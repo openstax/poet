@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>Preview</title>
+	<meta charset="UTF-8" />
+	<!-- Include 'unsafe-inline' because MathJax injects styles -->
+	<meta http-equiv="Content-Security-Policy" content="
+		default-src 'none';
+		    img-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
+		  media-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
+		 script-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
+		  style-src 'self' ${WEBVIEW_CSPSOURCE} https: data: 'unsafe-inline';
+		   font-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
+	" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+	<link rel="stylesheet" type="text/css" href="./preview.css">
+	</style>
+	<script src="./preview.js"></script>
+
+	<!-- Options: https://docs.mathjax.org/en/v2.7-latest/config-files.html -->
+	<script async src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=MML_SVG"></script>
+	<base href="${BASE_URI}"/>
+</head>
+
+<body>
+	<div id="preview">
+		If you see this the preview did not load which is a bug.
+	</div>
+
+	<details>
+		<summary>Click me for Advanced features</summary>
+
+		<h2>Test Saving Back</h2>
+		<textarea id="textarea" rows="10" cols="80"></textarea>
+		<button id="sendButton">Send</button>
+	</details>
+
+</body>
+</html>

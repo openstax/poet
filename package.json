@@ -1,0 +1,81 @@
+{
+	"name": "editor",
+	"version": "0.0.1",
+	"publisher": "openstax",
+	"description": "An editor for OpenStax-organized books.",
+	"author": "phil@openstax.org",
+	"repository": {
+		"url": "https://github.com/openstax/ce-git-vscode-spike/"
+	},
+	"engines": {
+		"vscode": "^1.39.0"
+	},
+	"main": "out/extension.js",
+	"scripts": {
+		"install": "yarn-required",
+		"compile": "tsc --build",
+		"prepackage": "yarn run compile",
+		"package": "vsce package",
+		"postinstall": "yarn run compile",
+		"pack": "vsce package --yarn"
+	},
+	"activationEvents": [
+		"onLanguage:xml",
+		"onWebviewPanel:openstax.previewThing",
+		"onCommand:openstax:showPreviewToSide"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "openstax.showPreviewToSide",
+				"title": "Show Preview/Visual Editor",
+				"category": "Openstax"
+			}
+		],
+		"menus": {
+			"editor/title": [
+				{
+					"command": "openstax.showPreviewToSide",
+					"when": "editorLangId == xml && !notebookEditorFocused",
+					"group": "navigation"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "openstax.showPreviewToSide",
+					"when": "editorLangId == xml",
+					"group": "navigation"
+				}
+			],
+			"editor/title/context": [
+				{
+					"command": "openstax.showPreviewToSide",
+					"when": "editorLangId == xml",
+					"group": "1_open"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "openstax.showPreviewToSide",
+					"when": "editorLangId == xml && !notebookEditorFocused",
+					"group": "navigation"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "markdown.showPreviewToSide",
+				"key": "shift+ctrl+v",
+				"mac": "shift+cmd+v",
+				"when": "editorLangId == xml && !notebookEditorFocused"
+			}
+		]
+	},
+	"devDependencies": {
+		"@types/node": "^12.11.7",
+		"@types/vscode": "^1.39.0",
+		"typescript": "^3.6.4",
+		"vsce": "^1.69.0",
+		"yarn-required": "^0.0.6"
+	}
+}

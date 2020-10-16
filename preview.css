@@ -1,0 +1,35 @@
+/*
+ * TODO: https://code.visualstudio.com/api/extension-guides/webview#theming-webview-content
+ */
+
+body {
+	margin-left: 10px;
+	font-family: sans-serif;
+}
+
+equation,
+note,
+section,
+example,
+exercise,
+problem,
+solution
+{ display: block; margin: 1rem; border: 1px solid #999; }
+
+equation::before,
+note::before,
+section::before,
+example::before,
+exercise::before,
+problem::before,
+solution::before { font-weight: bold; color: #999;}
+
+
+figure::before { content: "Figure: " }
+equation::before { content: "Equation: " }
+note::before { content: "Note: " }
+example::before { content: "Example: " }
+exercise::before { content: "Exercise: " }
+problem::before { content: "Problem: " }
+solution::before { content: "Solution: " }
+
