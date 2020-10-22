@@ -159,7 +159,7 @@ function vdom_patch($parent, newTree, oldTree, index = 0) {
     }
     else if (typeof newTree !== 'string') {
         if (typeof oldTree === 'string') {
-            throw new Error('BUG: Does not yet support replacing a string with a node. Only because of typing');
+            throw new Error('BUG: Unreachable! __vdom__changed should detect disparate types');
         }
         __vdom__applyProps($parent.childNodes[index], newTree.props, oldTree.props);
 		if (newTree.type !== 'math') { // replacing math nodes is handled in a hacky way in the step above
