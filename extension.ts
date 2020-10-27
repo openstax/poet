@@ -3,8 +3,11 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const resourceRootDir = path.join(__dirname, '../') // because the extension is running in the ./out/ subdir
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-	
+	showDashboard(context)
+
 	vscode.commands.registerCommand('openstax.showPreviewToSide', (uri?: vscode.Uri, previewSettings?: any) => {
 		let resource = uri;
 		let contents: string | null = null;
@@ -26,8 +29,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 		const resourceColumn = (vscode.window.activeTextEditor && vscode.window.activeTextEditor.viewColumn) || vscode.ViewColumn.One;
 		const previewColumn = resourceColumn + 1 // because the preview is on the side
-
-		let resourceRootDir = path.join(__dirname, '../') // because the extension is running in the ./out/ subdir
 
 		const panel = vscode.window.createWebviewPanel(
 			'openstax.previewThing',
@@ -86,6 +87,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 export async function deactivate(): Promise<void> {
 }
 
+function showDashboard(context: vscode.ExtensionContext) {
+	const panel = vscode.window.createWebviewPanel(
+		"openstax.dashboardThing",
+		"Book Dashboard",
+		vscode.ViewColumn.One,
+		{
+			enableScripts: true,
+		},
+	);
+
+	let html = fs.readFileSync(path.join(resourceRootDir, 'dashboard.html'), 'utf-8')
+	html = fixResourceReferences(panel.webview, html, resourceRootDir);
+	html = fixCspSourceReferences(panel.webview, html)
+	panel.webview.html = html;
+	
+	panel.reveal(vscode.ViewColumn.One)
+
+	// Reopen when the dashboard is closed (HACK to keep the panel open)
+	panel.onDidDispose(() => {
+		showDashboard(context)
+	}, null, context.subscriptions);
+
+}
 
 
 
