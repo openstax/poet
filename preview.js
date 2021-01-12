@@ -82,12 +82,7 @@ function messageHandler(message) {
 					.filter(c => !!c) // remove any null children (comments, processing instructions, etc)
 				const props = {}
 				for (const attr of xmlNode.attributes) {
-					if ((tagName === 'img') && (attr.name === 'src')) {
-						// Patch image links since the files are in a different relative path
-						props[attr.name] = `../../media/${attr.value}`
-					} else {
-						props[attr.name] = attr.value
-					}
+					props[attr.name] = attr.value
 				}
 				if (tagName === 'math') {
 					// wrap the math because MathJax likes to replace one <math> with 3 elements and the vdom does not like that
