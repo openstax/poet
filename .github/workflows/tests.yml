@@ -25,4 +25,4 @@ jobs:
           npm run lint
       - name: Test
         run: |
-          npm run test
+          xvfb-run -a npm test
