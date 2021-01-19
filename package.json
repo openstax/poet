@@ -1,23 +1,22 @@
 {
 	"name": "editor",
-	"version": "2.0.0",
 	"publisher": "openstax",
 	"description": "An editor for OpenStax-organized books.",
 	"author": "phil@openstax.org",
 	"repository": {
-		"url": "https://github.com/openstax/ce-git-vscode-spike/"
+		"url": "https://github.com/openstax/pro-editing-tool/"
 	},
 	"engines": {
 		"vscode": "^1.39.0"
 	},
-	"main": "out/extension.js",
+	"main": "./out/extension.js",
 	"scripts": {
-		"install": "yarn-required",
-		"compile": "tsc --build",
-		"prepackage": "yarn run compile",
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
 		"package": "vsce package",
-		"postinstall": "yarn run compile",
-		"pack": "vsce package --yarn"
+		"watch": "tsc -watch -p ./",
+		"lint": "eslint src --ext ts,js",
+		"test": "node ./out/test/runTest.js"
 	},
 	"activationEvents": [
 		"onLanguage:xml",
@@ -73,10 +72,17 @@
 		]
 	},
 	"devDependencies": {
+		"@types/glob": "^7.1.3",
+		"@types/mocha": "^8.0.4",
 		"@types/node": "^12.11.7",
 		"@types/vscode": "^1.39.0",
-		"typescript": "^3.6.4",
-		"vsce": "^1.69.0",
-		"yarn-required": "^0.0.6"
+		"@typescript-eslint/eslint-plugin": "^4.9.0",
+		"@typescript-eslint/parser": "^4.9.0",
+		"eslint": "^7.15.0",
+		"glob": "^7.1.6",
+		"mocha": "^8.1.3",
+		"typescript": "^4.1.2",
+		"vsce": "^1.83.0",
+		"vscode-test": "^1.4.1"
 	}
 }

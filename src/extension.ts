@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const resourceRootDir = path.join(__dirname, '../') // because the extension is running in the ./out/ subdir
+const resourceRootDir = path.join(__dirname, '../src/') // because the extension is running in the ./out/ subdir
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	showDashboard(context)
@@ -33,7 +33,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		const panel = vscode.window.createWebviewPanel(
 			'openstax.previewThing',
 			`Preview ${path.basename(resource.fsPath)}`,
-			previewColumn, { 
+			previewColumn, {
 				enableScripts: true,
 				localResourceRoots: getLocalResourceRoots([vscode.Uri.file(resourceRootDir),], resource),
 				enableFindWidget: true, });
@@ -80,7 +80,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 				vscode.workspace.applyEdit(edit)
 			} catch { }
 		});
-		
+
 	})
 }
 
@@ -101,7 +101,7 @@ function showDashboard(context: vscode.ExtensionContext) {
 	html = fixResourceReferences(panel.webview, html, resourceRootDir);
 	html = fixCspSourceReferences(panel.webview, html)
 	panel.webview.html = html;
-	
+
 	panel.reveal(vscode.ViewColumn.One)
 
 	// Reopen when the dashboard is closed (HACK to keep the panel open)

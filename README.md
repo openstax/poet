@@ -4,7 +4,7 @@
 
 ## Dev instructions
 1. open this directory in VSCode.
-1. Run `yarn`
+1. Run `npm run compile`
 1. Press F5 to launch the test extension in a new VS Code window.
 1. Open an XML file
 1. Click the Show Preview button on the top-right of the editor
@@ -14,6 +14,6 @@ For debugging, open the webview developer tools by opening the command pallete a
 
 ## How to create the .vsix extension for Theia or gitpod
 
-1. `yarn package`
+1. `npm run package`
 1. Open the Extensions panel on [gitpod.io](https://gitpod.io)
 1. Drag-and-drop the `.vsix` file [into the Extensions panel](https://www.gitpod.io/docs/vscode-extensions/) to install it.

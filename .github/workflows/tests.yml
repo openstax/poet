@@ -1,0 +1,28 @@
+---
+name: tests
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * 0' # weekly
+jobs:
+  tests:
+    timeout-minutes: 30
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Setup
+        run: |
+          npm install
+          npm run compile
+      - name: Lint
+        run: |
+          npm run lint
+      - name: Test
+        run: |
+          xvfb-run -a npm test
