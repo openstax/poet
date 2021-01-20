@@ -33,6 +33,27 @@
 				"category": "Openstax"
 			}
 		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "openstax",
+					"title": "Openstax",
+					"icon": "openstax-logo.svg"
+				}
+			]
+		},
+		"views": {
+			"openstax": [
+				{
+					"id": "test1",
+					"name": "Test1"
+				},
+				{
+					"id": "test2",
+					"name": "Test2"
+				}
+			]
+		},
 		"menus": {
 			"editor/title": [
 				{
