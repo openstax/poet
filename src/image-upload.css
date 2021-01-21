@@ -1,0 +1,15 @@
+body {
+	margin-left: 10px;
+	font-family: sans-serif;
+}
+
+#preview {
+  display: flex;
+  flex-direction: row;
+}
+
+img {
+  margin: 1rem;
+  max-width: 400px;
+  max-height: 400px;
+}

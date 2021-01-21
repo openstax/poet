@@ -23,6 +23,7 @@
 		"onLanguage:xml",
 		"onWebviewPanel:openstax.previewThing",
 		"onWebviewPanel:openstax.dashboardThing",
+		"onWebviewPanel:openstax.imageUpload",
 		"onCommand:openstax:showPreviewToSide"
 	],
 	"contributes": {
