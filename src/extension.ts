@@ -113,12 +113,15 @@ function showImageUpload(context: vscode.ExtensionContext) {
 			if (rootPath != null) {
 				for (const upload of mediaUploads) {
 					const { mediaName, data } = upload;
-					const newFileUri = vscode.Uri.joinPath(rootPath.uri, 'media', mediaName);
+					// vscode.Uri.joinPath is not in the latest theia yet
+					// const newFileUri = vscode.Uri.joinPath(rootPath.uri, 'media', mediaName);
+					const uri = rootPath.uri
+					const newFileUri = uri.with({ path: path.join(uri.path, 'media', mediaName) })
 					try {
 						await vscode.workspace.fs.stat(newFileUri)
 						// File exists already, do nothing for now
 					} catch (err) {
-						if (err instanceof vscode.FileSystemError && err.code == 'FileNotFound') {
+						if (err instanceof vscode.FileSystemError && err.name.includes('EntryNotFound')) {
 							console.log(`writing: ${newFileUri.toString()}`)
 							const content = Buffer.from(data.split(',')[1], 'base64');
 							vscode.workspace.fs.writeFile(newFileUri, content);
