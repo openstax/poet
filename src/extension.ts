@@ -2,13 +2,27 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as xml2js from 'xml2js';
+import * as xpath from 'xml2js-xpath';
 
 const resourceRootDir = path.join(__dirname, '../src/') // because the extension is running in the ./out/ subdir
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+	const cnxmlDiagnostics = vscode.languages.createDiagnosticCollection("cnxml");
+	context.subscriptions.push(cnxmlDiagnostics);
+
 	showDashboard(context)
 	showImageUpload(context)
 
+	vscode.workspace.onDidChangeTextDocument(
+		diagnosticsOnChangeTextDocument(cnxmlDiagnostics), null, context.subscriptions
+	);
+	vscode.workspace.onDidCloseTextDocument(
+		doc => cnxmlDiagnostics.delete(doc.uri), null, context.subscriptions
+	);
+	vscode.window.onDidChangeActiveTextEditor(
+		diagnosticsOnDidChangeActiveTextEditor(cnxmlDiagnostics), null, context.subscriptions
+	);
 	vscode.commands.registerCommand('openstax.showPreviewToSide', (uri?: vscode.Uri, previewSettings?: any) => {
 		let resource = uri;
 		let contents: string | null = null;
@@ -212,4 +226,52 @@ function getLocalResourceRoots(roots: vscode.Uri[], resource: vscode.Uri): Reado
 	}
 
 	return baseRoots
+}
+
+function diagnosticsOnChangeTextDocument(cnxmlDiagnostics: vscode.DiagnosticCollection) {
+	return (event: vscode.TextDocumentChangeEvent) => {
+		validateCnxmlImages(event.document, cnxmlDiagnostics);
+	}
+}
+
+function diagnosticsOnDidChangeActiveTextEditor(cnxmlDiagnostics: vscode.DiagnosticCollection) {
+	return (event: vscode.TextEditor | undefined) => {
+		if (event) {
+			validateCnxmlImages(event.document, cnxmlDiagnostics);
+		}
+	}
+}
+
+async function validateCnxmlImages(
+	textDocument: vscode.TextDocument, cnxmlDiagnostics: vscode.DiagnosticCollection
+): Promise<void> {
+	const text = textDocument.getText();
+	const xmlData = await xml2js.parseStringPromise(text);
+	const images = xpath.find(xmlData, "//image")
+
+	const diagnostics: vscode.Diagnostic[] = [];
+
+	for (const image of images) {
+		const imageSrc = image.$.src;
+		const imagePath = path.join(path.dirname(textDocument.fileName), imageSrc);
+		const imageLocation = text.indexOf(imageSrc);
+
+		if (fs.existsSync(imagePath)) {
+			continue;
+		}
+
+		const range = new vscode.Range(
+			textDocument.positionAt(imageLocation),
+			textDocument.positionAt(imageLocation + imageSrc.length)
+		)
+		const diagnostic: vscode.Diagnostic = {
+			severity: vscode.DiagnosticSeverity.Error,
+			range: range,
+			message: `Image file ${imageSrc} doesn't exist!`,
+			source: 'Image validation'
+		};
+		diagnostics.push(diagnostic);
+	}
+
+	cnxmlDiagnostics.set(textDocument.uri, diagnostics);
 }
