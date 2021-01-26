@@ -4,8 +4,7 @@
 
 ## Dev instructions
 1. open this directory in VSCode.
-1. Run `npm run compile`
-1. Press F5 to launch the test extension in a new VS Code window.
+1. Launch the "Run Extension" task
 1. Open an XML file
 1. Click the Show Preview button on the top-right of the editor
     - If you do not see it that is because it is invisible because we have not created an icon. Open a Markdown file, take note of where the icon is, and then click in the same area when viewing the CNXML file
