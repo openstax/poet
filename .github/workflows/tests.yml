@@ -19,7 +19,7 @@ jobs:
       - name: Setup
         run: |
           npm install
-          npm run compile
+          npm run test-compile
       - name: Lint
         run: |
           npm run lint
