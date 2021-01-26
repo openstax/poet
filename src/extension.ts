@@ -7,6 +7,7 @@ const resourceRootDir = path.join(__dirname, '../src/') // because the extension
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	showDashboard(context)
+	showImageUpload(context)
 
 	vscode.commands.registerCommand('openstax.showPreviewToSide', (uri?: vscode.Uri, previewSettings?: any) => {
 		let resource = uri;
@@ -85,6 +86,55 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 export async function deactivate(): Promise<void> {
+}
+
+function showImageUpload(context: vscode.ExtensionContext) {
+	const panel = vscode.window.createWebviewPanel(
+		"openstax.imageUpload",
+		"ImageUpload",
+		vscode.ViewColumn.Two,
+		{
+			enableScripts: true,
+		},
+	);
+
+	let html = fs.readFileSync(path.join(resourceRootDir, 'image-upload.html'), 'utf-8');
+	html = fixResourceReferences(panel.webview, html, resourceRootDir);
+	html = fixCspSourceReferences(panel.webview, html)
+	panel.webview.html = html;
+
+	panel.reveal(vscode.ViewColumn.Two)
+
+	panel.webview.onDidReceiveMessage(async (message) => {
+		const { mediaUploads } = message;
+		if (mediaUploads != null) {
+			const maybeRootPath = vscode.workspace.workspaceFolders;
+			const rootPath = maybeRootPath ? maybeRootPath[0] : null;
+			if (rootPath != null) {
+				for (const upload of mediaUploads) {
+					const { mediaName, data } = upload;
+					// vscode.Uri.joinPath is not in the latest theia yet
+					// const newFileUri = vscode.Uri.joinPath(rootPath.uri, 'media', mediaName);
+					const uri = rootPath.uri
+					const newFileUri = uri.with({ path: path.join(uri.path, 'media', mediaName) })
+					try {
+						await vscode.workspace.fs.stat(newFileUri)
+						// File exists already, do nothing for now
+					} catch (err) {
+						if (err instanceof vscode.FileSystemError && err.name.includes('EntryNotFound')) {
+							console.log(`writing: ${newFileUri.toString()}`)
+							const content = Buffer.from(data.split(',')[1], 'base64');
+							vscode.workspace.fs.writeFile(newFileUri, content);
+						}
+					}
+				}
+			}
+		}
+	});
+
+	panel.onDidDispose(() => {
+		showImageUpload(context)
+	}, null, context.subscriptions);
 }
 
 function showDashboard(context: vscode.ExtensionContext) {
