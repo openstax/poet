@@ -13,7 +13,7 @@
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
 			"outFiles": [
-				"${workspaceFolder}/dist/**/*.js"
+				"${workspaceFolder}/client/dist/**/*.js"
 			]
 		},
 		{
@@ -23,9 +23,9 @@
 			"runtimeExecutable": "${execPath}",
 			"args": [
 			  "--extensionDevelopmentPath=${workspaceFolder}",
-			  "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
+			  "--extensionTestsPath=${workspaceFolder}/client/out/test/suite/index"
 			],
-			"outFiles": ["${workspaceFolder}/out/test/**/*.js"],
+			"outFiles": ["${workspaceFolder}/client/out/test/**/*.js"],
 			"preLaunchTask": "npm: test-compile"
 		  }
 	]

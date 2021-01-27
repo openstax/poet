@@ -1,0 +1,11 @@
+{
+    "name": "client",
+    "version": "0.0.0-dev",
+    "description": "Extension implementation",
+    "author": "OpenStax",
+    "license": "AGPL-3.0",
+    "devDependencies": {
+        "@types/vscode": "^1.52.0",
+        "vscode-test": "^1.5.0"
+    }
+}

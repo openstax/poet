@@ -1,0 +1,17 @@
+{
+  "name": "server",
+  "version": "0.0.0-dev",
+  "description": "A language server for our extension",
+  "author": "OpenStax",
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "vscode-languageserver": "^7.0.0",
+    "vscode-languageserver-textdocument": "^1.0.1",
+    "vscode-uri": "^3.0.2",
+    "xml2js": "^0.4.23",
+    "xml2js-xpath": "^0.11.0"
+  },
+  "devDependencies": {
+    "@types/xml2js": "^0.4.8"
+  }
+}
