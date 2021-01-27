@@ -3,6 +3,6 @@
 .vscode
 **/node_modules
 **/*.ts
-tsconfig.json
-out/
-webpack.config.js
+**/tsconfig.json
+**/out/
+**/webpack.config.js
