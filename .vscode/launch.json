@@ -27,6 +27,14 @@
 			],
 			"outFiles": ["${workspaceFolder}/client/out/test/**/*.js"],
 			"preLaunchTask": "npm: test-compile"
-		  }
+		  },
+		  {
+			"type": "node",
+			"request": "attach",
+			"name": "Attach to Language Server",
+			"port": 6009,
+			"restart": true,
+			"outFiles": ["${workspaceRoot}/server/dist/**/*.js"]
+		},
 	]
 }
