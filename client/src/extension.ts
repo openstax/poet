@@ -7,7 +7,7 @@ import {
 	LanguageClientOptions,
 	ServerOptions,
 	TransportKind
-} from 'vscode-languageclient/node';
+} from 'vscode-languageclient';
 
 const resourceRootDir = path.join(__dirname, '../src/') // because the extension is running in the ./out/ subdir
 let client: LanguageClient;
