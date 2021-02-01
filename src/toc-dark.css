@@ -1,0 +1,31 @@
+.rst__lineHalfHorizontalRight::before,
+.rst__lineFullVertical::after,
+.rst__lineHalfVerticalTop::after,
+.rst__lineHalfVerticalBottom::after,
+.rst__lineChildren::after {
+  background-color: white;
+}
+
+.rst__moveHandle,
+.rst__loadingHandle {
+  background-color: #333;
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+  border-top-right-radius: 0px;
+  border-bottom-right-radius: 0px;
+}
+
+.rst__rowWrapper {
+  color: #333;
+}
+
+.rst__rowContents {
+  border-top-left-radius: 0px;
+  border-bottom-left-radius: 0px;
+  border-top-right-radius: 2px;
+  border-bottom-right-radius: 2px;
+}
+
+.rst__row {
+  border-radius: 2px;
+}
