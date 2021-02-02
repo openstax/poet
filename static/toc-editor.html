@@ -4,7 +4,7 @@
 <head>
     <title>Table of Contents Editor</title>
     <meta charset="UTF-8" />
-    <!-- Include 'unsafe-inline' because MathJax injects styles -->
+    <!-- Include 'unsafe-inline' because MathJax/Preact inject styles -->
     <meta http-equiv="Content-Security-Policy" content="
 		default-src 'none';
 		    img-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
@@ -13,8 +13,9 @@
 		  style-src 'self' ${WEBVIEW_CSPSOURCE} https: data: 'unsafe-inline';
 		   font-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
 	" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="./../dist/toc-editor.bundle.js"></script>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<script src="./toc-editor.bundle.js"></script>
+		<link rel="stylesheet" type="text/css" href="./toc-dark.css">
 </head>
 
 <body>

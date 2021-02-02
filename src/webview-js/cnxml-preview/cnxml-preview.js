@@ -23,98 +23,98 @@ window.addEventListener('load', () => {
 	sendButton = document.querySelector('#sendButton');
 	sendButton.addEventListener('click', sendUpdatedXML);
 
-	preview.innerHTML = '' // remove the "JS did not run" message
+	preview.innerHTML = ''; // remove the "JS did not run" message
 
-	isLoaded = true
+	isLoaded = true;
 	if (pendingMessage) {
-		messageHandler(pendingMessage)
+		messageHandler(pendingMessage);
 	}
 });
 
 // Handle the message inside the webview
 window.addEventListener('message', event => {
-	const message = event.data
+	const message = event.data;
 	if (isLoaded) {
-		messageHandler(message)
+		messageHandler(message);
 	} else {
-		pendingMessage = message
+		pendingMessage = message;
 	}
 });
 
 
-const elementMap = new Map()
-elementMap.set('image', 'img')
-elementMap.set('para', 'p')
-elementMap.set('list', 'ul')
-elementMap.set('item', 'li')
-elementMap.set('title', 'h2')
+const elementMap = new Map();
+elementMap.set('image', 'img');
+elementMap.set('para', 'p');
+elementMap.set('list', 'ul');
+elementMap.set('item', 'li');
+elementMap.set('title', 'h2');
 // elementMap.set('link', 'a')
-elementMap.set('term', 'strong')
-elementMap.set('strong', 'strong')
-elementMap.set('emphasis', 'em')
-elementMap.set('figure', 'figure')
-elementMap.set('caption', 'figcaption')
-elementMap.set('metadata', null) // Removes the element entirely
+elementMap.set('term', 'strong');
+elementMap.set('strong', 'strong');
+elementMap.set('emphasis', 'em');
+elementMap.set('figure', 'figure');
+elementMap.set('caption', 'figcaption');
+elementMap.set('metadata', null); // Removes the element entirely
 
-let currentVDom = undefined
+let currentVDom = undefined;
 
 
 function messageHandler(message) {
-	const xml = message.xml
+	const xml = message.xml;
 
-	textarea.value = xml
+	textarea.value = xml;
 
-	const parser = new DOMParser()
-	const xmlDoc = parser.parseFromString(xml,"text/xml")
+	const parser = new DOMParser();
+	const xmlDoc = parser.parseFromString(xml,"text/xml");
 
 	function translateTag(tagName) {
-		tagName = tagName.toLowerCase().replace('m:', '') // MathJax does not like `m:` prefix on MathML elements
-		return elementMap.has(tagName) ? elementMap.get(tagName) : tagName
+		tagName = tagName.toLowerCase().replace('m:', ''); // MathJax does not like `m:` prefix on MathML elements
+		return elementMap.has(tagName) ? elementMap.get(tagName) : tagName;
 	}
 
 	function recBuildVDom(xmlNode) {
 		switch (xmlNode.nodeType) {
 			case Node.ELEMENT_NODE:
-				const tagName = translateTag(xmlNode.tagName)
-				if (!tagName) { return null } // this is an element we want removed (metadata)
+				const tagName = translateTag(xmlNode.tagName);
+				if (!tagName) { return null; } // this is an element we want removed (metadata)
 				const children = [...xmlNode.childNodes]
 					.map(c => recBuildVDom(c))
-					.filter(c => !!c) // remove any null children (comments, processing instructions, etc)
-				const props = {}
+					.filter(c => !!c); // remove any null children (comments, processing instructions, etc)
+				const props = {};
 				for (const attr of xmlNode.attributes) {
-					props[attr.name] = attr.value
+					props[attr.name] = attr.value;
 				}
 				if (tagName === 'math') {
 					// wrap the math because MathJax likes to replace one <math> with 3 elements and the vdom does not like that
-					return vdom_h(MATH_WRAPPER_TAGNAME, {}, [vdom_h(tagName, props, ...children)])
+					return vdom_h(MATH_WRAPPER_TAGNAME, {}, [vdom_h(tagName, props, ...children)]);
 				} else {
-					return vdom_h(tagName, props, ...children)
+					return vdom_h(tagName, props, ...children);
 				}
-				break
+				break;
 			case Node.TEXT_NODE:
-				return xmlNode.nodeValue
-				break
+				return xmlNode.nodeValue;
+				break;
 			default:
 				// ignore anything else by returning null
-				return null
+				return null;
 		}
 	}
 
-	const newVDom = recBuildVDom(xmlDoc.documentElement)
-	vdom_patch(preview, newVDom, currentVDom)
-	currentVDom = newVDom
+	const newVDom = recBuildVDom(xmlDoc.documentElement);
+	vdom_patch(preview, newVDom, currentVDom);
+	currentVDom = newVDom;
 
 
 
 	if (window.MathJax) {
-		window.MathJax.Hub.Typeset(preview)
+		window.MathJax.Hub.Typeset(preview);
 	} else {
-		document.body.append(`[MathJax is not loaded]`)
+		document.body.append(`[MathJax is not loaded]`);
 	}
 }
 
 function sendUpdatedXML() {
-	const xml = textarea.value
+	const xml = textarea.value;
 	vscode.postMessage({xml});
 }
 
@@ -128,6 +128,7 @@ function sendUpdatedXML() {
 //
 // From https://github.com/philschatz/accessible-engine/blob/master/src/browser/vdom.ts
 // Original: https://medium.com/@deathmood/how-to-write-your-own-virtual-dom-ee74acc13060
+/* eslint-disable @typescript-eslint/naming-convention */
 function vdom_h(type, props, ...children) {
     // if (isFunction(type)) {
     //   const t = (type as any) as Fn
@@ -168,13 +169,13 @@ function vdom_patch($parent, newTree, oldTree, index = 0) {
     }
 }
 function __vdom__toString(a) {
-	return JSON.stringify(a)
+	return JSON.stringify(a);
 }
 // This added check should replace the whole <mathwrapper> whenever the math inside changes
 function __vdom__checkFullIfMath(a, b) {
-	if (a.type !== b.type) { return true }
+	if (a.type !== b.type) { return true; }
 	if (a.type === MATH_WRAPPER_TAGNAME) {
-		return __vdom__toString(a) !== __vdom__toString(b)
+		return __vdom__toString(a) !== __vdom__toString(b);
 	}
 }
 function __vdom__changed(a, b) {
@@ -237,7 +238,7 @@ function __vdom__removeProp($el, name) {
     }
 }
 function __vdom__isObject(x) {
-    return typeof x === 'object' && x !== null;
+    return typeof x === 'object' && x != null;
 }
 const __vdom__isArray = Array.isArray || function (obj) {
     return Object.prototype.toString.call(obj) === '[object Array]';
@@ -248,3 +249,4 @@ function __vdom__head(x) {
 function __vdom__merge(a, b) {
     return Object.assign({}, a, b);
 }
+/* eslint-enable @typescript-eslint/naming-convention */

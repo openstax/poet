@@ -1,7 +1,6 @@
 import { h, Fragment, render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import 'react-sortable-tree/style.css';
-import './toc-dark.css';
 import SortableTree from 'react-sortable-tree';
 
 let isLoaded = false;
