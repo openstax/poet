@@ -63,6 +63,10 @@ export function showTocEditor(resourceRootDir: string) {
   
     panel.reveal(vscode.ViewColumn.One);
   
+    let messageQueued: any = {
+      uneditable: [],
+      editable: []
+    }
     const uri = getRootPathUri();
     if (uri != null) {
       const collectionFiles = fs.readdirSync(path.join(uri.fsPath, 'collections'));
@@ -91,17 +95,23 @@ export function showTocEditor(resourceRootDir: string) {
         slug: 'mock-slug__source-only',
         children: orphanModules.map(moduleObjectFromModuleId).sort((m, n) => moduleIdNumber(m.moduleid) - moduleIdNumber(n.moduleid))
       };
-  
-      panel.webview.postMessage({
+
+      messageQueued = {
         uneditable: [collectionAllModules, collectionOrphanModules],
         editable: collectionTrees
-      });
+      }
     }
   
     panel.webview.onDidReceiveMessage(async (message) => {
+      const { signal } = message;
+      if (signal != null) {
+        if (signal === 'loaded') {
+          panel.webview.postMessage(messageQueued)
+        }
+      }
       const { treeData } = message;
       const uri = getRootPathUri();
-      if (uri != null) {
+      if (uri != null && treeData != null) {
         const replacingUri = uri.with({ path: path.join(uri.fsPath, 'collections', `${treeData.slug}.collection.xml`)});
         const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' });
         const document = new DOMParser().parseFromString(collectionData);

@@ -3,7 +3,6 @@ import { useEffect, useState } from 'preact/hooks';
 import 'react-sortable-tree/style.css';
 import SortableTree from 'react-sortable-tree';
 
-let isLoaded = false;
 const vscode = acquireVsCodeApi();
 const nodeType = 'toc-element'
 
@@ -137,17 +136,14 @@ const App = (props) => {
 }
 
 window.addEventListener('load', () => {
-  isLoaded = true
-  renderApp()
+  vscode.postMessage({signal: 'loaded'})
 });
 
 window.addEventListener('message', event => {
   const previousState = vscode.getState();
   const selectionIndices = previousState ? previousState.selectionIndices : {editable: 0, uneditable: 0}
   vscode.setState({ treesData: event.data, selectionIndices })
-	if (isLoaded) {
-		renderApp()
-	}
+  renderApp()
 });
 
 function renderApp() {
