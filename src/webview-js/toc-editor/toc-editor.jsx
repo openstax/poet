@@ -2,25 +2,12 @@ import { h, Fragment, render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import 'react-sortable-tree/style.css';
 import SortableTree from 'react-sortable-tree';
+import stringify from 'json-stable-stringify';
 
 const vscode = acquireVsCodeApi();
 const nodeType = 'toc-element'
 
-const removeExpanded = (obj) => {
-  if (typeof obj !== 'object') {
-    return obj
-  }
-  if (obj instanceof Array) {
-    const copy = []
-    for (const subobj of obj) {
-      copy.push(removeExpanded(subobj))
-    }
-    return copy
-  }
-  const { expanded, ...copy } = obj
-  copy.children = removeExpanded(copy.children)
-  return copy
-}
+const removeExpanded = (key, value) => key === 'expanded' ? undefined : value
 
 const ContentTree = (props) => {
   const modifiesStateName = props.modifiesStateName
@@ -30,8 +17,8 @@ const ContentTree = (props) => {
     const { treesData, selectionIndices } = vscode.getState()
 
     const newData = { ...data, ...{children: newChildren} }
-    const oldStructure = JSON.stringify(removeExpanded(data.children))
-    const newStructure = JSON.stringify(removeExpanded(newChildren))
+    const oldStructure = stringify(data.children, { replacer: removeExpanded })
+    const newStructure = stringify(newChildren, { replacer: removeExpanded })
 
     if (data.children.length - newChildren.length > 3) {
       // There's a bug that deletes the whole tree except for one element.

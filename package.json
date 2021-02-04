@@ -29,39 +29,50 @@
 		"onCommand:openstax:showPreviewToSide"
 	],
 	"contributes": {
-		"commands": [{
-			"command": "openstax.showPreviewToSide",
-			"title": "Show Preview/Visual Editor",
-			"category": "Openstax"
-		}, {
-			"command": "openstax.showTocEditor",
-			"title": "Show ToC Editor",
-			"category": "Openstax"
-		}, {
-			"command": "openstax.showImageUpload",
-			"title": "Show Image Upload",
-			"category": "Openstax"
-		}],
+		"commands": [
+			{
+				"command": "openstax.showPreviewToSide",
+				"title": "Show Preview/Visual Editor",
+				"category": "Openstax"
+			},
+			{
+				"command": "openstax.showTocEditor",
+				"title": "Show ToC Editor",
+				"category": "Openstax"
+			},
+			{
+				"command": "openstax.showImageUpload",
+				"title": "Show Image Upload",
+				"category": "Openstax"
+			}
+		],
 		"viewsContainers": {
-			"activitybar": [{
+			"activitybar": [
+				{
 					"id": "openstax",
 					"title": "Openstax",
 					"icon": "openstax-logo.svg"
-			}]
+				}
+			]
 		},
 		"views": {
-			"openstax": [{
-				"id": "openstax-controls",
-				"name": "Controls"
-			}, {
-				"id": "test2",
-				"name": "Test2"
-			}]
+			"openstax": [
+				{
+					"id": "openstax-controls",
+					"name": "Controls"
+				},
+				{
+					"id": "test2",
+					"name": "Test2"
+				}
+			]
 		},
-		"viewsWelcome": [{
-			"view": "openstax-controls",
-			"contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageUpload)"
-		}],
+		"viewsWelcome": [
+			{
+				"view": "openstax-controls",
+				"contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageUpload)"
+			}
+		],
 		"menus": {
 			"editor/title": [
 				{
@@ -121,6 +132,7 @@
 		"css-loader": "^5.0.1",
 		"eslint": "^7.15.0",
 		"glob": "^7.1.6",
+		"json-stable-stringify": "^1.0.1",
 		"mocha": "^8.1.3",
 		"node-loader": "^1.0.2",
 		"preact": "^10.5.11",
