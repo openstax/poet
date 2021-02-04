@@ -13,6 +13,8 @@
   border-bottom-left-radius: 2px;
   border-top-right-radius: 0px;
   border-bottom-right-radius: 0px;
+  border: none;
+  border-left: 1px;
 }
 
 .rst__rowWrapper {
@@ -24,8 +26,42 @@
   border-bottom-left-radius: 0px;
   border-top-right-radius: 2px;
   border-bottom-right-radius: 2px;
+  border: none;
 }
 
 .rst__row {
+  border-radius: 2px;
+  position: relative;
+}
+
+.rst__rowSearchMatch {
+  outline: none;
+}
+
+.rst__rowSearchMatch::before {
+  box-shadow: #0080ff 0px 0px 3px 7px;
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  border-radius: 2px;
+}
+
+.rst__rowSearchFocus {
+  outline: none;
+}
+
+.rst__rowSearchFocus::before {
+  box-shadow: #fc6421 0px 0px 3px 7px;
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
   border-radius: 2px;
 }

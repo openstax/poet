@@ -116,12 +116,14 @@ export const showTocEditor = (resourceRootDir: string) => async () => {
       editable: collectionTrees
     };
   }
-
+  
   panel.webview.onDidReceiveMessage(async (message) => {
     const { signal } = message;
     if (signal != null) {
-      if (signal === 'loaded') {
-        panel.webview.postMessage(messageQueued);
+      if (signal.type === 'loaded') {
+        panel.webview.postMessage(messageQueued)
+      } else if (signal.type === 'error') {
+        throw new Error(signal.message)
       }
     }
     const { treeData } = message;
@@ -162,8 +164,9 @@ function insertUsedModules(arr: Array<string>, tree: TocTreeElement){
 function moduleObjectFromModuleId(moduleid: string): TocTreeModule {
 	return {
     type: 'module',
-    moduleid: moduleid,
-    title: getModuleTitle(moduleid)
+		moduleid: moduleid,
+    title: getModuleTitle(moduleid),
+    subtitle: moduleid
   };
 }
 
