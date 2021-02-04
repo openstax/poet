@@ -5,13 +5,29 @@ import { each } from 'async';
 import { promises as fsPromises } from 'fs';
 import xmlFormat from 'xml-formatter';
 import { DOMParser, XMLSerializer } from 'xmldom';
-import { fixResourceReferences, fixCspSourceReferences, getRootPathUri } from './utils';
+import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect } from './utils';
 
 const NS_COLLECTION = 'http://cnx.rice.edu/collxml';
 const NS_CNXML = 'http://cnx.rice.edu/cnxml';
 const NS_METADATA = 'http://cnx.rice.edu/mdml';
 
 const guessedModuleTitles: {[key: string]: string} = {};
+
+type TocTreeModule = {
+  type: 'module',
+  moduleid: string,
+  title: string,
+  subtitle?: string
+}
+
+type TocTreeCollection = {
+  type: 'collection' | 'subcollection',
+  title: string,
+  slug?: string,
+  children: Array<TocTreeElement>
+}
+
+type TocTreeElement = TocTreeModule | TocTreeCollection
 
 /**
  * Guess all module titles by reading the modules asynchronously and
@@ -63,7 +79,7 @@ export function showTocEditor(resourceRootDir: string) {
   
     panel.reveal(vscode.ViewColumn.One);
   
-    let messageQueued: any = {
+    let messageQueued: {uneditable: Array<TocTreeCollection>, editable: Array<TocTreeCollection>} = {
       uneditable: [],
       editable: []
     }
@@ -83,17 +99,17 @@ export function showTocEditor(resourceRootDir: string) {
       }
       const usedModulesSet = new Set(usedModules);
       const orphanModules = allModules.filter(x => !usedModulesSet.has(x));
-      const collectionAllModules = {
+      const collectionAllModules: TocTreeCollection = {
         type: 'collection',
         title: 'All Modules',
         slug: 'mock-slug__source-only',
-        children: allModules.map(moduleObjectFromModuleId).sort((m, n) => moduleIdNumber(m.moduleid) - moduleIdNumber(n.moduleid))
+        children: allModules.map(moduleObjectFromModuleId).sort((m, n) => m.moduleid.localeCompare(n.moduleid))
       };
-      const collectionOrphanModules = {
+      const collectionOrphanModules: TocTreeCollection = {
         type: 'collection',
         title: 'Orphan Modules',
         slug: 'mock-slug__source-only',
-        children: orphanModules.map(moduleObjectFromModuleId).sort((m, n) => moduleIdNumber(m.moduleid) - moduleIdNumber(n.moduleid))
+        children: orphanModules.map(moduleObjectFromModuleId).sort((m, n) => m.moduleid.localeCompare(n.moduleid))
       };
 
       messageQueued = {
@@ -135,12 +151,7 @@ export function showTocEditor(resourceRootDir: string) {
   };
 }
 
-function moduleIdNumber(moduleid: string): number {
-	const numberPart = moduleid.substr(1);
-	return parseInt(numberPart);
-}
-
-function insertUsedModules(arr: Array<string>, tree: any){
+function insertUsedModules(arr: Array<string>, tree: TocTreeElement){
 	if (tree.type === 'module') {
 		arr.push(tree.moduleid);
 	} else if (tree.children) {
@@ -150,36 +161,30 @@ function insertUsedModules(arr: Array<string>, tree: any){
 	}
 }
 
-function moduleObjectFromModuleId(moduleid: string): any {
+function moduleObjectFromModuleId(moduleid: string): TocTreeModule {
 	return {
     type: 'module',
-		moduleid: moduleid,
-		title: getModuleTitle(moduleid)
+    moduleid: moduleid,
+    title: getModuleTitle(moduleid)
   };
 }
 
-function moduleToObject(element: any): any {
+function moduleToObject(element: any): TocTreeModule {
 	const moduleid = element.getAttribute('document');
-	if (moduleid == null) {
-		throw new Error('Error parsing collection. ModuleID missing.');
-	}
-  return moduleObjectFromModuleId(moduleid);
+  return moduleObjectFromModuleId(expect(moduleid, 'Module ID missing'));
 }
 
-function subcollectionToObject(element: any): any {
+function subcollectionToObject(element: any): TocTreeCollection {
   const title = element.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent;
 	const content = element.getElementsByTagNameNS(NS_COLLECTION, 'content')[0];
-	if (title == null) {
-		throw new Error('Error parsing collection. Subcollection title missing.');
-	}
   return {
     type: 'subcollection',
-    title: title,
+    title: expect(title, 'Subcollection title missing'),
     children: childObjects(content)
   };
 }
 
-function childObjects(element: any): Array<any> {
+function childObjects(element: any): Array<TocTreeElement> {
 	const children = [];
   for (const child of Array.from<any>(element.childNodes)) {
     if (child.localName === 'module') {
@@ -191,7 +196,7 @@ function childObjects(element: any): Array<any> {
   return children;
 }
 
-function parseCollection(xml: string): any {
+function parseCollection(xml: string): TocTreeCollection {
 	const document = new DOMParser().parseFromString(xml);
 
   const metadata = document.getElementsByTagNameNS(NS_COLLECTION, 'metadata')[0];
@@ -200,17 +205,15 @@ function parseCollection(xml: string): any {
   
   const treeRoot = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0];
 
-  const tree = {
+  return {
     type: 'collection',
-		title: collectionTitle,
-		slug: collectionSlug,
+		title: expect(collectionTitle, 'Collection title missing'),
+		slug: expect(collectionSlug, 'Collection slug missing'),
     children: childObjects(treeRoot)
   };
-
-  return tree;
 }
 
-function populateTreeDataToXML(document: XMLDocument, root: any, treeData: any) {
+function populateTreeDataToXML(document: XMLDocument, root: any, treeData: TocTreeCollection) {
 	for (const child of treeData.children) {
 		const element = document.createElementNS(NS_COLLECTION, child.type);
 		 // md prefix is technically a guess. If incorrect, document may have a lot of xmlns:md attributes
@@ -229,7 +232,7 @@ function populateTreeDataToXML(document: XMLDocument, root: any, treeData: any) 
 	}
 }
 
-function replaceCollectionContent(document: XMLDocument, treeData: any) {
+function replaceCollectionContent(document: XMLDocument, treeData: TocTreeCollection) {
 	const content = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0];
 
 	const newContent = document.createElementNS(NS_COLLECTION, 'content');

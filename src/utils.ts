@@ -60,3 +60,10 @@ export function getRootPathUri(): vscode.Uri | null {
 	const rootPath = maybeWorkspace ? maybeWorkspace[0] : null;
 	return rootPath ? rootPath.uri : null;
 }
+
+export function expect<T>(value: T | null | undefined, message?: string): T {
+	if (value == null) {
+		throw new Error(message || 'Unwrapped a null value')
+	}
+	return value
+}
