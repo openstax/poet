@@ -12,6 +12,7 @@
 		"tsBuildInfoFile": "out/tsbuildinfo.json",
 		"forceConsistentCasingInFileNames": true,
 		"experimentalDecorators": true,
+		"esModuleInterop": true
 	},
 	"exclude": [
 		"out"

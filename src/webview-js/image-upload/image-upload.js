@@ -1,4 +1,4 @@
-let pending = []
+let pending = [];
 
 window.addEventListener('load', () => {
   vscode = acquireVsCodeApi();
@@ -9,19 +9,19 @@ window.addEventListener('load', () => {
   let cancelButton = document.getElementById('cancel-upload');
 
   const clearPending = () => {
-    pending = []
+    pending = [];
     while (preview.firstChild) {
-      preview.firstChild.remove()
+      preview.firstChild.remove();
     }
-  }
+  };
 
   const preventDefaults = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    dropArea.addEventListener(eventName, preventDefaults, false)
+    dropArea.addEventListener(eventName, preventDefaults, false);
   });
 
   const previewFile = (file) => {
@@ -40,30 +40,30 @@ window.addEventListener('load', () => {
       pending.push({
         mediaName: file.name,
         data: reader.result
-      })
-    }
-  }
+      });
+    };
+  };
 
   const handleDrop = (e) => {
     let files = e.dataTransfer.files;
 
     ([...files]).forEach(previewFile);
-  }
+  };
 
   const handleUpload = (e) => {
     e.preventDefault();
     vscode.postMessage({
       mediaUploads: pending
-    })
-    clearPending()
-  }
+    });
+    clearPending();
+  };
 
   const handleCancel = (e) => {
     e.preventDefault();
-    clearPending()
-  }
+    clearPending();
+  };
 
   dropArea.addEventListener('drop', handleDrop, false);
-  uploadButton.addEventListener('click', handleUpload, false)
-  cancelButton.addEventListener('click', handleCancel, false)
+  uploadButton.addEventListener('click', handleUpload, false);
+  cancelButton.addEventListener('click', handleCancel, false);
 });

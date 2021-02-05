@@ -4,7 +4,7 @@
 <head>
 	<title>Preview</title>
 	<meta charset="UTF-8" />
-	<!-- Include 'unsafe-inline' because MathJax injects styles -->
+	<!-- Include 'unsafe-inline' because MathJax/Preact inject styles -->
 	<meta http-equiv="Content-Security-Policy" content="
 		default-src 'none';
 		    img-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
@@ -15,8 +15,8 @@
 	" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-	<link rel="stylesheet" type="text/css" href="./preview.css">
-	<script src="./preview.js"></script>
+	<link rel="stylesheet" type="text/css" href="./cnxml-preview.css">
+	<script src="./cnxml-preview.bundle.js"></script>
 
 	<!-- Options: https://docs.mathjax.org/en/v2.7-latest/config-files.html -->
 	<script async src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=MML_SVG"></script>
