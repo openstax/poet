@@ -43,4 +43,4 @@ export const showImageUpload = (resourceRootDir: string) => async () => {
       }
     }
   });
-}
+};

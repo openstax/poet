@@ -18,16 +18,16 @@ type TocTreeModule = {
   moduleid: string,
   title: string,
   subtitle?: string
-}
+};
 
 type TocTreeCollection = {
   type: 'collection' | 'subcollection',
   title: string,
   slug?: string,
   children: Array<TocTreeElement>
-}
+};
 
-type TocTreeElement = TocTreeModule | TocTreeCollection
+type TocTreeElement = TocTreeModule | TocTreeCollection;
 
 /**
  * Guess all module titles by reading the modules asynchronously and
@@ -81,7 +81,7 @@ export const showTocEditor = (resourceRootDir: string) => async () => {
   let messageQueued: {uneditable: Array<TocTreeCollection>, editable: Array<TocTreeCollection>} = {
     uneditable: [],
     editable: []
-  }
+  };
   const uri = getRootPathUri();
   if (uri != null) {
     const collectionFiles = fs.readdirSync(path.join(uri.fsPath, 'collections'));
@@ -114,14 +114,14 @@ export const showTocEditor = (resourceRootDir: string) => async () => {
     messageQueued = {
       uneditable: [collectionAllModules, collectionOrphanModules],
       editable: collectionTrees
-    }
+    };
   }
 
   panel.webview.onDidReceiveMessage(async (message) => {
     const { signal } = message;
     if (signal != null) {
       if (signal === 'loaded') {
-        panel.webview.postMessage(messageQueued)
+        panel.webview.postMessage(messageQueued);
       }
     }
     const { treeData } = message;
@@ -147,7 +147,7 @@ export const showTocEditor = (resourceRootDir: string) => async () => {
       vscode.workspace.applyEdit(edit);
     }
   });
-}
+};
 
 function insertUsedModules(arr: Array<string>, tree: TocTreeElement){
 	if (tree.type === 'module') {

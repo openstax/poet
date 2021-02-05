@@ -77,4 +77,4 @@ export const showCnxmlPreview = (resourceRootDir: string) => async (uri?: vscode
       vscode.workspace.applyEdit(edit);
     } catch { }
   });
-}
+};
