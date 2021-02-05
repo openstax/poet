@@ -48,7 +48,7 @@ const ContentTree = (props) => {
     }
   }
 
-  const canDrop = ({ nextParent}) => {
+  const canDrop = ({ nextParent }) => {
     if (nextParent && nextParent.type === 'module') {
       return false
     }
@@ -85,9 +85,7 @@ const EditorPanel = (props) => {
   return (
     <div style={{display: 'flex', flexDirection: 'column', height: '99vh', width: '49vw'}}>
       <select value={selection} style={{margin: '1rem', maxWidth: '300px'}} onChange={handleSelect}>
-        {trees.map((tree, i) => {
-          return (<option key={i} value={i}>{tree.title}</option>)
-        })}
+        {trees.map((tree, i) => <option key={i} value={i}>{tree.title}</option>)}
       </select>
       <div style={{flexGrow: '1'}}>
         {trees.map((tree, i) => {
@@ -102,25 +100,22 @@ const EditorPanel = (props) => {
   )
 }
 
-const App = (props) => {
-  return (
-    <div style={{display: 'flex', justifyContent: 'space-between'}}>
-      <EditorPanel
-        modifiesStateName={'editable'}
-        treesData={props.treesData.editable}
-        selectionIndex={props.selectionIndices.editable}
-        editable={true}
-      />
-      <EditorPanel
-        modifiesStateName={'uneditable'}
-        treesData={props.treesData.uneditable}
-        selectionIndex={props.selectionIndices.uneditable}
-        editable={false}
-      />
-    </div>
-    
-  )
-}
+const App = (props) => (
+  <div style={{display: 'flex', justifyContent: 'space-between'}}>
+    <EditorPanel
+      modifiesStateName={'editable'}
+      treesData={props.treesData.editable}
+      selectionIndex={props.selectionIndices.editable}
+      editable={true}
+    />
+    <EditorPanel
+      modifiesStateName={'uneditable'}
+      treesData={props.treesData.uneditable}
+      selectionIndex={props.selectionIndices.uneditable}
+      editable={false}
+    />
+  </div>
+)
 
 window.addEventListener('load', () => {
   vscode.postMessage({signal: 'loaded'})

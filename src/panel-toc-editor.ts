@@ -60,95 +60,93 @@ async function preloadGuessedModuleTitles() {
 	});
 }
 
-export function showTocEditor(resourceRootDir: string) {
-  return async () => {
-    await preloadGuessedModuleTitles();
-    const panel = vscode.window.createWebviewPanel(
-      "openstax.tocEditor",
-      "Table of Contents Editor",
-      vscode.ViewColumn.One,
-      {
-        enableScripts: true,
-      },
-    );
-  
-    let html = fs.readFileSync(path.join(resourceRootDir, 'toc-editor.html'), 'utf-8');
-    html = fixResourceReferences(panel.webview, html, resourceRootDir);
-    html = fixCspSourceReferences(panel.webview, html);
-    panel.webview.html = html;
-  
-    panel.reveal(vscode.ViewColumn.One);
-  
-    let messageQueued: {uneditable: Array<TocTreeCollection>, editable: Array<TocTreeCollection>} = {
-      uneditable: [],
-      editable: []
-    }
-    const uri = getRootPathUri();
-    if (uri != null) {
-      const collectionFiles = fs.readdirSync(path.join(uri.fsPath, 'collections'));
-      const collectionTrees = [];
-      for (const collectionFile of collectionFiles) {
-        const collectionData = fs.readFileSync(path.join(uri.fsPath, 'collections', collectionFile), { encoding: 'utf-8' });
-        collectionTrees.push(parseCollection(collectionData));
-      }
-      // Some special non-editable collections
-      const allModules = fs.readdirSync(path.join(uri.fsPath, 'modules'));
-      const usedModules: Array<string> = [];
-      for (const collectionTree of collectionTrees) {
-        insertUsedModules(usedModules, collectionTree);
-      }
-      const usedModulesSet = new Set(usedModules);
-      const orphanModules = allModules.filter(x => !usedModulesSet.has(x));
-      const collectionAllModules: TocTreeCollection = {
-        type: 'collection',
-        title: 'All Modules',
-        slug: 'mock-slug__source-only',
-        children: allModules.map(moduleObjectFromModuleId).sort((m, n) => m.moduleid.localeCompare(n.moduleid))
-      };
-      const collectionOrphanModules: TocTreeCollection = {
-        type: 'collection',
-        title: 'Orphan Modules',
-        slug: 'mock-slug__source-only',
-        children: orphanModules.map(moduleObjectFromModuleId).sort((m, n) => m.moduleid.localeCompare(n.moduleid))
-      };
+export const showTocEditor = (resourceRootDir: string) => async () => {
+  await preloadGuessedModuleTitles();
+  const panel = vscode.window.createWebviewPanel(
+    "openstax.tocEditor",
+    "Table of Contents Editor",
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true,
+    },
+  );
 
-      messageQueued = {
-        uneditable: [collectionAllModules, collectionOrphanModules],
-        editable: collectionTrees
+  let html = fs.readFileSync(path.join(resourceRootDir, 'toc-editor.html'), 'utf-8');
+  html = fixResourceReferences(panel.webview, html, resourceRootDir);
+  html = fixCspSourceReferences(panel.webview, html);
+  panel.webview.html = html;
+
+  panel.reveal(vscode.ViewColumn.One);
+
+  let messageQueued: {uneditable: Array<TocTreeCollection>, editable: Array<TocTreeCollection>} = {
+    uneditable: [],
+    editable: []
+  }
+  const uri = getRootPathUri();
+  if (uri != null) {
+    const collectionFiles = fs.readdirSync(path.join(uri.fsPath, 'collections'));
+    const collectionTrees = [];
+    for (const collectionFile of collectionFiles) {
+      const collectionData = fs.readFileSync(path.join(uri.fsPath, 'collections', collectionFile), { encoding: 'utf-8' });
+      collectionTrees.push(parseCollection(collectionData));
+    }
+    // Some special non-editable collections
+    const allModules = fs.readdirSync(path.join(uri.fsPath, 'modules'));
+    const usedModules: Array<string> = [];
+    for (const collectionTree of collectionTrees) {
+      insertUsedModules(usedModules, collectionTree);
+    }
+    const usedModulesSet = new Set(usedModules);
+    const orphanModules = allModules.filter(x => !usedModulesSet.has(x));
+    const collectionAllModules: TocTreeCollection = {
+      type: 'collection',
+      title: 'All Modules',
+      slug: 'mock-slug__source-only',
+      children: allModules.map(moduleObjectFromModuleId).sort((m, n) => m.moduleid.localeCompare(n.moduleid))
+    };
+    const collectionOrphanModules: TocTreeCollection = {
+      type: 'collection',
+      title: 'Orphan Modules',
+      slug: 'mock-slug__source-only',
+      children: orphanModules.map(moduleObjectFromModuleId).sort((m, n) => m.moduleid.localeCompare(n.moduleid))
+    };
+
+    messageQueued = {
+      uneditable: [collectionAllModules, collectionOrphanModules],
+      editable: collectionTrees
+    }
+  }
+
+  panel.webview.onDidReceiveMessage(async (message) => {
+    const { signal } = message;
+    if (signal != null) {
+      if (signal === 'loaded') {
+        panel.webview.postMessage(messageQueued)
       }
     }
-  
-    panel.webview.onDidReceiveMessage(async (message) => {
-      const { signal } = message;
-      if (signal != null) {
-        if (signal === 'loaded') {
-          panel.webview.postMessage(messageQueued)
-        }
-      }
-      const { treeData } = message;
-      const uri = getRootPathUri();
-      if (uri != null && treeData != null) {
-        const replacingUri = uri.with({ path: path.join(uri.fsPath, 'collections', `${treeData.slug}.collection.xml`)});
-        const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' });
-        const document = new DOMParser().parseFromString(collectionData);
-        replaceCollectionContent(document, treeData);
-        const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(document), {
-          indentation: '  ',
-          collapseContent: true,
-          lineSeparator: '\n'
-        });
-        console.log(`writing: ${replacingUri.toString()}`);
-        const textDocument = await vscode.workspace.openTextDocument(replacingUri);
-        const fullRange = new vscode.Range(
-          textDocument.positionAt(0),
-          textDocument.positionAt(textDocument.getText().length)
-        );
-        const edit = new vscode.WorkspaceEdit();
-        edit.replace(replacingUri, fullRange, serailizedXml);
-        vscode.workspace.applyEdit(edit);
-      }
-    });
-  };
+    const { treeData } = message;
+    const uri = getRootPathUri();
+    if (uri != null && treeData != null) {
+      const replacingUri = uri.with({ path: path.join(uri.fsPath, 'collections', `${treeData.slug}.collection.xml`)});
+      const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' });
+      const document = new DOMParser().parseFromString(collectionData);
+      replaceCollectionContent(document, treeData);
+      const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(document), {
+        indentation: '  ',
+        collapseContent: true,
+        lineSeparator: '\n'
+      });
+      console.log(`writing: ${replacingUri.toString()}`);
+      const textDocument = await vscode.workspace.openTextDocument(replacingUri);
+      const fullRange = new vscode.Range(
+        textDocument.positionAt(0),
+        textDocument.positionAt(textDocument.getText().length)
+      );
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(replacingUri, fullRange, serailizedXml);
+      vscode.workspace.applyEdit(edit);
+    }
+  });
 }
 
 function insertUsedModules(arr: Array<string>, tree: TocTreeElement){
