@@ -121,9 +121,9 @@ export const showTocEditor = (resourceRootDir: string) => async () => {
     const { signal } = message;
     if (signal != null) {
       if (signal.type === 'loaded') {
-        panel.webview.postMessage(messageQueued)
+        panel.webview.postMessage(messageQueued);
       } else if (signal.type === 'error') {
-        throw new Error(signal.message)
+        throw new Error(signal.message);
       }
     }
     const { treeData } = message;
