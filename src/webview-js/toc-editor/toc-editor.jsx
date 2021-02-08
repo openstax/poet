@@ -157,10 +157,10 @@ const EditorPanel = (props) => {
         <select value={selection} style={{margin: '1rem', maxWidth: '300px'}} onChange={handleSelect}>
           {trees.map((tree, i) => <option key={i} value={i}>{tree.title}</option>)}
         </select>
-        <div style={{margin: '1rem', marginTop: '0', height: '2rem', display: 'flex', maxWidth: '400px', alignItems: 'center'}}>
-          <input style={{maxWidth: '300px', height: '100%', border: 'none', padding: '0', paddingLeft: '4px'}} placeholder={'Search...'} onChange={handleSearch}></input>
-          <button style={{padding: '0.3rem', height: '100%'}} disabled={!searchFoundCount} onClick={selectPrevMatch}>{'<'}</button>
-          <button style={{padding: '0.3rem', height: '100%'}} disabled={!searchFoundCount} onClick={selectNextMatch}>{'>'}</button>
+        <div style={{ margin: '1rem', marginTop: '0', height: '2rem', display: 'flex', maxWidth: '400px', alignItems: 'center' }}>
+          <input style={{ maxWidth: '300px', height: '100%', padding: '0', paddingLeft: '4px' }} placeholder={'Search...'} onChange={handleSearch}></input>
+          <button style={{ height: '100%' }} disabled={!searchFoundCount} onClick={selectPrevMatch}>{'<'}</button>
+          <button style={{ height: '100%' }} disabled={!searchFoundCount} onClick={selectNextMatch}>{'>'}</button>
           {searchQuery
             ? <p style={{margin: '0px 10px', fontWeight: 'bold'}}>{searchInfo}</p>
             : <></>}
