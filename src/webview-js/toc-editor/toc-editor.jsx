@@ -13,7 +13,6 @@ const removeExpanded = (key, value) => key === 'expanded' ? undefined : value
 const SearchContext = createContext({});
 
 const ContentTree = (props) => {
-  console.log('render')
   const modifiesStateName = props.modifiesStateName
   const [data, setData] = useState(props.data);
   const {
