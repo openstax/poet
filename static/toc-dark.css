@@ -3,7 +3,7 @@
 .rst__lineHalfVerticalTop::after,
 .rst__lineHalfVerticalBottom::after,
 .rst__lineChildren::after {
-  background-color: white;
+  background-color: var(--vscode-input-foreground);
 }
 
 .rst__moveHandle,
