@@ -1,23 +1,22 @@
-import { h, Fragment, render, createContext } from 'preact';
-import { useState, useContext } from 'preact/hooks';
-import 'react-sortable-tree/style.css';
-import SortableTree from 'react-sortable-tree';
-import stringify from 'json-stable-stringify';
+import { h, Fragment, render, createContext } from 'preact' // eslint-disable-line no-unused-vars
+import { useState, useContext } from 'preact/hooks'
+import 'react-sortable-tree/style.css'
+import SortableTree from 'react-sortable-tree'
+import stringify from 'json-stable-stringify'
 
-const vscode = acquireVsCodeApi();
+const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'
 
 const removeExpanded = (key, value) => key === 'expanded' ? undefined : value
 
-
-const SearchContext = createContext({});
+const SearchContext = createContext({})
 
 const ContentTree = (props) => {
   const modifiesStateName = props.modifiesStateName
-  const [data, setData] = useState(props.data);
+  const [data, setData] = useState(props.data)
   const {
     searchQuery,
-    setSearchQuery,
+    // setSearchQuery,
     searchFocusIndex,
     setSearchFocusIndex,
     searchFoundCount,
@@ -25,7 +24,7 @@ const ContentTree = (props) => {
   } = useContext(SearchContext)
 
   const searchFinishCallback = (matches) => {
-    if (searchFoundCount == matches.length) {
+    if (searchFoundCount === matches.length) {
       // Returning prevents infinite render loop
       return
     }
@@ -33,7 +32,7 @@ const ContentTree = (props) => {
       // This is a bug, but let's at least error gracefully
       // instead of freezing with infinite render loop
       const message = 'Divided search item by zero (probably)'
-      vscode.postMessage({signal: {type: 'error', message}})
+      vscode.postMessage({ signal: { type: 'error', message } })
       throw new Error(message)
     }
     setSearchFoundCount(matches.length)
@@ -42,17 +41,17 @@ const ContentTree = (props) => {
 
   const searchMethod = ({ node, searchQuery }) => {
     if (!searchQuery) {
-      return false;
+      return false
     }
-    const titleMatches = node.title && node.title.toLowerCase().indexOf(searchQuery.toLowerCase()) > -1;
-    const subtitleMatches = node.subtitle && node.subtitle.toLowerCase().indexOf(searchQuery.toLowerCase()) > -1;
+    const titleMatches = node.title && node.title.toLowerCase().indexOf(searchQuery.toLowerCase()) > -1
+    const subtitleMatches = node.subtitle && node.subtitle.toLowerCase().indexOf(searchQuery.toLowerCase()) > -1
     return !!(titleMatches || subtitleMatches)
   }
 
   const handleChange = (newChildren) => {
     const { treesData, selectionIndices } = vscode.getState()
 
-    const newData = { ...data, ...{children: newChildren} }
+    const newData = { ...data, ...{ children: newChildren } }
     const oldStructure = stringify(data.children, { replacer: removeExpanded })
     const newStructure = stringify(newChildren, { replacer: removeExpanded })
 
@@ -67,19 +66,19 @@ const ContentTree = (props) => {
     setData(newData)
 
     if (oldStructure !== newStructure) {
-      vscode.postMessage({treeData: newData})
+      vscode.postMessage({ treeData: newData })
     }
   }
 
   const getNodeProps = ({ node }) => {
     const typeToColor = {
-      'subcollection': 'green',
-      'module': 'purple'
+      subcollection: 'green',
+      module: 'purple'
     }
     return {
       style: {
-        boxShadow: `0 0 0 4px ${typeToColor[node.type]}`,
-      },
+        boxShadow: `0 0 0 4px ${typeToColor[node.type]}`
+      }
     }
   }
 
@@ -89,7 +88,7 @@ const ContentTree = (props) => {
     }
     return true
   }
-  
+
   return (
     <div style={{ height: '100%' }}>
       <SortableTree
@@ -108,23 +107,22 @@ const ContentTree = (props) => {
   )
 }
 
-
 const EditorPanel = (props) => {
   const modifiesStateName = props.modifiesStateName
   const trees = props.treesData
-  const [selection, setSelection] = useState(props.selectionIndex);
+  const [selection, setSelection] = useState(props.selectionIndex)
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchFocusIndex, setSearchFocusIndex] = useState(0);
-  const [searchFoundCount, setSearchFoundCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocusIndex, setSearchFocusIndex] = useState(0)
+  const [searchFoundCount, setSearchFoundCount] = useState(0)
 
   const selectPrevMatch = () => {
-    if (searchFoundCount == 0) { return }
+    if (searchFoundCount === 0) { return }
     setSearchFocusIndex((searchFocusIndex + searchFoundCount - 1) % searchFoundCount)
   }
 
   const selectNextMatch = () => {
-    if (searchFoundCount == 0) { return }
+    if (searchFoundCount === 0) { return }
     setSearchFocusIndex((searchFocusIndex + searchFoundCount + 1) % searchFoundCount)
   }
 
@@ -152,27 +150,27 @@ const EditorPanel = (props) => {
   const searchInfo = `${searchFoundCount > 0 ? searchFocusIndex + 1 : 0} / ${searchFoundCount}`
 
   return (
-    <div style={{display: 'flex', flexDirection: 'column', height: '99vh', width: '49vw'}}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '99vh', width: '49vw' }}>
       <div>
-        <select value={selection} style={{margin: '1rem', maxWidth: '300px'}} onChange={handleSelect}>
+        <select value={selection} style={{ margin: '1rem', maxWidth: '300px' }} onChange={handleSelect}>
           {trees.map((tree, i) => <option key={i} value={i}>{tree.title}</option>)}
         </select>
-        <div style={{margin: '1rem', marginTop: '0', height: '2rem', display: 'flex', maxWidth: '400px', alignItems: 'center'}}>
-          <input style={{maxWidth: '300px', height: '100%', border: 'none', padding: '0', paddingLeft: '4px'}} placeholder={'Search...'} onChange={handleSearch}></input>
-          <button style={{padding: '0.3rem', height: '100%'}} disabled={!searchFoundCount} onClick={selectPrevMatch}>{'<'}</button>
-          <button style={{padding: '0.3rem', height: '100%'}} disabled={!searchFoundCount} onClick={selectNextMatch}>{'>'}</button>
+        <div style={{ margin: '1rem', marginTop: '0', height: '2rem', display: 'flex', maxWidth: '400px', alignItems: 'center' }}>
+          <input style={{ maxWidth: '300px', height: '100%', border: 'none', padding: '0', paddingLeft: '4px' }} placeholder={'Search...'} onChange={handleSearch}></input>
+          <button style={{ padding: '0.3rem', height: '100%' }} disabled={!searchFoundCount} onClick={selectPrevMatch}>{'<'}</button>
+          <button style={{ padding: '0.3rem', height: '100%' }} disabled={!searchFoundCount} onClick={selectNextMatch}>{'>'}</button>
           {searchQuery
-            ? <p style={{margin: '0px 10px', fontWeight: 'bold'}}>{searchInfo}</p>
+            ? <p style={{ margin: '0px 10px', fontWeight: 'bold' }}>{searchInfo}</p>
             : <></>}
         </div>
       </div>
-      <div style={{flexGrow: '1'}}>
+      <div style={{ flexGrow: '1' }}>
         {trees.map((tree, i) => {
           if (selection !== i) {
             return <></>
           }
           return (
-            <div key={i} style={{height: '100%'}}>
+            <div key={i} style={{ height: '100%' }}>
               <SearchContext.Provider value={searchContext}>
                 <ContentTree
                   modifiesStateName={modifiesStateName}
@@ -190,7 +188,7 @@ const EditorPanel = (props) => {
 }
 
 const App = (props) => (
-  <div style={{display: 'flex', justifyContent: 'space-between'}}>
+  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
     <EditorPanel
       modifiesStateName={'editable'}
       treesData={props.treesData.editable}
@@ -207,20 +205,20 @@ const App = (props) => (
 )
 
 window.addEventListener('load', () => {
-  vscode.postMessage({signal: {type: 'loaded'}})
-});
+  vscode.postMessage({ signal: { type: 'loaded' } })
+})
 
 window.addEventListener('message', event => {
-  const previousState = vscode.getState();
-  const selectionIndices = previousState ? previousState.selectionIndices : {editable: 0, uneditable: 0}
+  const previousState = vscode.getState()
+  const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
   vscode.setState({ treesData: event.data, selectionIndices })
   renderApp()
-});
+})
 
 function renderApp() {
-  const previousState = vscode.getState();
-  const treesData = previousState ? previousState.treesData : {editable: [], uneditable: []}
-  const selectionIndices = previousState ? previousState.selectionIndices : {editable: 0, uneditable: 0}
+  const previousState = vscode.getState()
+  const treesData = previousState ? previousState.treesData : { editable: [], uneditable: [] }
+  const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
   const mountPoint = document.getElementById('app')
-  render(<App {...{treesData, selectionIndices}}/>, mountPoint);
+  render(<App {...{ treesData, selectionIndices }}/>, mountPoint)
 }
