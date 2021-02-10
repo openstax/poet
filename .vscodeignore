@@ -1,11 +1,11 @@
 .github
 .gitignore
 .vscode
-node_modules
+**/node_modules
 **/*.ts
-tsconfig.json
-out/
-webpack.config.js
-src/
+**/tsconfig.json
+**/out/
+**/webpack.config.js
+**/src/
 editor.gif
-static/
+**/static/

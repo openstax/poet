@@ -1,0 +1,6 @@
+{
+	"include": [],
+	"references": [
+		{ "path": "./client" }
+	]
+}
