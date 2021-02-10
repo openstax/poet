@@ -12,15 +12,15 @@
 	},
 	"main": "./client/dist/extension.js",
 	"scripts": {
-		"vscode:prepublish": "webpack --mode production --config ./client/webpack.config.js",
-		"webpack": "webpack --mode development --config ./client/webpack.config.js",
-		"webpack:watch": "webpack --mode development --watch --config ./client/webpack.config.js",
+		"vscode:prepublish": "webpack --mode production --config ./client/webpack.config.js --config ./server/webpack.config.js",
+		"webpack": "webpack --mode development --config ./client/webpack.config.js --config ./server/webpack.config.js",
+		"webpack:watch": "webpack --mode development --watch --config ./client/webpack.config.js --config ./server/webpack.config.js",
 		"test-compile": "tsc -b",
 		"package": "vsce package",
 		"watch": "tsc -b -watch",
-		"lint": "eslint ./client/src --ext ts,js,jsx,tsx",
+		"lint": "eslint ./client/src ./server/src --ext ts,js,jsx,tsx",
 		"test": "node ./client/out/test/runTest.js",
-		"postinstall": "cd client && npm install"
+		"postinstall": "cd client && npm install && cd ../server && npm install"
 	},
 	"activationEvents": [
 		"onLanguage:xml",
@@ -113,7 +113,24 @@
 				"mac": "shift+cmd+v",
 				"when": "editorLangId == xml && !notebookEditorFocused"
 			}
-		]
+		],
+		"configuration": {
+			"type": "object",
+			"title": "CNXML extension configuration",
+			"properties": {
+				"languageServerCnxml.trace.server": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"default": "off",
+					"description": "Traces the communication between VS Code and the language server."
+				}
+			}
+		}
 	},
 	"devDependencies": {
 		"@babel/cli": "^7.12.10",

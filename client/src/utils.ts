@@ -1,6 +1,12 @@
 
 import vscode from 'vscode'
 import path from 'path'
+import {
+  LanguageClient,
+  LanguageClientOptions,
+  ServerOptions,
+  TransportKind
+} from 'vscode-languageclient/node'
 
 /**
  * Replace references to href="./file" or src="./file" with VS Code resource URIs.
@@ -66,4 +72,43 @@ export function expect<T>(value: T | null | undefined, message?: string): T {
     throw new Error(message ?? 'Unwrapped a null value')
   }
   return value
+}
+
+export function launchLanguageServer(context: vscode.ExtensionContext): LanguageClient {
+  const serverModule = context.asAbsolutePath(
+    path.join('server', 'dist', 'server.js')
+  )
+  // The debug options for the server
+  // --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
+  const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] }
+
+  // If the extension is launched in debug mode then the debug server options are used
+  // Otherwise the run options are used
+  const serverOptions: ServerOptions = {
+    run: { module: serverModule, transport: TransportKind.ipc },
+    debug: {
+      module: serverModule,
+      transport: TransportKind.ipc,
+      options: debugOptions
+    }
+  }
+
+  // Options to control the language client
+  const clientOptions: LanguageClientOptions = {
+    // Register the server for XML documents
+    documentSelector: [{ scheme: 'file', language: 'xml' }]
+  }
+
+  // Create the language client and start the client.
+  const client = new LanguageClient(
+    'languageServerCnxml',
+    'CNXML Language Server',
+    serverOptions,
+    clientOptions
+  )
+
+  // Start the client. This will also launch the server
+  client.start()
+
+  return client
 }

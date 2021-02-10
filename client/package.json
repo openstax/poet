@@ -18,5 +18,7 @@
 		"xml-formatter": "^2.4.0",
 		"xmldom": "^0.4.0"
 	},
-	"dependencies": {}
+	"dependencies": {
+		"vscode-languageclient": "^7.0.0"
+	}
 }
