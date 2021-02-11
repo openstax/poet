@@ -38,11 +38,9 @@ Note: Sometimes the package will end up appearing under "Installed for User" aft
 
 If you are using the Code editor, the manual package update steps are:
 
-1. Go to the extensions tab, and under Installed select our package. Click the gear icon and select "Uninstall".
-1. Reload the browser
 1. Upload the `.vsix` file to your workspace
-1. Go to the Extensions tab. Just above and to the right of the "Search Extensions in Marketplace", you'll see `...` which will open a dropdown. Select "Install from VSIX..." in that menu.
-1. Enter the path with your repo and package file as `/workspace/{repo}/{package}`. For example, if you're working in `university-physics` and the package is `editor-0.0.0-dev.vsix`, the path where you uploaded the file to your workspace will be `/workspace/university-physics/editor-0.0.0-dev.vsix`.
+1. Right click on the uploaded file, and select "Install Extension VSIX"
+1. If prompted to do so, reload the browser
 1. Delete the package file from your workspace
 
 ## Activating the extension
