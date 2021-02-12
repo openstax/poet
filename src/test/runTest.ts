@@ -15,7 +15,7 @@ async function main(): Promise<void> {
     const testDataFolder = path.resolve(extensionDevelopmentPath, 'out-instrumented/test/data/test-repo')
 
     // Download VS Code, unzip it and run the integration test
-    await runTests({ extensionDevelopmentPath, extensionTestsPath, launchArgs: [testDataFolder] })
+    await runTests({ extensionDevelopmentPath, extensionTestsPath, launchArgs: [testDataFolder, '--disable-extensions'] })
   } catch (err) {
     console.error('Failed to run tests')
     process.exit(1)
