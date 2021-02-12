@@ -230,7 +230,6 @@ suite('Extension Test Suite', () => {
     const insertIndex = documentBefore.indexOf('</content>')
 
     assert.strictEqual(htmlBefore.indexOf('__INSERTED__'), -1)
-    assert.notStrictEqual(htmlAfter.indexOf('__INSERTED__'), -1)
 
     // Clean up
     const fullRange = new vscode.Range(
