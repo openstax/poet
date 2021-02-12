@@ -29,8 +29,11 @@ jobs:
       - name: Build Extension
         run: |
           PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+          echo $PR_NUMBER
           sed -Ei 's/("version": ")(.+)(",)$/\1\2-'$PR_NUMBER'\3/' package.json
           npm run package
-
-
-
+      - name: Upload Extention
+        uses: actions/upload-artifact@v2
+        with:
+          name: editor-extension
+          path: editor-*.vsix
