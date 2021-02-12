@@ -4,7 +4,8 @@ import path from 'path'
 
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
+import { PanelType } from './panel-type'
 
 const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -12,31 +13,31 @@ const NS_METADATA = 'http://cnx.rice.edu/mdml'
 
 const guessedModuleTitles: {[key: string]: string} = {}
 
-interface TocTreeModule {
+export interface TocTreeModule {
   type: 'module'
   moduleid: string
   title: string
   subtitle?: string
 }
 
-interface TocTreeCollection {
+export interface TocTreeCollection {
   type: 'collection' | 'subcollection'
   title: string
   slug?: string
   children: TocTreeElement[]
 }
 
-type TocTreeElement = TocTreeModule | TocTreeCollection
+export type TocTreeElement = TocTreeModule | TocTreeCollection
 
-interface LoadedSignal {
+export interface LoadedSignal {
   type: 'loaded'
 }
-interface ErrorSignal {
+export interface ErrorSignal {
   type: 'error'
   message?: string
 }
-type Signal = LoadedSignal | ErrorSignal
-interface PanelIncomingMessage {
+export type Signal = LoadedSignal | ErrorSignal
+export interface PanelIncomingMessage {
   signal?: Signal
   treeData?: TocTreeCollection
 }
@@ -79,7 +80,7 @@ async function preloadGuessedModuleTitles(): Promise<void> {
   await Promise.all(promises)
 }
 
-export const showTocEditor = (resourceRootDir: string) => async () => {
+export const showTocEditor = (resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async () => {
   await preloadGuessedModuleTitles()
   const panel = vscode.window.createWebviewPanel(
     'openstax.tocEditor',
@@ -96,8 +97,9 @@ export const showTocEditor = (resourceRootDir: string) => async () => {
   panel.webview.html = html
 
   panel.reveal(vscode.ViewColumn.One)
+  activePanelsByType['openstax.tocEditor'] = panel
 
-  let messageQueued: {uneditable: TocTreeCollection[], editable: TocTreeCollection[]} = {
+  const messageQueued: {uneditable: TocTreeCollection[], editable: TocTreeCollection[]} = {
     uneditable: [],
     editable: []
   }
@@ -130,46 +132,47 @@ export const showTocEditor = (resourceRootDir: string) => async () => {
       children: orphanModules.map(moduleObjectFromModuleId).sort((m, n) => m.moduleid.localeCompare(n.moduleid))
     }
 
-    messageQueued = {
-      uneditable: [collectionAllModules, collectionOrphanModules],
-      editable: collectionTrees
-    }
+    // messageQueued reference passed to handleMessage so we must mutate
+    // the original object instead of setting messageQueued to a new value
+    messageQueued.uneditable = [collectionAllModules, collectionOrphanModules]
+    messageQueued.editable = collectionTrees
   }
 
-  panel.webview.onDidReceiveMessage(async (message) => {
-    const panelIncomingMessage: PanelIncomingMessage = message
-    const { signal } = panelIncomingMessage
-    if (signal != null) {
-      if (signal.type === 'loaded') {
-        await panel.webview.postMessage(messageQueued)
-      } else if (signal.type === 'error') {
-        throw new Error(signal.message)
-      }
+  panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(panel, messageQueued)))
+}
+
+export const handleMessage = (panel: vscode.WebviewPanel, messageQueued: {uneditable: TocTreeCollection[], editable: TocTreeCollection[]}) => async (message: PanelIncomingMessage) => {
+  const { signal } = message
+  if (signal != null) {
+    if (signal.type === 'loaded') {
+      await panel.webview.postMessage(messageQueued)
+    } else if (signal.type === 'error') {
+      throw new Error(signal.message)
     }
-    const { treeData } = panelIncomingMessage
-    const uri = getRootPathUri()
-    if (uri != null && treeData != null) {
-      const slug = expect(treeData.slug)
-      const replacingUri = uri.with({ path: path.join(uri.fsPath, 'collections', `${slug}.collection.xml`) })
-      const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' })
-      const document = new DOMParser().parseFromString(collectionData)
-      replaceCollectionContent(document, treeData)
-      const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(document), {
-        indentation: '  ',
-        collapseContent: true,
-        lineSeparator: '\n'
-      })
-      console.log(`writing: ${replacingUri.toString()}`)
-      const textDocument = await vscode.workspace.openTextDocument(replacingUri)
-      const fullRange = new vscode.Range(
-        textDocument.positionAt(0),
-        textDocument.positionAt(textDocument.getText().length)
-      )
-      const edit = new vscode.WorkspaceEdit()
-      edit.replace(replacingUri, fullRange, serailizedXml)
-      await vscode.workspace.applyEdit(edit)
-    }
-  })
+  }
+  const { treeData } = message
+  const uri = getRootPathUri()
+  if (uri != null && treeData != null) {
+    const slug = expect(treeData.slug)
+    const replacingUri = uri.with({ path: path.join(uri.fsPath, 'collections', `${slug}.collection.xml`) })
+    const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' })
+    const document = new DOMParser().parseFromString(collectionData)
+    replaceCollectionContent(document, treeData)
+    const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(document), {
+      indentation: '  ',
+      collapseContent: true,
+      lineSeparator: '\n'
+    })
+    console.log(`writing: ${replacingUri.toString()}`)
+    const textDocument = await vscode.workspace.openTextDocument(replacingUri)
+    const fullRange = new vscode.Range(
+      textDocument.positionAt(0),
+      textDocument.positionAt(textDocument.getText().length)
+    )
+    const edit = new vscode.WorkspaceEdit()
+    edit.replace(replacingUri, fullRange, serailizedXml)
+    await vscode.workspace.applyEdit(edit)
+  }
 }
 
 function insertUsedModules(arr: string[], tree: TocTreeElement): void {

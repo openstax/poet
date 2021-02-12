@@ -1,3 +1,4 @@
+import fs from 'fs'
 import path from 'path'
 import Mocha from 'mocha'
 import glob from 'glob'
@@ -11,7 +12,7 @@ export async function run(): Promise<void> {
 
   const testsRoot = path.resolve(__dirname, '..')
 
-  return await new Promise((resolve, reject) => {
+  return await new Promise<void>((resolve, reject) => {
     glob('**/**.test.js', { cwd: testsRoot }, (err, files) => {
       if (err != null) {
         return reject(err)
@@ -34,5 +35,8 @@ export async function run(): Promise<void> {
         reject(err)
       }
     })
+  }).finally(() => {
+    console.log('Extracting the code coverage from __coverage__ and writing it to .nyc_output/coverage.json')
+    fs.writeFileSync(path.join(__dirname, '../../../.nyc_output/coverage.json'), JSON.stringify((global as any).__coverage__))
   })
 }
