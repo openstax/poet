@@ -26,3 +26,11 @@ jobs:
       - name: Test
         run: |
           xvfb-run -a npm test
+      - name: Build Extension
+        run: |
+          PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+          sed -Ei 's/("version": ")(.+)(",)$/\1\2-'$PR_NUMBER'\3/' package.json
+          npm run package
+
+
+
