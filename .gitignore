@@ -1,7 +1,9 @@
 node_modules/
 out/
+out-instrumented/
 *.vsix
 .vscode-test/
 dist/
 .nyc_output/
 coverage/
+cypress/videos

@@ -36,7 +36,10 @@ export async function run(): Promise<void> {
       }
     })
   }).finally(() => {
-    console.log('Extracting the code coverage from __coverage__ and writing it to .nyc_output/coverage.json')
-    fs.writeFileSync(path.join(__dirname, '../../../.nyc_output/coverage.json'), JSON.stringify((global as any).__coverage__))
+    const dest = path.join(__dirname, '../../../.nyc_output/coverage.json')
+    const coverage = (global as any).__coverage__
+    if (!coverage) { throw new Error('Did not collect code coverage') }
+    console.log(`Extracting the code coverage from __coverage__ and writing it to ${dest}`)
+    fs.writeFileSync(dest, JSON.stringify(coverage))
   })
 }

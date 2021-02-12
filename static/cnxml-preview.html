@@ -9,7 +9,7 @@
 		default-src 'none';
 		    img-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
 		  media-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
-		 script-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
+		 script-src 'self' ${WEBVIEW_CSPSOURCE} https: data: 'unsafe-eval';
 		  style-src 'self' ${WEBVIEW_CSPSOURCE} https: data: 'unsafe-inline';
 		   font-src 'self' ${WEBVIEW_CSPSOURCE} https: data:;
 	" />

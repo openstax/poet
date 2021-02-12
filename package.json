@@ -21,7 +21,8 @@
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts,js,jsx,tsx",
     "pretest": "./scripts/pretest.sh",
-    "test": "node ./out/test/runTest.js"
+    "posttest": "cypress run",
+    "test": "node ./out-instrumented/test/runTest.js"
   },
   "nyc": {
     "sourceMap": true
