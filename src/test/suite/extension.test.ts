@@ -217,27 +217,6 @@ suite('Extension Test Suite', function(this: Suite) {
     assert.strictEqual(modified, testData)
     assert.notStrictEqual(modified, before)
   })
-  test('cnxml preview with edits', async () => {
-    const uri = expect(getRootPathUri())
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const document = await vscode.workspace.openTextDocument(resource)
-    await vscode.window.showTextDocument(document)
-    await withPanelFromCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, async (panel) => {
-      const documentBefore = document.getText()
-      const htmlBefore = panel.webview.html
-
-      const insertIndex = documentBefore.indexOf('</content>')
-      const edit = new vscode.WorkspaceEdit()
-      edit.insert(resource, document.positionAt(insertIndex), '<para>__INSERTED__</para>')
-      await vscode.workspace.applyEdit(edit)
-      // We need to wait for the panel to detect and respond to the changes
-      await sleep(1000)
-      const htmlAfter = panel.webview.html
-
-      assert.strictEqual(htmlBefore.indexOf('__INSERTED__'), -1)
-      assert.notStrictEqual(htmlAfter.indexOf('__INSERTED__'), -1)
-    })
-  }).timeout(5000)
   test('panel disposed and refocused', async () => {
     await assert.doesNotReject(async () => {
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})

@@ -43,6 +43,7 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
     }
   )
   activePanelsByType[panelType] = panel
+  let disposed = false
 
   let html = fs.readFileSync(path.join(resourceRootDir, 'cnxml-preview.html'), 'utf-8')
   html = addBaseHref(panel.webview, resource, html)
@@ -58,6 +59,9 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
 
   async function updatePreview(): Promise<void> {
     clearTimeout(throttleTimer)
+    if (disposed) {
+      return
+    }
     let document: vscode.TextDocument
     try {
       document = await vscode.workspace.openTextDocument(resource)
@@ -76,6 +80,9 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
 
   // https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
   panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(resource)))
+  panel.onDidDispose(() => {
+    disposed = true
+  })
 }
 
 export const handleMessage = (resource: vscode.Uri) => async (message: PanelIncomingMessage) => {

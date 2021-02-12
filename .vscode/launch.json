@@ -22,12 +22,12 @@
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
 			"args": [
-				"${workspaceFolder}/out/test/data/test-repo",
+				"${workspaceFolder}/out-instrumented/test/data/test-repo",
 				"--disable-extensions",
 			  "--extensionDevelopmentPath=${workspaceFolder}",
-			  "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
+			  "--extensionTestsPath=${workspaceFolder}/out-instrumented/test/suite/index"
 			],
-			"outFiles": ["${workspaceFolder}/out/test/**/*.js"],
+			"outFiles": ["${workspaceFolder}/out-instrumented/test/**/*.js"],
 			"preLaunchTask": "npm: pretest"
 		}
 	]
