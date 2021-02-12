@@ -12,7 +12,7 @@
   },
   "main": "./dist/extension.js",
   "scripts": {
-    "coverage": "nyc --exclude src/test npm run test",
+    "coverage": "nyc --exclude ./src/test npm run test",
     "cypress:open": "cypress open",
     "vscode:prepublish": "webpack --mode production",
     "webpack": "webpack --mode development",
@@ -161,5 +161,7 @@
     "xml-formatter": "^2.4.0",
     "xmldom": "^0.4.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@cypress/code-coverage": "^3.9.2"
+  }
 }
