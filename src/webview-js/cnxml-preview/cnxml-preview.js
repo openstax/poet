@@ -11,12 +11,7 @@ const MATH_WRAPPER_TAGNAME = 'mathwrapper'
 
 window.addEventListener('load', () => {
   // https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
-  try {
-    vscode = acquireVsCodeApi() // eslint-disable-line no-undef
-  } catch (e) {
-    // Not running as a VS Code webview - maybe testing in external browser.
-    console.error(e.message)
-  }
+  const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 
   preview = document.querySelector('#preview')
   textarea = document.querySelector('#textarea')
@@ -59,11 +54,18 @@ let currentVDom
 
 function messageHandler(message) {
   const xml = message.xml
+  if (!xml) throw new Error('Missing XML field on the message')
 
   textarea.value = xml
 
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(xml, 'text/xml')
+
+  // If a parseerror occurs then the root element is an <html>
+  // that contains a <parseerrror> element inside it
+  if (xmlDoc.documentElement.tagName === 'html') {
+    throw new Error(`Could not parse input as XML`)
+  }
 
   function translateTag(tagName) {
     tagName = tagName.toLowerCase().replace('m:', '') // MathJax does not like `m:` prefix on MathML elements
