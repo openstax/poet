@@ -22,7 +22,7 @@
     "lint": "eslint src --ext ts,js,jsx,tsx",
     "pretest": "./scripts/pretest.sh",
     "posttest": "cypress run",
-    "test": "node ./out-instrumented/test/runTest.js"
+    "test": "node ./out/test/runTest.js"
   },
   "nyc": {
     "sourceMap": true

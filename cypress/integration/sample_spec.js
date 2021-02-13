@@ -13,7 +13,7 @@ describe('cnxml-preview Webview Tests', () => {
   let pending = []
 
   beforeEach(() => {
-    cy.visit('./out-instrumented/cnxml-preview.html', {
+    cy.visit('./out/cnxml-preview.html', {
       onBeforeLoad: (contentWindow) => {
         class API {
           postMessage(msg) { pending.push(msg) }
