@@ -4,14 +4,11 @@ let preview
 let sendButton
 let textarea
 
-let isLoaded = false
-let pendingMessage = null
-
 const MATH_WRAPPER_TAGNAME = 'mathwrapper'
 
 window.addEventListener('load', () => {
   // https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
-  const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
+  vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 
   preview = document.querySelector('#preview')
   textarea = document.querySelector('#textarea')
@@ -20,20 +17,11 @@ window.addEventListener('load', () => {
 
   preview.innerHTML = '' // remove the "JS did not run" message
 
-  isLoaded = true
-  if (pendingMessage) {
-    messageHandler(pendingMessage)
-  }
-})
+  // Handle the message inside the webview
+  window.addEventListener('message', event => {
+    messageHandler(event.data)
+  })
 
-// Handle the message inside the webview
-window.addEventListener('message', event => {
-  const message = event.data
-  if (isLoaded) {
-    messageHandler(message)
-  } else {
-    pendingMessage = message
-  }
 })
 
 const elementMap = new Map()
@@ -60,12 +48,6 @@ function messageHandler(message) {
 
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(xml, 'text/xml')
-
-  // If a parseerror occurs then the root element is an <html>
-  // that contains a <parseerrror> element inside it
-  if (xmlDoc.documentElement.tagName === 'html') {
-    throw new Error(`Could not parse input as XML`)
-  }
 
   function translateTag(tagName) {
     tagName = tagName.toLowerCase().replace('m:', '') // MathJax does not like `m:` prefix on MathML elements
