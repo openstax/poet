@@ -2,15 +2,15 @@ import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, ensureCatch } from './utils'
-import { PanelType } from './panel-type'
+import { PanelType } from './extension-types'
 
 export interface PanelIncomingMessage {
   mediaUploads?: Array<{mediaName: string, data: string}>
 }
 
-export const showImageUpload = (resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async () => {
+export const showImageUpload = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async () => {
   const panel = vscode.window.createWebviewPanel(
-    'openstax.imageUpload',
+    panelType,
     'ImageUpload',
     vscode.ViewColumn.One,
     {
@@ -24,7 +24,7 @@ export const showImageUpload = (resourceRootDir: string, activePanelsByType: {[k
   panel.webview.html = html
 
   panel.reveal(vscode.ViewColumn.One)
-  activePanelsByType['openstax.imageUpload'] = panel
+  activePanelsByType[panelType] = panel
 
   panel.webview.onDidReceiveMessage(ensureCatch(handleMessage()))
 }

@@ -188,7 +188,7 @@ const EditorPanel = (props) => {
 }
 
 const App = (props) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+  <div data-app-init='true' style={{ display: 'flex', justifyContent: 'space-between' }}>
     <EditorPanel
       modifiesStateName={'editable'}
       treesData={props.treesData.editable}

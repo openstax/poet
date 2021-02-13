@@ -2,13 +2,13 @@ import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
 import { fixResourceReferences, fixCspSourceReferences, addBaseHref, getLocalResourceRoots, expect, ensureCatch } from './utils'
-import { PanelType } from './panel-type'
+import { PanelType } from './extension-types'
 
 export interface PanelIncomingMessage {
   xml?: string
 }
 
-export const showCnxmlPreview = (resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async (uri?: vscode.Uri, previewSettings?: any) => {
+export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async (uri?: vscode.Uri, previewSettings?: any) => {
   let maybeResource = uri
   let contents: string | null = null
   const editor = vscode.window.activeTextEditor
@@ -34,7 +34,7 @@ export const showCnxmlPreview = (resourceRootDir: string, activePanelsByType: {[
   const previewColumn = resourceColumn + 1 // because the preview is on the side
 
   const panel = vscode.window.createWebviewPanel(
-    'openstax.cnxmlPreview',
+    panelType,
     `Preview ${path.basename(resource.fsPath)}`,
     previewColumn, {
       enableScripts: true,
@@ -42,7 +42,8 @@ export const showCnxmlPreview = (resourceRootDir: string, activePanelsByType: {[
       enableFindWidget: true
     }
   )
-  activePanelsByType['openstax.cnxmlPreview'] = panel
+  activePanelsByType[panelType] = panel
+  let disposed = false
 
   let html = fs.readFileSync(path.join(resourceRootDir, 'cnxml-preview.html'), 'utf-8')
   html = addBaseHref(panel.webview, resource, html)
@@ -58,6 +59,9 @@ export const showCnxmlPreview = (resourceRootDir: string, activePanelsByType: {[
 
   async function updatePreview(): Promise<void> {
     clearTimeout(throttleTimer)
+    if (disposed) {
+      return
+    }
     let document: vscode.TextDocument
     try {
       document = await vscode.workspace.openTextDocument(resource)
@@ -76,6 +80,9 @@ export const showCnxmlPreview = (resourceRootDir: string, activePanelsByType: {[
 
   // https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
   panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(resource)))
+  panel.onDidDispose(() => {
+    disposed = true
+  })
 }
 
 export const handleMessage = (resource: vscode.Uri) => async (message: PanelIncomingMessage) => {

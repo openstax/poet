@@ -5,7 +5,7 @@ import path from 'path'
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
-import { PanelType } from './panel-type'
+import { PanelType } from './extension-types'
 
 const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -80,10 +80,10 @@ async function preloadGuessedModuleTitles(): Promise<void> {
   await Promise.all(promises)
 }
 
-export const showTocEditor = (resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async () => {
+export const showTocEditor = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async () => {
   await preloadGuessedModuleTitles()
   const panel = vscode.window.createWebviewPanel(
-    'openstax.tocEditor',
+    panelType,
     'Table of Contents Editor',
     vscode.ViewColumn.One,
     {
@@ -97,7 +97,7 @@ export const showTocEditor = (resourceRootDir: string, activePanelsByType: {[key
   panel.webview.html = html
 
   panel.reveal(vscode.ViewColumn.One)
-  activePanelsByType['openstax.tocEditor'] = panel
+  activePanelsByType[panelType] = panel
 
   const messageQueued: {uneditable: TocTreeCollection[], editable: TocTreeCollection[]} = {
     uneditable: [],

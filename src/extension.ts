@@ -3,7 +3,7 @@ import path from 'path'
 import { showTocEditor } from './panel-toc-editor'
 import { showImageUpload } from './panel-image-upload'
 import { showCnxmlPreview } from './panel-cnxml-preview'
-import { PanelType } from './panel-type'
+import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-types'
 import { expect, ensureCatch } from './utils'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
@@ -11,14 +11,14 @@ const resourceRootDir = path.join(__dirname) // extension is running in dist/
 // Only one instance of each type allowed at any given time
 const activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel} = {}
 const activationByType: {[key in PanelType]: any} = {
-  'openstax.tocEditor': ensureCatch(showTocEditor(resourceRootDir, activePanelsByType)),
-  'openstax.imageUpload': ensureCatch(showImageUpload(resourceRootDir, activePanelsByType)),
-  'openstax.cnxmlPreview': ensureCatch(showCnxmlPreview(resourceRootDir, activePanelsByType))
+  [PanelType.TOC_EDITOR]: ensureCatch(showTocEditor(PanelType.TOC_EDITOR, resourceRootDir, activePanelsByType)),
+  [PanelType.IMAGE_UPLOAD]: ensureCatch(showImageUpload(PanelType.IMAGE_UPLOAD, resourceRootDir, activePanelsByType)),
+  [PanelType.CNXML_PREVIEW]: ensureCatch(showCnxmlPreview(PanelType.CNXML_PREVIEW, resourceRootDir, activePanelsByType))
 }
 const defaultLocationByType: {[key in PanelType]: vscode.ViewColumn} = {
-  'openstax.tocEditor': vscode.ViewColumn.One,
-  'openstax.imageUpload': vscode.ViewColumn.One,
-  'openstax.cnxmlPreview': vscode.ViewColumn.Two
+  [PanelType.TOC_EDITOR]: vscode.ViewColumn.One,
+  [PanelType.IMAGE_UPLOAD]: vscode.ViewColumn.One,
+  [PanelType.CNXML_PREVIEW]: vscode.ViewColumn.Two
 }
 
 const lazilyFocusOrOpenPanelOfType = (type: PanelType) => {
@@ -41,9 +41,9 @@ const extensionExports = {
   activePanelsByType
 }
 export function activate(context: vscode.ExtensionContext): typeof extensionExports {
-  vscode.commands.registerCommand('openstax.showTocEditor', lazilyFocusOrOpenPanelOfType('openstax.tocEditor'))
-  vscode.commands.registerCommand('openstax.showImageUpload', lazilyFocusOrOpenPanelOfType('openstax.imageUpload'))
-  vscode.commands.registerCommand('openstax.showPreviewToSide', lazilyFocusOrOpenPanelOfType('openstax.cnxmlPreview'))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR]))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD]))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]))
   return extensionExports
 }
 

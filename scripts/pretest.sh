@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eo pipefail
+set -xeo pipefail
 rm -rf ./out/
 rm -rf ./out-instrumented/
 rm -rf ./.nyc_output/

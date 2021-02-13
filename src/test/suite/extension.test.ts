@@ -1,5 +1,5 @@
 import assert from 'assert'
-import fs from 'fs'
+import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
 import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref } from './../../utils'
@@ -7,8 +7,13 @@ import { activate } from './../../extension'
 import { handleMessage as tocEditorHandleMessage, TocTreeCollection } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
+import { commandToPanelType, OpenstaxCommand } from '../../extension-types'
+import { Suite } from 'mocha'
 
-const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo') // Running in out/test/suite, not src/test/suite
+// Test runs in out/test/suite, not src/test/suite
+const ORIGIN_DATA_DIR = path.join(__dirname, '../../../src/test/data/test-repo')
+const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo') 
+
 const extensionExports = activate(undefined as any)
 
 async function sleep(ms: number): Promise<void> {
@@ -30,7 +35,24 @@ const withTestPanel = (html: string, func: (arg0: vscode.WebviewPanel) => void) 
   panel.dispose()
 }
 
-suite('Extension Test Suite', () => {
+const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscode.WebviewPanel) => Promise<void>) => {
+  await vscode.commands.executeCommand(command)
+  // Wait for panel to load
+  await sleep(1000)
+  const panel = expect(extensionExports.activePanelsByType[commandToPanelType[command]])
+  await func(panel)
+  panel.dispose()
+}
+
+const resetTestData = async () => {
+  await vscode.workspace.saveAll(true)
+  fs.rmdirSync(TEST_DATA_DIR, { recursive: true })
+  fs.mkdirpSync(TEST_DATA_DIR)
+  fs.copySync(ORIGIN_DATA_DIR, TEST_DATA_DIR)
+}
+
+suite('Extension Test Suite', function(this: Suite) {
+  this.beforeEach(resetTestData)
   test('expect unwraps non-null', () => {
     const maybe: string | null = 'test'
     assert.doesNotThrow(() => { expect(maybe) })
@@ -105,21 +127,18 @@ suite('Extension Test Suite', () => {
     assert.strictEqual(roots[0].fsPath, TEST_DATA_DIR)
   })
   test('show toc editor', async () => {
-    await vscode.commands.executeCommand('openstax.showTocEditor')
-    await sleep(1000)
-    const html = expect(extensionExports.activePanelsByType['openstax.tocEditor']).webview.html
-    assert.notStrictEqual(html, null)
-    assert.notStrictEqual(html, undefined)
-    assert.notStrictEqual(html.indexOf('html'), -1)
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const html = panel.webview.html
+      assert.notStrictEqual(html, null)
+      assert.notStrictEqual(html, undefined)
+      assert.notStrictEqual(html.indexOf('html'), -1)
+    })
   }).timeout(5000)
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
     const collectionUri = uri.with({ path: path.join(uri.path, 'collections', 'test.collection.xml') })
     const document = await vscode.workspace.openTextDocument(collectionUri)
     const before = document.getText()
-    await vscode.commands.executeCommand('openstax.showTocEditor')
-    await sleep(1000)
-    const panel = expect(extensionExports.activePanelsByType['openstax.tocEditor'])
     const mockEditAddModule: TocTreeCollection = {
       type: 'collection',
       title: 'test collection',
@@ -138,48 +157,39 @@ suite('Extension Test Suite', () => {
         title: 'Unnamed Module'
       }]
     }
-    await tocEditorHandleMessage(panel, { editable: [], uneditable: [] })({ treeData: mockEditAddModule })
-    const after = document.getText()
-    assert.strictEqual(before.indexOf('m00002'), -1)
-    assert.notStrictEqual(after.indexOf('m00002'), -1)
-
-    // Clean up
-    const fullRange = new vscode.Range(
-      document.positionAt(0),
-      document.positionAt(document.getText().length)
-    )
-    const edit = new vscode.WorkspaceEdit()
-    edit.replace(collectionUri, fullRange, before)
-    await vscode.workspace.applyEdit(edit)
-    await document.save()
-    assert.strictEqual(before, document.getText())
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel, { editable: [], uneditable: [] })
+      await handler({ treeData: mockEditAddModule })
+      const after = document.getText()
+      assert.strictEqual(before.indexOf('m00002'), -1)
+      assert.notStrictEqual(after.indexOf('m00002'), -1)
+    })
   }).timeout(5000)
   test('toc editor handle signal message', async () => {
-    await vscode.commands.executeCommand('openstax.showTocEditor')
-    await sleep(1000)
-    const panel = expect(extensionExports.activePanelsByType['openstax.tocEditor'])
-    assert.rejects(tocEditorHandleMessage(panel, { editable: [], uneditable: [] })({ signal: { type: 'error', message: 'test' } }))
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel, { editable: [], uneditable: [] })
+      assert.rejects(handler({ signal: { type: 'error', message: 'test' } }))
+    })
   }).timeout(5000)
   test('show image upload', async () => {
-    await vscode.commands.executeCommand('openstax.showImageUpload')
-    await sleep(1000)
-    const html = expect(extensionExports.activePanelsByType['openstax.imageUpload']).webview.html
-    assert.notStrictEqual(html, null)
-    assert.notStrictEqual(html, undefined)
-    assert.notStrictEqual(html.indexOf('html'), -1)
+    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
+      const html = panel.webview.html
+      assert.notStrictEqual(html, null)
+      assert.notStrictEqual(html, undefined)
+      assert.notStrictEqual(html.indexOf('html'), -1)
+    })
   }).timeout(5000)
   test('image upload handle message', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
-    await imageUploadHandleMessage()({mediaUploads: [{mediaName: 'urgent2.jpg', data: 'data:image/jpeg;base64,' + data}]})
+    const handler = imageUploadHandleMessage()
+    await handler({mediaUploads: [{mediaName: 'urgent2.jpg', data: 'data:image/jpeg;base64,' + data}]})
     const uploaded = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent2.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, uploaded)
-
-    // Cleanup
-    fs.unlinkSync(path.join(TEST_DATA_DIR, 'media/urgent2.jpg'))
   })
   test('image upload handle message ignore duplicate image', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
-    await imageUploadHandleMessage()({mediaUploads: [{mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0'}]})
+    const handler = imageUploadHandleMessage()
+    await handler({mediaUploads: [{mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0'}]})
     const newData = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, newData)
   })
@@ -188,12 +198,12 @@ suite('Extension Test Suite', () => {
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
     const document = await vscode.workspace.openTextDocument(resource)
     await vscode.window.showTextDocument(document)
-    await vscode.commands.executeCommand('openstax.showPreviewToSide')
-    await sleep(1000)
-    const html = expect(extensionExports.activePanelsByType['openstax.cnxmlPreview']).webview.html
-    assert.notStrictEqual(html, null)
-    assert.notStrictEqual(html, undefined)
-    assert.notStrictEqual(html.indexOf('html'), -1)
+    await withPanelFromCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, async (panel) => {
+      const html = panel.webview.html
+      assert.notStrictEqual(html, null)
+      assert.notStrictEqual(html, undefined)
+      assert.notStrictEqual(html.indexOf('html'), -1)
+    })
   }).timeout(5000)
   test('cnxml preview handle message', async () => {
     const uri = expect(getRootPathUri())
@@ -201,55 +211,16 @@ suite('Extension Test Suite', () => {
     const document = await vscode.workspace.openTextDocument(resource)
     const before = document.getText()
     const testData = '<document>Test</document>'
-    await cnxmlPreviewHandleMessage(resource)({xml: testData})
+    const handler = cnxmlPreviewHandleMessage(resource)
+    await handler({xml: testData})
     const modified = document.getText()
     assert.strictEqual(modified, testData)
     assert.notStrictEqual(modified, before)
-    
-    // Clean up
-    const fullRange = new vscode.Range(
-      document.positionAt(0),
-      document.positionAt(document.getText().length)
-    )
-    const edit = new vscode.WorkspaceEdit()
-    edit.replace(resource, fullRange, before)
-    await vscode.workspace.applyEdit(edit)
-    await document.save()
-    assert.strictEqual(before, document.getText())
-  })
-  test('cnxml preview with edits', async () => {
-    const uri = expect(getRootPathUri())
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const document = await vscode.workspace.openTextDocument(resource)
-    await vscode.window.showTextDocument(document)
-    await vscode.commands.executeCommand('openstax.showPreviewToSide')
-    await sleep(1000)
-    const documentBefore = document.getText()
-    const htmlBefore = expect(extensionExports.activePanelsByType['openstax.cnxmlPreview']).webview.html
-
-    const insertIndex = documentBefore.indexOf('</content>')
-
-    assert.strictEqual(htmlBefore.indexOf('__INSERTED__'), -1)
-
-    // Clean up
-    const fullRange = new vscode.Range(
-      document.positionAt(0),
-      document.positionAt(document.getText().length)
-    )
-    const edit = new vscode.WorkspaceEdit()
-    edit.replace(resource, fullRange, documentBefore)
-    await vscode.workspace.applyEdit(edit)
-    await document.save()
-    assert.strictEqual(documentBefore, document.getText())
   })
   test('panel disposed and refocused', async () => {
     await assert.doesNotReject(async () => {
-      await vscode.commands.executeCommand('openstax.showTocEditor')
-      await sleep(1000)
-      const panel = expect(extensionExports.activePanelsByType['openstax.tocEditor'])
-      panel.dispose()
-      await vscode.commands.executeCommand('openstax.showTocEditor')
-      await sleep(1000)
-    })    
+      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})
+      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})
+    })
   }).timeout(5000)
 })
