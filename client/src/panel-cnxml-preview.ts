@@ -81,4 +81,13 @@ export const showCnxmlPreview = (resourceRootDir: string) => async (uri?: vscode
       await vscode.workspace.applyEdit(edit)
     } catch { }
   })
+
+  panel.onDidChangeViewState(async event => {
+    // Trigger a message to the panel by resetting the content whenever the
+    // view state changes and it is active.
+    if (event.webviewPanel.active) {
+      contents = null
+      await updatePreview()
+    }
+  })
 }
