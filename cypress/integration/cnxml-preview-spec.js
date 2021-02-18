@@ -1,5 +1,8 @@
 /// <reference types="cypress" />
 
+// The HTML file that cypress should load when running tests (relative to the project root)
+const htmlPath = './out/cnxml-preview.html'
+
 describe('cnxml-preview Webview Tests', () => {
   function postMessage(msg) {
     cy.window().then($window => {
@@ -13,7 +16,7 @@ describe('cnxml-preview Webview Tests', () => {
   let pending = []
 
   beforeEach(() => {
-    cy.visit('./out/cnxml-preview.html', {
+    cy.visit(htmlPath, {
       onBeforeLoad: (contentWindow) => {
         class API {
           postMessage(msg) { pending.push(msg) }

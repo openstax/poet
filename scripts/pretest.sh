@@ -3,7 +3,6 @@
 set -xeo pipefail
 rm -rf ./out/
 rm -rf ./.nyc_output/
-mkdir -p ./.nyc_output/
 tsc --project ./tsconfig.json
 webpack --mode development
 cp -r ./dist/* ./out/
