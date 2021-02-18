@@ -92,7 +92,13 @@ async function validateImagePaths(textDocument: TextDocument): Promise<void> {
   }
 
   for (const image of images) {
-    const imageSrc = image.$.src
+    // Ignore if this image doesn't have attributes or src (e.g. if it is
+    // being edited).
+    const imageSrc = image !== '' && 'src' in image.$ ? image.$.src : null
+    if (imageSrc == null) {
+      continue
+    }
+
     const documentPath = URI.parse(textDocument.uri).path
     // The image path is relative to the document
     const imagePath = path.join(path.dirname(documentPath), imageSrc)
