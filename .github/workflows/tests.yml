@@ -28,9 +28,16 @@ jobs:
           xvfb-run -a npm test
       - name: Build Extension
         run: |
-          PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
-          echo $PR_NUMBER
-          sed -Ei 's/("version": ")(.+)(",)$/\1\2-'$PR_NUMBER'\3/' package.json
+          case "$GITHUB_EVENT_NAME" in
+            push)
+              VERSION_VALUE=${GITHUB_SHA:0:7};;
+            pull_request)
+              VERSION_VALUE=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH");;
+            *)
+              VERSION_VALUE="unknown";;
+          esac
+          echo $VERSION_VALUE
+          sed -Ei 's/("version": ")(.+)(",)$/\1\2-'$VERSION_VALUE'\3/' package.json
           npm run package
       - name: Upload Extention
         uses: actions/upload-artifact@v2
