@@ -1,24 +1,20 @@
 import {
   createConnection,
   TextDocuments,
-  Diagnostic,
-  DiagnosticSeverity,
   ProposedFeatures,
   InitializeParams,
   TextDocumentSyncKind,
-  InitializeResult
+  InitializeResult,
+  Diagnostic
 } from 'vscode-languageserver/node'
 
-import xpath from 'xml2js-xpath'
-import { parseStringPromise } from 'xml2js'
-import {
-  URI
-} from 'vscode-uri'
 import {
   TextDocument
 } from 'vscode-languageserver-textdocument'
-import fs from 'fs'
-import path from 'path'
+
+import {
+  parseXMLString, validateImagePaths
+} from './utils'
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -58,7 +54,17 @@ documents.onDidClose(event => {
 
 documents.onDidChangeContent(async event => {
   const textDocument = event.document
-  await validateImagePaths(textDocument)
+  const diagnostics: Diagnostic[] = []
+  const xmlData = await parseXMLString(textDocument)
+
+  if (xmlData != null) {
+    const imagePathDiagnostics = await validateImagePaths(textDocument, xmlData)
+    diagnostics.push(...imagePathDiagnostics)
+  }
+  connection.sendDiagnostics({
+    uri: textDocument.uri,
+    diagnostics
+  })
 })
 
 // Make the text document manager listen on the connection
@@ -67,58 +73,3 @@ documents.listen(connection)
 
 // Listen on the connection
 connection.listen()
-
-async function validateImagePaths(textDocument: TextDocument): Promise<void> {
-  const text = textDocument.getText()
-  const diagnostics: Diagnostic[] = []
-  const diagnosticSource = 'Image validation'
-  let images = []
-
-  try {
-    const xmlData = await parseStringPromise(text)
-    images = xpath.find(xmlData, '//image')
-  } catch {
-    // Send an error that the validator can't parse file as XML
-    const diagnostic: Diagnostic = {
-      severity: DiagnosticSeverity.Error,
-      range: {
-        start: textDocument.positionAt(0),
-        end: textDocument.positionAt(0)
-      },
-      message: `Cannot parse ${textDocument.uri} as valid XML`,
-      source: diagnosticSource
-    }
-    diagnostics.push(diagnostic)
-  }
-
-  for (const image of images) {
-    // Ignore if this image doesn't have attributes or src (e.g. if it is
-    // being edited).
-    const imageSrc = image !== '' && 'src' in image.$ ? image.$.src : null
-    if (imageSrc == null) {
-      continue
-    }
-
-    const documentPath = URI.parse(textDocument.uri).path
-    // The image path is relative to the document
-    const imagePath = path.join(path.dirname(documentPath), imageSrc)
-    // Track the location of the image path in the text for diagnostic range
-    const imageLocation = text.indexOf(imageSrc)
-
-    if (fs.existsSync(imagePath)) {
-      continue
-    }
-    const diagnostic: Diagnostic = {
-      severity: DiagnosticSeverity.Error,
-      range: {
-        start: textDocument.positionAt(imageLocation),
-        end: textDocument.positionAt(imageLocation + parseInt(imageSrc.length))
-      },
-      message: `Image file ${String(imageSrc)} doesn't exist!`,
-      source: diagnosticSource
-    }
-    diagnostics.push(diagnostic)
-  }
-
-  connection.sendDiagnostics({ uri: textDocument.uri, diagnostics })
-}
