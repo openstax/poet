@@ -23,14 +23,14 @@ export function parseXMLString(textDocument: TextDocument): Document | null {
 }
 
 export async function validateImagePaths(textDocument: TextDocument, xmlData: Document): Promise<Diagnostic[]> {
-  const text = textDocument.getText()
   const diagnostics: Diagnostic[] = []
 
   const select = xpath.useNamespaces({ cnxml: NS_CNXML })
   const images = select('//cnxml:image[@src]', xmlData) as Node[]
 
   for (const image of images) {
-    const imageSrc = (image as Element).getAttribute('src')
+    const imageElement = image as any
+    const imageSrc = imageElement.getAttribute('src')
     if (imageSrc == null) {
       continue
     }
@@ -39,15 +39,22 @@ export async function validateImagePaths(textDocument: TextDocument, xmlData: Do
     // The image path is relative to the document
     const imagePath = path.join(path.dirname(documentPath), imageSrc)
     // Track the location of the image path in the text for diagnostic range
-    const imageLocation = text.indexOf(imageSrc)
+    const startPosition: Position = {
+      line: imageElement.lineNumber - 1,
+      character: imageElement.columnNumber - 1
+    }
+    const endPosition: Position = {
+      line: imageElement.nextSibling.lineNumber - 1,
+      character: imageElement.nextSibling.columnNumber - 1
+    }
 
     if (fs.existsSync(imagePath)) {
       continue
     }
     const diagnostic: Diagnostic = generateDiagnostic(
       DiagnosticSeverity.Error,
-      textDocument.positionAt(imageLocation),
-      textDocument.positionAt(imageLocation + imageSrc.length),
+      startPosition,
+      endPosition,
       `Image file ${String(imageSrc)} doesn't exist!`,
       IMAGEPATH_DIAGNOSTIC_SOURCE
     )

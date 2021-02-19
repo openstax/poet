@@ -83,13 +83,13 @@ describe('validateImagePaths', function () {
     const xmlData = parseXMLString(inputDocument)
     assert(xmlData != null)
     const result = await validateImagePaths(inputDocument, xmlData)
-    const image2Location = inputContent.indexOf('../../media/image2.jpg')
-    const image3Location = inputContent.indexOf('../../media/image3.jpg')
+    const image2Location = inputContent.indexOf('<image src="../../media/image2.jpg"')
+    const image3Location = inputContent.indexOf('<image src="../../media/image3.jpg"')
     const expectedDiagnostic1: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
         start: inputDocument.positionAt(image2Location),
-        end: inputDocument.positionAt(image2Location + '../../media/image2.jpg'.length)
+        end: inputDocument.positionAt(image2Location + '<image src="../../media/image2.jpg" />'.length)
       },
       message: 'Image file ../../media/image2.jpg doesn\'t exist!',
       source: IMAGEPATH_DIAGNOSTIC_SOURCE
@@ -98,9 +98,46 @@ describe('validateImagePaths', function () {
       severity: DiagnosticSeverity.Error,
       range: {
         start: inputDocument.positionAt(image3Location),
-        end: inputDocument.positionAt(image3Location + '../../media/image3.jpg'.length)
+        end: inputDocument.positionAt(image3Location + '<image src="../../media/image3.jpg" />'.length)
       },
       message: 'Image file ../../media/image3.jpg doesn\'t exist!',
+      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+    }
+    assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
+  })
+  it('should return correct diagnostics with duplicate invalid images', async function () {
+    const inputContent = `
+      <document xmlns="http://cnx.rice.edu/cnxml">
+        <content>
+          <image src="../../media/image2.jpg" />
+          <image src="../../media/image2.jpg" />
+        </content>
+      </document>
+    `
+    const inputDocument = TextDocument.create(
+      'file:///modules/m12345/index.cnxml', '', 0, inputContent
+    )
+    const xmlData = parseXMLString(inputDocument)
+    assert(xmlData != null)
+    const result = await validateImagePaths(inputDocument, xmlData)
+    const image2Location = inputContent.indexOf('<image src="../../media/image2.jpg"')
+    const image2DupLocation = inputContent.lastIndexOf('<image src="../../media/image2.jpg"')
+    const expectedDiagnostic1: Diagnostic = {
+      severity: DiagnosticSeverity.Error,
+      range: {
+        start: inputDocument.positionAt(image2Location),
+        end: inputDocument.positionAt(image2Location + '<image src="../../media/image2.jpg" />'.length)
+      },
+      message: 'Image file ../../media/image2.jpg doesn\'t exist!',
+      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+    }
+    const expectedDiagnostic2: Diagnostic = {
+      severity: DiagnosticSeverity.Error,
+      range: {
+        start: inputDocument.positionAt(image2DupLocation),
+        end: inputDocument.positionAt(image2DupLocation + '<image src="../../media/image2.jpg" />'.length)
+      },
+      message: 'Image file ../../media/image2.jpg doesn\'t exist!',
       source: IMAGEPATH_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
