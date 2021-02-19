@@ -2,35 +2,32 @@ import { Diagnostic, DiagnosticSeverity, Position } from 'vscode-languageserver/
 import {
   TextDocument
 } from 'vscode-languageserver-textdocument'
-import { parseStringPromise } from 'xml2js'
-import xpath from 'xml2js-xpath'
+import { DOMParser } from 'xmldom'
+import * as xpath from 'xpath-ts'
 import {
   URI
 } from 'vscode-uri'
 import fs from 'fs'
 import path from 'path'
 
+const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 export const IMAGEPATH_DIAGNOSTIC_SOURCE = 'Image validation'
 
-export async function parseXMLString(textDocument: TextDocument): Promise<any> {
-  try {
-    const text = textDocument.getText()
-    const xmlData = await parseStringPromise(text)
-    return xmlData
-  } catch {
-    return null
-  }
+export function parseXMLString(textDocument: TextDocument): Document {
+  const text = textDocument.getText()
+  const xmlData: Document = new DOMParser().parseFromString(text)
+  return xmlData
 }
 
-export async function validateImagePaths(textDocument: TextDocument, xmlData: any): Promise<Diagnostic[]> {
+export async function validateImagePaths(textDocument: TextDocument, xmlData: Document): Promise<Diagnostic[]> {
   const text = textDocument.getText()
   const diagnostics: Diagnostic[] = []
-  const images = xpath.find(xmlData, '//image')
+
+  const select = xpath.useNamespaces({ cnxml: NS_CNXML })
+  const images = select('//cnxml:image[@src]', xmlData) as Node[]
 
   for (const image of images) {
-    // Ignore if this image doesn't have attributes or src (e.g. if it is
-    // being edited).
-    const imageSrc = image !== '' && 'src' in image.$ ? image.$.src : null
+    const imageSrc = (image as Element).getAttribute('src')
     if (imageSrc == null) {
       continue
     }
@@ -47,7 +44,7 @@ export async function validateImagePaths(textDocument: TextDocument, xmlData: an
     const diagnostic: Diagnostic = generateDiagnostic(
       DiagnosticSeverity.Error,
       textDocument.positionAt(imageLocation),
-      textDocument.positionAt(imageLocation + parseInt(imageSrc.length)),
+      textDocument.positionAt(imageLocation + imageSrc.length),
       `Image file ${String(imageSrc)} doesn't exist!`,
       IMAGEPATH_DIAGNOSTIC_SOURCE
     )

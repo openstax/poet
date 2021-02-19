@@ -10,18 +10,9 @@ import mockfs from 'mock-fs'
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver'
 
 describe('parseXMLString', function () {
-  it('should return null on bad XML', async function () {
-    const inputContent = `
-      <document></documentt>
-    `
-    const inputDocument = TextDocument.create('', '', 0, inputContent)
-    const result = await parseXMLString(inputDocument)
-    assert.strictEqual(result, null)
-  })
-
   it('should return an object on valid XML', async function () {
     const inputContent = `
-      <document>
+      <document xmlns="http://cnx.rice.edu/cnxml">
         <content></content>
       </document>
     `
@@ -42,7 +33,7 @@ describe('validateImagePaths', function () {
   })
   it('should return empty diagnostics when no images', async function () {
     const inputContent = `
-      <document>
+      <document xmlns="http://cnx.rice.edu/cnxml">
         <content></content>
       </document>
     `
@@ -55,7 +46,7 @@ describe('validateImagePaths', function () {
   })
   it('should return empty diagnostics when all images are valid', async function () {
     const inputContent = `
-      <document>
+      <document xmlns="http://cnx.rice.edu/cnxml">
         <content>
           <image src="../../media/image1.jpg" />
         </content>
@@ -70,7 +61,7 @@ describe('validateImagePaths', function () {
   })
   it('should return diagnostics when images are invalid', async function () {
     const inputContent = `
-      <document>
+      <document xmlns="http://cnx.rice.edu/cnxml">
         <content>
           <image src="../../media/image1.jpg" />
           <image src="../../media/image2.jpg" />
@@ -107,7 +98,7 @@ describe('validateImagePaths', function () {
   })
   it('should ignore incomplete image elements', async function () {
     const inputContent = `
-      <document>
+      <document xmlns="http://cnx.rice.edu/cnxml">
         <content>
           <image src="../../media/image1.jpg" />
           <image />

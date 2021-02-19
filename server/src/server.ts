@@ -55,12 +55,11 @@ documents.onDidClose(event => {
 documents.onDidChangeContent(async event => {
   const textDocument = event.document
   const diagnostics: Diagnostic[] = []
-  const xmlData = await parseXMLString(textDocument)
+  const xmlData: Document = parseXMLString(textDocument)
 
-  if (xmlData != null) {
-    const imagePathDiagnostics = await validateImagePaths(textDocument, xmlData)
-    diagnostics.push(...imagePathDiagnostics)
-  }
+  const imagePathDiagnostics = await validateImagePaths(textDocument, xmlData)
+  diagnostics.push(...imagePathDiagnostics)
+
   connection.sendDiagnostics({
     uri: textDocument.uri,
     diagnostics
