@@ -13,9 +13,12 @@ import path from 'path'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 export const IMAGEPATH_DIAGNOSTIC_SOURCE = 'Image validation'
 
-export function parseXMLString(textDocument: TextDocument): Document {
+export function parseXMLString(textDocument: TextDocument): Document | null {
   const text = textDocument.getText()
   const xmlData: Document = new DOMParser().parseFromString(text)
+  if (xmlData === undefined) {
+    return null
+  }
   return xmlData
 }
 

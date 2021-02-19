@@ -10,6 +10,12 @@ import mockfs from 'mock-fs'
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver'
 
 describe('parseXMLString', function () {
+  it('should return null on a new / empty XML', async function () {
+    const inputContent = ''
+    const inputDocument = TextDocument.create('', '', 0, inputContent)
+    const result = parseXMLString(inputDocument)
+    assert.strictEqual(result, null)
+  })
   it('should return an object on valid XML', async function () {
     const inputContent = `
       <document xmlns="http://cnx.rice.edu/cnxml">
@@ -17,7 +23,7 @@ describe('parseXMLString', function () {
       </document>
     `
     const inputDocument = TextDocument.create('', '', 0, inputContent)
-    const result = await parseXMLString(inputDocument)
+    const result = parseXMLString(inputDocument)
     assert(result instanceof Object)
   })
 })
@@ -40,7 +46,8 @@ describe('validateImagePaths', function () {
     const inputDocument = TextDocument.create(
       'file:///modules/m12345/index.cnxml', '', 0, inputContent
     )
-    const xmlData = await parseXMLString(inputDocument)
+    const xmlData = parseXMLString(inputDocument)
+    assert(xmlData != null)
     const result = await validateImagePaths(inputDocument, xmlData)
     assert.deepStrictEqual(result, [])
   })
@@ -55,7 +62,8 @@ describe('validateImagePaths', function () {
     const inputDocument = TextDocument.create(
       'file:///modules/m12345/index.cnxml', '', 0, inputContent
     )
-    const xmlData = await parseXMLString(inputDocument)
+    const xmlData = parseXMLString(inputDocument)
+    assert(xmlData != null)
     const result = await validateImagePaths(inputDocument, xmlData)
     assert.deepStrictEqual(result, [])
   })
@@ -72,7 +80,8 @@ describe('validateImagePaths', function () {
     const inputDocument = TextDocument.create(
       'file:///modules/m12345/index.cnxml', '', 0, inputContent
     )
-    const xmlData = await parseXMLString(inputDocument)
+    const xmlData = parseXMLString(inputDocument)
+    assert(xmlData != null)
     const result = await validateImagePaths(inputDocument, xmlData)
     const image2Location = inputContent.indexOf('../../media/image2.jpg')
     const image3Location = inputContent.indexOf('../../media/image3.jpg')
@@ -108,7 +117,8 @@ describe('validateImagePaths', function () {
     const inputDocument = TextDocument.create(
       'file:///modules/m12345/index.cnxml', '', 0, inputContent
     )
-    const xmlData = await parseXMLString(inputDocument)
+    const xmlData = parseXMLString(inputDocument)
+    assert(xmlData != null)
     const result = await validateImagePaths(inputDocument, xmlData)
     assert.deepStrictEqual(result, [])
   })
