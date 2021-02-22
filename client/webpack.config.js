@@ -9,6 +9,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const extensionConfig = {
     target: 'node',
 
+    context: path.join(__dirname),
     entry: './src/extension.ts',
     output: {
         path: path.resolve(__dirname, 'dist'),
@@ -37,6 +38,7 @@ const extensionConfig = {
 
 /**@type {import('webpack').Configuration}*/
 const viewConfig = {
+    context: path.join(__dirname),
     devtool: 'source-map',
     entry: {
         'toc-editor': './src/webview-js/toc-editor/toc-editor.jsx',
@@ -47,8 +49,8 @@ const viewConfig = {
         path: path.resolve(__dirname, 'dist'),
         filename: '[name].bundle.js'
     },
-    resolve: { 
-        alias: { 
+    resolve: {
+        alias: {
             "react": "preact/compat",
             "react-dom/test-utils": "preact/test-utils",
             "react-dom": "preact/compat",
