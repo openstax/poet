@@ -1,4 +1,5 @@
-# VSCode Extension that runs in gitpod/Theia
+# VSCode Extension that runs in gitpod
+[![Coverage Status](https://img.shields.io/codecov/c/github/openstax/poet.svg)](https://codecov.io/gh/openstax/poet)
 
 ![installing and enabling the preview](./editor.gif)
 
