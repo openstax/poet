@@ -13,6 +13,16 @@
 
 For debugging, open the webview developer tools by opening the command pallete and selecting `Developer: Open Webview Developer Tools`. This will allow you to inspect the webview contents. **Note:** It can only be opened when the webview is open.
 
+The tests for client and server require running the `test-compile` script beforehand. For example, the server tests can be run via command line as follows:
+
+```bash
+$ npm install
+$ npm run test-compile
+$ npm run test-server
+```
+
+If you use the launch configuration to invoke the client tests from VS Code, the `test-compile` will be run automatically.
+
 ## Enabling the Code editor for Gitpod
 
 Go to your [settings](https://gitpod.io/settings/) view and select "Enable Feature Preview". Then, you can choose Code as your Default IDE (or switch back to Theia). The change will be reflected in any new workspace you create.

@@ -19,7 +19,9 @@
 		"package": "vsce package",
 		"watch": "tsc -b -watch",
 		"lint": "eslint ./client/src ./server/src --ext ts,js,jsx,tsx",
-		"test": "node ./client/out/test/runTest.js",
+		"test-client": "node ./client/out/test/runTest.js",
+		"test-server": "./server/node_modules/.bin/mocha ./server/out/test/server.test.js",
+		"test": "npm run test-client && npm run test-server",
 		"postinstall": "cd client && npm install && cd ../server && npm install"
 	},
 	"activationEvents": [
