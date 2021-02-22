@@ -20,9 +20,10 @@
     "package": "vsce package",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts,js,jsx,tsx",
-    "pretest": "./scripts/pretest.sh",
-    "posttest": "cypress run",
-    "test": "node ./out/test/runTest.js"
+    "test:compile": "./scripts/pretest.sh",
+    "test:extension": "node ./out/test/runTest.js",
+    "test:browser": "cypress run",
+    "test": "npm run test:compile && npm run test:extension && npm run test:browser"
   },
   "nyc": {
     "sourceMap": true
