@@ -21,7 +21,6 @@ window.addEventListener('load', () => {
   window.addEventListener('message', event => {
     messageHandler(event.data)
   })
-
 })
 
 const elementMap = new Map()

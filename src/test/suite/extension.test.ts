@@ -12,7 +12,7 @@ import { Suite } from 'mocha'
 
 // Test runs in out/test/suite, not src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../src/test/data/test-repo')
-const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo') 
+const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
 
 const extensionExports = activate(undefined as any)
 
@@ -20,7 +20,7 @@ async function sleep(ms: number): Promise<void> {
   return await new Promise(resolve => setTimeout(resolve, ms))
 }
 
-const withTestPanel = (html: string, func: (arg0: vscode.WebviewPanel) => void) => {
+const withTestPanel = (html: string, func: (arg0: vscode.WebviewPanel) => void): void => {
   const panel = vscode.window.createWebviewPanel(
     'openstax.testPanel',
     'Test Panel',
@@ -35,7 +35,7 @@ const withTestPanel = (html: string, func: (arg0: vscode.WebviewPanel) => void) 
   panel.dispose()
 }
 
-const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscode.WebviewPanel) => Promise<void>) => {
+const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscode.WebviewPanel) => Promise<void>): Promise<void> => {
   await vscode.commands.executeCommand(command)
   // Wait for panel to load
   await sleep(1000)
@@ -44,14 +44,14 @@ const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscod
   panel.dispose()
 }
 
-const resetTestData = async () => {
+const resetTestData = async (): Promise<void> => {
   await vscode.workspace.saveAll(true)
   fs.rmdirSync(TEST_DATA_DIR, { recursive: true })
   fs.mkdirpSync(TEST_DATA_DIR)
   fs.copySync(ORIGIN_DATA_DIR, TEST_DATA_DIR)
 }
 
-suite('Extension Test Suite', function(this: Suite) {
+suite('Extension Test Suite', function (this: Suite) {
   this.beforeEach(resetTestData)
   test('expect unwraps non-null', () => {
     const maybe: string | null = 'test'
@@ -81,6 +81,7 @@ suite('Extension Test Suite', function(this: Suite) {
   test('addBaseHref', () => {
     const uri = expect(getRootPathUri())
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    // eslint-disable-next-line no-template-curly-in-string
     const html = '<document><base href="${BASE_URI}"/></document>'
     withTestPanel(
       html,
@@ -111,6 +112,7 @@ suite('Extension Test Suite', function(this: Suite) {
     )
   })
   test('fixCspSourceReferences', () => {
+    // eslint-disable-next-line no-template-curly-in-string
     const html = '<document><meta content="${WEBVIEW_CSPSOURCE}"</meta></document>'
     withTestPanel(
       html,
@@ -168,6 +170,7 @@ suite('Extension Test Suite', function(this: Suite) {
   test('toc editor handle signal message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const handler = tocEditorHandleMessage(panel, { editable: [], uneditable: [] })
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       assert.rejects(handler({ signal: { type: 'error', message: 'test' } }))
     })
   }).timeout(5000)
@@ -182,14 +185,14 @@ suite('Extension Test Suite', function(this: Suite) {
   test('image upload handle message', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     const handler = imageUploadHandleMessage()
-    await handler({mediaUploads: [{mediaName: 'urgent2.jpg', data: 'data:image/jpeg;base64,' + data}]})
+    await handler({ mediaUploads: [{ mediaName: 'urgent2.jpg', data: 'data:image/jpeg;base64,' + data }] })
     const uploaded = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent2.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, uploaded)
   })
   test('image upload handle message ignore duplicate image', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     const handler = imageUploadHandleMessage()
-    await handler({mediaUploads: [{mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0'}]})
+    await handler({ mediaUploads: [{ mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0' }] })
     const newData = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, newData)
   })
@@ -212,7 +215,7 @@ suite('Extension Test Suite', function(this: Suite) {
     const before = document.getText()
     const testData = '<document>Test</document>'
     const handler = cnxmlPreviewHandleMessage(resource)
-    await handler({xml: testData})
+    await handler({ xml: testData })
     const modified = document.getText()
     assert.strictEqual(modified, testData)
     assert.notStrictEqual(modified, before)

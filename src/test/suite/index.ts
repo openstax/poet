@@ -13,7 +13,7 @@ export async function run(): Promise<void> {
 
   const testsRoot = path.resolve(__dirname, '..')
 
-  return new Promise<void>((resolve, reject) => {
+  return await new Promise<void>((resolve, reject) => {
     glob('**/**.test.js', { cwd: testsRoot }, (err, files) => {
       if (err != null) {
         return reject(err)
@@ -40,7 +40,7 @@ export async function run(): Promise<void> {
     const destDir = path.join(__dirname, '../../../.nyc_output')
     const dest = path.join(destDir, 'coverage.json')
     const coverage = (global as any).__coverage__
-    if (!coverage) { throw new Error('Did not collect code coverage') }
+    if (coverage === undefined) { throw new Error('Did not collect code coverage') }
     console.log(`Extracting the code coverage from __coverage__ and writing it to ${dest}`)
     mkdirpSync(destDir)
     fs.writeFileSync(dest, JSON.stringify(coverage))

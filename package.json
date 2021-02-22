@@ -20,6 +20,7 @@
     "package": "vsce package",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts,js,jsx,tsx",
+    "lint:fix": "npm run lint -- --fix",
     "test:compile": "./scripts/pretest.sh",
     "test:extension": "node ./out/test/runTest.js",
     "test:browser": "cypress run",
