@@ -83,6 +83,15 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
   panel.onDidDispose(() => {
     disposed = true
   })
+
+  panel.onDidChangeViewState(async event => {
+    // Trigger a message to the panel by resetting the content whenever the
+    // view state changes and it is active.
+    if (event.webviewPanel.active) {
+      contents = null
+      await updatePreview()
+    }
+  })
 }
 
 export const handleMessage = (resource: vscode.Uri) => async (message: PanelIncomingMessage) => {

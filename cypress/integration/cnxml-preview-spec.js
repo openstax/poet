@@ -1,7 +1,7 @@
 /// <reference types="cypress" />
 
 // The HTML file that cypress should load when running tests (relative to the project root)
-const htmlPath = './out/cnxml-preview.html'
+const htmlPath = './client/out/cnxml-preview.html'
 
 describe('cnxml-preview Webview Tests', () => {
   function sendMessage(msg) {

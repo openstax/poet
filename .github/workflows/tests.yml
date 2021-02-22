@@ -26,4 +26,21 @@ jobs:
       - name: Lint
         run: |
           npm run lint
-  
+      - name: Build Extension
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            push)
+              VERSION_VALUE=${GITHUB_SHA:0:7};;
+            pull_request)
+              VERSION_VALUE=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH");;
+            *)
+              VERSION_VALUE="unknown";;
+          esac
+          echo $VERSION_VALUE
+          sed -Ei 's/("version": ")(.+)(",)$/\1\2-'$VERSION_VALUE'\3/' package.json
+          npm run package
+      - name: Upload Extention
+        uses: actions/upload-artifact@v2
+        with:
+          name: editor-extension
+          path: editor-*.vsix

@@ -14,7 +14,10 @@ import { Suite } from 'mocha'
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../src/test/data/test-repo')
 const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
 
-const extensionExports = activate(undefined as any)
+const contextStub = {
+  asAbsolutePath: (relPath: string) => path.resolve(__dirname, '../../../../', relPath)
+}
+const extensionExports = activate(contextStub as any)
 
 async function sleep(ms: number): Promise<void> {
   return await new Promise(resolve => setTimeout(resolve, ms))

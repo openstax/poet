@@ -38,11 +38,9 @@ Note: Sometimes the package will end up appearing under "Installed for User" aft
 
 If you are using the Code editor, the manual package update steps are:
 
-1. Go to the extensions tab, and under Installed select our package. Click the gear icon and select "Uninstall".
-1. Reload the browser
 1. Upload the `.vsix` file to your workspace
-1. Go to the Extensions tab. Just above and to the right of the "Search Extensions in Marketplace", you'll see `...` which will open a dropdown. Select "Install from VSIX..." in that menu.
-1. Enter the path with your repo and package file as `/workspace/{repo}/{package}`. For example, if you're working in `university-physics` and the package is `editor-0.0.0-dev.vsix`, the path where you uploaded the file to your workspace will be `/workspace/university-physics/editor-0.0.0-dev.vsix`.
+1. Right click on the uploaded file, and select "Install Extension VSIX"
+1. If prompted to do so, reload the browser
 1. Delete the package file from your workspace
 
 ## Activating the extension
@@ -58,3 +56,46 @@ Currently our extension will activate when it detects an XML file. If it doesn't
 ```
 
 In a Theia editor, this file should be `.theia/settings.json` in your workspace, and for VS code it should be `.vscode/settings.json`. Once set, you can open any CNXML file and the extension should load.
+
+## Developing / Debugging with the language server
+
+Our extension incorporates a language server which can be debugged using:
+
+* Debug / console messages which get displayed in the editor after being passed to the extension over the language server protocol
+* Collecting and analyzing traces of the language server protocol communication between the extension and language server (refer to the [LSP specification](https://microsoft.github.io/language-server-protocol/specifications/specification-current/))
+* Debugging in a local VS code environment by attaching to the language server, setting breakpoints, etc.
+
+### Language server console messages
+
+The language server code can be instrumented with `connection.console.log()` to send logging / debug output to the extension. This information can be inspected by opening the Output window labeled "CNXML Language Server" once the extension is activated. This works when running the extension in a local VS Code debug environment or on gitpod.
+
+### LSP traces
+
+The `vscode-languageclient` library supports generating traces of the language server protocol communication between the extension and language server. By default, this output is disabled. It can be enabled in any environment by adding the following to the `settings.json` configuration where the extension is running (e.g. in a gitpod workspace or the workspace opened in a local extension session):
+
+```json
+"languageServerCnxml.trace.server": "verbose"
+```
+
+The trace data is then added to the Output window labeled "CNXML Language Server". It can be visualized using the [language-server-protocol-inspector](https://github.com/Microsoft/language-server-protocol-inspector). The following steps assume:
+
+1. You have copied the output data into a local `trace.log` file
+2. You are using node <= 10 (more recent versions of node seem to be problematic)
+
+```bash
+$ git clone https://github.com/Microsoft/language-server-protocol-inspector
+$ cd language-server-protocol-inspector/lsp-inspector
+$ yarn
+$ yarn serve
+```
+
+You can then open `http://localhost:8082/` in your browser, upload your `trace.log` file, and select it to view the visualized / parsed output.
+
+### Debugging language server code with VS Code
+
+There is a launch configuration to attach to the language server which can be used during local development. Since the language server is launched by the extension itself, the following sequence of steps should be used:
+
+1. Execute "Run Extension" from the Run view
+1. Once the extension is launched, execute "Attach to Language Server" from the Run view
+
+You can now set breakpoints, etc. in the server source code.
