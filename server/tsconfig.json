@@ -1,11 +1,11 @@
 {
-	"extends": "../tsconfig.base.json",
-	"compilerOptions": {
-		"rootDir": "src",                      /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */
-		"outDir": "out",                       /* Redirect output structure to the directory. */
-		"tsBuildInfoFile": "out/tsbuildinfo.json"
-	},
-	"exclude": [
-		"out"
-	]
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "out",
+    "tsBuildInfoFile": "out/tsbuildinfo.json"
+  },
+  "exclude": [
+    "out"
+  ]
 }

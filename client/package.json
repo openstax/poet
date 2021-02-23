@@ -1,24 +1,24 @@
 {
-	"name": "client",
-	"devDependencies": {
-		"@types/async": "^3.2.5",
-		"@types/glob": "^7.1.3",
-		"@types/jsdom": "^16.2.6",
-		"@types/mocha": "^8.0.4",
-		"@types/node": "^12.11.7",
-		"@types/vscode": "^1.39.0",
-		"@types/xml-formatter": "^2.1.1",
-		"@types/xmldom": "^0.1.30",
-		"glob": "^7.1.6",
-		"json-stable-stringify": "^1.0.1",
-		"mocha": "^8.1.3",
-		"preact": "^10.5.11",
-		"react-sortable-tree": "^2.8.0",
-		"vscode-test": "^1.4.1",
-		"xml-formatter": "^2.4.0",
-		"xmldom": "^0.4.0"
-	},
-	"dependencies": {
-		"vscode-languageclient": "^7.0.0"
-	}
+  "name": "client",
+  "dependencies": {
+    "vscode-languageclient": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/async": "^3.2.5",
+    "@types/glob": "^7.1.3",
+    "@types/jsdom": "^16.2.6",
+    "@types/mocha": "^8.0.4",
+    "@types/node": "^12.11.7",
+    "@types/vscode": "^1.39.0",
+    "@types/xml-formatter": "^2.1.1",
+    "@types/xmldom": "^0.1.30",
+    "glob": "^7.1.6",
+    "json-stable-stringify": "^1.0.1",
+    "mocha": "^8.1.3",
+    "preact": "^10.5.11",
+    "react-sortable-tree": "^2.8.0",
+    "vscode-test": "^1.4.1",
+    "xml-formatter": "^2.4.0",
+    "xmldom": "^0.4.0"
+  }
 }
