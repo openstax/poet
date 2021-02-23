@@ -16,8 +16,8 @@ describe('cnxml-preview Webview Tests', () => {
   // When the browser calls vscode.postMessage(...) that message is added to this array
   let messagesFromWidget = []
 
-  // Load the HTML file and inject the acquireVsCodeApi() stub.
   beforeEach(() => {
+    // Load the HTML file and inject the acquireVsCodeApi() stub.
     cy.visit(htmlPath, {
       onBeforeLoad: (contentWindow) => {
         class API {
@@ -26,6 +26,10 @@ describe('cnxml-preview Webview Tests', () => {
         contentWindow.acquireVsCodeApi = () => { return new API() }
       }
     })
+  })
+  afterEach(() => {
+    // Clear shared vars
+    messagesFromWidget = []
   })
 
   it('Errors when something other than an object with an xml field is sent', () => {
@@ -38,7 +42,7 @@ describe('cnxml-preview Webview Tests', () => {
     cy.get('#preview parsererror').should('exist')
   })
 
-  it('Does not error when valid XML is ssent', () => {
+  it('Does not error when valid XML is sent', () => {
     sendXml('<valid-xml-element/>')
     cy.get('#preview parsererror').should('not.exist')
   })
