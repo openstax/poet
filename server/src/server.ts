@@ -4,12 +4,17 @@ import {
   ProposedFeatures,
   InitializeParams,
   TextDocumentSyncKind,
-  InitializeResult
+  InitializeResult,
+  Diagnostic
 } from 'vscode-languageserver/node'
 
 import {
   TextDocument
 } from 'vscode-languageserver-textdocument'
+
+import {
+  parseXMLString, validateImagePaths
+} from './utils'
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -47,10 +52,20 @@ documents.onDidClose(event => {
   )
 })
 
-documents.onDidChangeContent(event => {
-  connection.console.log(
-    `Language server received a content change event for ${event.document.uri}`
-  )
+documents.onDidChangeContent(async event => {
+  const textDocument = event.document
+  const diagnostics: Diagnostic[] = []
+  const xmlData = parseXMLString(textDocument)
+
+  if (xmlData != null) {
+    const imagePathDiagnostics = await validateImagePaths(textDocument, xmlData)
+    diagnostics.push(...imagePathDiagnostics)
+  }
+
+  connection.sendDiagnostics({
+    uri: textDocument.uri,
+    diagnostics
+  })
 })
 
 // Make the text document manager listen on the connection

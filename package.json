@@ -25,7 +25,8 @@
 		"test:compile": "./scripts/pretest.sh",
 		"test:client": "node ./client/out/test/runTest.js",
 		"test:cypress": "cypress run",
-		"test": "npm run test:compile && npm run test:client && npm run test:cypress",
+		"test": "npm run test:compile && npm run test:client && npm run test:cypress && npm run test:server",
+		"test:server": "./server/node_modules/.bin/mocha ./server/out/test/server.test.js",
 		"postinstall": "cd ./client/ && npm install && cd ../server/ && npm install"
 	},
 	"nyc": {
