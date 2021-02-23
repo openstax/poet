@@ -2,7 +2,8 @@ node_modules/
 /*.vsix
 /.vscode-test/
 /coverage/
-/cypress/videos
+/cypress/videos/
+/cypress/screenshots/
 /.nyc_output/
 
 /client/out/
