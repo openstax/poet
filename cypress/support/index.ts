@@ -36,7 +36,7 @@ class DndSimulatorDataTransfer {
 
   setDragImage(img, xOffset, yOffset): void { }
 }
-const dndCommand = (sourceSelector, targetSelector, options: { offsetX?: number, offsetY?: number } = {}): void => {
+const dndCommand = (subject: JQuery<HTMLElement>, targetSelector: string, options: { offsetX?: number, offsetY?: number } = {}): void => {
   const dataTransfer = new DndSimulatorDataTransfer()
   const opts = {
     offsetX: 10,
@@ -44,7 +44,7 @@ const dndCommand = (sourceSelector, targetSelector, options: { offsetX?: number,
     ...options
   }
 
-  cy.wrap(sourceSelector.get(0))
+  cy.wrap(subject.get(0))
     .trigger('dragstart', {
       dataTransfer
     })
@@ -87,3 +87,15 @@ const dndCommand = (sourceSelector, targetSelector, options: { offsetX?: number,
 }
 
 Cypress.Commands.add('dnd', { prevSubject: 'element' }, dndCommand)
+
+Cypress.Commands.add('dropFile', { prevSubject: 'element' }, (subject: Cypress.Chainable, fileName: string) => {
+  cy.fixture(fileName, 'base64')
+    .then(Cypress.Blob.base64StringToBlob)
+    .then(blob => {
+      const file = new File([blob], fileName)
+      const dataTransfer = new DataTransfer()
+      dataTransfer.items.add(file)
+      cy.wrap(subject)
+        .trigger('drop', { dataTransfer })
+    })
+})

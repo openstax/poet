@@ -1,3 +1,4 @@
+// Shares a namespace with the other specfiles if not scoped
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/cnxml-preview.html'
