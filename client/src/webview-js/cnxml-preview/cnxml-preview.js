@@ -4,19 +4,11 @@ let preview
 let sendButton
 let textarea
 
-let isLoaded = false
-let pendingMessage = null
-
 const MATH_WRAPPER_TAGNAME = 'mathwrapper'
 
 window.addEventListener('load', () => {
   // https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
-  try {
-    vscode = acquireVsCodeApi() // eslint-disable-line no-undef
-  } catch (e) {
-    // Not running as a VS Code webview - maybe testing in external browser.
-    console.error(e.message)
-  }
+  vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 
   preview = document.querySelector('#preview')
   textarea = document.querySelector('#textarea')
@@ -25,20 +17,10 @@ window.addEventListener('load', () => {
 
   preview.innerHTML = '' // remove the "JS did not run" message
 
-  isLoaded = true
-  if (pendingMessage) {
-    messageHandler(pendingMessage)
-  }
-})
-
-// Handle the message inside the webview
-window.addEventListener('message', event => {
-  const message = event.data
-  if (isLoaded) {
-    messageHandler(message)
-  } else {
-    pendingMessage = message
-  }
+  // Handle the message inside the webview
+  window.addEventListener('message', event => {
+    messageHandler(event.data)
+  })
 })
 
 const elementMap = new Map()
@@ -59,6 +41,7 @@ let currentVDom
 
 function messageHandler(message) {
   const xml = message.xml
+  if (!xml) throw new Error('Missing XML field on the message')
 
   textarea.value = xml
 

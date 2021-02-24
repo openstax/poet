@@ -67,11 +67,29 @@ export function getRootPathUri(): vscode.Uri | null {
   return rootPath != null ? rootPath.uri : null
 }
 
+/**
+ * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
+ */
 export function expect<T>(value: T | null | undefined, message?: string): T {
   if (value == null) {
     throw new Error(message ?? 'Unwrapped a null value')
   }
   return value
+}
+
+/*
+ * Provides very simple reject handling for async functions (just throws)
+ * to avoid silent failures when passing a fallible async callback function
+ * to something that expects a sync callback function.
+ * This comes at the cost of not preserving the original return type as well
+ * as the resulting thrown error being uncatchable.
+ */
+export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: any[]) => void {
+  return (...args: any[]) => {
+    func(...args).catch((err: Error) => {
+      throw err
+    })
+  }
 }
 
 export function launchLanguageServer(context: vscode.ExtensionContext): LanguageClient {

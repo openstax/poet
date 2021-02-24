@@ -150,18 +150,44 @@ const EditorPanel = (props) => {
   const searchInfo = `${searchFoundCount > 0 ? searchFocusIndex + 1 : 0} / ${searchFoundCount}`
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '99vh', width: '49vw' }}>
+    <div className={`panel-${modifiesStateName}`} style={{ display: 'flex', flexDirection: 'column', height: '99vh', width: '49vw' }}>
       <div>
-        <select value={selection} style={{ margin: '1rem', maxWidth: '300px' }} onChange={handleSelect}>
+        <select
+          className='tree-select'
+          value={selection}
+          style={{ margin: '1rem', maxWidth: '300px' }}
+          onChange={handleSelect}
+        >
           {trees.map((tree, i) => <option key={i} value={i}>{tree.title}</option>)}
         </select>
         <div style={{ margin: '1rem', marginTop: '0', height: '2rem', display: 'flex', maxWidth: '400px', alignItems: 'center' }}>
-          <input style={{ maxWidth: '300px', height: '100%', padding: '0', paddingLeft: '4px' }} placeholder={'Search...'} onChange={handleSearch}></input>
-          <button style={{ height: '100%' }} disabled={!searchFoundCount} onClick={selectPrevMatch}>{'<'}</button>
-          <button style={{ height: '100%' }} disabled={!searchFoundCount} onClick={selectNextMatch}>{'>'}</button>
-          {searchQuery
-            ? <p style={{ margin: '0px 10px', fontWeight: 'bold' }}>{searchInfo}</p>
-            : <></>}
+          <input
+            className='search'
+            style={{ maxWidth: '300px', height: '100%', padding: '0', paddingLeft: '4px' }}
+            placeholder={'Search...'}
+            onChange={handleSearch}
+          />
+          <button
+            className='search-prev'
+            style={{ height: '100%' }}
+            disabled={!searchFoundCount}
+            onClick={selectPrevMatch}
+          >
+            {'<'}
+          </button>
+          <button
+            className='search-next'
+            style={{ height: '100%' }}
+            disabled={!searchFoundCount}
+            onClick={selectNextMatch}
+          >
+            {'>'}
+          </button>
+          {
+            searchQuery
+              ? <p className='search-info' style={{ margin: '0px 10px', fontWeight: 'bold' }}>{searchInfo}</p>
+              : <></>
+          }
         </div>
       </div>
       <div style={{ flexGrow: '1' }}>
@@ -188,7 +214,7 @@ const EditorPanel = (props) => {
 }
 
 const App = (props) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+  <div data-app-init='true' style={{ display: 'flex', justifyContent: 'space-between' }}>
     <EditorPanel
       modifiesStateName={'editable'}
       treesData={props.treesData.editable}

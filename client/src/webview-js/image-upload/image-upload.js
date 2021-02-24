@@ -67,4 +67,6 @@ window.addEventListener('load', () => {
   dropArea.addEventListener('drop', handleDrop, false)
   uploadButton.addEventListener('click', handleUpload, false)
   cancelButton.addEventListener('click', handleCancel, false)
+
+  dropArea.setAttribute('data-app-init', 'true')
 })
