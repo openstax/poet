@@ -64,7 +64,6 @@ suite('Unsaved Files', function (this: Suite) {
     const panel = extensionExports.activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
     assert.strictEqual(panel, undefined)
   })
-
 })
 
 suite('Extension Test Suite', function (this: Suite) {

@@ -13,7 +13,7 @@ export const getContents = (uri?: vscode.Uri): [string | undefined, vscode.TextE
   let contents: string | null = null
   const editor = vscode.window.activeTextEditor
 
-  if (!!editor) {
+  if (editor != null) {
     const activeDocument = editor.document
     if (activeDocument.uri === uri) {
       contents = activeDocument.getText()
@@ -24,7 +24,7 @@ export const getContents = (uri?: vscode.Uri): [string | undefined, vscode.TextE
       contents = activeDocument.getText()
     }
   }
-  if (!maybeResource) {
+  if (maybeResource == null) {
     return [undefined, editor, undefined]
   }
   const resource = expect(maybeResource)
@@ -37,7 +37,7 @@ export const getContents = (uri?: vscode.Uri): [string | undefined, vscode.TextE
 
 export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async (uri?: vscode.Uri, previewSettings?: any) => {
   let [contents, editor, resource] = getContents()
-  if (!contents || !resource) { return }
+  if (contents == null || resource == null) { return }
   const definitelyResource = resource
 
   const resourceColumn = editor?.viewColumn ?? vscode.ViewColumn.One
