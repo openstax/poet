@@ -10,7 +10,7 @@
     }>
   }
 
-  describe('toc-editor Webview Tests', () => {
+  describe('image-upload Webview Tests', () => {
     // When the browser calls vscode.postMessage(...) that message is added to this array
     let messagesFromWidget: WidgetMessage[] = []
 
