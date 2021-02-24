@@ -1,5 +1,12 @@
 node_modules/
-out/
-*.vsix
-.vscode-test/
-dist/
+/*.vsix
+/.vscode-test/
+/coverage/
+/cypress/videos/
+/cypress/screenshots/
+/.nyc_output/
+
+/client/out/
+/client/dist/
+/server/out/
+/server/dist/

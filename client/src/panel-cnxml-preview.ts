@@ -1,12 +1,18 @@
 import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
-import { fixResourceReferences, fixCspSourceReferences, addBaseHref, getLocalResourceRoots, expect } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, addBaseHref, getLocalResourceRoots, expect, ensureCatch } from './utils'
+import { PanelType } from './extension-types'
 
-export const showCnxmlPreview = (resourceRootDir: string) => async (uri?: vscode.Uri, previewSettings?: any) => {
+export interface PanelIncomingMessage {
+  xml?: string
+}
+
+export const getContents = (uri?: vscode.Uri): [string | undefined, vscode.TextEditor | undefined, vscode.Uri | undefined] => {
   let maybeResource = uri
   let contents: string | null = null
   const editor = vscode.window.activeTextEditor
+
   if (editor != null) {
     const activeDocument = editor.document
     if (activeDocument.uri === uri) {
@@ -18,24 +24,36 @@ export const showCnxmlPreview = (resourceRootDir: string) => async (uri?: vscode
       contents = activeDocument.getText()
     }
   }
-  if (maybeResource == null) { return }
+  if (maybeResource == null) {
+    return [undefined, editor, undefined]
+  }
   const resource = expect(maybeResource)
 
   if (contents == null) {
     contents = fs.readFileSync(resource.fsPath, 'utf-8')
   }
+  return [contents, editor, resource]
+}
+
+export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async (uri?: vscode.Uri, previewSettings?: any) => {
+  let [contents, editor, resource] = getContents()
+  if (contents == null || resource == null) { return }
+  const definitelyResource = resource
 
   const resourceColumn = editor?.viewColumn ?? vscode.ViewColumn.One
   const previewColumn = resourceColumn + 1 // because the preview is on the side
 
   const panel = vscode.window.createWebviewPanel(
-    'openstax.cnxmlPreview',
+    panelType,
     `Preview ${path.basename(resource.fsPath)}`,
     previewColumn, {
       enableScripts: true,
       localResourceRoots: getLocalResourceRoots([vscode.Uri.file(resourceRootDir)], resource),
       enableFindWidget: true
-    })
+    }
+  )
+  activePanelsByType[panelType] = panel
+  let disposed = false
 
   let html = fs.readFileSync(path.join(resourceRootDir, 'cnxml-preview.html'), 'utf-8')
   html = addBaseHref(panel.webview, resource, html)
@@ -51,9 +69,12 @@ export const showCnxmlPreview = (resourceRootDir: string) => async (uri?: vscode
 
   async function updatePreview(): Promise<void> {
     clearTimeout(throttleTimer)
+    if (disposed) {
+      return
+    }
     let document: vscode.TextDocument
     try {
-      document = await vscode.workspace.openTextDocument(resource)
+      document = await vscode.workspace.openTextDocument(definitelyResource)
     } catch {
       return
     }
@@ -68,26 +89,32 @@ export const showCnxmlPreview = (resourceRootDir: string) => async (uri?: vscode
   }
 
   // https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
-  panel.webview.onDidReceiveMessage(async (message) => {
-    // Replace the full-source version with what came out of the preview panel
-    try {
-      const document = await vscode.workspace.openTextDocument(resource)
-      const fullRange = new vscode.Range(
-        document.positionAt(0),
-        document.positionAt(document.getText().length)
-      )
-      const edit = new vscode.WorkspaceEdit()
-      edit.replace(resource, fullRange, message.xml)
-      await vscode.workspace.applyEdit(edit)
-    } catch { }
+  panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(resource)))
+  panel.onDidDispose(() => {
+    disposed = true
   })
 
   panel.onDidChangeViewState(async event => {
     // Trigger a message to the panel by resetting the content whenever the
     // view state changes and it is active.
     if (event.webviewPanel.active) {
-      contents = null
+      contents = undefined
       await updatePreview()
     }
   })
+}
+
+export const handleMessage = (resource: vscode.Uri) => async (message: PanelIncomingMessage) => {
+  const { xml } = message
+  if (xml == null) {
+    return
+  }
+  const document = await vscode.workspace.openTextDocument(resource)
+  const fullRange = new vscode.Range(
+    document.positionAt(0),
+    document.positionAt(document.getText().length)
+  )
+  const edit = new vscode.WorkspaceEdit()
+  edit.replace(resource, fullRange, xml)
+  await vscode.workspace.applyEdit(edit)
 }

@@ -1,7 +1,11 @@
 {
-	"include": [],
-	"references": [
-		{ "path": "./client" },
-		{ "path": "./server" }
-	]
+  "include": [],
+  "references": [
+    {
+      "path": "./client"
+    },
+    {
+      "path": "./server"
+    }
+  ]
 }

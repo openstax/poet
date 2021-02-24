@@ -1,4 +1,5 @@
-# VSCode Extension that runs in gitpod/Theia
+# VSCode Extension that runs in gitpod
+[![Coverage Status](https://img.shields.io/codecov/c/github/openstax/poet.svg)](https://codecov.io/gh/openstax/poet)
 
 ![installing and enabling the preview](./editor.gif)
 
@@ -12,6 +13,16 @@
     - If you do not see it that is because it is invisible because we have not created an icon. Open a Markdown file, take note of where the icon is, and then click in the same area when viewing the CNXML file
 
 For debugging, open the webview developer tools by opening the command pallete and selecting `Developer: Open Webview Developer Tools`. This will allow you to inspect the webview contents. **Note:** It can only be opened when the webview is open.
+
+The tests for client and server require running the `test-compile` script beforehand. For example, the server tests can be run via command line as follows:
+
+```bash
+$ npm install
+$ npm run test-compile
+$ npm run test-server
+```
+
+If you use the launch configuration to invoke the client tests from VS Code, the `test-compile` will be run automatically.
 
 ## Enabling the Code editor for Gitpod
 

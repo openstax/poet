@@ -1,0 +1,14 @@
+<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+  <col:metadata>
+    <md:title>test collection</md:title>
+    <md:slug>test</md:slug>
+  </col:metadata>
+  <col:content>
+    <col:subcollection>
+      <md:title>subcollection</md:title>
+      <col:content>
+        <col:module document="m00001" />
+      </col:content>
+    </col:subcollection>
+  </col:content>
+</col:collection>

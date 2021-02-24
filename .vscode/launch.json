@@ -22,11 +22,13 @@
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
 			"args": [
+				"${workspaceFolder}/out/test/data/test-repo",
+				"--disable-extensions",
 			  "--extensionDevelopmentPath=${workspaceFolder}",
 			  "--extensionTestsPath=${workspaceFolder}/client/out/test/suite/index"
 			],
 			"outFiles": ["${workspaceFolder}/client/out/test/**/*.js"],
-			"preLaunchTask": "npm: test-compile"
+			"preLaunchTask": "npm: test:compile"
 		  },
 		  {
 			"type": "node",

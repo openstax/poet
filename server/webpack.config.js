@@ -1,37 +1,37 @@
-//@ts-check
+// @ts-check
 
-'use strict';
+'use strict'
 
-const path = require('path');
+const path = require('path')
 
-/**@type {import('webpack').Configuration}*/
+/** @type {import('webpack').Configuration} */
 const config = {
-    target: 'node',
+  target: 'node',
 
-    context: path.join(__dirname),
-    entry: './src/server.ts',
-    output: {
-        path: path.resolve(__dirname, 'dist'),
-        filename: 'server.js',
-        libraryTarget: "commonjs2",
-        devtoolModuleFilenameTemplate: "../[resource-path]",
-    },
-    devtool: 'source-map',
-    externals: {
-        vscode: "commonjs vscode"
-    },
-    resolve: {
-        extensions: ['.ts', '.js']
-    },
-    module: {
-        rules: [{
-            test: /\.ts$/,
-            exclude: /node_modules/,
-            use: {
-                loader: 'ts-loader'
-            }
-        }]
-    },
+  context: path.join(__dirname),
+  entry: './src/server.ts',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'server.js',
+    libraryTarget: 'commonjs2',
+    devtoolModuleFilenameTemplate: '../[resource-path]'
+  },
+  devtool: 'source-map',
+  externals: {
+    vscode: 'commonjs vscode'
+  },
+  resolve: {
+    extensions: ['.ts', '.js']
+  },
+  module: {
+    rules: [{
+      test: /\.ts$/,
+      exclude: /node_modules/,
+      use: {
+        loader: 'ts-loader'
+      }
+    }]
+  }
 }
 
-module.exports = config;
+module.exports = config
