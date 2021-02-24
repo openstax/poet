@@ -2,7 +2,8 @@ import {
   Diagnostic,
   DiagnosticSeverity,
   Position,
-  WorkspaceFolder
+  WorkspaceFolder,
+  Connection
 } from 'vscode-languageserver/node'
 import {
   TextDocument
@@ -217,4 +218,79 @@ function calculateElementPositions(element: any): Position[] {
   }
 
   return [startPosition, endPosition]
+}
+
+export interface ValidationRequest {
+  textDocument: TextDocument
+  version: number
+}
+
+export class ValidationQueue {
+  private queue: ValidationRequest[]
+  private timer: NodeJS.Immediate | undefined
+
+  constructor(private readonly connection: Connection) {
+    this.queue = []
+  }
+
+  public addRequest(request: ValidationRequest): void {
+    this.dropOldVersions(request)
+    this.queue.push(request)
+    this.trigger()
+  }
+
+  private dropOldVersions(request: ValidationRequest): void {
+    // It's possible to get validation requests for the same document before
+    // we've processed older ones. We can use the document version (which
+    // increases after each change, even if it's undo / redo) to prune the queue
+    const updatedQueue = this.queue.filter(entry => {
+      const isOlderVersion = (entry.textDocument.uri === request.textDocument.uri) && (entry.version < request.version)
+      const isDifferentDocument = (entry.textDocument.uri !== request.textDocument.uri)
+      return (!isOlderVersion || isDifferentDocument)
+    })
+
+    this.queue = updatedQueue
+  }
+
+  private trigger(): void {
+    if (this.timer !== undefined || this.queue.length === 0) {
+      // Either the queue is empty, or we're already set to process the next
+      // entry
+      return
+    }
+
+    this.timer = setImmediate(() => {
+      this.processQueue().finally(() => {
+        this.timer = undefined
+        this.trigger()
+      })
+    })
+  }
+
+  private async processQueue(): Promise<void> {
+    const request = this.queue.shift()
+    if (request == null) {
+      return
+    }
+    const textDocument = request.textDocument
+    let workspaceFolders = await this.connection.workspace.getWorkspaceFolders()
+    if (workspaceFolders == null) {
+      workspaceFolders = []
+    }
+    const diagnostics: Diagnostic[] = []
+    const xmlData = parseXMLString(textDocument)
+    const knownModules = await getCurrentModules(workspaceFolders)
+
+    if (xmlData != null) {
+      const imagePathDiagnostics = await validateImagePaths(textDocument, xmlData)
+      diagnostics.push(...imagePathDiagnostics)
+      const linkDiagnostics = await validateLinks(xmlData, knownModules)
+      diagnostics.push(...linkDiagnostics)
+    }
+
+    this.connection.sendDiagnostics({
+      uri: textDocument.uri,
+      diagnostics
+    })
+  }
 }

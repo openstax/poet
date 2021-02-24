@@ -4,8 +4,7 @@ import {
   ProposedFeatures,
   InitializeParams,
   TextDocumentSyncKind,
-  InitializeResult,
-  Diagnostic
+  InitializeResult
 } from 'vscode-languageserver/node'
 
 import {
@@ -13,10 +12,8 @@ import {
 } from 'vscode-languageserver-textdocument'
 
 import {
-  getCurrentModules,
-  parseXMLString,
-  validateImagePaths,
-  validateLinks
+  ValidationQueue,
+  ValidationRequest
 } from './utils'
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -25,6 +22,8 @@ const connection = createConnection(ProposedFeatures.all)
 
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
+
+const validationQueue: ValidationQueue = new ValidationQueue(connection)
 
 connection.onInitialize((params: InitializeParams) => {
   const result: InitializeResult = {
@@ -57,27 +56,12 @@ documents.onDidClose(event => {
 
 documents.onDidChangeContent(async event => {
   const textDocument = event.document
-  let workspaceFolders = await connection.workspace.getWorkspaceFolders()
-  if (workspaceFolders == null) {
-    workspaceFolders = []
-  }
-  const diagnostics: Diagnostic[] = []
-  const xmlData = parseXMLString(textDocument)
-  // FIXME: Querying known modules here temporarily, but this will get removed
-  // in a subsequent commit to make it event based
-  const knownModules = await getCurrentModules(workspaceFolders)
-
-  if (xmlData != null) {
-    const imagePathDiagnostics = await validateImagePaths(textDocument, xmlData)
-    diagnostics.push(...imagePathDiagnostics)
-    const linkDiagnostics = await validateLinks(xmlData, knownModules)
-    diagnostics.push(...linkDiagnostics)
+  const request: ValidationRequest = {
+    textDocument: textDocument,
+    version: textDocument.version
   }
 
-  connection.sendDiagnostics({
-    uri: textDocument.uri,
-    diagnostics
-  })
+  validationQueue.addRequest(request)
 })
 
 // Make the text document manager listen on the connection

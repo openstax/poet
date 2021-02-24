@@ -7,11 +7,14 @@ import {
   validateLinks,
   IMAGEPATH_DIAGNOSTIC_SOURCE,
   LINK_DIAGNOSTIC_SOURCE,
-  getCurrentModules
+  getCurrentModules,
+  ValidationQueue,
+  ValidationRequest
 } from './../utils'
 
 import assert from 'assert'
 import mockfs from 'mock-fs'
+import sinon from 'sinon'
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver'
 
 describe('parseXMLString', function () {
@@ -413,5 +416,116 @@ describe('validateLinks', function () {
       source: LINK_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
+  })
+})
+
+describe('ValidationQueue', function () {
+  const connection: any = {}
+
+  it('should queue requests when added', async function () {
+    const validationQueue: ValidationQueue = new ValidationQueue(connection)
+    const inputDocument = TextDocument.create('', '', 0, '')
+    sinon.stub(validationQueue, 'processQueue' as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: ValidationRequest = {
+      textDocument: inputDocument,
+      version: inputDocument.version
+    }
+
+    validationQueue.addRequest(validationRequest)
+    assert.strictEqual((validationQueue as any).queue.length, 1)
+
+    sinon.restore()
+  })
+  it('should drop old version when adding requests', async function () {
+    const validationQueue: ValidationQueue = new ValidationQueue(connection)
+    const inputDocument1v0 = TextDocument.create('file:///test1.cnxml', '', 0, '')
+    const inputDocument1v1 = TextDocument.create('file:///test1.cnxml', '', 1, '')
+    const inputDocument2v0 = TextDocument.create('file:///test2.cnxml', '', 0, '')
+    const documents: TextDocument[] = [inputDocument1v0, inputDocument1v1, inputDocument2v0]
+    sinon.stub(validationQueue, 'processQueue' as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+
+    documents.forEach(element => {
+      const validationRequest: ValidationRequest = {
+        textDocument: element,
+        version: element.version
+      }
+      validationQueue.addRequest(validationRequest)
+    })
+
+    assert.strictEqual((validationQueue as any).queue.length, 2)
+    const entry0 = (validationQueue as any).queue[0]
+    const entry1 = (validationQueue as any).queue[1]
+    assert.strictEqual(entry0.textDocument.uri, inputDocument1v1.uri)
+    assert.strictEqual(entry0.version, inputDocument1v1.version)
+    assert.strictEqual(entry1.textDocument.uri, inputDocument2v0.uri)
+    assert.strictEqual(entry1.version, inputDocument2v0.version)
+
+    sinon.restore()
+  })
+  it('should self-invoke trigger() when adding requests', async function () {
+    const validationQueue: ValidationQueue = new ValidationQueue(connection)
+    const inputDocument = TextDocument.create('', '', 0, '')
+    sinon.stub(validationQueue, 'processQueue' as any)
+    const triggerStub = sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: ValidationRequest = {
+      textDocument: inputDocument,
+      version: inputDocument.version
+    }
+
+    validationQueue.addRequest(validationRequest)
+    assert(triggerStub.calledOnce)
+
+    sinon.restore()
+  })
+  it('should queue requests when triggering processing', async function () {
+    const clock = sinon.useFakeTimers()
+    const validationQueue: ValidationQueue = new ValidationQueue(connection)
+    const inputDocument1 = TextDocument.create('file:///test1.cnxml', '', 0, '')
+    const inputDocument2 = TextDocument.create('file:///test2.cnxml', '', 0, '')
+    const inputDocument3 = TextDocument.create('file:///test3.cnxml', '', 0, '')
+    const inputDocument4 = TextDocument.create('file:///test4.cnxml', '', 0, '')
+    const documents: TextDocument[] = [
+      inputDocument1, inputDocument2, inputDocument3, inputDocument4
+    ]
+
+    documents.forEach(element => {
+      const validationRequest: ValidationRequest = {
+        textDocument: element,
+        version: element.version
+      }
+      validationQueue.addRequest(validationRequest)
+    })
+
+    // All of the requests should still be in the queue
+    assert.strictEqual((validationQueue as any).queue.length, 4)
+    // Advance the event loop and ensure the queue is consumed
+    clock.next()
+    assert.strictEqual((validationQueue as any).queue.length, 3)
+    sinon.restore()
+  })
+  it('should remove queue entries when processing', async function () {
+    const validationQueue: ValidationQueue = new ValidationQueue(connection)
+    const inputDocument = TextDocument.create('', '', 0, '')
+    const workspaceFoldersStub = sinon.stub().resolves(null)
+    sinon.stub(validationQueue, 'trigger' as any).callsFake(
+      function () {
+        (validationQueue as any).processQueue()
+      }
+    )
+    connection.workspace = {
+      getWorkspaceFolders: workspaceFoldersStub
+    } as any
+
+    const validationRequest: ValidationRequest = {
+      textDocument: inputDocument,
+      version: inputDocument.version
+    }
+
+    validationQueue.addRequest(validationRequest)
+    assert.strictEqual((validationQueue as any).queue.length, 0)
+
+    sinon.restore()
   })
 })
