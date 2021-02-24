@@ -8,11 +8,12 @@ export interface PanelIncomingMessage {
   xml?: string
 }
 
-export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async (uri?: vscode.Uri, previewSettings?: any) => {
+export const getContents = (uri?: vscode.Uri): [string | undefined, vscode.TextEditor | undefined, vscode.Uri | undefined] => {
   let maybeResource = uri
   let contents: string | null = null
   const editor = vscode.window.activeTextEditor
-  if (editor != null) {
+
+  if (!!editor) {
     const activeDocument = editor.document
     if (activeDocument.uri === uri) {
       contents = activeDocument.getText()
@@ -23,12 +24,21 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
       contents = activeDocument.getText()
     }
   }
-  if (maybeResource == null) { return }
+  if (!maybeResource) {
+    return [undefined, editor, undefined]
+  }
   const resource = expect(maybeResource)
 
   if (contents == null) {
     contents = fs.readFileSync(resource.fsPath, 'utf-8')
   }
+  return [contents, editor, resource]
+}
+
+export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async (uri?: vscode.Uri, previewSettings?: any) => {
+  let [contents, editor, resource] = getContents()
+  if (!contents || !resource) { return }
+  const definitelyResource = resource
 
   const resourceColumn = editor?.viewColumn ?? vscode.ViewColumn.One
   const previewColumn = resourceColumn + 1 // because the preview is on the side
@@ -64,7 +74,7 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
     }
     let document: vscode.TextDocument
     try {
-      document = await vscode.workspace.openTextDocument(resource)
+      document = await vscode.workspace.openTextDocument(definitelyResource)
     } catch {
       return
     }
@@ -88,7 +98,7 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
     // Trigger a message to the panel by resetting the content whenever the
     // view state changes and it is active.
     if (event.webviewPanel.active) {
-      contents = null
+      contents = undefined
       await updatePreview()
     }
   })

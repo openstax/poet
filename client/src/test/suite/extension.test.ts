@@ -55,6 +55,18 @@ const resetTestData = async (): Promise<void> => {
   fs.copySync(ORIGIN_DATA_DIR, TEST_DATA_DIR)
 }
 
+suite('Unsaved Files', function (this: Suite) {
+  this.beforeEach(resetTestData)
+  test('show cnxml preview with no file open', async () => {
+    assert.strictEqual(vscode.window.activeTextEditor, undefined)
+    await vscode.commands.executeCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW)
+    await sleep(1000) // Wait for panel to load
+    const panel = extensionExports.activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
+    assert.strictEqual(panel, undefined)
+  })
+
+})
+
 suite('Extension Test Suite', function (this: Suite) {
   this.beforeEach(resetTestData)
   test('expect unwraps non-null', () => {
@@ -200,7 +212,7 @@ suite('Extension Test Suite', function (this: Suite) {
     const newData = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, newData)
   })
-  test('show cnxml preview', async () => {
+  test('show cnxml preview with a file open', async () => {
     const uri = expect(getRootPathUri())
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
     const document = await vscode.workspace.openTextDocument(resource)
