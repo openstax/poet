@@ -528,4 +528,22 @@ describe('ValidationQueue', function () {
 
     sinon.restore()
   })
+  it('should send diagnostics when processing document', async function () {
+    const validationQueue: ValidationQueue = new ValidationQueue(connection)
+    const inputDocument = TextDocument.create('', '', 0, '<document></document>')
+    const sendDiagnosticsStub = sinon.stub()
+    sinon.stub(validationQueue, 'trigger' as any)
+
+    connection.sendDiagnostics = sendDiagnosticsStub
+
+    const validationRequest: ValidationRequest = {
+      textDocument: inputDocument,
+      version: inputDocument.version
+    }
+
+    validationQueue.addRequest(validationRequest)
+    await (validationQueue as any).processQueue()
+    assert.strictEqual(sendDiagnosticsStub.callCount, 1)
+    sinon.restore()
+  })
 })
