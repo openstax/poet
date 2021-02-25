@@ -42,6 +42,7 @@
   "settings": {
     "json/json-with-comments-files": [
       ".vscode/**"
-    ]
+    ],
+    "json/sort-package-json": false
   }
 }
