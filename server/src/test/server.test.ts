@@ -156,6 +156,7 @@ describe('validateImagePaths', function () {
         <content>
           <image src="../../media/image1.jpg" />
           <image />
+          <image src="" />
         </content>
       </document>
     `
@@ -226,6 +227,24 @@ describe('validateLinks', function () {
     const inputContent = `
       <document xmlns="http://cnx.rice.edu/cnxml">
         <content></content>
+      </document>
+    `
+    const inputDocument = TextDocument.create(
+      'file:///modules/m12345/index.cnxml', '', 0, inputContent
+    )
+    const xmlData = await parseXMLString(inputDocument)
+    assert(xmlData != null)
+    const result = await validateLinks(xmlData, [])
+    assert.deepStrictEqual(result, [])
+  })
+  it('should return empty diagnostics links are incomplete', async function () {
+    const inputContent = `
+      <document xmlns="http://cnx.rice.edu/cnxml">
+        <content>
+          <link target-id="" />
+          <link document="" />
+          <link document="" target-id="" />
+        </content>
       </document>
     `
     const inputDocument = TextDocument.create(

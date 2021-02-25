@@ -39,7 +39,7 @@ export async function validateImagePaths(textDocument: TextDocument, xmlData: Do
   for (const image of images) {
     const imageElement = image as any
     const imageSrc = imageElement.getAttribute('src')
-    if (imageSrc == null) {
+    if (imageSrc === '') {
       continue
     }
 
@@ -110,7 +110,7 @@ function validateOtherPageLinks(xmlData: Document, knownModules: string[]): Diag
       LINK_DIAGNOSTIC_SOURCE
     )
 
-    if (linkTargetModule == null) {
+    if (linkTargetModule === '') {
       continue
     }
 
@@ -168,7 +168,7 @@ function validateSamePageLinks(xmlData: Document, knownModules: string[]): Diagn
       LINK_DIAGNOSTIC_SOURCE
     )
     const linkTargetId: string = linkElement.getAttribute('target-id')
-    if (linkTargetId == null) {
+    if (linkTargetId === '') {
       continue
     }
     const targetElements = select(
@@ -269,7 +269,7 @@ export class ValidationQueue {
 
   private async processQueue(): Promise<void> {
     const request = this.queue.shift()
-    if (request == null) {
+    if (request === undefined) {
       return
     }
     const textDocument = request.textDocument
