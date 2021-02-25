@@ -107,6 +107,7 @@ async function validateOtherPageLinks(xmlData: Document, knownModules: Map<strin
   const diagnostics: Diagnostic[] = []
   const select = xpath.useNamespaces({ cnxml: NS_CNXML })
   const documentLinks = select('//cnxml:link[@document]', xmlData) as Node[]
+  const parsedOtherPages = new Map<string, Document>()
 
   for (const link of documentLinks) {
     const linkElement = link as any
@@ -135,17 +136,23 @@ async function validateOtherPageLinks(xmlData: Document, knownModules: Map<strin
     // A matching module was found. Also validate target ID if it's specified in the link
     const linkTargetId: string = linkElement.getAttribute('target-id')
     if (linkTargetId !== '') {
-      const targetModulePath = targetModuleInformation.path
-      const targetModuleText = fs.readFileSync(targetModulePath, 'utf-8')
-      const targetModuleXmlData: Document = new DOMParser().parseFromString(targetModuleText)
-      if (targetModuleXmlData === undefined) {
-        preparedDiagnostic.message = `Could not parse target document!: ${linkTargetModule}`
-        diagnostics.push(preparedDiagnostic)
-        continue
+      // Grab a previously parsed object if we've already checked something on
+      // this target page, otherwise read the file and parse it
+      let maybeModuleXmlData: Document | undefined = parsedOtherPages.get(linkTargetModule)
+      if (maybeModuleXmlData === undefined) {
+        const targetModulePath = targetModuleInformation.path
+        const targetModuleText = fs.readFileSync(targetModulePath, 'utf-8')
+        maybeModuleXmlData = new DOMParser().parseFromString(targetModuleText)
+        if (maybeModuleXmlData === undefined) {
+          preparedDiagnostic.message = `Could not parse target document!: ${linkTargetModule}`
+          diagnostics.push(preparedDiagnostic)
+          continue
+        }
+        parsedOtherPages.set(linkTargetModule, maybeModuleXmlData)
       }
       const targetElements = select(
         `//cnxml:*[@id="${linkTargetId}"]`,
-        targetModuleXmlData
+        maybeModuleXmlData
       ) as Node[]
       if (targetElements.length === 0) {
         preparedDiagnostic.message = `Target ID in document doesn't exist!: ${linkTargetId}`
