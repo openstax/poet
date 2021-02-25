@@ -9,7 +9,8 @@ import {
   LINK_DIAGNOSTIC_SOURCE,
   getCurrentModules,
   ValidationQueue,
-  ValidationRequest
+  ValidationRequest,
+  ModuleInformation
 } from './../utils'
 
 import assert from 'assert'
@@ -188,20 +189,19 @@ describe('getCurrentModules', function () {
       uri: 'file:///workspace'
     }
     const result = await getCurrentModules([workspaceFolder])
-    const expected = [
-      '/workspace/modules/m00001/index.cnxml',
-      '/workspace/modules/m00002/index.cnxml'
-    ]
+    const expected = new Map<string, ModuleInformation>()
+    expected.set('m00001', { path: '/workspace/modules/m00001/index.cnxml' })
+    expected.set('m00002', { path: '/workspace/modules/m00002/index.cnxml' })
     assert.deepStrictEqual(result, expected)
   })
-  it('should return empty array if modules directory doesn\'t exist', async function () {
+  it('should return empty data if modules directory doesn\'t exist', async function () {
     const workspaceFolder = {
       index: 0,
       name: '',
       uri: 'file:///emptyworkspace'
     }
     const result = await getCurrentModules([workspaceFolder])
-    assert.deepStrictEqual(result, [])
+    assert.deepStrictEqual(result, new Map<string, ModuleInformation>())
   })
 })
 
@@ -234,7 +234,7 @@ describe('validateLinks', function () {
     )
     const xmlData = await parseXMLString(inputDocument)
     assert(xmlData != null)
-    const result = await validateLinks(xmlData, [])
+    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
     assert.deepStrictEqual(result, [])
   })
   it('should return empty diagnostics links are incomplete', async function () {
@@ -252,7 +252,7 @@ describe('validateLinks', function () {
     )
     const xmlData = await parseXMLString(inputDocument)
     assert(xmlData != null)
-    const result = await validateLinks(xmlData, [])
+    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
     assert.deepStrictEqual(result, [])
   })
   it('should return empty diagnostics when all links are valid', async function () {
@@ -270,7 +270,12 @@ describe('validateLinks', function () {
     )
     const xmlData = await parseXMLString(inputDocument)
     assert(xmlData != null)
-    const result = await validateLinks(xmlData, ['/modules/m00001/index.cnxml'])
+    const moduleInformation: ModuleInformation = {
+      path: '/modules/m00001/index.cnxml'
+    }
+    const knownModules = new Map<string, ModuleInformation>()
+    knownModules.set('m00001', moduleInformation)
+    const result = await validateLinks(xmlData, knownModules)
     assert.deepStrictEqual(result, [])
   })
   it('should return diagnostic when same-page target-id doesn\'t exist', async function () {
@@ -288,7 +293,7 @@ describe('validateLinks', function () {
     )
     const xmlData = await parseXMLString(inputDocument)
     assert(xmlData != null)
-    const result = await validateLinks(xmlData, [])
+    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
     const linkLocation = inputContent.indexOf('<link target-id="para2"')
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -316,7 +321,7 @@ describe('validateLinks', function () {
     )
     const xmlData = await parseXMLString(inputDocument)
     assert(xmlData != null)
-    const result = await validateLinks(xmlData, [])
+    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
     const linkLocation = inputContent.indexOf('<link target-id="para1"')
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -342,7 +347,7 @@ describe('validateLinks', function () {
     )
     const xmlData = await parseXMLString(inputDocument)
     assert(xmlData != null)
-    const result = await validateLinks(xmlData, [])
+    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
     const linkLocation = inputContent.indexOf('<link document="m00002"')
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -371,7 +376,12 @@ describe('validateLinks', function () {
     )
     const xmlData = await parseXMLString(inputDocument)
     assert(xmlData != null)
-    const result = await validateLinks(xmlData, ['/modules/m00001/index.cnxml'])
+    const moduleInformation: ModuleInformation = {
+      path: '/modules/m00001/index.cnxml'
+    }
+    const knownModules = new Map<string, ModuleInformation>()
+    knownModules.set('m00001', moduleInformation)
+    const result = await validateLinks(xmlData, knownModules)
     const linkLocation = inputContent.indexOf('<link document="m00001" target-id="para2"/>')
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -397,7 +407,12 @@ describe('validateLinks', function () {
     )
     const xmlData = await parseXMLString(inputDocument)
     assert(xmlData != null)
-    const result = await validateLinks(xmlData, ['/modules/m00001/index.cnxml'])
+    const moduleInformation: ModuleInformation = {
+      path: '/modules/m00001/index.cnxml'
+    }
+    const knownModules = new Map<string, ModuleInformation>()
+    knownModules.set('m00001', moduleInformation)
+    const result = await validateLinks(xmlData, knownModules)
     const linkLocation = inputContent.indexOf('<link document="m00001" target-id="dup"/>')
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -423,7 +438,12 @@ describe('validateLinks', function () {
     )
     const xmlData = await parseXMLString(inputDocument)
     assert(xmlData != null)
-    const result = await validateLinks(xmlData, ['/modules/empty/index.cnxml'])
+    const moduleInformation: ModuleInformation = {
+      path: '/modules/empty/index.cnxml'
+    }
+    const knownModules = new Map<string, ModuleInformation>()
+    knownModules.set('empty', moduleInformation)
+    const result = await validateLinks(xmlData, knownModules)
     const linkLocation = inputContent.indexOf('<link document="empty" target-id="para1"/>')
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,

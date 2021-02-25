@@ -65,10 +65,10 @@ export async function validateImagePaths(textDocument: TextDocument, xmlData: Do
   return diagnostics
 }
 
-export async function validateLinks(xmlData: Document, knownModules: string[]): Promise<Diagnostic[]> {
+export async function validateLinks(xmlData: Document, knownModules: Map<string, ModuleInformation>): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = []
 
-  const samePageValidation = validateSamePageLinks(xmlData, knownModules)
+  const samePageValidation = validateSamePageLinks(xmlData)
   const otherPageValidation = validateOtherPageLinks(xmlData, knownModules)
   await Promise.all([samePageValidation, otherPageValidation]).then(results => {
     results.forEach(diags => diagnostics.push(...diags))
@@ -77,26 +77,33 @@ export async function validateLinks(xmlData: Document, knownModules: string[]): 
   return diagnostics
 }
 
-export async function getCurrentModules(workspaceFolders: WorkspaceFolder[]): Promise<string[]> {
-  const moduleFiles: string[] = []
+export interface ModuleInformation {
+  path: string
+}
+
+export async function getCurrentModules(workspaceFolders: WorkspaceFolder[]): Promise<Map<string, ModuleInformation>> {
+  const moduleFiles = new Map<string, ModuleInformation>()
 
   for (const workspace of workspaceFolders) {
     const modulesPath = path.join(URI.parse(workspace.uri).path, 'modules')
     if (fs.existsSync(modulesPath)) {
       // Return modules with full path information in case we need to peek into
       // any of them later (e.g. for validation purposes)
-      moduleFiles.push(
-        ...glob.sync('**/*.cnxml', { cwd: modulesPath }).map(
-          (val) => { return modulesPath.concat('/', val) }
-        )
-      )
+      glob.sync('**/*.cnxml', { cwd: modulesPath }).forEach(val => {
+        const modulePath = modulesPath.concat('/', val)
+        const moduleId = val.split('/')[0]
+        const moduleInformation: ModuleInformation = {
+          path: modulePath
+        }
+        moduleFiles.set(moduleId, moduleInformation)
+      })
     }
   }
 
   return moduleFiles
 }
 
-async function validateOtherPageLinks(xmlData: Document, knownModules: string[]): Promise<Diagnostic[]> {
+async function validateOtherPageLinks(xmlData: Document, knownModules: Map<string, ModuleInformation>): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = []
   const select = xpath.useNamespaces({ cnxml: NS_CNXML })
   const documentLinks = select('//cnxml:link[@document]', xmlData) as Node[]
@@ -118,8 +125,8 @@ async function validateOtherPageLinks(xmlData: Document, knownModules: string[])
     }
 
     // Check whether the target module is known
-    const targetModulePath = knownModules.find(val => val.includes(linkTargetModule))
-    if (targetModulePath === undefined) {
+    const targetModuleInformation = knownModules.get(linkTargetModule)
+    if (targetModuleInformation === undefined) {
       preparedDiagnostic.message = `Target document for link doesn't exist!: ${linkTargetModule}`
       diagnostics.push(preparedDiagnostic)
       continue
@@ -128,6 +135,7 @@ async function validateOtherPageLinks(xmlData: Document, knownModules: string[])
     // A matching module was found. Also validate target ID if it's specified in the link
     const linkTargetId: string = linkElement.getAttribute('target-id')
     if (linkTargetId !== '') {
+      const targetModulePath = targetModuleInformation.path
       const targetModuleText = fs.readFileSync(targetModulePath, 'utf-8')
       const targetModuleXmlData: Document = new DOMParser().parseFromString(targetModuleText)
       if (targetModuleXmlData === undefined) {
@@ -154,7 +162,7 @@ async function validateOtherPageLinks(xmlData: Document, knownModules: string[])
   return diagnostics
 }
 
-async function validateSamePageLinks(xmlData: Document, knownModules: string[]): Promise<Diagnostic[]> {
+async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = []
   const select = xpath.useNamespaces({ cnxml: NS_CNXML })
   const samePageLinks = select('//cnxml:link[@target-id and not(@document)]', xmlData) as Node[]
