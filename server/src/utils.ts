@@ -173,6 +173,7 @@ async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = []
   const select = xpath.useNamespaces({ cnxml: NS_CNXML })
   const samePageLinks = select('//cnxml:link[@target-id and not(@document)]', xmlData) as Node[]
+  const validTargetIds = new Set<string>()
 
   for (const link of samePageLinks) {
     // Check the document for a matching id element
@@ -186,7 +187,7 @@ async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
       LINK_DIAGNOSTIC_SOURCE
     )
     const linkTargetId: string = linkElement.getAttribute('target-id')
-    if (linkTargetId === '') {
+    if ((linkTargetId === '') || (validTargetIds.has(linkTargetId))) {
       continue
     }
     const targetElements = select(
@@ -203,6 +204,8 @@ async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
       diagnostics.push(preparedDiagnostic)
       continue
     }
+
+    validTargetIds.add(linkTargetId)
   }
 
   return diagnostics
