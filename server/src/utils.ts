@@ -68,8 +68,11 @@ export async function validateImagePaths(textDocument: TextDocument, xmlData: Do
 export async function validateLinks(xmlData: Document, knownModules: string[]): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = []
 
-  diagnostics.push(...validateSamePageLinks(xmlData, knownModules))
-  diagnostics.push(...validateOtherPageLinks(xmlData, knownModules))
+  const samePageValidation = validateSamePageLinks(xmlData, knownModules)
+  const otherPageValidation = validateOtherPageLinks(xmlData, knownModules)
+  await Promise.all([samePageValidation, otherPageValidation]).then(results => {
+    results.forEach(diags => diagnostics.push(...diags))
+  })
 
   return diagnostics
 }
@@ -93,7 +96,7 @@ export async function getCurrentModules(workspaceFolders: WorkspaceFolder[]): Pr
   return moduleFiles
 }
 
-function validateOtherPageLinks(xmlData: Document, knownModules: string[]): Diagnostic[] {
+async function validateOtherPageLinks(xmlData: Document, knownModules: string[]): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = []
   const select = xpath.useNamespaces({ cnxml: NS_CNXML })
   const documentLinks = select('//cnxml:link[@document]', xmlData) as Node[]
@@ -151,7 +154,7 @@ function validateOtherPageLinks(xmlData: Document, knownModules: string[]): Diag
   return diagnostics
 }
 
-function validateSamePageLinks(xmlData: Document, knownModules: string[]): Diagnostic[] {
+async function validateSamePageLinks(xmlData: Document, knownModules: string[]): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = []
   const select = xpath.useNamespaces({ cnxml: NS_CNXML })
   const samePageLinks = select('//cnxml:link[@target-id and not(@document)]', xmlData) as Node[]
@@ -282,10 +285,11 @@ export class ValidationQueue {
     const knownModules = await getCurrentModules(workspaceFolders)
 
     if (xmlData != null) {
-      const imagePathDiagnostics = await validateImagePaths(textDocument, xmlData)
-      diagnostics.push(...imagePathDiagnostics)
-      const linkDiagnostics = await validateLinks(xmlData, knownModules)
-      diagnostics.push(...linkDiagnostics)
+      const imageValidation: Promise<Diagnostic[]> = validateImagePaths(textDocument, xmlData)
+      const linkValidation: Promise<Diagnostic[]> = validateLinks(xmlData, knownModules)
+      await Promise.all([imageValidation, linkValidation]).then(results => {
+        results.forEach(diags => diagnostics.push(...diags))
+      })
     }
 
     this.connection.sendDiagnostics({
