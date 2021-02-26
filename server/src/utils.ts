@@ -249,16 +249,29 @@ function generateDiagnostic(severity: DiagnosticSeverity,
   return diagnostic
 }
 
-function calculateElementPositions(element: any): Position[] {
+export function calculateElementPositions(element: any): Position[] {
   // Calculate positions accounting for the zero-based convention used by
   // vscode
   const startPosition: Position = {
     line: element.lineNumber - 1,
     character: element.columnNumber - 1
   }
-  const endPosition: Position = {
-    line: element.nextSibling.lineNumber - 1,
-    character: element.nextSibling.columnNumber - 1
+  const elementSibling = element.nextSibling
+  let endPosition: Position
+
+  // Use the sibling element to get accurate position of the end of the
+  // input element if it's available. Otherwise we'll use the length of the
+  // tag name to establish an end position
+  if (elementSibling === null) {
+    endPosition = {
+      line: element.lineNumber - 1,
+      character: (element.columnNumber as number) + (element.tagName.length as number)
+    }
+  } else {
+    endPosition = {
+      line: element.nextSibling.lineNumber - 1,
+      character: element.nextSibling.columnNumber - 1
+    }
   }
 
   return [startPosition, endPosition]
