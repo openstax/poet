@@ -262,6 +262,7 @@ describe('validateLinks', function () {
           <link target-id="para1" />
           <link document="m00001" />
           <para id="para1"></para>
+          <para id=""></para>
         </content>
       </document>
     `

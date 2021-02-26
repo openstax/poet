@@ -173,7 +173,36 @@ async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = []
   const select = xpath.useNamespaces({ cnxml: NS_CNXML })
   const samePageLinks = select('//cnxml:link[@target-id and not(@document)]', xmlData) as Node[]
+  const samePageElementsWithIds = select('//cnxml:*[@id]', xmlData) as Node[]
+  const samePageIdCounts = new Map<string, number>()
   const validTargetIds = new Set<string>()
+  const duplicateTargetIds = new Set<string>()
+
+  for (const elementWithId of samePageElementsWithIds) {
+    const element = elementWithId as any
+    const elementId = element.getAttribute('id')
+
+    if (elementId === '') {
+      continue
+    }
+
+    const count = samePageIdCounts.get(elementId)
+    if (count === undefined) {
+      samePageIdCounts.set(elementId, 1)
+    } else {
+      samePageIdCounts.set(elementId, count + 1)
+    }
+  }
+
+  samePageIdCounts.forEach((val, key, map) => {
+    if (val === 1) {
+      validTargetIds.add(key)
+    }
+
+    if (val > 1) {
+      duplicateTargetIds.add(key)
+    }
+  })
 
   for (const link of samePageLinks) {
     // Check the document for a matching id element
@@ -190,22 +219,16 @@ async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
     if ((linkTargetId === '') || (validTargetIds.has(linkTargetId))) {
       continue
     }
-    const targetElements = select(
-      `//cnxml:*[@id="${linkTargetId}"]`,
-      xmlData
-    ) as Node[]
 
-    if (targetElements.length === 0) {
-      preparedDiagnostic.message = `Target for link doesn't exist!: ${linkTargetId}`
-      diagnostics.push(preparedDiagnostic)
-      continue
-    } else if (targetElements.length > 1) {
+    if (duplicateTargetIds.has(linkTargetId)) {
       preparedDiagnostic.message = `Target for link is not unique!: ${linkTargetId}`
       diagnostics.push(preparedDiagnostic)
       continue
+    } else {
+      preparedDiagnostic.message = `Target for link doesn't exist!: ${linkTargetId}`
+      diagnostics.push(preparedDiagnostic)
+      continue
     }
-
-    validTargetIds.add(linkTargetId)
   }
 
   return diagnostics
