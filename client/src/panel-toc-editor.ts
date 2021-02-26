@@ -42,6 +42,46 @@ export interface PanelIncomingMessage {
   treeData?: TocTreeCollection
 }
 
+async function createBlankModule(): Promise<string> {
+  const template = `
+<document xmlns="http://cnx.rice.edu/cnxml">
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:title>New Module</md:title>
+  </metadata>
+  <content>
+  </content>
+</document>`.trim()
+  const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
+  let moduleNumber = 0
+  while (true) {
+    const newModuleId = `m${moduleNumber.toString().padStart(5, '0')}`
+    const newModuleUri = uri.with({ path: path.join(uri.path, 'modules', newModuleId, 'index.cnxml') })
+    try {
+      await vscode.workspace.fs.stat(newModuleUri)
+    } catch (err) {
+      if (err instanceof vscode.FileSystemError && err.name.includes('EntryNotFound')) {
+        await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(template))
+        return newModuleId
+      }
+    }
+    // File exists already, try again
+    moduleNumber += 1
+    continue
+  }
+}
+
+async function renameModule(id: string, newName: string): Promise<void> {
+  const uri = expect(getRootPathUri(), 'No root path in which to find renamed module')
+  const moduleUri = uri.with({ path: path.join(uri.path, 'modules', id, 'index.cnxml') })
+  const xml = Buffer.from(await vscode.workspace.fs.readFile(moduleUri)).toString('utf-8')
+  const document = new DOMParser().parseFromString(xml)
+  const metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
+  metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent = newName
+  const newData = new XMLSerializer().serializeToString(document)
+  await vscode.workspace.fs.writeFile(moduleUri, Buffer.from(newData))
+}
+
+
 /**
  * Guess all module titles by reading the modules asynchronously and
  * just looking for the title tag with a specific namespace prefix.
