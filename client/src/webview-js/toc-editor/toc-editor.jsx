@@ -1,5 +1,5 @@
 import { h, Fragment, render, createContext } from 'preact' // eslint-disable-line no-unused-vars
-import { useState, useContext, useEffect } from 'preact/hooks'
+import { useState, useContext, useEffect, useRef } from 'preact/hooks'
 import 'react-sortable-tree/style.css'
 import SortableTree from 'react-sortable-tree'
 import stringify from 'json-stable-stringify'
@@ -8,13 +8,13 @@ const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'
 
 const getExpandedIndices = (tree) => {
-  const stack = [...tree.children]
+  const stack = [...tree.children.slice().reverse()]
   const subcollections = []
   while (stack.length > 0) {
     const element = stack.pop()
     if (element.type === 'subcollection') {
       subcollections.push(element)
-      stack.push(...element.children)
+      stack.push(...element.children.slice().reverse())
     }
   }
   const indices = []
@@ -27,13 +27,13 @@ const getExpandedIndices = (tree) => {
 }
 
 const expandIndices = (tree, indices) => {
-  const stack = [...tree.children]
+  const stack = [...tree.children.slice().reverse()]
   const subcollections = []
   while (stack.length > 0) {
     const element = stack.pop()
     if (element.type === 'subcollection') {
       subcollections.push(element)
-      stack.push(...element.children)
+      stack.push(...element.children.slice().reverse())
     }
   }
   for (const index of indices) {
@@ -46,12 +46,47 @@ const removeExpanded = (key, value) => key === 'expanded' ? undefined : value
 const SearchContext = createContext({})
 
 const saveState = (item) => {
-  // vscode.postMessage({type: 'debug', item: ['save', item]})
   vscode.setState(item)
 }
 const getSavedState = () => {
-  // vscode.postMessage({type: 'debug', item: ['load', vscode.getState()]})
   return vscode.getState()
+}
+
+// Use this function to send messages to the extension debug console
+// eslint-disable-line no-unused-vars
+const debug = (item) => {
+  vscode.postMessage({ type: 'debug', item })
+}
+
+const InputOnFocus = (props) => {
+  const [focus, setFocus] = useState(false)
+  const [value, setValue] = useState(props.value)
+  const inputRef = useRef(null);
+
+  // be reactive to a value change up the tree
+  useEffect(() => {
+    setValue(props.value)
+  }, [props.value])
+
+  // focus the input box when it appears
+  useEffect(() => {
+    if (focus) {
+      inputRef.current.focus()
+    }
+  }, [focus])
+
+  if (focus) {
+    return (
+      <input
+        style={{display: 'block', fontWeight: 'inherit', fontSize: 'inherit', color: 'inherit', height: 'inherit' }}
+        ref={inputRef}
+        onBlur={() => {setFocus(false)}}
+        onChange={props.onChange} 
+        value={value}
+      />
+    )
+  }
+  return <span style={{display: 'block', minWidth: '2rem', height: 'inherit'}} onClick={() => {setFocus(true)}}>{props.value}</span>
 }
 
 const ContentTree = (props) => {
@@ -97,7 +132,7 @@ const ContentTree = (props) => {
     return !!(titleMatches || subtitleMatches)
   }
 
-  const handleChange = (newChildren) => {
+  const handleChange = (newChildren, force=false) => {
     const { treesData, selectionIndices } = getSavedState()
 
     const newData = { ...data, ...{ children: newChildren } }
@@ -114,7 +149,7 @@ const ContentTree = (props) => {
     saveState({ treesData, selectionIndices })
     setData(newData)
 
-    if (oldStructure !== newStructure) {
+    if (oldStructure !== newStructure || force) {
       vscode.postMessage({ type: 'write-tree', treeData: newData })
     }
   }
@@ -124,7 +159,25 @@ const ContentTree = (props) => {
       subcollection: 'green',
       module: 'purple'
     }
+    const typeToRenameAction = {
+      // Force rewriting the tree only will change the module title as it appears in the collection file,
+      // but won't change the actual title inside the module content.
+      // We need to have the base part of the extension do that for us.
+      module: (event) => {
+        node.title = event.target.value
+        vscode.postMessage({type: 'module-rename', moduleid: node.moduleid, newName: event.target.value })
+      },
+      // We can change the title by just force rewriting the collection tree with the modified title
+      // Subcollections don't have persistent identifiers, so changing them in the base part of the
+      // extension would be tougher to do.
+      subcollection: (event) => {
+        node.title = event.target.value
+        handleChange(data.children, true)
+      }
+    }
+
     return {
+      title: <InputOnFocus onChange={typeToRenameAction[node.type]} value={node.title} />,
       style: {
         boxShadow: `0 0 0 4px ${typeToColor[node.type]}`
       }
@@ -180,7 +233,7 @@ const EditorPanel = (props) => {
   }
 
   const handleAddSubcollection = (event) => {
-    vscode.postMessage({ type: 'subcollection-create' })
+    vscode.postMessage({ type: 'subcollection-create', slug: trees[selection].slug })
   }
 
   const handleSelect = (event) => {
@@ -260,23 +313,16 @@ const EditorPanel = (props) => {
         </div>
       </div>
       <div style={{ flexGrow: '1' }}>
-        {trees.map((tree, i) => {
-          if (selection !== i) {
-            return <></>
-          }
-          return (
-            <div key={i} style={{ height: '100%' }}>
-              <SearchContext.Provider value={searchContext}>
-                <ContentTree
-                  modifiesStateName={modifiesStateName}
-                  index={i}
-                  data={tree}
-                  editable={props.editable}
-                />
-              </SearchContext.Provider>
-            </div>
-          )
-        })}
+        <div style={{ height: '100%' }}>
+          <SearchContext.Provider value={searchContext}>
+            <ContentTree
+              modifiesStateName={modifiesStateName}
+              index={selection}
+              data={trees[selection]}
+              editable={props.editable}
+            />
+          </SearchContext.Provider>
+        </div>
       </div>
     </div>
   )
@@ -289,6 +335,7 @@ const App = (props) => (
       treesData={props.treesData.editable}
       selectionIndex={props.selectionIndices.editable}
       editable={true}
+      canAddSubcollections
     />
     <EditorPanel
       modifiesStateName={'uneditable'}

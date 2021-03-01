@@ -42,6 +42,10 @@ export interface WriteTreeSignal {
   type: 'write-tree'
   treeData: TocTreeCollection
 }
+export interface SubcollectionCreateSignal {
+  type: 'subcollection-create'
+  slug: string
+}
 export interface ModuleCreateSignal {
   type: 'module-create'
 }
@@ -50,7 +54,15 @@ export interface ModuleRenameSignal {
   moduleid: string
   newName: string
 }
-export type PanelIncomingMessage = DebugSignal | RefreshSignal | ErrorSignal | WriteTreeSignal | ModuleCreateSignal | ModuleRenameSignal
+export type PanelIncomingMessage = 
+  ( DebugSignal
+  | RefreshSignal
+  | ErrorSignal
+  | WriteTreeSignal
+  | SubcollectionCreateSignal
+  | ModuleCreateSignal
+  | ModuleRenameSignal
+  )
 
 interface PanelOutgoingMessage {
   uneditable: TocTreeCollection[]
@@ -80,6 +92,30 @@ async function createBlankModule(): Promise<string> {
     await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(template))
     return newModuleId
   }
+}
+
+async function createSubcollection(slug: string): Promise<void> {
+  const uri = expect(getRootPathUri(), 'no root path found in which to write tree')
+  const replacingUri = uri.with({ path: path.join(uri.fsPath, 'collections', `${slug}.collection.xml`) })
+  const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' })
+  const document = new DOMParser().parseFromString(collectionData)
+  const contentRoot = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
+  // make a fake tree data collection to populate the new subcollection to the content root
+  populateTreeDataToXML(document, contentRoot, {
+    type: 'collection',
+    title: 'fake',
+    children: [{
+      type: 'subcollection',
+      title: 'New Subcollection',
+      children: []
+    }]
+  })
+  const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(document), {
+    indentation: '  ',
+    collapseContent: true,
+    lineSeparator: '\n'
+  })
+  await vscode.workspace.fs.writeFile(replacingUri, Buffer.from(serailizedXml))
 }
 
 async function renameModule(id: string, newName: string): Promise<void> {
@@ -160,8 +196,11 @@ export const showTocEditor = (panelType: PanelType, resourceRootDir: string, act
   panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(panel)))
 
   // Setup an occasional refresh to remain reactive to unhandled events
-  const refreshHandler = ensureCatch(handleMessage(panel))
-  setInterval(() => { refreshHandler({ type: 'refresh' }) }, 1000)
+  let autoRefresh = setInterval(() => {
+    handleMessage(panel)({ type: 'refresh' }).catch(err => {
+      clearInterval(autoRefresh)
+    })
+  }, 1000)
 }
 
 export const handleMessage = (panel: vscode.WebviewPanel) => async (message: PanelIncomingMessage) => {
@@ -178,12 +217,17 @@ export const handleMessage = (panel: vscode.WebviewPanel) => async (message: Pan
   } else if (message.type === 'module-create') {
     await createBlankModule()
     await refreshPanel()
+  } else if (message.type === 'subcollection-create') {
+    await createSubcollection(message.slug)
+    await refreshPanel()
   } else if (message.type === 'module-rename') {
     const { moduleid, newName } = message
     await renameModule(moduleid, newName)
     await refreshPanel()
   } else if (message.type === 'write-tree') {
     await writeTree(message.treeData)
+  } else {
+    throw new Error(`Unexpected signal: ${JSON.stringify(message)}`)
   }
 }
 
