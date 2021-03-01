@@ -623,10 +623,10 @@ describe('calculateElementPositions', function () {
     const result: Position[] = calculateElementPositions(imageElement)
     assert.deepStrictEqual(result, [expectedStart, expectedEnd])
   })
-  it('should return start and end positions based on tag length when no siblings', async function () {
+  it('should return start and end positions based on attributes when no siblings', async function () {
     const xmlContent = `
       <document>
-        <content><image src="" /></content>
+        <content><image src="value" /></content>
       </document>
     `
     const document = TextDocument.create(
@@ -644,7 +644,7 @@ describe('calculateElementPositions', function () {
     }
     const expectedEnd: Position = {
       line: 2,
-      character: 23
+      character: 35
     }
     const result: Position[] = calculateElementPositions(imageElement)
     assert.deepStrictEqual(result, [expectedStart, expectedEnd])

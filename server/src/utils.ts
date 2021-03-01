@@ -260,12 +260,17 @@ export function calculateElementPositions(element: any): Position[] {
   let endPosition: Position
 
   // Use the sibling element to get accurate position of the end of the
-  // input element if it's available. Otherwise we'll use the length of the
-  // tag name to establish an end position
+  // input element if it's available. Otherwise we'll use the position and
+  // content of the last attribute to establish an end position
   if (elementSibling === null) {
+    const elementAttributes = element.attributes
+    const finalAttribute = elementAttributes[elementAttributes.length - 1]
+    const finalAttributeColumn: number = finalAttribute.columnNumber
+    const finalAttributeLength: number = finalAttribute.value.length
+
     endPosition = {
-      line: element.lineNumber - 1,
-      character: (element.columnNumber as number) + (element.tagName.length as number)
+      line: finalAttribute.lineNumber - 1,
+      character: finalAttributeColumn + finalAttributeLength + 1
     }
   } else {
     endPosition = {
