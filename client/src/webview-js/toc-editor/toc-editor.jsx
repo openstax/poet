@@ -1,5 +1,5 @@
 import { h, Fragment, render, createContext } from 'preact' // eslint-disable-line no-unused-vars
-import { useState, useContext } from 'preact/hooks'
+import { useState, useContext, useEffect } from 'preact/hooks'
 import 'react-sortable-tree/style.css'
 import SortableTree from 'react-sortable-tree'
 import stringify from 'json-stable-stringify'
@@ -7,13 +7,62 @@ import stringify from 'json-stable-stringify'
 const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'
 
+const getExpandedIndices = (tree) => {
+  const stack = [...tree.children]
+  const subcollections = []
+  while (stack.length > 0) {
+    const element = stack.pop()
+    if (element.type === 'subcollection') {
+      subcollections.push(element)
+      stack.push(...element.children)
+    }
+  }
+  const indices = []
+  for (let x = 0; x < subcollections.length; x++) {
+    if (subcollections[x].expanded === true) {
+      indices.push(x)
+    }
+  }
+  return indices
+}
+
+const expandIndices = (tree, indices) => {
+  const stack = [...tree.children]
+  const subcollections = []
+  while (stack.length > 0) {
+    const element = stack.pop()
+    if (element.type === 'subcollection') {
+      subcollections.push(element)
+      stack.push(...element.children)
+    }
+  }
+  for (const index of indices) {
+    subcollections[index].expanded = true
+  }
+}
+
 const removeExpanded = (key, value) => key === 'expanded' ? undefined : value
 
 const SearchContext = createContext({})
 
+const saveState = (item) => {
+  // vscode.postMessage({type: 'debug', item: ['save', item]})
+  vscode.setState(item)
+}
+const getSavedState = () => {
+  // vscode.postMessage({type: 'debug', item: ['load', vscode.getState()]})
+  return vscode.getState()
+}
+
 const ContentTree = (props) => {
   const modifiesStateName = props.modifiesStateName
   const [data, setData] = useState(props.data)
+
+  // be reactive to a data change up the tree as well
+  useEffect(() => {
+    setData(props.data)
+  }, [props.data])
+
   const {
     searchQuery,
     // setSearchQuery,
@@ -32,7 +81,7 @@ const ContentTree = (props) => {
       // This is a bug, but let's at least error gracefully
       // instead of freezing with infinite render loop
       const message = 'Divided search item by zero (probably)'
-      vscode.postMessage({ signal: { type: 'error', message } })
+      vscode.postMessage({ type: 'error', message })
       throw new Error(message)
     }
     setSearchFoundCount(matches.length)
@@ -49,7 +98,7 @@ const ContentTree = (props) => {
   }
 
   const handleChange = (newChildren) => {
-    const { treesData, selectionIndices } = vscode.getState()
+    const { treesData, selectionIndices } = getSavedState()
 
     const newData = { ...data, ...{ children: newChildren } }
     const oldStructure = stringify(data.children, { replacer: removeExpanded })
@@ -62,11 +111,11 @@ const ContentTree = (props) => {
     }
 
     treesData[modifiesStateName][props.index].children = newChildren
-    vscode.setState({ treesData, selectionIndices })
+    saveState({ treesData, selectionIndices })
     setData(newData)
 
     if (oldStructure !== newStructure) {
-      vscode.postMessage({ treeData: newData })
+      vscode.postMessage({ type: 'write-tree', treeData: newData })
     }
   }
 
@@ -126,11 +175,19 @@ const EditorPanel = (props) => {
     setSearchFocusIndex((searchFocusIndex + searchFoundCount + 1) % searchFoundCount)
   }
 
+  const handleAddModule = (event) => {
+    vscode.postMessage({ type: 'module-create' })
+  }
+
+  const handleAddSubcollection = (event) => {
+    vscode.postMessage({ type: 'subcollection-create' })
+  }
+
   const handleSelect = (event) => {
-    const { treesData, selectionIndices } = vscode.getState()
+    const { treesData, selectionIndices } = getSavedState()
     const newSelection = parseInt(event.target.value)
     selectionIndices[modifiesStateName] = newSelection
-    vscode.setState({ treesData, selectionIndices })
+    saveState({ treesData, selectionIndices })
     setSelection(newSelection)
   }
 
@@ -151,16 +208,28 @@ const EditorPanel = (props) => {
 
   return (
     <div className={`panel-${modifiesStateName}`} style={{ display: 'flex', flexDirection: 'column', height: '99vh', width: '49vw' }}>
-      <div>
+      <div className="controls" style={{ margin: '1rem' }}>
         <select
           className='tree-select'
           value={selection}
-          style={{ margin: '1rem', maxWidth: '300px' }}
+          style={{ maxWidth: '300px' }}
           onChange={handleSelect}
         >
           {trees.map((tree, i) => <option key={i} value={i}>{tree.title}</option>)}
         </select>
-        <div style={{ margin: '1rem', marginTop: '0', height: '2rem', display: 'flex', maxWidth: '400px', alignItems: 'center' }}>
+        <div style={{ display: 'flex' }}>
+          {
+            props.canAddModules
+              ? <button onClick={handleAddModule}>Add Module</button>
+              : <></>
+          }
+          {
+            props.canAddSubcollections
+              ? <button onClick={handleAddSubcollection}>Add Subcollection</button>
+              : <></>
+          }
+        </div>
+        <div style={{ marginTop: '0', height: '2rem', display: 'flex', maxWidth: '400px', alignItems: 'center' }}>
           <input
             className='search'
             style={{ maxWidth: '300px', height: '100%', padding: '0', paddingLeft: '4px' }}
@@ -226,23 +295,38 @@ const App = (props) => (
       treesData={props.treesData.uneditable}
       selectionIndex={props.selectionIndices.uneditable}
       editable={false}
+      canAddModules
     />
   </div>
 )
 
 window.addEventListener('load', () => {
-  vscode.postMessage({ signal: { type: 'loaded' } })
+  vscode.postMessage({ type: 'refresh' })
 })
 
 window.addEventListener('message', event => {
-  const previousState = vscode.getState()
+  const previousState = getSavedState()
+  const oldData = previousState?.treesData
+  const newData = event.data
+  if (oldData != null) {
+    const slugToExpandedIndices = {}
+    for (const tree of oldData.editable) {
+      slugToExpandedIndices[tree.slug] = getExpandedIndices(tree)
+    }
+    for (const tree of newData.editable) {
+      const expandedIndices = slugToExpandedIndices[tree.slug]
+      if (expandedIndices != null) {
+        expandIndices(tree, expandedIndices)
+      }
+    }
+  }
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
-  vscode.setState({ treesData: event.data, selectionIndices })
+  saveState({ treesData: newData, selectionIndices })
   renderApp()
 })
 
 function renderApp() {
-  const previousState = vscode.getState()
+  const previousState = getSavedState()
   const treesData = previousState ? previousState.treesData : { editable: [], uneditable: [] }
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
   const mountPoint = document.getElementById('app')

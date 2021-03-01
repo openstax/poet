@@ -175,8 +175,8 @@ suite('Extension Test Suite', function (this: Suite) {
       }]
     }
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, { editable: [], uneditable: [] })
-      await handler({ treeData: mockEditAddModule })
+      const handler = tocEditorHandleMessage(panel)
+      await handler({ type: 'write-tree', treeData: mockEditAddModule })
       const after = document.getText()
       assert.strictEqual(before.indexOf('m00002'), -1)
       assert.notStrictEqual(after.indexOf('m00002'), -1)
@@ -184,9 +184,9 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('toc editor handle signal message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, { editable: [], uneditable: [] })
+      const handler = tocEditorHandleMessage(panel)
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      assert.rejects(handler({ signal: { type: 'error', message: 'test' } }))
+      assert.rejects(handler({ type: 'error', message: 'test' }))
     })
   }).timeout(5000)
   test('show image upload', async () => {
