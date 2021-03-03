@@ -6,10 +6,11 @@ import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
 import { PanelType } from './extension-types'
+import { title } from 'process'
 
-const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
-const NS_CNXML = 'http://cnx.rice.edu/cnxml'
-const NS_METADATA = 'http://cnx.rice.edu/mdml'
+export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
+export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
+export const NS_METADATA = 'http://cnx.rice.edu/mdml'
 
 export interface TocTreeModule {
   type: 'module'
@@ -124,8 +125,18 @@ async function renameModule(id: string, newName: string): Promise<void> {
   const moduleUri = uri.with({ path: path.join(uri.path, 'modules', id, 'index.cnxml') })
   const xml = Buffer.from(await vscode.workspace.fs.readFile(moduleUri)).toString('utf-8')
   const document = new DOMParser().parseFromString(xml)
-  const metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
-  metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent = newName
+  let metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
+  if (metadata == null) {
+    const root = document.getElementsByTagNameNS(NS_CNXML, 'document')[0]
+    metadata = document.createElementNS(NS_CNXML, 'metadata')
+    root.appendChild(metadata)
+  }
+  let titleElement = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0]
+  if (titleElement == null) {
+    titleElement = document.createElementNS(NS_METADATA, 'md:title')
+    metadata.appendChild(titleElement)
+  }
+  titleElement.textContent = newName
   const newData = new XMLSerializer().serializeToString(document)
   await vscode.workspace.fs.writeFile(moduleUri, Buffer.from(newData))
 }
