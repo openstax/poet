@@ -1,25 +1,18 @@
 // Shares a namespace with the other specfiles if not scoped
+import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../../client/src/panel-toc-editor'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/toc-editor.html'
 
-  interface TreeData {type: string, title: string, slug?: string, subtitle?: string, expanded?: true, children?: TreeData[]}
-  interface SignalMessage {signal: {type: string}, treeData: TreeData}
-  interface TreeMessage {editable: TreeData[], uneditable: TreeData[]}
-  type WidgetMessage = SignalMessage | TreeMessage
-
   describe('toc-editor Webview Tests', () => {
-    function sendMessage(msg: WidgetMessage): void {
+    function sendMessage(msg: PanelOutgoingMessage): void {
       cy.window().then($window => {
         $window.postMessage(msg, '*')
       })
     }
-    function sendTreeData(editable: TreeData[], uneditable: TreeData[]): void {
-      sendMessage({ editable, uneditable })
-    }
 
     // When the browser calls vscode.postMessage(...) that message is added to this array
-    let messagesFromWidget: WidgetMessage[] = []
+    let messagesFromWidget: PanelIncomingMessage[] = []
     // When the browser calls vscode.setState, that state is stored here
     let pageState: any
 
@@ -28,7 +21,7 @@
       cy.visit(htmlPath, {
         onBeforeLoad: (contentWindow) => {
           class API {
-            postMessage(msg: WidgetMessage): void { messagesFromWidget.push(msg) }
+            postMessage(msg: PanelIncomingMessage): void { messagesFromWidget.push(msg) }
             getState(): any { return pageState }
             setState(state: any): void { pageState = state }
           }
@@ -43,48 +36,9 @@
       pageState = undefined
     })
 
-    it('will not load without a sent message', () => {
-      cy.get('[data-app-init]').should('not.exist')
-      cy.get('.panel-editable .rst__node').should('not.exist')
-      cy.get('.panel-uneditable .rst__node').should('not.exist')
-      cy.then(() => {
-        expect(messagesFromWidget.length).equal(1)
-        expect((messagesFromWidget[0] as SignalMessage).signal.type).equal('loaded')
-      })
-    })
-
     it('will load when a message is sent', () => {
-      sendTreeData([{
-        type: 'collection',
-        title: 'test collection',
-        slug: 'test',
-        children: [{
-          type: 'subcollection',
-          title: 'subcollection',
-          expanded: true,
-          children: [{
-            type: 'module',
-            subtitle: 'm00001',
-            title: 'Introduction'
-          }]
-        }, {
-          type: 'module',
-          subtitle: 'm00002',
-          title: 'Appendix'
-        }]
-      }], [])
-      cy.get('[data-app-init]').should('exist')
-      cy.get('.panel-editable .rst__node').should('have.length', 3)
-      cy.get('.panel-uneditable .rst__node').should('not.exist')
-      cy.then(() => {
-        expect(messagesFromWidget.length).equal(1)
-        expect((messagesFromWidget[0] as SignalMessage).signal.type).equal('loaded')
-      })
-    })
-
-    describe('drag-n-drop', () => {
-      beforeEach(() => {
-        sendTreeData([{
+      sendMessage({
+        editable: [{
           type: 'collection',
           title: 'test collection',
           slug: 'test',
@@ -94,38 +48,32 @@
             expanded: true,
             children: [{
               type: 'module',
+              moduleid: 'm00001',
               subtitle: 'm00001',
               title: 'Introduction'
             }]
           }, {
             type: 'module',
+            moduleid: 'm00002',
             subtitle: 'm00002',
             title: 'Appendix'
           }]
-        }], [{
-          type: 'mock',
-          title: 'mock',
-          slug: 'mock',
-          children: [{
-            type: 'module',
-            subtitle: 'm00003',
-            title: 'Module 3'
-          }, {
-            type: 'module',
-            subtitle: 'm00004',
-            title: 'Module 4'
-          }]
-        }])
+        }],
+        uneditable: []
       })
-      it('allows dnd from uneditable to editable', () => {
-        cy.get('.panel-uneditable .rst__node:nth-child(1) .rst__moveHandle')
-          .dnd('.panel-editable .rst__node:nth-child(2) .rst__nodeContent')
-        cy.get('.panel-editable .rst__node').should('have.length', 4)
-        cy.get('.panel-uneditable .rst__node').should('have.length', 2)
-        cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(2)
-          expect((messagesFromWidget[0] as SignalMessage).signal.type).to.equal('loaded')
-          expect((messagesFromWidget[1] as SignalMessage).treeData).to.deep.equal({
+      cy.get('[data-app-init]').should('exist')
+      cy.get('.panel-editable .rst__node').should('have.length', 3)
+      cy.get('.panel-uneditable .rst__node').should('not.exist')
+      cy.then(() => {
+        expect(messagesFromWidget).to.have.length(1)
+        expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+      })
+    })
+
+    describe('drag-n-drop', () => {
+      beforeEach(() => {
+        sendMessage({
+          editable: [{
             type: 'collection',
             title: 'test collection',
             slug: 'test',
@@ -135,18 +83,71 @@
               expanded: true,
               children: [{
                 type: 'module',
-                subtitle: 'm00003',
-                title: 'Module 3'
-              }, {
-                type: 'module',
+                moduleid: 'm00001',
                 subtitle: 'm00001',
                 title: 'Introduction'
               }]
             }, {
               type: 'module',
+              moduleid: 'm00002',
               subtitle: 'm00002',
               title: 'Appendix'
             }]
+          }],
+          uneditable: [{
+            type: 'collection',
+            title: 'mock',
+            slug: 'mock',
+            children: [{
+              type: 'module',
+              moduleid: 'm00003',
+              subtitle: 'm00003',
+              title: 'Module 3'
+            }, {
+              type: 'module',
+              moduleid: 'm00004',
+              subtitle: 'm00004',
+              title: 'Module 4'
+            }]
+          }]
+        })
+      })
+      it('allows dnd from uneditable to editable', () => {
+        cy.get('.panel-uneditable .rst__node:nth-child(1) .rst__moveHandle')
+          .dnd('.panel-editable .rst__node:nth-child(2) .rst__nodeContent')
+        cy.get('.panel-editable .rst__node').should('have.length', 4)
+        cy.get('.panel-uneditable .rst__node').should('have.length', 2)
+        cy.then(() => {
+          expect(messagesFromWidget).to.have.length(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+          expect(messagesFromWidget[1]).to.deep.equal({
+            type: 'write-tree',
+            treeData: {
+              type: 'collection',
+              title: 'test collection',
+              slug: 'test',
+              children: [{
+                type: 'subcollection',
+                title: 'subcollection',
+                expanded: true,
+                children: [{
+                  type: 'module',
+                  moduleid: 'm00003',
+                  subtitle: 'm00003',
+                  title: 'Module 3'
+                }, {
+                  type: 'module',
+                  moduleid: 'm00001',
+                  subtitle: 'm00001',
+                  title: 'Introduction'
+                }]
+              }, {
+                type: 'module',
+                moduleid: 'm00002',
+                subtitle: 'm00002',
+                title: 'Appendix'
+              }]
+            }
           })
         })
       })
@@ -156,26 +157,31 @@
         cy.get('.panel-editable .rst__node').should('have.length', 3)
         cy.get('.panel-uneditable .rst__node').should('have.length', 2)
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(2)
-          expect((messagesFromWidget[0] as SignalMessage).signal.type).to.equal('loaded')
-          expect((messagesFromWidget[1] as SignalMessage).treeData).to.deep.equal({
-            type: 'collection',
-            title: 'test collection',
-            slug: 'test',
-            children: [{
-              type: 'subcollection',
-              title: 'subcollection',
-              expanded: true,
+          expect(messagesFromWidget).to.have.length(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+          expect(messagesFromWidget[1]).to.deep.equal({
+            type: 'write-tree',
+            treeData: {
+              type: 'collection',
+              title: 'test collection',
+              slug: 'test',
               children: [{
-                type: 'module',
-                subtitle: 'm00002',
-                title: 'Appendix'
-              }, {
-                type: 'module',
-                subtitle: 'm00001',
-                title: 'Introduction'
+                type: 'subcollection',
+                title: 'subcollection',
+                expanded: true,
+                children: [{
+                  type: 'module',
+                  moduleid: 'm00002',
+                  subtitle: 'm00002',
+                  title: 'Appendix'
+                }, {
+                  type: 'module',
+                  moduleid: 'm00001',
+                  subtitle: 'm00001',
+                  title: 'Introduction'
+                }]
               }]
-            }]
+            }
           })
         })
       })
@@ -185,22 +191,26 @@
         cy.get('.panel-editable .rst__node').should('have.length', 2)
         cy.get('.panel-uneditable .rst__node').should('have.length', 2)
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(2)
-          expect((messagesFromWidget[0] as SignalMessage).signal.type).to.equal('loaded')
-          expect((messagesFromWidget[1] as SignalMessage).treeData).to.deep.equal({
-            type: 'collection',
-            title: 'test collection',
-            slug: 'test',
-            children: [{
-              type: 'subcollection',
-              title: 'subcollection',
-              expanded: true,
+          expect(messagesFromWidget).to.have.length(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+          expect(messagesFromWidget[1]).to.deep.equal({
+            type: 'write-tree',
+            treeData: {
+              type: 'collection',
+              title: 'test collection',
+              slug: 'test',
               children: [{
-                type: 'module',
-                subtitle: 'm00001',
-                title: 'Introduction'
+                type: 'subcollection',
+                title: 'subcollection',
+                expanded: true,
+                children: [{
+                  type: 'module',
+                  subtitle: 'm00001',
+                  moduleid: 'm00001',
+                  title: 'Introduction'
+                }]
               }]
-            }]
+            }
           })
         })
       })
@@ -210,72 +220,83 @@
         cy.get('.panel-editable .rst__node').should('have.length', 3)
         cy.get('.panel-uneditable .rst__node').should('have.length', 2)
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect((messagesFromWidget[0] as SignalMessage).signal.type).to.equal('loaded')
+          expect(messagesFromWidget).to.have.length(1)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
         })
       })
     })
 
     describe('controls', () => {
       beforeEach(() => {
-        sendTreeData([{
-          type: 'collection',
-          title: 'test collection',
-          slug: 'test',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            expanded: true,
+        sendMessage({
+          editable: [{
+            type: 'collection',
+            title: 'test collection',
+            slug: 'test',
             children: [{
-              type: 'module',
-              subtitle: 'm00001',
-              title: 'Introduction'
+              type: 'subcollection',
+              title: 'subcollection',
+              expanded: true,
+              children: [{
+                type: 'module',
+                moduleid: 'm00001',
+                subtitle: 'm00001',
+                title: 'Introduction'
+              }, {
+                type: 'module',
+                moduleid: 'm00005',
+                subtitle: 'm00005',
+                title: 'Appending To Lists'
+              }]
             }, {
               type: 'module',
-              subtitle: 'm00005',
-              title: 'Appending To Lists'
+              moduleid: 'm00002',
+              subtitle: 'm00002',
+              title: 'Appendix'
             }]
           }, {
-            type: 'module',
-            subtitle: 'm00002',
-            title: 'Appendix'
-          }]
-        }, {
-          type: 'collection',
-          title: 'test collection 2',
-          slug: 'test-2',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            expanded: true,
+            type: 'collection',
+            title: 'test collection 2',
+            slug: 'test-2',
             children: [{
-              type: 'module',
-              subtitle: 'm00001',
-              title: 'Introduction'
+              type: 'subcollection',
+              title: 'subcollection',
+              expanded: true,
+              children: [{
+                type: 'module',
+                moduleid: 'm00001',
+                subtitle: 'm00001',
+                title: 'Introduction'
+              }, {
+                type: 'module',
+                moduleid: 'm00006',
+                subtitle: 'm00006',
+                title: 'Deleting From Lists'
+              }]
             }, {
               type: 'module',
-              subtitle: 'm00006',
-              title: 'Deleting From Lists'
+              moduleid: 'm00002',
+              subtitle: 'm00002',
+              title: 'Appendix'
             }]
-          }, {
-            type: 'module',
-            subtitle: 'm00002',
-            title: 'Appendix'
+          }],
+          uneditable: [{
+            type: 'collection',
+            title: 'mock',
+            slug: 'mock',
+            children: [{
+              type: 'module',
+              moduleid: 'm00003',
+              subtitle: 'm00003',
+              title: 'Module 3'
+            }, {
+              type: 'module',
+              moduleid: 'm00004',
+              subtitle: 'm00004',
+              title: 'Module 4'
+            }]
           }]
-        }], [{
-          type: 'mock',
-          title: 'mock',
-          slug: 'mock',
-          children: [{
-            type: 'module',
-            subtitle: 'm00003',
-            title: 'Module 3'
-          }, {
-            type: 'module',
-            subtitle: 'm00004',
-            title: 'Module 4'
-          }]
-        }])
+        })
       })
       it('highlights elements that match search by title', () => {
         cy.get('.panel-editable .search')

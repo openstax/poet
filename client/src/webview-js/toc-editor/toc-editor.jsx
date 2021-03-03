@@ -214,6 +214,8 @@ const EditorPanel = (props) => {
   const trees = props.treesData
   const [selection, setSelection] = useState(props.selectionIndex)
 
+  const selectedTree = trees[selection]
+
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocusIndex, setSearchFocusIndex] = useState(0)
   const [searchFoundCount, setSearchFoundCount] = useState(0)
@@ -233,7 +235,7 @@ const EditorPanel = (props) => {
   }
 
   const handleAddSubcollection = (event) => {
-    vscode.postMessage({ type: 'subcollection-create', slug: trees[selection].slug })
+    vscode.postMessage({ type: 'subcollection-create', slug: selectedTree.slug })
   }
 
   const handleSelect = (event) => {
@@ -261,69 +263,76 @@ const EditorPanel = (props) => {
 
   return (
     <div className={`panel-${modifiesStateName}`} style={{ display: 'flex', flexDirection: 'column', height: '99vh', width: '49vw' }}>
-      <div className="controls" style={{ margin: '1rem' }}>
-        <select
-          className='tree-select'
-          value={selection}
-          style={{ maxWidth: '300px' }}
-          onChange={handleSelect}
-        >
-          {trees.map((tree, i) => <option key={i} value={i}>{tree.title}</option>)}
-        </select>
-        <div style={{ display: 'flex' }}>
-          {
-            props.canAddModules
-              ? <button onClick={handleAddModule}>Add Module</button>
-              : <></>
-          }
-          {
-            props.canAddSubcollections
-              ? <button onClick={handleAddSubcollection}>Add Subcollection</button>
-              : <></>
-          }
-        </div>
-        <div style={{ marginTop: '0', height: '2rem', display: 'flex', maxWidth: '400px', alignItems: 'center' }}>
-          <input
-            className='search'
-            style={{ maxWidth: '300px', height: '100%', padding: '0', paddingLeft: '4px' }}
-            placeholder={'Search...'}
-            onChange={handleSearch}
-          />
-          <button
-            className='search-prev'
-            style={{ height: '100%' }}
-            disabled={!searchFoundCount}
-            onClick={selectPrevMatch}
-          >
-            {'<'}
-          </button>
-          <button
-            className='search-next'
-            style={{ height: '100%' }}
-            disabled={!searchFoundCount}
-            onClick={selectNextMatch}
-          >
-            {'>'}
-          </button>
-          {
-            searchQuery
-              ? <p className='search-info' style={{ margin: '0px 10px', fontWeight: 'bold' }}>{searchInfo}</p>
-              : <></>
-          }
-        </div>
-      </div>
-      <div style={{ flexGrow: '1' }}>
-        <div style={{ height: '100%' }}>
-          <SearchContext.Provider value={searchContext}>
-            <ContentTree
-              modifiesStateName={modifiesStateName}
-              index={selection}
-              data={trees[selection]}
-              editable={props.editable}
-            />
-          </SearchContext.Provider>
-        </div>
-      </div>
+      {
+        selectedTree == null
+          ? <p>No data</p>
+          : <>
+            <div className="controls" style={{ margin: '1rem' }}>
+              <select
+                className='tree-select'
+                value={selection}
+                style={{ maxWidth: '300px' }}
+                onChange={handleSelect}
+              >
+                {trees.map((tree, i) => <option key={i} value={i}>{tree.title}</option>)}
+              </select>
+              <div style={{ display: 'flex' }}>
+                {
+                  props.canAddModules
+                    ? <button onClick={handleAddModule}>Add Module</button>
+                    : <></>
+                }
+                {
+                  props.canAddSubcollections
+                    ? <button onClick={handleAddSubcollection}>Add Subcollection</button>
+                    : <></>
+                }
+              </div>
+              <div style={{ marginTop: '0', height: '2rem', display: 'flex', maxWidth: '400px', alignItems: 'center' }}>
+                <input
+                  className='search'
+                  style={{ maxWidth: '300px', height: '100%', padding: '0', paddingLeft: '4px' }}
+                  placeholder={'Search...'}
+                  onChange={handleSearch}
+                />
+                <button
+                  className='search-prev'
+                  style={{ height: '100%' }}
+                  disabled={!searchFoundCount}
+                  onClick={selectPrevMatch}
+                >
+                  {'<'}
+                </button>
+                <button
+                  className='search-next'
+                  style={{ height: '100%' }}
+                  disabled={!searchFoundCount}
+                  onClick={selectNextMatch}
+                >
+                  {'>'}
+                </button>
+                {
+                  searchQuery
+                    ? <p className='search-info' style={{ margin: '0px 10px', fontWeight: 'bold' }}>{searchInfo}</p>
+                    : <></>
+                }
+              </div>
+            </div>
+            <div style={{ flexGrow: '1' }}>
+              <div style={{ height: '100%' }}>
+                <SearchContext.Provider value={searchContext}>
+                  <ContentTree
+                    modifiesStateName={modifiesStateName}
+                    index={selection}
+                    key={selection}
+                    data={selectedTree}
+                    editable={props.editable}
+                  />
+                </SearchContext.Provider>
+              </div>
+            </div>
+          </>
+      }
     </div>
   )
 }

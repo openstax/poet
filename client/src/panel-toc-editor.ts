@@ -22,6 +22,7 @@ export interface TocTreeCollection {
   type: 'collection' | 'subcollection'
   title: string
   slug?: string
+  expanded?: boolean
   children: TocTreeElement[]
 }
 
@@ -54,7 +55,7 @@ export interface ModuleRenameSignal {
   moduleid: string
   newName: string
 }
-export type PanelIncomingMessage = 
+export type PanelIncomingMessage =
   ( DebugSignal
   | RefreshSignal
   | ErrorSignal
@@ -64,7 +65,7 @@ export type PanelIncomingMessage =
   | ModuleRenameSignal
   )
 
-interface PanelOutgoingMessage {
+export interface PanelOutgoingMessage {
   uneditable: TocTreeCollection[]
   editable: TocTreeCollection[]
 }

@@ -153,9 +153,8 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
-    const collectionUri = uri.with({ path: path.join(uri.path, 'collections', 'test.collection.xml') })
-    const document = await vscode.workspace.openTextDocument(collectionUri)
-    const before = document.getText()
+    const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
+    const before = fs.readFileSync(collectionPath)
     const mockEditAddModule: TocTreeCollection = {
       type: 'collection',
       title: 'test collection',
@@ -177,12 +176,12 @@ suite('Extension Test Suite', function (this: Suite) {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const handler = tocEditorHandleMessage(panel)
       await handler({ type: 'write-tree', treeData: mockEditAddModule })
-      const after = document.getText()
-      assert.strictEqual(before.indexOf('m00002'), -1)
-      assert.notStrictEqual(after.indexOf('m00002'), -1)
+    const after = fs.readFileSync(collectionPath)
+    assert.strictEqual(before.indexOf('m00002'), -1)
+    assert.notStrictEqual(after.indexOf('m00002'), -1)
     })
   }).timeout(5000)
-  test('toc editor handle signal message', async () => {
+  test('toc editor handle error message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const handler = tocEditorHandleMessage(panel)
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
