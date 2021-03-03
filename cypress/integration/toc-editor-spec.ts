@@ -440,7 +440,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
           .should('not.exist')
         cy.get('.panel-editable .node-title-rename')
           .eq(0)
-          .type('abc', {delay: 50})
+          .type('abc', { delay: 50 })
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(4)
           expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
@@ -456,7 +456,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
           .should('not.exist')
         cy.get('.panel-editable .node-title-rename')
           .eq(0)
-          .type('abc', {delay: 50})
+          .type('abc', { delay: 50 })
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(4)
           expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })

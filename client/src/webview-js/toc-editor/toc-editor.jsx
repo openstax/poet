@@ -53,7 +53,7 @@ const getSavedState = () => {
 }
 
 // Use this function to send messages to the extension debug console
-// eslint-disable-line no-unused-vars
+// eslint-disable-next-line no-unused-vars
 const debug = (item) => {
   vscode.postMessage({ type: 'debug', item })
 }
@@ -79,15 +79,15 @@ const InputOnFocus = (props) => {
     return (
       <input
         className='node-title-rename'
-        style={{display: 'block', fontWeight: 'inherit', fontSize: 'inherit', color: 'inherit', height: 'inherit' }}
+        style={{ display: 'block', fontWeight: 'inherit', fontSize: 'inherit', color: 'inherit', height: 'inherit' }}
         ref={inputRef}
-        onBlur={() => {setFocus(false)}}
-        onChange={props.onChange} 
+        onBlur={() => { setFocus(false) }}
+        onChange={props.onChange}
         value={value}
       />
     )
   }
-  return <span className='node-title' style={{display: 'block', minWidth: '2rem', height: 'inherit'}} onClick={() => {setFocus(true)}}>{props.value}</span>
+  return <span className='node-title' style={{ display: 'block', minWidth: '2rem', height: 'inherit' }} onClick={() => { setFocus(true) }}>{props.value}</span>
 }
 
 const ContentTree = (props) => {
@@ -133,7 +133,7 @@ const ContentTree = (props) => {
     return !!(titleMatches || subtitleMatches)
   }
 
-  const handleChange = (newChildren, force=false) => {
+  const handleChange = (newChildren, force = false) => {
     const { treesData, selectionIndices } = getSavedState()
 
     const newData = { ...data, ...{ children: newChildren } }
@@ -166,7 +166,7 @@ const ContentTree = (props) => {
       // We need to have the base part of the extension do that for us.
       module: (event) => {
         node.title = event.target.value
-        vscode.postMessage({type: 'module-rename', moduleid: node.moduleid, newName: event.target.value })
+        vscode.postMessage({ type: 'module-rename', moduleid: node.moduleid, newName: event.target.value })
       },
       // We can change the title by just force rewriting the collection tree with the modified title
       // Subcollections don't have persistent identifiers, so changing them in the base part of the

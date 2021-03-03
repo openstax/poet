@@ -56,7 +56,7 @@ export interface ModuleRenameSignal {
   newName: string
 }
 export type PanelIncomingMessage =
-  ( DebugSignal
+  (DebugSignal
   | RefreshSignal
   | ErrorSignal
   | WriteTreeSignal
@@ -207,15 +207,18 @@ export const showTocEditor = (panelType: PanelType, resourceRootDir: string, act
   panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(panel)))
 
   // Setup an occasional refresh to remain reactive to unhandled events
-  let autoRefresh = setInterval(() => {
-    handleMessage(panel)({ type: 'refresh' }).catch(err => {
-      clearInterval(autoRefresh)
-    })
+  const autoRefresh = setInterval(() => {
+    handleMessage(panel)({ type: 'refresh' })
+      // eslint-disable-next-line node/handle-callback-err
+      .catch(err => {
+        // Panel was probably disposed
+        clearInterval(autoRefresh)
+      })
   }, 1000)
 }
 
-export const handleMessage = (panel: vscode.WebviewPanel) => async (message: PanelIncomingMessage) => {
-  const refreshPanel = async () => {
+export const handleMessage = (panel: vscode.WebviewPanel) => async (message: PanelIncomingMessage): Promise<void> => {
+  const refreshPanel = async (): Promise<void> => {
     const out = await workspaceToTrees()
     await panel.webview.postMessage(out)
   }
