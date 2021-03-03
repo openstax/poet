@@ -69,6 +69,76 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
       })
     })
+    it('will preserve expanded nodes on reload', () => {
+      sendMessage({
+        editable: [{
+          type: 'collection',
+          title: 'test collection',
+          slug: 'test',
+          children: [{
+            type: 'subcollection',
+            title: 'subcollection',
+            expanded: true,
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }, {
+            type: 'subcollection',
+            title: 'subcollection',
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }]
+        }],
+        uneditable: []
+      })
+      cy.get('.panel-editable .rst__node').should('have.length', 3)
+      sendMessage({
+        editable: [{
+          type: 'collection',
+          title: 'test collection',
+          slug: 'test',
+          children: [{
+            type: 'subcollection',
+            title: 'subcollection',
+            expanded: true,
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }, {
+            type: 'subcollection',
+            title: 'subcollection',
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }, {
+            type: 'subcollection',
+            title: 'subcollection',
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }]
+        }],
+        uneditable: []
+      })
+      // Would be 3 if the expanded subcollection was not preserved
+      cy.get('.panel-editable .rst__node').should('have.length', 4)
+    })
 
     describe('drag-n-drop', () => {
       beforeEach(() => {
@@ -329,6 +399,70 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.get('.panel-editable .tree-select')
           .select('test collection 2')
         cy.get('.panel-editable .search-info').should('contain.text', '1 / 1')
+      })
+      it('can tell the extension to create module', () => {
+        cy.get('.panel-uneditable .module-create')
+          .click()
+        cy.then(() => {
+          expect(messagesFromWidget).to.have.length(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+          expect(messagesFromWidget[1]).to.deep.equal({ type: 'module-create' })
+        })
+      })
+      it('can tell the extension to create subcollection', () => {
+        cy.get('.panel-editable .subcollection-create')
+          .click()
+        cy.get('.panel-editable .tree-select')
+          .select('test collection 2')
+        cy.get('.panel-editable .subcollection-create')
+          .click()
+        cy.then(() => {
+          expect(messagesFromWidget).to.have.length(3)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+          expect(messagesFromWidget[1]).to.deep.equal({ type: 'subcollection-create', slug: 'test' })
+          expect(messagesFromWidget[2]).to.deep.equal({ type: 'subcollection-create', slug: 'test-2' })
+        })
+      })
+      it('provides an input box when title is clicked', () => {
+        cy.get('.panel-editable .node-title')
+          .eq(1)
+          .click()
+          .should('not.exist')
+        cy.get('.panel-editable .node-title-rename')
+          .eq(0)
+          .blur()
+          .should('not.exist')
+      })
+      it('can tell the extension to rename module', () => {
+        cy.get('.panel-editable .node-title')
+          .eq(1)
+          .click()
+          .should('not.exist')
+        cy.get('.panel-editable .node-title-rename')
+          .eq(0)
+          .type('abc', {delay: 50})
+        cy.then(() => {
+          expect(messagesFromWidget).to.have.length(4)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+          expect(messagesFromWidget[1]).to.deep.equal({ type: 'module-rename', moduleid: 'm00001', newName: 'Introductiona' })
+          expect(messagesFromWidget[2]).to.deep.equal({ type: 'module-rename', moduleid: 'm00001', newName: 'Introductionab' })
+          expect(messagesFromWidget[3]).to.deep.equal({ type: 'module-rename', moduleid: 'm00001', newName: 'Introductionabc' })
+        })
+      })
+      it('can tell the extension to rename subcollection', () => {
+        cy.get('.panel-editable .node-title')
+          .eq(0)
+          .click()
+          .should('not.exist')
+        cy.get('.panel-editable .node-title-rename')
+          .eq(0)
+          .type('abc', {delay: 50})
+        cy.then(() => {
+          expect(messagesFromWidget).to.have.length(4)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+          // Don't care how we get there, just that we get there.
+          expect((messagesFromWidget[3] as WriteTreeSignal).treeData.children[0].title).to.equal('subcollectionabc')
+        })
       })
     })
   })

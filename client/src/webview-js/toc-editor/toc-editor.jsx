@@ -61,7 +61,7 @@ const debug = (item) => {
 const InputOnFocus = (props) => {
   const [focus, setFocus] = useState(false)
   const [value, setValue] = useState(props.value)
-  const inputRef = useRef(null);
+  const inputRef = useRef(null)
 
   // be reactive to a value change up the tree
   useEffect(() => {
@@ -78,6 +78,7 @@ const InputOnFocus = (props) => {
   if (focus) {
     return (
       <input
+        className='node-title-rename'
         style={{display: 'block', fontWeight: 'inherit', fontSize: 'inherit', color: 'inherit', height: 'inherit' }}
         ref={inputRef}
         onBlur={() => {setFocus(false)}}
@@ -86,7 +87,7 @@ const InputOnFocus = (props) => {
       />
     )
   }
-  return <span style={{display: 'block', minWidth: '2rem', height: 'inherit'}} onClick={() => {setFocus(true)}}>{props.value}</span>
+  return <span className='node-title' style={{display: 'block', minWidth: '2rem', height: 'inherit'}} onClick={() => {setFocus(true)}}>{props.value}</span>
 }
 
 const ContentTree = (props) => {
@@ -279,12 +280,12 @@ const EditorPanel = (props) => {
               <div style={{ display: 'flex' }}>
                 {
                   props.canAddModules
-                    ? <button onClick={handleAddModule}>Add Module</button>
+                    ? <button className='module-create' onClick={handleAddModule}>Add Module</button>
                     : <></>
                 }
                 {
                   props.canAddSubcollections
-                    ? <button onClick={handleAddSubcollection}>Add Subcollection</button>
+                    ? <button className='subcollection-create' onClick={handleAddSubcollection}>Add Subcollection</button>
                     : <></>
                 }
               </div>

@@ -6,7 +6,6 @@ import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
 import { PanelType } from './extension-types'
-import { title } from 'process'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
