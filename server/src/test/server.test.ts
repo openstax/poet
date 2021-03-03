@@ -649,4 +649,30 @@ describe('calculateElementPositions', function () {
     const result: Position[] = calculateElementPositions(imageElement)
     assert.deepStrictEqual(result, [expectedStart, expectedEnd])
   })
+  it('should return start and end positions based on tag when no siblings or attributes', async function () {
+    const xmlContent = `
+      <document>
+        <content><image /></content>
+      </document>
+    `
+    const document = TextDocument.create(
+      'file:///modules/m12345/index.cnxml', '', 0, xmlContent
+    )
+    const xmlData = parseXMLString(document)
+    assert(xmlData != null)
+    const elements = xpath.select('//image', xmlData) as Node[]
+    const imageElement = elements[0] as Element
+
+    assert(imageElement.nextSibling === null)
+    const expectedStart: Position = {
+      line: 2,
+      character: 17
+    }
+    const expectedEnd: Position = {
+      line: 2,
+      character: 23
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    assert.deepStrictEqual(result, [expectedStart, expectedEnd])
+  })
 })
