@@ -82,7 +82,7 @@ const InputOnFocus = (props) => {
         style={{ display: 'block', fontWeight: 'inherit', fontSize: 'inherit', color: 'inherit', height: 'inherit' }}
         ref={inputRef}
         onBlur={() => { setFocus(false) }}
-        onChange={props.onChange}
+        onChange={(event) => { setValue(event.target.value); props.onChange(event) }}
         value={value}
       />
     )
@@ -378,6 +378,15 @@ window.addEventListener('message', event => {
     }
   }
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
+  const appRootElement = window.document.querySelector('[data-app-init]')
+  if (appRootElement != null) {
+    appRootElement.removeAttribute('data-render-cached')
+  }
+  if (stringify(oldData) === stringify(newData) && appRootElement != null) {
+    // no need to re-render
+    appRootElement.setAttribute('data-render-cached', true)
+    return
+  }
   saveState({ treesData: newData, selectionIndices })
   renderApp()
 })

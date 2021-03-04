@@ -69,6 +69,56 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
       })
     })
+    it('will not re-render on same data', () => {
+      const message: PanelOutgoingMessage = {
+        editable: [{
+          type: 'collection',
+          title: 'test collection',
+          slug: 'test',
+          children: [{
+            type: 'subcollection',
+            title: 'subcollection',
+            expanded: true,
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }]
+        }],
+        uneditable: []
+      }
+      sendMessage(message)
+      cy.get('[data-render-cached]').should('not.exist')
+      sendMessage(message)
+      cy.get('[data-render-cached]').should('exist')
+      sendMessage({
+        editable: [{
+          type: 'collection',
+          title: 'test collection',
+          slug: 'test',
+          children: [{
+            type: 'subcollection',
+            title: 'subcollection',
+            expanded: true,
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }, {
+            type: 'module',
+            moduleid: 'm00002',
+            subtitle: 'm00002',
+            title: 'Appendix'
+          }]
+        }],
+        uneditable: []
+      })
+      cy.get('[data-render-cached]').should('not.exist')
+    })
     it('will preserve expanded nodes on reload', () => {
       sendMessage({
         editable: [{
