@@ -4,7 +4,7 @@ import { LanguageClient } from 'vscode-languageclient/node'
 import { showTocEditor } from './panel-toc-editor'
 import { showImageUpload } from './panel-image-upload'
 import { showCnxmlPreview } from './panel-cnxml-preview'
-import { expect, ensureCatch, launchLanguageServer } from './utils'
+import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
 import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-types'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
@@ -45,6 +45,7 @@ const extensionExports = {
 
 export function activate(context: vscode.ExtensionContext): typeof extensionExports {
   client = launchLanguageServer(context)
+  populateXsdSchemaFiles(resourceRootDir)
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR]))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD]))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]))
