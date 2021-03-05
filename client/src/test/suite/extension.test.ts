@@ -5,11 +5,13 @@ import vscode from 'vscode'
 import 'source-map-support/register'
 import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref } from './../../utils'
 import { activate } from './../../extension'
-import { handleMessage as tocEditorHandleMessage, TocTreeCollection } from './../../panel-toc-editor'
+import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, TocTreeCollection } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
 import { commandToPanelType, OpenstaxCommand } from '../../extension-types'
 import { Suite } from 'mocha'
+import { DOMParser } from 'xmldom'
+import * as xpath from 'xpath-ts'
 
 // Test runs in out/test/suite, not src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../src/test/data/test-repo')
@@ -23,6 +25,8 @@ const extensionExports = activate(contextStub as any)
 async function sleep(ms: number): Promise<void> {
   return await new Promise(resolve => setTimeout(resolve, ms))
 }
+
+const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
 const withTestPanel = (html: string, func: (arg0: vscode.WebviewPanel) => void): void => {
   const panel = vscode.window.createWebviewPanel(
@@ -153,9 +157,8 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
-    const collectionUri = uri.with({ path: path.join(uri.path, 'collections', 'test.collection.xml') })
-    const document = await vscode.workspace.openTextDocument(collectionUri)
-    const before = document.getText()
+    const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
+    const before = fs.readFileSync(collectionPath)
     const mockEditAddModule: TocTreeCollection = {
       type: 'collection',
       title: 'test collection',
@@ -175,20 +178,62 @@ suite('Extension Test Suite', function (this: Suite) {
       }]
     }
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, { editable: [], uneditable: [] })
-      await handler({ treeData: mockEditAddModule })
-      const after = document.getText()
-      assert.strictEqual(before.indexOf('m00002'), -1)
-      assert.notStrictEqual(after.indexOf('m00002'), -1)
+      const handler = tocEditorHandleMessage(panel)
+      await handler({ type: 'write-tree', treeData: mockEditAddModule })
     })
+    const after = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
+    assert.strictEqual(before.indexOf('m00002'), -1)
+    assert.notStrictEqual(after.indexOf('m00002'), -1)
   }).timeout(5000)
-  test('toc editor handle signal message', async () => {
+  test('toc editor handle error message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, { editable: [], uneditable: [] })
+      const handler = tocEditorHandleMessage(panel)
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      assert.rejects(handler({ signal: { type: 'error', message: 'test' } }))
+      assert.rejects(handler({ type: 'error', message: 'test' }))
     })
   }).timeout(5000)
+  test('toc editor handle subcollection create', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel)
+      await handler({ type: 'subcollection-create', slug: 'test' })
+    })
+    const uri = expect(getRootPathUri())
+    const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
+    const collectionData = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
+    const document = new DOMParser().parseFromString(collectionData)
+    const newSubcollection = select('/col:collection/col:content/col:subcollection[2]/md:title', document) as Node[]
+    assert.notStrictEqual(newSubcollection, undefined)
+    assert.notStrictEqual(newSubcollection, null)
+    assert.strictEqual(newSubcollection.length, 1)
+    assert.strictEqual(newSubcollection[0].textContent, 'New Subcollection')
+  })
+  test('toc editor handle module create', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel)
+      await handler({ type: 'module-create' })
+    })
+    const uri = expect(getRootPathUri())
+    const modulePath = path.join(uri.fsPath, 'modules', 'm00004', 'index.cnxml')
+    assert(fs.existsSync(modulePath))
+    const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
+    const document = new DOMParser().parseFromString(moduleData)
+    const moduleTitle = select('//md:title', document) as Node[]
+    assert.strictEqual(moduleTitle.length, 1)
+    assert.strictEqual(moduleTitle[0].textContent, 'New Module')
+  })
+  test('toc editor handle module rename', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel)
+      await handler({ type: 'module-rename', moduleid: 'm00003', newName: 'rename' })
+    })
+    const uri = expect(getRootPathUri())
+    const modulePath = path.join(uri.fsPath, 'modules', 'm00003', 'index.cnxml')
+    const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
+    const document = new DOMParser().parseFromString(moduleData)
+    const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
+    assert.strictEqual(moduleTitle.length, 1)
+    assert.strictEqual(moduleTitle[0].textContent, 'rename')
+  })
   test('show image upload', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
       const html = panel.webview.html
