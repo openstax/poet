@@ -4,6 +4,8 @@ import { runTests } from 'vscode-test'
 
 async function main(): Promise<void> {
   try {
+    const vscodeExecutablePath = undefined // !!process.env['GITPOD_HOST'] ? '/ide/bin/code' : undefined
+
     // The folder containing the Extension Manifest package.json
     // Passed to `--extensionDevelopmentPath`
     const extensionDevelopmentPath = path.resolve(__dirname, '../../')
@@ -15,7 +17,7 @@ async function main(): Promise<void> {
     const testDataFolder = path.resolve(extensionDevelopmentPath, 'out/test/data/test-repo')
 
     // Download VS Code, unzip it and run the integration test
-    await runTests({ extensionDevelopmentPath, extensionTestsPath, launchArgs: [testDataFolder, '--disable-extensions'] })
+    await runTests({ vscodeExecutablePath, extensionDevelopmentPath, extensionTestsPath, launchArgs: [testDataFolder, '--disable-extensions'] })
   } catch (err) {
     console.error('Failed to run tests')
     process.exit(1)
