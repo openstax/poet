@@ -141,6 +141,9 @@
       }
     }
   },
+  "extensionDependencies": [
+    "redhat.vscode-xml"
+  ],
   "devDependencies": {
     "@babel/cli": "^7.12.10",
     "@babel/plugin-transform-react-jsx": "^7.12.12",
