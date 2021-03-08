@@ -4,6 +4,8 @@ import { LanguageClient } from 'vscode-languageclient/node'
 import { showTocEditor } from './panel-toc-editor'
 import { showImageUpload } from './panel-image-upload'
 import { showCnxmlPreview } from './panel-cnxml-preview'
+import { pushContent } from './push-content'
+
 import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
 import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-types'
 
@@ -11,13 +13,13 @@ const resourceRootDir = path.join(__dirname) // extension is running in dist/
 let client: LanguageClient
 
 // Only one instance of each type allowed at any given time
-const activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel} = {}
-const activationByType: {[key in PanelType]: any} = {
+const activePanelsByType: { [key in PanelType]?: vscode.WebviewPanel } = {}
+const activationByType: { [key in PanelType]: any } = {
   [PanelType.TOC_EDITOR]: ensureCatch(showTocEditor(PanelType.TOC_EDITOR, resourceRootDir, activePanelsByType)),
   [PanelType.IMAGE_UPLOAD]: ensureCatch(showImageUpload(PanelType.IMAGE_UPLOAD, resourceRootDir, activePanelsByType)),
   [PanelType.CNXML_PREVIEW]: ensureCatch(showCnxmlPreview(PanelType.CNXML_PREVIEW, resourceRootDir, activePanelsByType))
 }
-const defaultLocationByType: {[key in PanelType]: vscode.ViewColumn} = {
+const defaultLocationByType: { [key in PanelType]: vscode.ViewColumn } = {
   [PanelType.TOC_EDITOR]: vscode.ViewColumn.One,
   [PanelType.IMAGE_UPLOAD]: vscode.ViewColumn.One,
   [PanelType.CNXML_PREVIEW]: vscode.ViewColumn.Two
@@ -49,6 +51,8 @@ export function activate(context: vscode.ExtensionContext): typeof extensionExpo
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR]))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD]))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]))
+  vscode.commands.registerCommand('openstax.pushContent', pushContent(resourceRootDir))
+
   return extensionExports
 }
 

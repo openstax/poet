@@ -38,7 +38,8 @@
     "onLanguage:xml",
     "onCommand:openstax.showPreviewToSide",
     "onCommand:openstax.showTocEditor",
-    "onCommand:openstax.showImageUpload"
+    "onCommand:openstax.showImageUpload",
+    "onCommand:openstax.pushContent"
   ],
   "contributes": {
     "commands": [
@@ -55,6 +56,11 @@
       {
         "command": "openstax.showImageUpload",
         "title": "Show Image Upload",
+        "category": "Openstax"
+      },
+      {
+        "command": "openstax.pushContent",
+        "title": "Push Content",
         "category": "Openstax"
       }
     ],
@@ -82,7 +88,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageUpload)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageUpload)\n[Push Content](command:openstax.pushContent)"
       }
     ],
     "menus": {
@@ -174,5 +180,8 @@
     "vscode-languageserver": "^7.0.0",
     "webpack": "^5.18.0",
     "webpack-cli": "^4.4.0"
-  }
+  },
+  "extensionDependencies": [
+    "vscode.git"
+  ]
 }

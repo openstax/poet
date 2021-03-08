@@ -283,8 +283,8 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('panel disposed and refocused', async () => {
     await assert.doesNotReject(async () => {
-      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})
-      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})
+      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
+      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
     })
   }).timeout(5000)
   test('schema files are populated when not existing', async () => {
