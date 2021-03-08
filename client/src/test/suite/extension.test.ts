@@ -3,7 +3,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
 import 'source-map-support/register'
-import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref } from './../../utils'
+import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
 import { activate } from './../../extension'
 import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, TocTreeCollection } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
@@ -16,6 +16,7 @@ import * as xpath from 'xpath-ts'
 // Test runs in out/test/suite, not src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../src/test/data/test-repo')
 const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
+const TEST_OUT_DIR = path.join(__dirname, '../../')
 
 const contextStub = {
   asAbsolutePath: (relPath: string) => path.resolve(__dirname, '../../../../', relPath)
@@ -286,4 +287,23 @@ suite('Extension Test Suite', function (this: Suite) {
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})
     })
   }).timeout(5000)
+  test('schema files are populated when not existing', async () => {
+    const uri = expect(getRootPathUri())
+    const schemaPath = path.join(uri.path, '.xsd')
+    assert(!fs.existsSync(schemaPath))
+    populateXsdSchemaFiles(TEST_OUT_DIR)
+    assert(fs.existsSync(schemaPath))
+    assert(fs.existsSync(path.join(schemaPath, 'catalog.xml')))
+  })
+  test('schema files are replaced when they exist', async () => {
+    const uri = expect(getRootPathUri())
+    const schemaPath = path.join(uri.path, '.xsd')
+    const testXsdPath = path.join(schemaPath, 'foo.xsd')
+    assert(!fs.existsSync(schemaPath))
+    fs.mkdirSync(path.join(schemaPath))
+    fs.writeFileSync(testXsdPath, 'test')
+    assert(fs.existsSync(testXsdPath))
+    populateXsdSchemaFiles(TEST_OUT_DIR)
+    assert(!fs.existsSync(testXsdPath))
+  })
 })
