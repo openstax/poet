@@ -11,35 +11,33 @@ export const pushContent = (resourceRootDir: string) => async () => {
     all: true
   }
 
+  let commitSucceeded = false
   try {
     await repo.commit('poet commit', commitOptions)
+    commitSucceeded = true
+  } catch (e) {
+    if (e.stdout == null) { throw e }
+    void vscode.window.showErrorMessage(e.gitErrorCode)
+    if ((e.stdout as string).includes('nothing to commit')) {
+      void vscode.window.showErrorMessage('No changes to push.')
+    } else {
+      const message = e.gitErrorCode ? e.gitErrorCode : e.message
+      void vscode.window.showErrorMessage(`Push failed: ${e.message}`)
+    }
+  }
+  if (commitSucceeded) {
     try {
       await repo.pull()
       await repo.push()
-      await vscode.window.showInformationMessage('Successful content push.')
+      void vscode.window.showInformationMessage('Successful content push.')
     } catch (e) {
-      if (!(e as any).gitErrorCode) { throw e }
+      console.log(e)
+      if (e.gitErrorCode == null) { throw e }
       if (e.gitErrorCode === GitErrorCodes.Conflict) {
-        await vscode.window.showErrorMessage('Content conflict, please resolve.')
+        void vscode.window.showErrorMessage('Content conflict, please resolve.')
       } else {
-        await vscode.window.showErrorMessage(`Push failed: ${e.gitErrorCode}`)
+        void vscode.window.showErrorMessage(`Push failed: ${e.message}`)
       }
-    }
-  } catch (e) {
-    try {
-
-      await vscode.window.showErrorMessage(e.gitErrorCode)
-    } catch (e) {
-      await vscode.window.showErrorMessage("¯\_(ツ)_/¯")
-    }
-
-    if (!(e as any).gitErrorCode) { await vscode.window.showErrorMessage(e) }
-    // if (e.gitErrorCode === GitErrorCodes.NoLocalChanges) {
-    // Not working yet (commit doesn't use GitErrorCodes ¯\_(ツ)_/¯)
-    if ((e as any).stdout.includes('nothing to commit')) {
-      await vscode.window.showErrorMessage('No changes to push.')
-    } else {
-      await vscode.window.showErrorMessage(`Push failed: ${e}`)
     }
   }
 }

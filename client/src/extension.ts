@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext): typeof extensionExpo
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR]))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD]))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]))
-  vscode.commands.registerCommand('openstax.pushContent', pushContent(resourceRootDir))
+  vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent(resourceRootDir)))
 
   return extensionExports
 }
