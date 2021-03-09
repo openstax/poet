@@ -87,7 +87,7 @@ const InputOnFocus = (props) => {
       />
     )
   }
-  return <span className='node-title' style={{ display: 'block', minWidth: '2rem', height: 'inherit' }} onClick={() => { setFocus(true) }}>{props.value}</span>
+  return <span className='node-title' style={{ display: 'block', minWidth: '5em', height: '1em' }} onClick={() => { setFocus(true) }}>{props.value}</span>
 }
 
 const ContentTree = (props) => {
