@@ -1,6 +1,7 @@
 
 import vscode from 'vscode'
 import path from 'path'
+import fs from 'fs'
 import {
   LanguageClient,
   LanguageClientOptions,
@@ -90,6 +91,32 @@ export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: a
       throw err
     })
   }
+}
+
+export function populateXsdSchemaFiles(resourceRootDir: string): void {
+  const relResourcePath = 'xsd'
+  const relTargetPath = '.xsd'
+  const uri = getRootPathUri()
+  if (uri == null) {
+    return
+  }
+
+  const targetPath = path.join(uri.fsPath, relTargetPath)
+  const sourcePath = path.join(resourceRootDir, relResourcePath)
+
+  // Delete any existing directory and create a new one to ensure no old
+  // schema files are kept around
+  fs.rmdirSync(targetPath, { recursive: true })
+  fs.mkdirSync(targetPath)
+
+  // Copy all schema files
+  const schemaFiles = fs.readdirSync(sourcePath)
+  schemaFiles.forEach(val => {
+    fs.copyFileSync(
+      path.join(sourcePath, val),
+      path.join(targetPath, val)
+    )
+  })
 }
 
 export function launchLanguageServer(context: vscode.ExtensionContext): LanguageClient {

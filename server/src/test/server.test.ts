@@ -10,13 +10,19 @@ import {
   getCurrentModules,
   ValidationQueue,
   ValidationRequest,
-  ModuleInformation
+  ModuleInformation,
+  calculateElementPositions
 } from './../utils'
 
 import assert from 'assert'
 import mockfs from 'mock-fs'
 import sinon from 'sinon'
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver'
+import * as xpath from 'xpath-ts'
+import {
+  Diagnostic,
+  DiagnosticSeverity,
+  Position
+} from 'vscode-languageserver'
 
 describe('parseXMLString', function () {
   it('should return null on a new / empty XML', async function () {
@@ -585,5 +591,88 @@ describe('ValidationQueue', function () {
     await (validationQueue as any).processQueue()
     assert.strictEqual(sendDiagnosticsStub.callCount, 1)
     sinon.restore()
+  })
+})
+
+describe('calculateElementPositions', function () {
+  it('should return start and end positions using siblings when available', async function () {
+    const xmlContent = `
+      <document>
+        <content>
+          <image src="" />
+        </content>
+      </document>
+    `
+    const document = TextDocument.create(
+      'file:///modules/m12345/index.cnxml', '', 0, xmlContent
+    )
+    const xmlData = parseXMLString(document)
+    assert(xmlData != null)
+    const elements = xpath.select('//image', xmlData) as Node[]
+    const imageElement = elements[0] as Element
+
+    assert(imageElement.nextSibling != null)
+    const expectedStart: Position = {
+      line: 3,
+      character: 10
+    }
+    const expectedEnd: Position = {
+      line: 3,
+      character: 26
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    assert.deepStrictEqual(result, [expectedStart, expectedEnd])
+  })
+  it('should return start and end positions based on attributes when no siblings', async function () {
+    const xmlContent = `
+      <document>
+        <content><image src="value" /></content>
+      </document>
+    `
+    const document = TextDocument.create(
+      'file:///modules/m12345/index.cnxml', '', 0, xmlContent
+    )
+    const xmlData = parseXMLString(document)
+    assert(xmlData != null)
+    const elements = xpath.select('//image', xmlData) as Node[]
+    const imageElement = elements[0] as Element
+
+    assert(imageElement.nextSibling === null)
+    const expectedStart: Position = {
+      line: 2,
+      character: 17
+    }
+    const expectedEnd: Position = {
+      line: 2,
+      character: 35
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    assert.deepStrictEqual(result, [expectedStart, expectedEnd])
+  })
+  it('should return start and end positions based on tag when no siblings or attributes', async function () {
+    const xmlContent = `
+      <document>
+        <content><image /></content>
+      </document>
+    `
+    const document = TextDocument.create(
+      'file:///modules/m12345/index.cnxml', '', 0, xmlContent
+    )
+    const xmlData = parseXMLString(document)
+    assert(xmlData != null)
+    const elements = xpath.select('//image', xmlData) as Node[]
+    const imageElement = elements[0] as Element
+
+    assert(imageElement.nextSibling === null)
+    const expectedStart: Position = {
+      line: 2,
+      character: 17
+    }
+    const expectedEnd: Position = {
+      line: 2,
+      character: 23
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    assert.deepStrictEqual(result, [expectedStart, expectedEnd])
   })
 })

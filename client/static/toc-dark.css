@@ -65,3 +65,7 @@
   z-index: -1;
   border-radius: 2px;
 }
+
+.controls > * {
+  margin-bottom: 0.5rem;
+}

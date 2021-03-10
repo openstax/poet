@@ -17,7 +17,7 @@
     "request": "launch",
     "runtimeExecutable": "${execPath}",
     "args": [
-      "${workspaceFolder}/out/test/data/test-repo",
+      "${workspaceFolder}/client/out/test/data/test-repo",
       "--disable-extensions",
       "--extensionDevelopmentPath=${workspaceFolder}",
       "--extensionTestsPath=${workspaceFolder}/client/out/test/suite/index"
