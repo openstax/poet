@@ -1,5 +1,6 @@
 # VSCode Extension that runs in gitpod
 [![Coverage Status](https://img.shields.io/codecov/c/github/openstax/poet.svg)](https://codecov.io/gh/openstax/poet)
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/from-referrer/)
 
 ![installing and enabling the preview](./editor.gif)
 
