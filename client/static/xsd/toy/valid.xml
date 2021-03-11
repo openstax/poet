@@ -1,0 +1,5 @@
+<toybox xmlns="http://toy.org/toybox">
+  <toy toy-type="lego" color="red"/>
+  <toy toy-type="game" game-type="board"/>
+  <toy toy-type="puzzle" difficulty="easy"/>
+</toybox>

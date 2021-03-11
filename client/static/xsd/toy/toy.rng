@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0" ns="http://toy.org/toybox">
+
+  <start>
+    <ref name="toybox"/>
+  </start>
+
+  <define name="toybox">
+    <element name="toybox">
+      <zeroOrMore>
+        <ref name="toy"/>
+      </zeroOrMore>
+    </element>
+  </define>
+
+  <define name="toy">
+    <choice>
+      <ref name="lego"/>
+      <ref name="puzzle"/>
+      <ref name="game"/>
+    </choice>
+  </define>
+
+  <define name="lego">
+    <element name="toy">
+      <attribute name="toy-type">
+        <value>lego</value>
+      </attribute>
+      <attribute name="color">
+        <choice>
+          <value>red</value>
+          <value>yellow</value>
+        </choice>
+      </attribute>
+    </element>
+  </define>
+
+  <define name="puzzle">
+    <element name="toy">
+      <attribute name="toy-type">
+        <value>puzzle</value>
+      </attribute>
+      <attribute name="difficulty">
+        <choice>
+          <value>easy</value>
+          <value>hard</value>
+        </choice>
+      </attribute>
+    </element>
+  </define>
+
+  <define name="game">
+    <element name="toy">
+      <attribute name="toy-type">
+        <value>game</value>
+      </attribute>
+      <attribute name="game-type">
+        <choice>
+          <value>board</value>
+          <value>video</value>
+        </choice>
+      </attribute>
+    </element>
+  </define>
+</grammar>
