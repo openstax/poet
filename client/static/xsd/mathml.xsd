@@ -32,24 +32,9 @@
       <xs:group ref="cnxml:note"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="media">
-    <xs:sequence>
-      <xs:group ref="cnxml:media"/>
-    </xs:sequence>
-  </xs:group>
   <xs:group name="list">
     <xs:sequence>
       <xs:group ref="cnxml:list"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="list_2">
-    <xs:sequence>
-      <xs:group ref="cnxml:list1"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="list_3">
-    <xs:sequence>
-      <xs:group ref="cnxml:list2"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="para">
@@ -206,9 +191,9 @@
       <xs:group ref="cnxml:preformat1"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="list_4">
+  <xs:group name="list_2">
     <xs:sequence>
-      <xs:group ref="cnxml:list3"/>
+      <xs:group ref="cnxml:list1"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="title_3">
@@ -269,26 +254,6 @@
   <xs:group name="note_2">
     <xs:sequence>
       <xs:group ref="cnxml:note1"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="list_5">
-    <xs:sequence>
-      <xs:group ref="cnxml:list4"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="list_6">
-    <xs:sequence>
-      <xs:group ref="cnxml:list5"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="list_7">
-    <xs:sequence>
-      <xs:group ref="cnxml:list6"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="media_2">
-    <xs:sequence>
-      <xs:group ref="cnxml:media1"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="item">
@@ -5169,11 +5134,6 @@
   <xs:group name="item_3">
     <xs:sequence>
       <xs:group ref="cnxml:item1"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="item_4">
-    <xs:sequence>
-      <xs:group ref="cnxml:item2"/>
     </xs:sequence>
   </xs:group>
   <xs:element name="mglyph">
