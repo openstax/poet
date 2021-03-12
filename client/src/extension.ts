@@ -28,8 +28,7 @@ const lazilyFocusOrOpenPanelOfType = (type: PanelType) => {
     if (activePanelsByType[type] != null) {
       const activePanel = expect(activePanelsByType[type])
       try {
-        activePanel.reveal(defaultLocationByType[type])
-        return
+        return activePanel.reveal(defaultLocationByType[type])
       } catch (err) {
         // Panel was probably disposed
         return activationByType[type](...args)
@@ -53,8 +52,5 @@ export function activate(context: vscode.ExtensionContext): typeof extensionExpo
 }
 
 export async function deactivate(): Promise<void> {
-  if (client === undefined) {
-    return
-  }
-  return await client.stop()
+  expect(client).stop()
 }

@@ -4,7 +4,7 @@ import path from 'path'
 import vscode from 'vscode'
 import 'source-map-support/register'
 import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
-import { activate } from './../../extension'
+import { activate, deactivate } from './../../extension'
 import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, TocTreeCollection } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
@@ -77,9 +77,13 @@ suite('Extension Test Suite', function (this: Suite) {
     const maybe: string | null = 'test'
     assert.doesNotThrow(() => { expect(maybe) })
   })
-  test('expect unwraps null', async () => {
+  test('expect throws on null', async () => {
     const maybe: string | null = null
     assert.throws(() => { expect(maybe) })
+  })
+  test('expect throws on null with custom message', async () => {
+    const maybe: string | null = null
+    assert.throws(() => { expect(maybe, 'my-message') })
   })
   test('getRootPathUri', () => {
     const uri = expect(getRootPathUri())
@@ -305,5 +309,9 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(fs.existsSync(testXsdPath))
     populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(!fs.existsSync(testXsdPath))
+  })
+
+  this.afterAll(async () => {
+    await deactivate()
   })
 })
