@@ -10,7 +10,6 @@ rm -rf ./server/out/
 $(npm bin)/tsc --build
 npm run webpack
 cp -r ./client/dist/* ./client/out/
-cp -r ./client/src/test/data/ ./client/out/test/data/
 
 macos_arg=''
 if [[ "$(uname)" == 'Darwin' ]]; then
