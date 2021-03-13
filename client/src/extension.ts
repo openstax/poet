@@ -52,5 +52,5 @@ export function activate(context: vscode.ExtensionContext): typeof extensionExpo
 }
 
 export async function deactivate(): Promise<void> {
-  expect(client).stop()
+  await expect(client).stop()
 }

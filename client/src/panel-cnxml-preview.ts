@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
-import { fixResourceReferences, fixCspSourceReferences, addBaseHref, getLocalResourceRoots, expect, ensureCatch } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, addBaseHref, getLocalResourceRoots, ensureCatch } from './utils'
 import { PanelType } from './extension-types'
 
 export interface PanelIncomingMessage {
@@ -9,7 +9,7 @@ export interface PanelIncomingMessage {
 }
 
 export const getContents = (uri?: vscode.Uri): [string | undefined, vscode.TextEditor | undefined, vscode.Uri | undefined] => {
-  let contents: string | undefined = undefined
+  let contents: string | undefined
   const editor = vscode.window.activeTextEditor
 
   if (editor != null) {

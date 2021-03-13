@@ -340,7 +340,7 @@ export class ValidationQueue {
 
   private async processQueue(): Promise<void> {
     const request = this.queue.shift()
-    if (request) {
+    if (request !== undefined) {
       const textDocument = request.textDocument
       let workspaceFolders = await this.connection.workspace.getWorkspaceFolders()
       if (workspaceFolders == null) {
@@ -349,7 +349,7 @@ export class ValidationQueue {
       const diagnostics: Diagnostic[] = []
       const xmlData = parseXMLString(textDocument)
       const knownModules = await getCurrentModules(workspaceFolders)
-  
+
       if (xmlData != null) {
         const imageValidation: Promise<Diagnostic[]> = validateImagePaths(textDocument, xmlData)
         const linkValidation: Promise<Diagnostic[]> = validateLinks(xmlData, knownModules)
@@ -357,7 +357,7 @@ export class ValidationQueue {
           results.forEach(diags => diagnostics.push(...diags))
         })
       }
-  
+
       this.connection.sendDiagnostics({
         uri: textDocument.uri,
         diagnostics
