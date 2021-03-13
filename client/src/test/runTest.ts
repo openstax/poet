@@ -14,7 +14,7 @@ async function main(): Promise<void> {
     // Passed to --extensionTestsPath
     const extensionTestsPath = path.resolve(__dirname, './suite/index')
 
-    const testDataFolder = path.resolve(extensionDevelopmentPath, '../') // The workspace root
+    const testDataFolder = path.resolve(extensionDevelopmentPath, 'out/test/data/test-repo')
 
     // Download VS Code, unzip it and run the integration test
     await runTests({ version, extensionDevelopmentPath, extensionTestsPath, launchArgs: [testDataFolder, '--disable-extensions'] })
