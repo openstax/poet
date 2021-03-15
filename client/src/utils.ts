@@ -143,7 +143,14 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
     // Register the server for XML documents
-    documentSelector: [{ scheme: 'file', language: 'xml' }]
+    documentSelector: [{ scheme: 'file', language: 'xml' }],
+    synchronize: {
+      fileEvents: [
+        vscode.workspace.createFileSystemWatcher('**/media/**'),
+        vscode.workspace.createFileSystemWatcher('**/modules/**'),
+        vscode.workspace.createFileSystemWatcher('**/collections/**')
+      ]
+    }
   }
 
   // Create the language client and start the client.

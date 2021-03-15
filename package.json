@@ -15,7 +15,7 @@
     "coverage": "nyc --exclude ./src/test npm run test",
     "cypress:open": "cypress open",
     "vscode:prepublish": "npm run _webpack_ -- --mode production",
-    "_webpack_": "webpack --stats=errors-warnings --config ./client/webpack.config.js --config ./server/webpack.config.js",
+    "_webpack_": "webpack --stats=minimal --config ./client/webpack.config.js --config ./server/webpack.config.js",
     "webpack": "npm run _webpack_ -- --mode development",
     "webpack:watch": "npm run _webpack_ -- --mode development --watch",
     "package": "vsce package",

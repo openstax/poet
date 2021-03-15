@@ -15,6 +15,7 @@ import { Suite } from 'mocha'
 import { DOMParser } from 'xmldom'
 import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
+import { LanguageClient } from 'vscode-languageclient/node'
 
 // Test runs in out/test/suite, not src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../')
@@ -51,7 +52,7 @@ const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscod
   await vscode.commands.executeCommand(command)
   // Wait for panel to load
   await sleep(1000)
-  const panel = expect(extensionExports.activePanelsByType[commandToPanelType[command]])
+  const panel = expect((await extensionExports).activePanelsByType[commandToPanelType[command]])
   await func(panel)
   panel.dispose()
 }
@@ -71,7 +72,7 @@ suite('Unsaved Files', function (this: Suite) {
     assert.strictEqual(vscode.window.activeTextEditor, undefined)
     await vscode.commands.executeCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW)
     await sleep(1000) // Wait for panel to load
-    const panel = extensionExports.activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
+    const panel = (await extensionExports).activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
     assert.strictEqual(panel, undefined)
   })
 })
@@ -184,7 +185,7 @@ suite('Extension Test Suite', function (this: Suite) {
       }]
     }
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       await handler({ type: 'write-tree', treeData: mockEditAddModule })
     })
     const after = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
@@ -193,14 +194,14 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('toc editor handle error message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       assert.rejects(handler({ type: 'error', message: 'test' }))
     })
   }).timeout(5000)
   test('toc editor handle subcollection create', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       await handler({ type: 'subcollection-create', slug: 'test' })
     })
     const uri = expect(getRootPathUri())
@@ -215,7 +216,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toc editor handle module create', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       await handler({ type: 'module-create' })
     })
     const uri = expect(getRootPathUri())
@@ -229,7 +230,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toc editor handle module rename', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       await handler({ type: 'module-rename', moduleid: 'm00003', newName: 'rename' })
     })
     const uri = expect(getRootPathUri())

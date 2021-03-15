@@ -6,6 +6,7 @@ import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
 import { PanelType } from './extension-types'
+import { LanguageClient } from 'vscode-languageclient/node'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -186,7 +187,7 @@ async function guessModuleTitles(): Promise<Map<string, string>> {
   return results
 }
 
-export const showTocEditor = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async () => {
+export const showTocEditor = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}, client: LanguageClient) => async () => {
   const panel = vscode.window.createWebviewPanel(
     panelType,
     'Table of Contents Editor',
@@ -204,22 +205,42 @@ export const showTocEditor = (panelType: PanelType, resourceRootDir: string, act
   panel.reveal(vscode.ViewColumn.One)
   activePanelsByType[panelType] = panel
 
-  panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(panel)))
+  panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(panel, client)))
 
   // Setup an occasional refresh to remain reactive to unhandled events
-  const autoRefresh = setInterval(() => {
-    handleMessage(panel)({ type: 'refresh' })
-      // eslint-disable-next-line node/handle-callback-err
-      .catch(err => {
-        // Panel was probably disposed
-        clearInterval(autoRefresh)
-      })
-  }, 1000)
+  // const autoRefresh = setInterval(() => {
+  //   handleMessage(panel)({ type: 'refresh' })
+  //     // eslint-disable-next-line node/handle-callback-err
+  //     .catch(err => {
+  //       // Panel was probably disposed
+  //       clearInterval(autoRefresh)
+  //     })
+  // }, 1000)
 }
 
-export const handleMessage = (panel: vscode.WebviewPanel) => async (message: PanelIncomingMessage): Promise<void> => {
+export const handleMessage = (panel: vscode.WebviewPanel, client: LanguageClient) => async (message: PanelIncomingMessage): Promise<void> => {
   const refreshPanel = async (): Promise<void> => {
-    const out = await workspaceToTrees()
+    const uri = expect(getRootPathUri(), 'no workspace root from which to generate trees')
+    const trees = await client.sendRequest('repo-trees', { workspaceUri: uri.toString() })
+    console.log(trees)
+    const allModules: TocTreeModule[] = await client.sendRequest('repo-modules', { workspaceUri: uri.toString(), asTreeObjects: true })
+    const orphanModules: TocTreeModule[] = await client.sendRequest('repo-orphan-modules', { workspaceUri: uri.toString(), asTreeObjects: true })
+    const collectionAllModules: TocTreeCollection = {
+      type: 'collection',
+      title: 'All Modules',
+      slug: 'mock-slug__source-only',
+      children: allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
+    }
+    const collectionOrphanModules: TocTreeCollection = {
+      type: 'collection',
+      title: 'Orphan Modules',
+      slug: 'mock-slug__source-only',
+      children: orphanModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
+    }
+    const out = {
+      uneditable: [collectionAllModules, collectionOrphanModules],
+      editable: trees
+    }
     await panel.webview.postMessage(out)
   }
   if (message.type === 'refresh') {
@@ -230,14 +251,14 @@ export const handleMessage = (panel: vscode.WebviewPanel) => async (message: Pan
     console.debug(message.item)
   } else if (message.type === 'module-create') {
     await createBlankModule()
-    await refreshPanel()
+    // await refreshPanel()
   } else if (message.type === 'subcollection-create') {
     await createSubcollection(message.slug)
-    await refreshPanel()
+    // await refreshPanel()
   } else if (message.type === 'module-rename') {
     const { moduleid, newName } = message
     await renameModule(moduleid, newName)
-    await refreshPanel()
+    // await refreshPanel()
   } else if (message.type === 'write-tree') {
     await writeTree(message.treeData)
   } else {
