@@ -13,7 +13,7 @@
         <xs:extension base="xs:NMTOKEN">
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:anyAttribute processContents="skip"/>
+          <xs:anyAttribute processContents="strict"/>
         </xs:extension>
       </xs:simpleContent>
     </xs:complexType>
@@ -22,56 +22,56 @@
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="content-url">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="title">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="short-title">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="subtitle">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="version">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="created">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="revised">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="actors">
@@ -82,7 +82,7 @@
       </xs:choice>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="roles">
@@ -92,7 +92,7 @@
       </xs:sequence>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="license">
@@ -100,7 +100,7 @@
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="url" use="required"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="extended-attribution">
@@ -110,7 +110,7 @@
       </xs:sequence>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="derived-from">
@@ -151,7 +151,7 @@
       <xs:attribute name="document"/>
       <xs:attribute name="version"/>
       <xs:attribute name="repository"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="keywordlist">
@@ -161,7 +161,7 @@
       </xs:sequence>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="subjectlist">
@@ -171,7 +171,7 @@
       </xs:sequence>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="education-levellist">
@@ -181,7 +181,7 @@
       </xs:sequence>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="abstract">
@@ -200,75 +200,75 @@
           <xs:element ref="mathml:math"/>
           <xs:group ref="mathml:quote_2"/>
           <xs:group ref="mathml:preformat_2"/>
-          <xs:group ref="mathml:list_4"/>
+          <xs:group ref="mathml:list_2"/>
         </xs:choice>
       </xs:choice>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="language">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="objectives">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="homepage">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="institution">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="course-code">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="instructor">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="uuid">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="canonical-book-uuid">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="slug">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="person">
@@ -286,7 +286,7 @@
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="userid"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="organization">
@@ -300,7 +300,7 @@
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="userid"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="role">
@@ -308,14 +308,14 @@
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="type" use="required"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="keyword">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="subject">
@@ -324,7 +324,7 @@
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="source"/>
       <xs:attribute name="key"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="education-level">
@@ -333,63 +333,63 @@
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="source"/>
       <xs:attribute name="key"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="honorific">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="firstname">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="othername">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="surname">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="lineage">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="fullname">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="email">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="shortname">
     <xs:complexType mixed="true">
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:anyAttribute processContents="skip"/>
+      <xs:anyAttribute processContents="strict"/>
     </xs:complexType>
   </xs:element>
 </xs:schema>
