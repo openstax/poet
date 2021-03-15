@@ -114,13 +114,14 @@ You can now set breakpoints, etc. in the server source code.
 
 ## Generating XSD schema files
 
-The CNXML schema validation in the extension is performed using XSD files generated using the RelaxNG schema files in the [cnxml repo](https://github.com/openstax/cnxml). The XSD files can be regenerated using [jing-trang](https://github.com/relaxng/jing-trang.git). You can clone that repo and follow the instructions to build `trang.jar` and `jing.jar`. The following steps assume:
+The CNXML schema validation in the extension is performed using XSD files generated using the RelaxNG schema files in the `poet-schema` branch of the [cnxml repo](https://github.com/openstax/cnxml). The XSD files can be regenerated using [jing-trang](https://github.com/relaxng/jing-trang.git). You can clone that repo and follow the instructions to build `trang.jar` and `jing.jar`. The following steps assume:
 
 * You have the `trang.jar` and `jing.jar` files in the root of this repo (you can simply modify the paths as necessary for your environment)
 * You have the `cnmxl` repo cloned as a peer of this repo
 
 ```bash
+$ git -C ../cnxml checkout poet-schema
 $ java -jar jing.jar -s ../cnxml/cnxml/xml/cnxml/schema/rng/0.7/cnxml-jing.rng > cnxml-simplified.rng
-$ java -jar trang.jar -I rng -O xsd cnxml-simplified.rng client/static/xsd/mathml.xsd
+$ java -jar trang.jar -I rng -O xsd -o any-attribute-process-contents=strict cnxml-simplified.rng client/static/xsd/mathml.xsd
 $ rm cnxml-simplified.rng
 ```

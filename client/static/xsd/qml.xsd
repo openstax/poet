@@ -42,8 +42,7 @@
     <xs:complexType mixed="true">
       <xs:choice minOccurs="0" maxOccurs="unbounded">
         <xs:element ref="cnxml:section"/>
-        <xs:group ref="mathml:media"/>
-        <xs:group ref="mathml:media_2"/>
+        <xs:element ref="cnxml:media"/>
       </xs:choice>
     </xs:complexType>
   </xs:element>
@@ -69,8 +68,7 @@
     <xs:complexType mixed="true">
       <xs:choice minOccurs="0" maxOccurs="unbounded">
         <xs:element ref="cnxml:section"/>
-        <xs:group ref="mathml:media"/>
-        <xs:group ref="mathml:media_2"/>
+        <xs:element ref="cnxml:media"/>
       </xs:choice>
     </xs:complexType>
   </xs:element>
@@ -78,8 +76,7 @@
     <xs:complexType mixed="true">
       <xs:choice minOccurs="0" maxOccurs="unbounded">
         <xs:element ref="cnxml:section"/>
-        <xs:group ref="mathml:media"/>
-        <xs:group ref="mathml:media_2"/>
+        <xs:element ref="cnxml:media"/>
       </xs:choice>
       <xs:attribute name="correct">
         <xs:simpleType>
@@ -95,8 +92,7 @@
     <xs:complexType mixed="true">
       <xs:choice minOccurs="0" maxOccurs="unbounded">
         <xs:element ref="cnxml:section"/>
-        <xs:group ref="mathml:media"/>
-        <xs:group ref="mathml:media_2"/>
+        <xs:element ref="cnxml:media"/>
       </xs:choice>
       <xs:attribute name="answer"/>
     </xs:complexType>
@@ -105,8 +101,7 @@
     <xs:complexType mixed="true">
       <xs:choice minOccurs="0" maxOccurs="unbounded">
         <xs:element ref="cnxml:section"/>
-        <xs:group ref="mathml:media"/>
-        <xs:group ref="mathml:media_2"/>
+        <xs:element ref="cnxml:media"/>
       </xs:choice>
     </xs:complexType>
   </xs:element>
