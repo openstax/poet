@@ -81,8 +81,8 @@ const InputOnFocus = (props) => {
         className='node-title-rename'
         style={{ display: 'block', fontWeight: 'inherit', fontSize: 'inherit', color: 'inherit', height: 'inherit' }}
         ref={inputRef}
-        onBlur={() => { setFocus(false) }}
-        onChange={(event) => { setValue(event.target.value); props.onChange(event) }}
+        onBlur={(event) => { props.onBlur(event); setFocus(false) }}
+        onChange={(event) => { setValue(event.target.value) }}
         value={value}
       />
     )
@@ -178,7 +178,7 @@ const ContentTree = (props) => {
     }
 
     return {
-      title: <InputOnFocus onChange={typeToRenameAction[node.type]} value={node.title} />,
+      title: <InputOnFocus onBlur={typeToRenameAction[node.type]} value={node.title} />,
       style: {
         boxShadow: `0 0 0 4px ${typeToColor[node.type]}`
       }
