@@ -2,6 +2,7 @@ import assert from 'assert'
 import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
+import { GitErrorCodes, Repository } from '../../git.d'
 import 'source-map-support/register'
 import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
 import { activate } from './../../extension'
@@ -9,9 +10,12 @@ import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_ME
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
 import { commandToPanelType, OpenstaxCommand } from '../../extension-types'
+import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
 import { DOMParser } from 'xmldom'
 import * as xpath from 'xpath-ts'
+import * as sinon from 'sinon'
+import { Substitute } from '@fluffy-spoon/substitute'
 
 // Test runs in out/test/suite, not src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../src/test/data/test-repo')
@@ -59,6 +63,9 @@ const resetTestData = async (): Promise<void> => {
   fs.mkdirpSync(TEST_DATA_DIR)
   fs.copySync(ORIGIN_DATA_DIR, TEST_DATA_DIR)
 }
+// Where does this go?
+const stubRepo = Substitute.for<Repository>()
+sinon.stub(pushContent, 'getRepo').returns(stubRepo)
 
 suite('Unsaved Files', function (this: Suite) {
   this.beforeEach(resetTestData)
@@ -305,5 +312,40 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(fs.existsSync(testXsdPath))
     populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(!fs.existsSync(testXsdPath))
+  })
+  test('push with no conflict', async () => {
+    try {
+      stubRepo.commit = sinon.stub().throws()
+      stubRepo.pull = sinon.stub().throws()
+      stubRepo.push = sinon.stub().throws()
+      await pushContent.pushContent()
+    } catch (e) {
+      console.log(`Oh no! ${e}`)
+    }
+  })
+  test('push with merge conflict', async () => {
+    try {
+      stubRepo.commit = sinon.stub().throws(GitErrorCodes.Conflict)
+      stubRepo.pull = sinon.stub().throws()
+      stubRepo.push = sinon.stub().throws()
+      await pushContent.pushContent()
+    } catch (e) {
+      console.log(`whats this: ${e}`)
+      assert(e === GitErrorCodes.Conflict)
+    }
+  })
+  test('push with no changes', async () => {
+    try {
+      stubRepo.commit = sinon.stub().throws(() => {
+        const error: any = {}
+        error.stdout = 'nothing to commit '
+        return error
+      })
+      stubRepo.pull = sinon.stub().throws()
+      stubRepo.push = sinon.stub().throws()
+      await pushContent.pushContent()
+    } catch (e) {
+      assert((e.stdout as string).includes('nothing to commit'))
+    }
   })
 })

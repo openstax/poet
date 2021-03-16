@@ -1,12 +1,16 @@
 import vscode from 'vscode'
 import { expect } from './utils'
-import { GitExtension, GitErrorCodes, CommitOptions } from './git'
+import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git'
 
-export const pushContent = (resourceRootDir: string) => async () => {
+export const getRepo = (): Repository => {
   const gitExtension = expect(vscode.extensions.getExtension<GitExtension>('vscode.git')).exports
   const api = gitExtension.getAPI(1)
-  const repo = api.repositories[0]
+  const result: Repository = api.repositories[0]
+  return result
+}
 
+export const pushContent = () => async () => {
+  const repo = getRepo()
   const commitOptions: CommitOptions = { all: true }
 
   let commitSucceeded = false
