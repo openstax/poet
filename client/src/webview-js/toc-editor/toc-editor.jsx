@@ -75,19 +75,25 @@ const InputOnFocus = (props) => {
     }
   }, [focus])
 
+  const blur = (event) => {
+    props.onBlur(event)
+    setFocus(false)
+  }
+
   if (focus) {
     return (
       <input
         className='node-title-rename'
         style={{ display: 'block', fontWeight: 'inherit', fontSize: 'inherit', color: 'inherit', height: 'inherit' }}
         ref={inputRef}
-        onBlur={(event) => { props.onBlur(event); setFocus(false) }}
+        onBlur={(event) => { blur(value) }}
         onChange={(event) => { setValue(event.target.value) }}
+        onKeyDown={(event) => { if(event.key === 'Enter') { blur(value) } }}
         value={value}
       />
     )
   }
-  return <span className='node-title' style={{ display: 'block', minWidth: '5em', height: '1em' }} onClick={() => { setFocus(true) }}>{props.value}</span>
+  return <span className='node-title' style={{ display: 'block', minWidth: '5em', height: '1em' }} onClick={() => { setFocus(true) }}>{value}</span>
 }
 
 const ContentTree = (props) => {
@@ -164,15 +170,15 @@ const ContentTree = (props) => {
       // Force rewriting the tree only will change the module title as it appears in the collection file,
       // but won't change the actual title inside the module content.
       // We need to have the base part of the extension do that for us.
-      module: (event) => {
-        node.title = event.target.value
-        vscode.postMessage({ type: 'module-rename', moduleid: node.moduleid, newName: event.target.value })
+      module: (value) => {
+        node.title = value
+        vscode.postMessage({ type: 'module-rename', moduleid: node.moduleid, newName: value })
       },
       // We can change the title by just force rewriting the collection tree with the modified title
       // Subcollections don't have persistent identifiers, so changing them in the base part of the
       // extension would be tougher to do.
-      subcollection: (event) => {
-        node.title = event.target.value
+      subcollection: (value) => {
+        node.title = value
         handleChange(data.children, true)
       }
     }
