@@ -314,14 +314,10 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(!fs.existsSync(testXsdPath))
   })
   test('push with no conflict', async () => {
-    try {
-      stubRepo.commit = sinon.stub().throws()
-      stubRepo.pull = sinon.stub().throws()
-      stubRepo.push = sinon.stub().throws()
-      await pushContent.pushContent()
-    } catch (e) {
-      console.log(`Oh no! ${e}`)
-    }
+    stubRepo.commit = sinon.stub().throws()
+    stubRepo.pull = sinon.stub().throws()
+    stubRepo.push = sinon.stub().throws()
+    await pushContent.pushContent()
   })
   test('push with merge conflict', async () => {
     try {
@@ -330,14 +326,13 @@ suite('Extension Test Suite', function (this: Suite) {
       stubRepo.push = sinon.stub().throws()
       await pushContent.pushContent()
     } catch (e) {
-      console.log(`whats this: ${e}`)
       assert(e === GitErrorCodes.Conflict)
     }
   })
   test('push with no changes', async () => {
     try {
       stubRepo.commit = sinon.stub().throws(() => {
-        const error: any = {}
+        const error: any = new Error()
         error.stdout = 'nothing to commit '
         return error
       })
