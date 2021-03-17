@@ -14,7 +14,7 @@ import { DOMParser } from 'xmldom'
 import * as xpath from 'xpath-ts'
 
 // Test runs in out/test/suite, not src/test/suite
-const ORIGIN_DATA_DIR = path.join(__dirname, '../../../src/test/data/test-repo')
+const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../')
 const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
 const TEST_OUT_DIR = path.join(__dirname, '../../')
 
@@ -57,7 +57,9 @@ const resetTestData = async (): Promise<void> => {
   await vscode.workspace.saveAll(true)
   fs.rmdirSync(TEST_DATA_DIR, { recursive: true })
   fs.mkdirpSync(TEST_DATA_DIR)
-  fs.copySync(ORIGIN_DATA_DIR, TEST_DATA_DIR)
+  fs.copySync(path.join(ORIGIN_DATA_DIR, 'collections'), path.join(TEST_DATA_DIR, 'collections'))
+  fs.copySync(path.join(ORIGIN_DATA_DIR, 'media'), path.join(TEST_DATA_DIR, 'media'))
+  fs.copySync(path.join(ORIGIN_DATA_DIR, 'modules'), path.join(TEST_DATA_DIR, 'modules'))
 }
 
 suite('Unsaved Files', function (this: Suite) {
