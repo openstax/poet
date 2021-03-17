@@ -74,7 +74,7 @@ export function getRootPathUri(): vscode.Uri | null {
 export function expect<T>(value: T | null | undefined, message?: string): T {
   message = message ?? 'Unwrapped a null value'
   if (value == null) {
-    vscode.window.showErrorMessage(message)
+    void vscode.window.showErrorMessage(message)
     throw new Error(message)
   }
   return value
