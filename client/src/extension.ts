@@ -45,7 +45,7 @@ const extensionExports = {
 
 export function activate(context: vscode.ExtensionContext): typeof extensionExports {
   // detect Theia. Alert the user if they are running Theia
-  expect(process.env.GITPOD_HOST == null && process.env.EDITOR !== 'code' ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
+  expect(process.env.GITPOD_HOST != null && process.env.EDITOR !== 'code' ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
 
   client = launchLanguageServer(context)
   populateXsdSchemaFiles(resourceRootDir)
