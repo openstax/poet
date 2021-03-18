@@ -2,7 +2,7 @@ import assert from 'assert'
 import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
-import { GitErrorCodes, Repository } from '../../git.d'
+import { GitErrorCodes, Repository } from '../../git-api/git.d'
 import 'source-map-support/register'
 import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
 import { activate } from './../../extension'
@@ -63,9 +63,19 @@ const resetTestData = async (): Promise<void> => {
   fs.mkdirpSync(TEST_DATA_DIR)
   fs.copySync(ORIGIN_DATA_DIR, TEST_DATA_DIR)
 }
-// Where does this go?
+
+// TODO Where does this go?
 const stubRepo = Substitute.for<Repository>()
-sinon.stub(pushContent, 'getRepo').returns(stubRepo)
+
+const getRepo = (): Repository => {
+  return stubRepo
+}
+
+const reporter = (expectedMessage: string) => (_: string) => {
+  return (message: string) => { assert.notStrictEqual(message, expectedMessage) }
+}
+
+const ignore = (message: string): void => { }
 
 suite('Unsaved Files', function (this: Suite) {
   this.beforeEach(resetTestData)
@@ -313,32 +323,40 @@ suite('Extension Test Suite', function (this: Suite) {
     populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(!fs.existsSync(testXsdPath))
   })
+  test('getRepo returns repository', async () => {
+    const repo = pushContent.getRepo()
+    assert.notStrictEqual(repo.rootUri, undefined)
+  })
   test('push with no conflict', async () => {
     stubRepo.commit = sinon.stub().throws()
-    stubRepo.pull = sinon.stub().throws()
-    stubRepo.push = sinon.stub().throws()
-    await pushContent.pushContent()
+    stubRepo.pull = sinon.stub().returns(Promise.resolve())
+    stubRepo.push = sinon.stub().returns(Promise.resolve())
+    await pushContent._pushContent(getRepo, reporter('Successful content push.'), ignore)
   })
   test('push with merge conflict', async () => {
+    stubRepo.commit = sinon.stub().returns(Promise.resolve())
+    stubRepo.pull = sinon.stub().throws(() => {
+      const error: any = new Error()
+      error.gitErrorCode = GitErrorCodes.Conflict
+      return error
+    })
+    stubRepo.push = sinon.stub().returns(Promise.resolve())
     try {
-      stubRepo.commit = sinon.stub().throws(GitErrorCodes.Conflict)
-      stubRepo.pull = sinon.stub().throws()
-      stubRepo.push = sinon.stub().throws()
-      await pushContent.pushContent()
+      await pushContent._pushContent(getRepo, ignore, reporter('Content conflict, please resolve.'))
     } catch (e) {
-      assert(e === GitErrorCodes.Conflict)
+      assert.notStrictEqual(e.gitErrorCode, GitErrorCodes.Conflict)
     }
   })
   test('push with no changes', async () => {
+    stubRepo.commit = sinon.stub().throws(() => {
+      const error: any = new Error()
+      error.stdout = 'nothing to commit '
+      return error
+    })
+    stubRepo.pull = sinon.stub().returns(Promise.resolve())
+    stubRepo.push = sinon.stub().returns(Promise.resolve())
     try {
-      stubRepo.commit = sinon.stub().throws(() => {
-        const error: any = new Error()
-        error.stdout = 'nothing to commit '
-        return error
-      })
-      stubRepo.pull = sinon.stub().throws()
-      stubRepo.push = sinon.stub().throws()
-      await pushContent.pushContent()
+      await pushContent._pushContent(getRepo, ignore, reporter('No changes to push.'))
     } catch (e) {
       assert((e.stdout as string).includes('nothing to commit'))
     }

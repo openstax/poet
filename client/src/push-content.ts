@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { expect } from './utils'
-import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git'
+import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git-api/git'
 
 export const getRepo = (): Repository => {
   const gitExtension = expect(vscode.extensions.getExtension<GitExtension>('vscode.git')).exports
@@ -10,7 +10,11 @@ export const getRepo = (): Repository => {
 }
 
 export const pushContent = () => async () => {
-  const repo = getRepo()
+  _pushContent(getRepo, vscode.window.showInformationMessage, vscode.window.showErrorMessage)
+}
+
+export const _pushContent = (_getRepo: Function, infoReporter: Function, errorReporter: Function) => async () => {
+  const repo = _getRepo()
   const commitOptions: CommitOptions = { all: true }
 
   let commitSucceeded = false
@@ -19,12 +23,13 @@ export const pushContent = () => async () => {
     await repo.commit('poet commit', commitOptions)
     commitSucceeded = true
   } catch (e) {
+    console.log(e)
     if (e.stdout == null) { throw e }
     if ((e.stdout as string).includes('nothing to commit')) {
-      void vscode.window.showErrorMessage('No changes to push.')
+      void errorReporter('No changes to push.')
     } else {
       const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
-      void vscode.window.showErrorMessage(`Push failed: ${message}`)
+      void errorReporter(`Push failed: ${message}`)
     }
   }
 
@@ -32,13 +37,14 @@ export const pushContent = () => async () => {
     try {
       await repo.pull()
       await repo.push()
-      void vscode.window.showInformationMessage('Successful content push.')
+      void infoReporter('Successful content push.')
     } catch (e) {
+      console.log(e)
       if (e.gitErrorCode == null) { throw e }
       if (e.gitErrorCode === GitErrorCodes.Conflict) {
-        void vscode.window.showErrorMessage('Content conflict, please resolve.')
+        void errorReporter('Content conflict, please resolve.')
       } else {
-        void vscode.window.showErrorMessage(`Push failed: ${e.message as string}`)
+        void errorReporter(`Push failed: ${e.message as string}`)
       }
     }
   }
