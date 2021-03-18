@@ -10,7 +10,7 @@
   "engines": {
     "vscode": "^1.39.0"
   },
-  "main": "./client/dist/extension.js",
+  "main": "./client/dist/client/src/extension.js",
   "scripts": {
     "coverage": "nyc --exclude ./src/test npm run test",
     "cypress:open": "cypress open",
