@@ -88,7 +88,7 @@ const InputOnFocus = (props) => {
         ref={inputRef}
         onBlur={(event) => { blur(value) }}
         onChange={(event) => { setValue(event.target.value) }}
-        onKeyDown={(event) => { if(event.key === 'Enter') { blur(value) } }}
+        onKeyDown={(event) => { if (event.key === 'Enter') { blur(value) } }}
         value={value}
       />
     )

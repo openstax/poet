@@ -5,29 +5,14 @@ import path from 'path'
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
+import { TocTreeCollection } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
+import { BundleModulesArgs, BundleModulesResponse, BundleOrphanedModulesArgs, BundleOrphanedModulesResponse, BundleTreesArgs, BundleTreesResponse, ExtensionServerRequest } from '../../common/src/requests'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 export const NS_METADATA = 'http://cnx.rice.edu/mdml'
-
-export interface TocTreeModule {
-  type: 'module'
-  moduleid: string
-  title: string
-  subtitle?: string
-}
-
-export interface TocTreeCollection {
-  type: 'collection' | 'subcollection'
-  title: string
-  slug?: string
-  expanded?: boolean
-  children: TocTreeElement[]
-}
-
-export type TocTreeElement = TocTreeModule | TocTreeCollection
 
 export interface DebugSignal {
   type: 'debug'
@@ -69,6 +54,16 @@ export type PanelIncomingMessage =
 export interface PanelOutgoingMessage {
   uneditable: TocTreeCollection[]
   editable: TocTreeCollection[]
+}
+
+const requestBundleTrees = async (client: LanguageClient, args: BundleTreesArgs): Promise<BundleTreesResponse> => {
+  return await client.sendRequest(ExtensionServerRequest.BundleTrees, args)
+}
+const requestBundleOrphanedModules = async (client: LanguageClient, args: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
+  return await client.sendRequest(ExtensionServerRequest.BundleOrphanedModules, args)
+}
+const requestBundleModules = async (client: LanguageClient, args: BundleModulesArgs): Promise<BundleModulesResponse> => {
+  return await client.sendRequest(ExtensionServerRequest.BundleModules, args)
 }
 
 async function createBlankModule(): Promise<string> {
@@ -141,52 +136,6 @@ async function renameModule(id: string, newName: string): Promise<void> {
   await vscode.workspace.fs.writeFile(moduleUri, Buffer.from(newData))
 }
 
-/**
- * Guess all module titles by reading the modules asynchronously and
- * just looking for the title tag with a specific namespace prefix.
- * This can yield incomplete results, but is about 50x faster than
- * preloading the module titles via parsing individual modules as XML
- */
-async function guessModuleTitles(): Promise<Map<string, string>> {
-  const results = new Map<string, string>()
-  const uri = getRootPathUri()
-  if (uri == null) {
-    return results
-  }
-  const moduleDirs = await fsPromises.readdir(path.join(uri.fsPath, 'modules'))
-
-  const guessFromDir = async (moduleDir: string): Promise<[string, string] | null> => {
-    const module = uri.with({ path: path.join(uri.path, 'modules', moduleDir, 'index.cnxml') })
-    const xml = await fsPromises.readFile(module.fsPath, { encoding: 'utf-8' })
-    const titleTagStart = xml.indexOf('<md:title>')
-    const titleTagEnd = xml.indexOf('</md:title>')
-    if (titleTagStart === -1 || titleTagEnd === -1) {
-      return null
-    }
-    const actualTitleStart = titleTagStart + 10 // Add length of '<md:title>'
-    if (titleTagEnd - actualTitleStart > 280) {
-      // If the title is so long you can't tweet it,
-      // then something probably went wrong.
-      return null
-    }
-    const moduleTitle = xml.substring(actualTitleStart, titleTagEnd).trim()
-    return [moduleDir, moduleTitle]
-  }
-
-  const promises = []
-  for (const moduleDir of moduleDirs) {
-    promises.push(guessFromDir(moduleDir))
-  }
-
-  for (const result of await Promise.all(promises)) {
-    if (result == null) {
-      continue
-    }
-    results.set(result[0], result[1])
-  }
-  return results
-}
-
 export const showTocEditor = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}, client: LanguageClient) => async () => {
   const panel = vscode.window.createWebviewPanel(
     panelType,
@@ -206,25 +155,17 @@ export const showTocEditor = (panelType: PanelType, resourceRootDir: string, act
   activePanelsByType[panelType] = panel
 
   panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(panel, client)))
-
-  // Setup an occasional refresh to remain reactive to unhandled events
-  // const autoRefresh = setInterval(() => {
-  //   handleMessage(panel)({ type: 'refresh' })
-  //     // eslint-disable-next-line node/handle-callback-err
-  //     .catch(err => {
-  //       // Panel was probably disposed
-  //       clearInterval(autoRefresh)
-  //     })
-  // }, 1000)
 }
 
 export const handleMessage = (panel: vscode.WebviewPanel, client: LanguageClient) => async (message: PanelIncomingMessage): Promise<void> => {
   const refreshPanel = async (): Promise<void> => {
     const uri = expect(getRootPathUri(), 'no workspace root from which to generate trees')
-    const trees = await client.sendRequest('repo-trees', { workspaceUri: uri.toString() })
-    console.log(trees)
-    const allModules: TocTreeModule[] = await client.sendRequest('repo-modules', { workspaceUri: uri.toString(), asTreeObjects: true })
-    const orphanModules: TocTreeModule[] = await client.sendRequest('repo-orphan-modules', { workspaceUri: uri.toString(), asTreeObjects: true })
+    const trees = await requestBundleTrees(client, { workspaceUri: uri.toString() })
+    const allModules = await requestBundleModules(client, { workspaceUri: uri.toString() })
+    const orphanModules = await requestBundleOrphanedModules(client, { workspaceUri: uri.toString() })
+    if (trees == null || allModules == null || orphanModules == null) {
+      throw new Error('Server cannot properly find workspace')
+    }
     const collectionAllModules: TocTreeCollection = {
       type: 'collection',
       title: 'All Modules',
@@ -251,81 +192,15 @@ export const handleMessage = (panel: vscode.WebviewPanel, client: LanguageClient
     console.debug(message.item)
   } else if (message.type === 'module-create') {
     await createBlankModule()
-    // await refreshPanel()
   } else if (message.type === 'subcollection-create') {
     await createSubcollection(message.slug)
-    // await refreshPanel()
   } else if (message.type === 'module-rename') {
     const { moduleid, newName } = message
     await renameModule(moduleid, newName)
-    // await refreshPanel()
   } else if (message.type === 'write-tree') {
     await writeTree(message.treeData)
   } else {
     throw new Error(`Unexpected signal: ${JSON.stringify(message)}`)
-  }
-}
-
-async function workspaceToTrees(): Promise<PanelOutgoingMessage> {
-  const guessedModuleTitles = await guessModuleTitles()
-  const uri = expect(getRootPathUri(), 'no workspace root from which to generate trees')
-
-  const getModuleTitle = (moduleid: string): string => {
-    const titleFromCache = guessedModuleTitles.get(moduleid)
-    if (titleFromCache != null) {
-      return titleFromCache
-    }
-    const module = uri.with({ path: path.join(uri.path, 'modules', moduleid, 'index.cnxml') })
-    const xml = fs.readFileSync(module.fsPath, { encoding: 'utf-8' })
-    const document = new DOMParser().parseFromString(xml)
-    try {
-      const metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
-      const moduleTitle = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent
-      return moduleTitle ?? 'Unnamed Module'
-    } catch {
-      return 'Unnamed Module'
-    }
-  }
-
-  const moduleObjectFromModuleId = (moduleid: string): TocTreeModule => {
-    return {
-      type: 'module',
-      moduleid: moduleid,
-      title: getModuleTitle(moduleid),
-      subtitle: moduleid
-    }
-  }
-
-  const collectionFiles = fs.readdirSync(path.join(uri.fsPath, 'collections'))
-  const collectionTrees = []
-  for (const collectionFile of collectionFiles) {
-    const collectionData = fs.readFileSync(path.join(uri.fsPath, 'collections', collectionFile), { encoding: 'utf-8' })
-    collectionTrees.push(parseCollection(collectionData, moduleObjectFromModuleId))
-  }
-  // Some special non-editable collections
-  const allModules = fs.readdirSync(path.join(uri.fsPath, 'modules'))
-  const usedModules: string[] = []
-  for (const collectionTree of collectionTrees) {
-    insertUsedModules(usedModules, collectionTree)
-  }
-  const usedModulesSet = new Set(usedModules)
-  const orphanModules = allModules.filter(x => !usedModulesSet.has(x))
-  const collectionAllModules: TocTreeCollection = {
-    type: 'collection',
-    title: 'All Modules',
-    slug: 'mock-slug__source-only',
-    children: allModules.map(moduleObjectFromModuleId).sort((m, n) => m.moduleid.localeCompare(n.moduleid))
-  }
-  const collectionOrphanModules: TocTreeCollection = {
-    type: 'collection',
-    title: 'Orphan Modules',
-    slug: 'mock-slug__source-only',
-    children: orphanModules.map(moduleObjectFromModuleId).sort((m, n) => m.moduleid.localeCompare(n.moduleid))
-  }
-
-  return {
-    uneditable: [collectionAllModules, collectionOrphanModules],
-    editable: collectionTrees
   }
 }
 
@@ -342,60 +217,6 @@ async function writeTree(treeData: TocTreeCollection): Promise<void> {
     lineSeparator: '\n'
   })
   await vscode.workspace.fs.writeFile(replacingUri, Buffer.from(serailizedXml))
-}
-
-function insertUsedModules(arr: string[], tree: TocTreeElement): void {
-  if (tree.type === 'module') {
-    arr.push(tree.moduleid)
-  } else {
-    for (const child of tree.children) {
-      insertUsedModules(arr, child)
-    }
-  }
-}
-
-function parseCollection(xml: string, moduleObjectResolver: (id: string) => TocTreeModule): TocTreeCollection {
-  const document = new DOMParser().parseFromString(xml)
-
-  const metadata = document.getElementsByTagNameNS(NS_COLLECTION, 'metadata')[0]
-  const collectionTitle = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent
-  const collectionSlug = metadata.getElementsByTagNameNS(NS_METADATA, 'slug')[0].textContent
-
-  const treeRoot = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
-
-  const moduleToObject = (element: any): TocTreeModule => {
-    const moduleid = element.getAttribute('document')
-    return moduleObjectResolver(expect(moduleid, 'Module ID missing'))
-  }
-
-  const subcollectionToObject = (element: any): TocTreeCollection => {
-    const title = element.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent
-    const content = element.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
-    return {
-      type: 'subcollection',
-      title: expect(title, 'Subcollection title missing'),
-      children: childObjects(content)
-    }
-  }
-
-  const childObjects = (element: any): TocTreeElement[] => {
-    const children = []
-    for (const child of Array.from<any>(element.childNodes)) {
-      if (child.localName === 'module') {
-        children.push(moduleToObject(child))
-      } else if (child.localName === 'subcollection') {
-        children.push(subcollectionToObject(child))
-      }
-    }
-    return children
-  }
-
-  return {
-    type: 'collection',
-    title: expect(collectionTitle, 'Collection title missing'),
-    slug: expect(collectionSlug, 'Collection slug missing'),
-    children: childObjects(treeRoot)
-  }
 }
 
 function populateTreeDataToXML(document: XMLDocument, root: any, treeData: TocTreeCollection): void {

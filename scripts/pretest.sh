@@ -9,12 +9,13 @@ rm -rf ./server/out/
 
 $(npm bin)/tsc --build
 npm run webpack
-cp -r ./client/dist/* ./client/out/
-mkdir ./client/out/test/data/
-mkdir ./client/out/test/data/test-repo/
-cp -r ./collections/ ./client/out/test/data/test-repo/
-cp -r ./media/ ./client/out/test/data/test-repo/
-cp -r ./modules/ ./client/out/test/data/test-repo/
+
+cp -r ./client/dist/* ./client/out/client/src/
+test_repo_dest=./client/out/client/src/test/data/test-repo
+mkdir -p "${test_repo_dest}"
+cp -r ./collections/ "${test_repo_dest}"
+cp -r ./media/ "${test_repo_dest}"
+cp -r ./modules/ "${test_repo_dest}"
 
 macos_arg=''
 if [[ "$(uname)" == 'Darwin' ]]; then

@@ -24,9 +24,9 @@
     "lint": "eslint . --ext ts,js,jsx,tsx,json",
     "lint:fix": "npm run lint -- --fix",
     "test:compile": "./scripts/pretest.sh",
-    "test:client": "node ./client/out/test/runTest.js",
+    "test:client": "node ./client/out/client/src/test/runTest.js",
     "test:cypress": "cypress run --quiet",
-    "test:server": "nyc ./server/node_modules/.bin/mocha ./server/out/test/server.test.js",
+    "test:server": "nyc ./server/node_modules/.bin/mocha ./server/out/server/src/test/server.test.js",
     "test": "npm run test:compile && npm run test:server && npm run test:client && npm run test:cypress",
     "posttest": "nyc report",
     "postinstall": "cd ./client/ && npm install && cd ../server/ && npm install"

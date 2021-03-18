@@ -6,9 +6,10 @@ import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
 import 'source-map-support/register'
 import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
 import { activate } from './../../extension'
-import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, TocTreeCollection } from './../../panel-toc-editor'
+import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
+import { TocTreeCollection } from '../../../../common/src/toc-tree'
 import { commandToPanelType, OpenstaxCommand } from '../../extension-types'
 import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
@@ -17,13 +18,13 @@ import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 
-// Test runs in out/test/suite, not src/test/suite
-const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../')
+// Test runs in out/client/src/test/suite, not src/client/src/test/suite
+const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../../../')
 const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
 const TEST_OUT_DIR = path.join(__dirname, '../../')
 
 const contextStub = {
-  asAbsolutePath: (relPath: string) => path.resolve(__dirname, '../../../../', relPath)
+  asAbsolutePath: (relPath: string) => path.resolve(__dirname, '../../../../../../', relPath)
 }
 const extensionExports = activate(contextStub as any)
 
@@ -69,10 +70,11 @@ const resetTestData = async (): Promise<void> => {
 suite('Unsaved Files', function (this: Suite) {
   this.beforeEach(resetTestData)
   test('show cnxml preview with no file open', async () => {
+    const activationExports = await extensionExports
     assert.strictEqual(vscode.window.activeTextEditor, undefined)
     await vscode.commands.executeCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW)
     await sleep(1000) // Wait for panel to load
-    const panel = (await extensionExports).activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
+    const panel = activationExports.activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
     assert.strictEqual(panel, undefined)
   })
 })
