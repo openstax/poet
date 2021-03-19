@@ -23,6 +23,7 @@ import {
   DiagnosticSeverity,
   Position
 } from 'vscode-languageserver'
+import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, BookBundle } from '../book-bundle'
 
 describe('parseXMLString', function () {
   it('should return null on a new / empty XML', async function () {
@@ -674,5 +675,144 @@ describe('calculateElementPositions', function () {
     }
     const result: Position[] = calculateElementPositions(imageElement)
     assert.deepStrictEqual(result, [expectedStart, expectedEnd])
+  })
+})
+describe('BookBundle', () => {
+  before(function () {
+    mockfs({
+      '/bundle/media/empty.jpg': '',
+      '/bundle/media/orphan.jpg': '',
+      '/bundle/modules/m00001/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml" class="introduction">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Introduction</md:title>
+          </metadata>
+          <content>
+            <para id="para" />
+            <link target-id="para" />
+            <link target-id="other" document="m99999" />
+            <image src="../media/empty.jpg />
+          </content>
+        </document>
+      `,
+      '/bundle/modules/m00002/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content/>
+        </document>
+      `,
+      '/bundle/modules/m00003/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Another</md:title>
+          </metadata>
+          <content/>
+        </document>
+      `,
+      '/bundle/collections/normal.collection.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>normal</md:title>
+            <md:slug>normal</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="m00001" />
+          </col:content>
+        </col:collection>
+      `,
+      '/bundle/collections/duplicate-module.collection.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>duplicate-module</md:title>
+            <md:slug>duplicate-module</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="m00001" />
+            <col:module document="m00001" />
+          </col:content>
+        </col:collection>
+      `,
+      '/bundle/collections/bad-document-link.collection.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>bad-document-link</md:title>
+            <md:slug>bad-document-link</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="m99999" />
+            <col:module document="m99999" />
+          </col:content>
+        </col:collection>
+      `
+    })
+  })
+  after(function () {
+    mockfs.restore()
+  })
+  it('can be created from a bundle directory', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    assert.deepStrictEqual(bundle.images().sort(), ['empty.jpg', 'orphan.jpg'])
+    assert.deepStrictEqual(bundle.modules().sort(), ['m00001', 'm00002', 'm00003'])
+    assert.deepStrictEqual(bundle.collections().sort(), [
+      'bad-document-link.collection.xml',
+      'duplicate-module.collection.xml',
+      'normal.collection.xml'
+    ])
+  })
+})
+describe('BookBundle caching', () => {
+  describe('cachify', () => {
+    it('will mutate its argument', () => {
+      const object = {}
+      const cachified = cachify(object)
+      assert.strictEqual(object, cachified)
+    })
+    it('will provide cacheKey and resetCacheKeyAttributes', () => {
+      const cachified = cachify({})
+      assert.strictEqual(typeof cachified.cacheKey, 'string')
+      assert.strictEqual(typeof cachified.resetCacheKey, 'function')
+    })
+    it('will change its key on reset', () => {
+      const cachified = cachify({})
+      const cloned = {...cachified}
+      cachified.resetCacheKey()
+      assert.notDeepStrictEqual(cachified, cloned)
+    })
+  })
+  describe('cache equality', () => {
+    it('checks for equality only on the cache key', () => {
+      const cachified = cachify({prop: 'apples'})
+      const cloneCache = {...cachified, prop: 'oranges'}
+      const cloneData = cachify({prop: 'apples'})
+      assert(cacheEquals(cachified, cloneCache))
+      assert(!cacheEquals(cachified, cloneData))
+    })
+    it('can check for equality for lists of cached items', () => {
+      const a = cachify({item: 'a'})
+      const b = cachify({item: 'b'})
+      const c = cachify({item: 'c'})
+      const arr = [a, b, c]
+      const clone = [a, b, c]
+      assert(cacheListsEqual(arr, clone))
+    })
+    it('can check for equality for arg lists of cached items', () => {
+      const a = cachify({item: 'a'})
+      const b = cachify({item: 'b'})
+      const c = cachify({item: 'c'})
+      const arr = [a, [b, c]]
+      const clone = [a, [b, c]]
+      assert(cacheArgsEqual(arr, clone))
+    })
+  })
+  describe('cacheSort', () => {
+    it('sorts cached items in cacheKey order to ensure memoization works', () => {
+      const resetCacheKey = () => {}
+      const a = { cacheKey: 'a', resetCacheKey }
+      const b = { cacheKey: 'b', resetCacheKey }
+      const c = { cacheKey: 'c', resetCacheKey }
+      assert.deepStrictEqual(cacheSort([b,c,a]), [a,b,c])
+    })
   })
 })

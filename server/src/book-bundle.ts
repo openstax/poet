@@ -22,15 +22,15 @@ interface Link {
   targetid: string
 }
 
-type Cachified<T> = T & CacheVerified
-interface CacheVerified {
+export type Cachified<T> = T & CacheVerified
+export interface CacheVerified {
   cacheKey: string
   resetCacheKey: () => void
 }
-const cacheEquals = (one: CacheVerified, other: CacheVerified): boolean => {
+export const cacheEquals = (one: CacheVerified, other: CacheVerified): boolean => {
   return one.cacheKey === other.cacheKey
 }
-const cacheListsEqual = (one: CacheVerified[], other: CacheVerified[]): boolean => {
+export const cacheListsEqual = (one: CacheVerified[], other: CacheVerified[]): boolean => {
   if (one.length !== other.length) {
     return false
   }
@@ -45,7 +45,7 @@ const cacheListsEqual = (one: CacheVerified[], other: CacheVerified[]): boolean 
 }
 // works for singular and one-level nested array and set args
 // one-level nested array cache equality is order dependent
-const cacheArgsEqual = (args: Array<CacheVerified | CacheVerified[]>, otherArgs: Array<CacheVerified | CacheVerified[]>): boolean => {
+export const cacheArgsEqual = (args: Array<CacheVerified | CacheVerified[]>, otherArgs: Array<CacheVerified | CacheVerified[]>): boolean => {
   if (args.length !== otherArgs.length) {
     return false
   }
@@ -70,7 +70,7 @@ const cacheArgsEqual = (args: Array<CacheVerified | CacheVerified[]>, otherArgs:
   }
   return true
 }
-const cachify = <T extends Record<string, any>>(arg: T): T & CacheVerified => {
+export const cachify = <T extends Record<string, any>>(arg: T): T & CacheVerified => {
   const generateKey = uuidv4
   const resetCacheKey = (bind: any) => () => {
     bind.cacheKey = generateKey()
@@ -79,6 +79,10 @@ const cachify = <T extends Record<string, any>>(arg: T): T & CacheVerified => {
   argAsAny.cacheKey = generateKey()
   argAsAny.resetCacheKey = resetCacheKey(arg)
   return arg as T & CacheVerified
+}
+
+export const cacheSort = <T extends CacheVerified>(items: T[]): T[] => {
+  return items.sort((a, b) => a.cacheKey.localeCompare(b.cacheKey))
 }
 
 const memoizeOneCache = <T extends (this: any, ...newArgs: any[]) => ReturnType<T>>(args: T): T => {
@@ -253,7 +257,7 @@ class CollectionInfo {
     const modulesUsed = Array.from(await this.modulesUsed())
     const moduleTitles = await Promise.all(modulesUsed.map(async module => await this.bundle.modulesInternal.get(module)?.title()))
     const moduleTitlesDefined = moduleTitles.filter(t => t !== undefined) as Array<Cachified<ModuleTitle>>
-    return this._tree(document, moduleTitlesDefined)
+    return this._tree(document, cacheSort(moduleTitlesDefined))
   }
 
   private readonly _tree = memoizeOneCache(
@@ -341,7 +345,7 @@ export class BookBundle {
 
   async orphanedImages(): Promise<Set<string>> {
     const usedImagesPerModule = await Promise.all(Array.from(this.modulesInternal.values()).map(async module => await module.imagesUsed()))
-    return this._orphanedImages(this.imagesInternal, usedImagesPerModule)
+    return this._orphanedImages(this.imagesInternal, cacheSort(usedImagesPerModule))
   }
 
   private readonly _orphanedImages = memoizeOneCache(
@@ -358,7 +362,7 @@ export class BookBundle {
 
   async orphanedModules(): Promise<Set<string>> {
     const usedModulesPerCollection = await Promise.all(Array.from(this.collectionsInternal.values()).map(async collection => await collection.modulesUsed()))
-    return this._orphanedModules(this.modulesInternal, usedModulesPerCollection)
+    return this._orphanedModules(this.modulesInternal, cacheSort(usedModulesPerCollection))
   }
 
   private readonly _orphanedModules = memoizeOneCache(
