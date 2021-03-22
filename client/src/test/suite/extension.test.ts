@@ -71,11 +71,7 @@ const getRepo = (): Repository => {
   return stubRepo
 }
 
-const reporter = (expectedMessage: string) => (_: string) => {
-  return (message: string) => { assert.notStrictEqual(message, expectedMessage) }
-}
-
-const ignore = (message: string): void => { }
+const ignore = (msg: string) => { }
 
 suite('Unsaved Files', function (this: Suite) {
   this.beforeEach(resetTestData)
@@ -323,17 +319,22 @@ suite('Extension Test Suite', function (this: Suite) {
     populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(!fs.existsSync(testXsdPath))
   })
+  // Push Content Tests
   test('getRepo returns repository', async () => {
     const repo = pushContent.getRepo()
     assert.notStrictEqual(repo.rootUri, undefined)
   })
   test('push with no conflict', async () => {
+    const messages: string[] = []
     stubRepo.commit = sinon.stub().throws()
     stubRepo.pull = sinon.stub().returns(Promise.resolve())
     stubRepo.push = sinon.stub().returns(Promise.resolve())
-    await pushContent._pushContent(getRepo, reporter('Successful content push.'), ignore)
+    await assert.doesNotReject(pushContent._pushContent(getRepo, messages.push.bind(messages), ignore))
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Successful content push.')
   })
   test('push with merge conflict', async () => {
+    const messages: string[] = []
     stubRepo.commit = sinon.stub().returns(Promise.resolve())
     stubRepo.pull = sinon.stub().throws(() => {
       const error: any = new Error()
@@ -341,24 +342,21 @@ suite('Extension Test Suite', function (this: Suite) {
       return error
     })
     stubRepo.push = sinon.stub().returns(Promise.resolve())
-    try {
-      await pushContent._pushContent(getRepo, ignore, reporter('Content conflict, please resolve.'))
-    } catch (e) {
-      assert.notStrictEqual(e.gitErrorCode, GitErrorCodes.Conflict)
-    }
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, messages.push.bind(messages)))
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Content conflict, please resolve.')
   })
   test('push with no changes', async () => {
+    const messages: string[] = []
     stubRepo.commit = sinon.stub().throws(() => {
       const error: any = new Error()
-      error.stdout = 'nothing to commit '
+      error.stdout = 'nothing to commit.'
       return error
     })
     stubRepo.pull = sinon.stub().returns(Promise.resolve())
     stubRepo.push = sinon.stub().returns(Promise.resolve())
-    try {
-      await pushContent._pushContent(getRepo, ignore, reporter('No changes to push.'))
-    } catch (e) {
-      assert((e.stdout as string).includes('nothing to commit'))
-    }
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, messages.push.bind(messages)))
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'No changes to push.')
   })
 })
