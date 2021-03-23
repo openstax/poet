@@ -24,33 +24,31 @@ export interface Link {
 export interface FileData { data: string }
 export interface ModuleTitle { title: string, moduleid: string }
 
-export type Cachified<T> = T & CacheVerified
+export type Cachified<T> = CacheVerified & Wraps<T>
 export interface CacheVerified {
   cacheKey: string
-  resetCacheKey: () => void
+}
+export interface Wraps<T> {
+  inner: T
 }
 
-const cachify_next = <T extends object>(inner: T) => {
-  const key = uuidv4()
-  const handler = {
-    get: (target: any, prop: any, receiver: any) => {
-      const found = target[prop]
-      if (prop === 'cacheKey') {
-        return key
-      }
-      if (found instanceof Function) {
-        return found.bind(target)
-      }
-      return found
-    }
+export const cachify = <T>(inner: T): Cachified<T> => {
+  return {
+    cacheKey: uuidv4(),
+    inner
   }
-  return new Proxy(inner, handler) as Cachified<T>
 }
-
+export const recachify = <T>(cachified: Cachified<T>): Cachified<T> => {
+  return {
+    cacheKey: uuidv4(),
+    inner: cachified.inner
+  }
+}
 
 export const cacheEquals = (one: CacheVerified, other: CacheVerified): boolean => {
   return one.cacheKey === other.cacheKey
 }
+
 export const cacheListsEqual = (one: CacheVerified[], other: CacheVerified[]): boolean => {
   if (one.length !== other.length) {
     return false
@@ -64,6 +62,7 @@ export const cacheListsEqual = (one: CacheVerified[], other: CacheVerified[]): b
   }
   return true
 }
+
 // works for singular and one-level nested array and set args
 // one-level nested array cache equality is order dependent
 export const cacheArgsEqual = (args: Array<CacheVerified | CacheVerified[]>, otherArgs: Array<CacheVerified | CacheVerified[]>): boolean => {
@@ -87,16 +86,6 @@ export const cacheArgsEqual = (args: Array<CacheVerified | CacheVerified[]>, oth
     }
   }
   return true
-}
-export const cachify = <T extends Record<string, any>>(arg: T): T & CacheVerified => {
-  const generateKey = uuidv4
-  const resetCacheKey = (bind: any) => () => {
-    bind.cacheKey = generateKey()
-  }
-  const argAsAny = arg as any
-  argAsAny.cacheKey = generateKey()
-  argAsAny.resetCacheKey = resetCacheKey(arg)
-  return arg as T & CacheVerified
 }
 
 export const cacheSort = <T extends CacheVerified>(items: T[]): T[] => {
@@ -124,9 +113,9 @@ class ModuleInfo {
     return this._document(fileData)
   }
 
-  _document = memoizeOneCache(
-    ({ data }: Cachified<FileData>): Cachified<Document> => {
-      return cachify(new DOMParser().parseFromString(data))
+  private readonly _document = memoizeOneCache(
+    ({ inner }: Cachified<FileData>): Cachified<Document> => {
+      return cachify(new DOMParser().parseFromString(inner.data))
     }
   )
 
@@ -135,10 +124,10 @@ class ModuleInfo {
     return this._idsDeclared(document)
   }
 
-  _idsDeclared = memoizeOneCache(
-    (document: Cachified<Document>) => {
+  private readonly _idsDeclared = memoizeOneCache(
+    ({ inner: doc }: Cachified<Document>) => {
       const ids = new Map<string, Element[]>()
-      const idNodes = select('//cnxml:*[@id]', document) as Element[]
+      const idNodes = select('//cnxml:*[@id]', doc) as Element[]
       for (const idNode of idNodes) {
         const id = expect(idNode.getAttribute('id'), 'selection requires attribute exists')
         const existing = ids.get(id)
@@ -157,10 +146,10 @@ class ModuleInfo {
     return this._imagesUsed(document)
   }
 
-  _imagesUsed = memoizeOneCache(
-    (document: Cachified<Document>) => {
+  private readonly _imagesUsed = memoizeOneCache(
+    ({ inner: doc }: Cachified<Document>) => {
       const images = new Set<string>()
-      const imageNodes = select('//cnxml:image[@src]', document) as Element[]
+      const imageNodes = select('//cnxml:image[@src]', doc) as Element[]
       for (const imageNode of imageNodes) {
         const source = expect(imageNode.getAttribute('src'), 'selection requires attribute exists')
         const basename = path.basename(source)
@@ -175,10 +164,10 @@ class ModuleInfo {
     return this._linksDeclared(document)
   }
 
-  _linksDeclared = memoizeOneCache(
-    (document: Cachified<Document>) => {
+  private readonly _linksDeclared = memoizeOneCache(
+    ({ inner: doc }: Cachified<Document>) => {
       const links: Link[] = []
-      const linkNodes = select('//cnxml:link[@target-id]', document) as Element[]
+      const linkNodes = select('//cnxml:link[@target-id]', doc) as Element[]
       for (const linkNode of linkNodes) {
         let documentid = linkNode.getAttribute('document')
         documentid = documentid == null ? this.moduleid : documentid
@@ -206,10 +195,10 @@ class ModuleInfo {
     return { title: titleString, moduleid: this.moduleid }
   }
 
-  _titleFromDocument = memoizeOneCache(
-    (document: Cachified<Document>): Cachified<ModuleTitle> => {
+  private readonly _titleFromDocument = memoizeOneCache(
+    ({ inner: doc }: Cachified<Document>): Cachified<ModuleTitle> => {
       try {
-        const metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
+        const metadata = doc.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
         const moduleTitle = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent
         return cachify(this._moduleTitleFromString(moduleTitle ?? 'Unnamed Module'))
       } catch {
@@ -218,8 +207,9 @@ class ModuleInfo {
     }
   )
 
-  _guessFromFileData = memoizeOneCache(
-    ({ data }: Cachified<FileData>): Cachified<ModuleTitle> | null => {
+  private readonly _guessFromFileData = memoizeOneCache(
+    ({ inner }: Cachified<FileData>): Cachified<ModuleTitle> | null => {
+      const { data } = inner
       const titleTagStart = data.indexOf('<md:title>')
       const titleTagEnd = data.indexOf('</md:title>')
       if (titleTagStart === -1 || titleTagEnd === -1) {
@@ -254,8 +244,8 @@ class CollectionInfo {
   }
 
   private readonly _document = memoizeOneCache(
-    ({ data }: Cachified<FileData>): Cachified<Document> => {
-      return cachify(new DOMParser().parseFromString(data))
+    ({ inner }: Cachified<FileData>): Cachified<Document> => {
+      return cachify(new DOMParser().parseFromString(inner.data))
     }
   )
 
@@ -265,9 +255,9 @@ class CollectionInfo {
   }
 
   private readonly _modulesUsed = memoizeOneCache(
-    (document: Cachified<Document>) => {
+    ({ inner: doc }: Cachified<Document>) => {
       const modules = new Set<string>()
-      const moduleNodes = select('//col:module[@document]', document) as Element[]
+      const moduleNodes = select('//col:module[@document]', doc) as Element[]
       for (const moduleNode of moduleNodes) {
         modules.add(expect(moduleNode.getAttribute('document'), 'selection requires attribute exists'))
       }
@@ -277,17 +267,17 @@ class CollectionInfo {
 
   async tree(): Promise<Cachified<TocTreeCollection>> {
     const document = await this.document()
-    const modulesUsed = Array.from(await this.modulesUsed())
-    const moduleTitles = await Promise.all(modulesUsed.map(async module => await this.bundle.modulesInternal.get(module)?.title()))
+    const modulesUsed = Array.from((await this.modulesUsed()).inner)
+    const moduleTitles = await Promise.all(modulesUsed.map(async module => await this.bundle.moduleTitle(module)))
     const moduleTitlesDefined = moduleTitles.filter(t => t !== undefined) as Array<Cachified<ModuleTitle>>
     return this._tree(document, cacheSort(moduleTitlesDefined))
   }
 
   private readonly _tree = memoizeOneCache(
-    async (document: Cachified<Document>, titles: Array<Cachified<ModuleTitle>>) => {
+    async ({ inner: doc }: Cachified<Document>, titles: Array<Cachified<ModuleTitle>>) => {
       const moduleTitleMap = new Map<string, string>()
       for (const entry of titles) {
-        moduleTitleMap.set(entry.moduleid, entry.title)
+        moduleTitleMap.set(entry.inner.moduleid, entry.inner.title)
       }
       const moduleToObjectResolver = (moduleid: string): TocTreeModule => {
         return {
@@ -297,7 +287,7 @@ class CollectionInfo {
           subtitle: moduleid
         }
       }
-      const tree = parseCollection(document, moduleToObjectResolver)
+      const tree = parseCollection(doc, moduleToObjectResolver)
       return cachify(tree)
     }
   )
@@ -306,9 +296,9 @@ class CollectionInfo {
 export class BookBundle {
   constructor(
     readonly workspaceRootInternal: string,
-    readonly imagesInternal: Cachified<Set<string>>,
-    readonly modulesInternal: Cachified<Map<string, ModuleInfo>>,
-    readonly collectionsInternal: Cachified<Map<string, CollectionInfo>>
+    private imagesInternal: Cachified<Set<string>>,
+    private modulesInternal: Cachified<Map<string, ModuleInfo>>,
+    private collectionsInternal: Cachified<Map<string, CollectionInfo>>
   ) {}
 
   static async from(workspaceRoot: string): Promise<BookBundle> {
@@ -334,7 +324,7 @@ export class BookBundle {
         map.set(collection, new CollectionInfo(bundle, collection))
       }
     }
-    await Promise.all([loadImages(bundle, images), loadModules(bundle, modules), loadCollections(bundle, collections)])
+    await Promise.all([loadImages(bundle, images.inner), loadModules(bundle, modules.inner), loadCollections(bundle, collections.inner)])
     return bundle
   }
 
@@ -343,39 +333,39 @@ export class BookBundle {
   }
 
   images(): string[] {
-    return Array.from(this.imagesInternal.values())
+    return Array.from(this.imagesInternal.inner.values())
   }
 
   modules(): string[] {
-    return Array.from(this.modulesInternal.keys())
+    return Array.from(this.modulesInternal.inner.keys())
   }
 
   collections(): string[] {
-    return Array.from(this.collectionsInternal.keys())
+    return Array.from(this.collectionsInternal.inner.keys())
   }
 
   imageExists(name: string): boolean {
-    return this.imagesInternal.has(name)
+    return this.imagesInternal.inner.has(name)
   }
 
   moduleExists(moduleid: string): boolean {
-    return this.modulesInternal.has(moduleid)
+    return this.modulesInternal.inner.has(moduleid)
   }
 
   collectionExists(filename: string): boolean {
-    return this.collectionsInternal.has(filename)
+    return this.collectionsInternal.inner.has(filename)
   }
 
   async orphanedImages(): Promise<Cachified<Set<string>>> {
-    const usedImagesPerModule = await Promise.all(Array.from(this.modulesInternal.values()).map(async module => await module.imagesUsed()))
+    const usedImagesPerModule = await Promise.all(Array.from(this.modulesInternal.inner.values()).map(async module => await module.imagesUsed()))
     return this._orphanedImages(this.imagesInternal, cacheSort(usedImagesPerModule))
   }
 
   private readonly _orphanedImages = memoizeOneCache(
     (allImages: Cachified<Set<string>>, usedImagesPerModule: Array<Cachified<Set<string>>>): Cachified<Set<string>> => {
-      const orphanImages = new Set(allImages)
+      const orphanImages = new Set(allImages.inner)
       for (const moduleImages of usedImagesPerModule) {
-        for (const image of moduleImages) {
+        for (const image of moduleImages.inner) {
           orphanImages.delete(image)
         }
       }
@@ -384,31 +374,24 @@ export class BookBundle {
   )
 
   async orphanedModules(): Promise<Cachified<Set<string>>> {
-    const usedModulesPerCollection = await Promise.all(Array.from(this.collectionsInternal.values()).map(async collection => await collection.modulesUsed()))
-    console.error(this)
+    const usedModulesPerCollection = await Promise.all(Array.from(this.collectionsInternal.inner.values()).map(async collection => await collection.modulesUsed()))
     return this._orphanedModules(this.modulesInternal, cacheSort(usedModulesPerCollection))
   }
 
-  private readonly _orphanedModules = memoizeOne(
+  private readonly _orphanedModules = memoizeOneCache(
     (allModules: Cachified<Map<string, ModuleInfo>>, usedModulesPerCollection: Array<Cachified<Set<string>>>): Cachified<Set<string>> => {
-      const orphanModules = new Set(allModules.keys())
+      const orphanModules = new Set(allModules.inner.keys())
       for (const collectionModules of usedModulesPerCollection) {
-        for (const module of collectionModules) {
+        for (const module of collectionModules.inner) {
           orphanModules.delete(module)
         }
       }
       return cachify(orphanModules)
-    },
-    (a,b) => {
-      console.error(a)
-      console.error(b)
-      console.error('compare called')
-      return false
     }
   )
 
   async moduleTitle(moduleid: string): Promise<Cachified<ModuleTitle> | null> {
-    const moduleInfo = this.modulesInternal.get(moduleid)
+    const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
     }
@@ -416,19 +399,22 @@ export class BookBundle {
   }
 
   async isIdInModule(id: string, moduleid: string): Promise<boolean> {
-    const moduleInfo = this.modulesInternal.get(moduleid)
+    const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return false
     }
-    return (await moduleInfo.idsDeclared()).has(id)
+    console.error((await moduleInfo.idsDeclared()).inner)
+    console.error(id)
+    console.error((await moduleInfo.idsDeclared()).inner.has(id))
+    return (await moduleInfo.idsDeclared()).inner.has(id)
   }
 
   async isIdUniqueInModule(id: string, moduleid: string): Promise<boolean> {
-    const moduleInfo = this.modulesInternal.get(moduleid)
+    const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return false
     }
-    const elements = (await moduleInfo.idsDeclared()).get(id)
+    const elements = (await moduleInfo.idsDeclared()).inner.get(id)
     if (elements == null) {
       return false
     }
@@ -436,7 +422,7 @@ export class BookBundle {
   }
 
   async moduleLinks(moduleid: string): Promise<Cachified<Link[]> | null> {
-    const moduleInfo = this.modulesInternal.get(moduleid)
+    const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
     }
@@ -444,7 +430,7 @@ export class BookBundle {
   }
 
   async moduleIds(moduleid: string): Promise<Cachified<Set<string>> | null> {
-    const moduleInfo = this.modulesInternal.get(moduleid)
+    const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
     }
@@ -453,12 +439,12 @@ export class BookBundle {
 
   private readonly _moduleIds = memoizeOneCache(
     (moduleIdsAsMap: Cachified<Map<string, Element[]>>): Cachified<Set<string>> => {
-      return cachify(new Set(moduleIdsAsMap.keys()))
+      return cachify(new Set(moduleIdsAsMap.inner.keys()))
     }
   )
 
   async moduleImages(moduleid: string): Promise<Cachified<Set<string>> | null> {
-    const moduleInfo = this.modulesInternal.get(moduleid)
+    const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
     }
@@ -466,7 +452,7 @@ export class BookBundle {
   }
 
   async collectionTree(filename: string): Promise<Cachified<TocTreeCollection> | null> {
-    const collectionInfo = this.collectionsInternal.get(filename)
+    const collectionInfo = this.collectionsInternal.inner.get(filename)
     if (collectionInfo == null) {
       return null
     }
@@ -478,49 +464,48 @@ export class BookBundle {
     return {
       type: 'module',
       moduleid: moduleid,
-      title: title?.title ?? 'Unnamed Module',
+      title: title?.inner.title ?? 'Unnamed Module',
       subtitle: moduleid
     }
   }
 
-  onModuleCreated(moduleid: string): void {
-    this.modulesInternal.set(moduleid, new ModuleInfo(this, moduleid))
-    this.modulesInternal.resetCacheKey()
+  private onModuleCreated(moduleid: string): void {
+    this.modulesInternal.inner.set(moduleid, new ModuleInfo(this, moduleid))
+    this.modulesInternal = recachify(this.modulesInternal)
   }
 
-  onModuleChanged(moduleid: string): void {
-    console.log('changed ' + moduleid)
-    this.modulesInternal.set(moduleid, new ModuleInfo(this, moduleid))
+  private onModuleChanged(moduleid: string): void {
+    this.modulesInternal.inner.set(moduleid, new ModuleInfo(this, moduleid))
   }
 
-  onModuleDeleted(moduleid: string): void {
-    this.modulesInternal.delete(moduleid)
-    this.modulesInternal.resetCacheKey()
+  private onModuleDeleted(moduleid: string): void {
+    this.modulesInternal.inner.delete(moduleid)
+    this.modulesInternal = recachify(this.modulesInternal)
   }
 
-  onImageCreated(name: string): void {
-    this.imagesInternal.add(name)
-    this.imagesInternal.resetCacheKey()
+  private onImageCreated(name: string): void {
+    this.imagesInternal.inner.add(name)
+    this.imagesInternal = recachify(this.imagesInternal)
   }
 
-  onImageChanged(name: string): void {}
-  onImageDeleted(name: string): void {
-    this.imagesInternal.delete(name)
-    this.imagesInternal.resetCacheKey()
+  private onImageChanged(name: string): void {}
+  private onImageDeleted(name: string): void {
+    this.imagesInternal.inner.delete(name)
+    this.imagesInternal = recachify(this.imagesInternal)
   }
 
-  onCollectionCreated(filename: string): void {
-    this.collectionsInternal.set(filename, new CollectionInfo(this, filename))
-    this.collectionsInternal.resetCacheKey()
+  private onCollectionCreated(filename: string): void {
+    this.collectionsInternal.inner.set(filename, new CollectionInfo(this, filename))
+    this.collectionsInternal = recachify(this.collectionsInternal)
   }
 
-  onCollectionChanged(filename: string): void {
-    this.collectionsInternal.set(filename, new CollectionInfo(this, filename))
+  private onCollectionChanged(filename: string): void {
+    this.collectionsInternal.inner.set(filename, new CollectionInfo(this, filename))
   }
 
-  onCollectionDeleted(filename: string): void {
-    this.collectionsInternal.delete(filename)
-    this.collectionsInternal.resetCacheKey()
+  private onCollectionDeleted(filename: string): void {
+    this.collectionsInternal.inner.delete(filename)
+    this.collectionsInternal = recachify(this.collectionsInternal)
   }
 
   processChange(change: FileEvent): void {

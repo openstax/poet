@@ -25,7 +25,7 @@ import {
   FileChangeType,
   Position
 } from 'vscode-languageserver'
-import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, BookBundle, ModuleTitle } from '../book-bundle'
+import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, BookBundle, ModuleTitle, recachify } from '../book-bundle'
 import { TocTreeCollection } from '../../../common/src/toc-tree'
 
 describe('parseXMLString', function () {
@@ -801,28 +801,47 @@ describe('BookBundle', () => {
       'normal.collection.xml'
     ])
   })
+  it('provides basic asset existence information', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    assert(bundle.moduleExists('m00001'))
+    assert(bundle.imageExists('empty.jpg'))
+    assert(bundle.collectionExists('normal.collection.xml'))
+  })
+  it('provides basic element id information within modules', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    assert(await bundle.isIdInModule('para', 'm00001'))
+    assert(!(await bundle.isIdInModule('nope', 'm00001')))
+    assert(await bundle.isIdUniqueInModule('para', 'm00001'))
+    assert(await bundle.isIdInModule('duplicate', 'm00002'))
+    assert(!(await bundle.isIdUniqueInModule('duplicate', 'm00002')))
+    assert(!(await bundle.isIdInModule('does-not-exist', 'does-not-exist')))
+    assert(!(await bundle.isIdUniqueInModule('does-not-exist', 'does-not-exist')))
+    assert(!(await bundle.isIdUniqueInModule('does-not-exist', 'm00001')))
+  })
   it('tracks and caches used images per module', async () => {
     const bundle = await BookBundle.from('/bundle')
     const images = expect(await bundle.moduleImages('m00001'))
-    assert.deepStrictEqual(Array.from(images), ['empty.jpg'])
+    assert.deepStrictEqual(Array.from(images.inner), ['empty.jpg'])
     const cached = expect(await bundle.moduleImages('m00001'))
     assert(cacheEquals(images, cached))
+    assert.strictEqual(await bundle.moduleImages('does-not-exist'), null)
   })
   it('tracks and caches declared ids per module', async () => {
     const bundle = await BookBundle.from('/bundle')
     const ids = expect(await bundle.moduleIds('m00001'))
-    assert.deepStrictEqual(Array.from(ids).sort(), ['para', 'para2'])
+    assert.deepStrictEqual(Array.from(ids.inner).sort(), ['para', 'para2'])
     const cached = expect(await bundle.moduleIds('m00001'))
     assert(cacheEquals(ids, cached))
+    assert.strictEqual(await bundle.moduleIds('does-not-exist'), null)
   })
   it('removes duplicates from tracked ids per module', async () => {
     const bundle = await BookBundle.from('/bundle')
     const ids = expect(await bundle.moduleIds('m00002'))
-    assert.deepStrictEqual(Array.from(ids), ['duplicate'])
+    assert.deepStrictEqual(Array.from(ids.inner), ['duplicate'])
   })
   it('tracks and caches declared links per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const links = expect(await bundle.moduleLinks('m00001')).sort((a, b) => a.moduleid.localeCompare(b.moduleid))
+    const links = expect(await bundle.moduleLinks('m00001'))
     const expected = [
       {
         moduleid: 'm00001',
@@ -831,57 +850,47 @@ describe('BookBundle', () => {
         moduleid: 'm99999',
         targetid: 'other'
       }
-    ];
-    // We don't care about equality of the cache properties, just copy them
-    (expected as any).cacheKey = links.cacheKey;
-    (expected as any).resetCacheKey = links.resetCacheKey
-    assert.deepStrictEqual(links, expected)
+    ]
+    assert.deepStrictEqual(links.inner.sort((a, b) => a.moduleid.localeCompare(b.moduleid)), expected)
     const cached = expect(await bundle.moduleLinks('m00001'))
     assert(cacheEquals(links, cached))
+    assert.strictEqual(await bundle.moduleLinks('does-not-exist'), null)
   })
   it('tracks and caches titles per module', async () => {
     const bundle = await BookBundle.from('/bundle')
     const title = expect(await bundle.moduleTitle('m00001'))
-    const expected: ModuleTitle = { title: 'Introduction', moduleid: 'm00001' };
-    // We don't care about equality of the cache properties, just copy them
-    (expected as any).cacheKey = title.cacheKey;
-    (expected as any).resetCacheKey = title.resetCacheKey
-    assert.deepStrictEqual(title, expected)
+    const expected: ModuleTitle = { title: 'Introduction', moduleid: 'm00001' }
+    assert.deepStrictEqual(title.inner, expected)
     const cached = expect(await bundle.moduleTitle('m00001'))
     assert(cacheEquals(title, cached))
+    assert.strictEqual(await bundle.moduleTitle('does-not-exist'), null)
   })
   it('Allows existant but empty module titles', async () => {
     const bundle = await BookBundle.from('/bundle')
     const title = expect(await bundle.moduleTitle('m00004'))
-    const expected: ModuleTitle = { title: '', moduleid: 'm00004' };
-    // We don't care about equality of the cache properties, just copy them
-    (expected as any).cacheKey = title.cacheKey;
-    (expected as any).resetCacheKey = title.resetCacheKey
-    assert.deepStrictEqual(title, expected)
+    const expected: ModuleTitle = { title: '', moduleid: 'm00004' }
+    assert.deepStrictEqual(title.inner, expected)
     const cached = expect(await bundle.moduleTitle('m00004'))
     assert(cacheEquals(title, cached))
   })
   it('reports module as unnamed if no title exists', async () => {
     const bundle = await BookBundle.from('/bundle')
     const title = expect(await bundle.moduleTitle('m00005'))
-    const expected: ModuleTitle = { title: 'Unnamed Module', moduleid: 'm00005' };
-    // We don't care about equality of the cache properties, just copy them
-    (expected as any).cacheKey = title.cacheKey;
-    (expected as any).resetCacheKey = title.resetCacheKey
-    assert.deepStrictEqual(title, expected)
+    const expected: ModuleTitle = { title: 'Unnamed Module', moduleid: 'm00005' }
+    assert.deepStrictEqual(title.inner, expected)
     const cached = expect(await bundle.moduleTitle('m00005'))
     assert(cacheEquals(title, cached))
   })
   it('tracks and caches orphaned modules', async () => {
     const bundle = await BookBundle.from('/bundle')
     const orphaned = await bundle.orphanedModules()
-    assert.deepStrictEqual(Array.from(orphaned).sort(), ['m00002', 'm00003', 'm00004', 'm00005'])
+    assert.deepStrictEqual(Array.from(orphaned.inner).sort(), ['m00002', 'm00003', 'm00004', 'm00005'])
     assert(cacheEquals(orphaned, await bundle.orphanedModules()))
   })
   it('tracks and caches orphaned images', async () => {
     const bundle = await BookBundle.from('/bundle')
     const orphaned = await bundle.orphanedImages()
-    assert.deepStrictEqual(Array.from(orphaned).sort(), ['orphan.jpg'])
+    assert.deepStrictEqual(Array.from(orphaned.inner).sort(), ['orphan.jpg'])
     assert(cacheEquals(orphaned, await bundle.orphanedImages()))
   })
   it('tracks and caches table of contents trees', async () => {
@@ -899,12 +908,10 @@ describe('BookBundle', () => {
           subtitle: 'm00001'
         }
       ]
-    };
-    // We don't care about equality of the cache properties, just copy them
-    (expected as any).cacheKey = tree.cacheKey;
-    (expected as any).resetCacheKey = tree.resetCacheKey
-    assert.deepStrictEqual(tree, expected)
+    }
+    assert.deepStrictEqual(tree.inner, expected)
     assert(cacheEquals(tree, expect(await bundle.collectionTree('normal.collection.xml'))))
+    assert.strictEqual(await bundle.collectionTree('does-not-exist'), null)
   })
   it('tracks and caches table of contents trees containing subcollections', async () => {
     const bundle = await BookBundle.from('/bundle')
@@ -928,12 +935,20 @@ describe('BookBundle', () => {
           subtitle: 'm00001'
         }]
       }]
-    };
-    // We don't care about equality of the cache properties, just copy them
-    (expected as any).cacheKey = tree.cacheKey;
-    (expected as any).resetCacheKey = tree.resetCacheKey
-    assert.deepStrictEqual(tree, expected)
+    }
+    assert.deepStrictEqual(tree.inner, expected)
     assert(cacheEquals(tree, expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))))
+  })
+  it('can provide modules directly as toc tree objects', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const module = await bundle.moduleAsTreeObject('m00001')
+    const expected = {
+      type: 'module',
+      title: 'Introduction',
+      moduleid: 'm00001',
+      subtitle: 'm00001'
+    }
+    assert.deepStrictEqual(module, expected)
   })
   it('busts caches when a module is created', async () => {
     const bundle = await BookBundle.from('/bundle')
@@ -942,34 +957,86 @@ describe('BookBundle', () => {
     const orphanedModulesAgain = await bundle.orphanedModules()
     assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
   })
+  it('busts caches when a module is deleted', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphanedModules = await bundle.orphanedModules()
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00000/index.cnxml' })
+    const orphanedModulesAgain = await bundle.orphanedModules()
+    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+  })
+  it('busts caches when a module is changed', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const tree = expect(await bundle.collectionTree('normal.collection.xml'))
+    const orphanedImages = await bundle.orphanedImages()
+    const moduleTitle = expect(await bundle.moduleTitle('m00002'))
+
+    bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/modules/m00002/index.cnxml' })
+
+    const treeAgainNotContains = expect(await bundle.collectionTree('normal.collection.xml'))
+    const moduleTitleAgain = expect(await bundle.moduleTitle('m00002'))
+    const orphanedImagesAgain = await bundle.orphanedImages()
+
+    assert(!cacheEquals(moduleTitle, moduleTitleAgain))
+    assert(!cacheEquals(orphanedImages, orphanedImagesAgain))
+    assert(cacheEquals(tree, treeAgainNotContains))
+
+    bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/modules/m00001/index.cnxml' })
+    const treeAgainContains = expect(await bundle.collectionTree('normal.collection.xml'))
+    assert(!cacheEquals(tree, treeAgainContains))
+  })
+  it('busts caches when an image is created', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphanedImages = await bundle.orphanedImages()
+    bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/media/test.png' })
+    assert(!cacheEquals(orphanedImages, await bundle.orphanedImages()))
+  })
+  it('busts caches when an image is deleted', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphanedImages = await bundle.orphanedImages()
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media/test.png' })
+    assert(!cacheEquals(orphanedImages, await bundle.orphanedImages()))
+  })
+  it('busts caches when a collection is created', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphanedModules = await bundle.orphanedModules()
+    bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/collections/normal.collection.xml' })
+    const orphanedModulesAgain = await bundle.orphanedModules()
+    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+  })
+  it('busts caches when a collection is changed', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphanedModules = await bundle.orphanedModules()
+    bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/collections/normal.collection.xml' })
+    const orphanedModulesAgain = await bundle.orphanedModules()
+    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+  })
+  it('busts caches when a collection is deleted', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphanedModules = await bundle.orphanedModules()
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/collections/normal.collection.xml' })
+    const orphanedModulesAgain = await bundle.orphanedModules()
+    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+  })
 })
 describe('BookBundle caching', () => {
   describe('cachify', () => {
-    it('will mutate its argument', () => {
-      const object = {}
-      const cachified = cachify(object)
-      assert.strictEqual(object, cachified)
-    })
-    it('will provide cacheKey and resetCacheKeyAttributes', () => {
+    it('will provide cacheKey and inner', () => {
       const cachified = cachify({})
       assert.strictEqual(typeof cachified.cacheKey, 'string')
-      assert.strictEqual(typeof cachified.resetCacheKey, 'function')
+      assert.deepStrictEqual(cachified.inner, {})
     })
-    it('will change its key on reset', () => {
+    it('will change its key on recachify', () => {
       const cachified = cachify({})
-      const cloned = { ...cachified }
-      cachified.resetCacheKey()
-      assert.notDeepStrictEqual(cachified, cloned)
-      assert(!cacheEquals(cachified, cloned))
+      const recachified = recachify(cachified)
+      assert.strictEqual(cachified.inner, recachified.inner)
+      assert(!cacheEquals(cachified, recachified))
     })
   })
   describe('cache equality', () => {
     it('checks for equality only on the cache key', () => {
       const cachified = cachify({ prop: 'apples' })
-      const cloneCache = { ...cachified, prop: 'oranges' }
-      const cloneData = cachify({ prop: 'apples' })
+      const cloneCache = { cacheKey: cachified.cacheKey, inner: { prop: 'oranges' } }
       assert(cacheEquals(cachified, cloneCache))
-      assert(!cacheEquals(cachified, cloneData))
     })
     it('can check for equality for lists of cached items', () => {
       const a = cachify({ item: 'a' })

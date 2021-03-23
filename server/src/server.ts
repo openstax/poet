@@ -151,14 +151,14 @@ connection.onRequest('echo', message => message)
 connection.onRequest(ExtensionServerRequest.BundleTrees, async ({ workspaceUri }: BundleTreesArgs): Promise<BundleTreesResponse> => {
   const bundle = workspaceBookBundles.get(workspaceUri)
   if (bundle == null) { return null }
-  const trees = await Promise.all(bundle.collections().map(async collection => expect(await bundle.collectionTree(collection), 'collection must exist')))
+  const trees = await Promise.all(bundle.collections().map(async collection => expect(await bundle.collectionTree(collection), 'collection must exist').inner))
   return trees
 })
 
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
   const bundle = workspaceBookBundles.get(workspaceUri)
   if (bundle == null) { return null }
-  const orphanModules = Array.from(await bundle.orphanedModules())
+  const orphanModules = Array.from((await bundle.orphanedModules()).inner)
   const result = await Promise.all(orphanModules.map(async m => await bundle.moduleAsTreeObject(m)))
   return result
 })
