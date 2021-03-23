@@ -11,7 +11,8 @@ import {
   ValidationQueue,
   ValidationRequest,
   ModuleInformation,
-  calculateElementPositions
+  calculateElementPositions,
+  expect
 } from './../utils'
 
 import assert from 'assert'
@@ -21,9 +22,11 @@ import * as xpath from 'xpath-ts'
 import {
   Diagnostic,
   DiagnosticSeverity,
+  FileChangeType,
   Position
 } from 'vscode-languageserver'
-import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, BookBundle } from '../book-bundle'
+import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, BookBundle, ModuleTitle } from '../book-bundle'
+import { TocTreeCollection } from '../../../common/src/toc-tree'
 
 describe('parseXMLString', function () {
   it('should return null on a new / empty XML', async function () {
@@ -689,9 +692,10 @@ describe('BookBundle', () => {
           </metadata>
           <content>
             <para id="para" />
+            <para id="para2" />
             <link target-id="para" />
             <link target-id="other" document="m99999" />
-            <image src="../media/empty.jpg />
+            <image src="../media/empty.jpg" />
           </content>
         </document>
       `,
@@ -700,7 +704,10 @@ describe('BookBundle', () => {
           <metadata xmlns:md="http://cnx.rice.edu/mdml">
             <md:title>Module</md:title>
           </metadata>
-          <content/>
+          <content>
+            <para id="duplicate" />
+            <para id="duplicate" />
+          </content>
         </document>
       `,
       '/bundle/modules/m00003/index.cnxml': `
@@ -711,6 +718,21 @@ describe('BookBundle', () => {
           <content/>
         </document>
       `,
+      '/bundle/modules/m00004/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title />
+          </metadata>
+          <content>Empty title</content>
+        </document>
+      `,
+      '/bundle/modules/m00005/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+          </metadata>
+          <content>No title</content>
+        </document>
+      `,
       '/bundle/collections/normal.collection.xml': `
         <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
           <col:metadata>
@@ -719,6 +741,23 @@ describe('BookBundle', () => {
           </col:metadata>
           <col:content>
             <col:module document="m00001" />
+          </col:content>
+        </col:collection>
+      `,
+      '/bundle/collections/normal-with-subcollection.collection.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>normal-with-subcollection</md:title>
+            <md:slug>normal-with-subcollection</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="m00001" />
+            <col:subcollection>
+              <md:title>subcollection</md:title>
+              <col:content>
+                <col:module document="m00001" />
+              </col:content>
+            </col:subcollection>
           </col:content>
         </col:collection>
       `,
@@ -754,12 +793,154 @@ describe('BookBundle', () => {
   it('can be created from a bundle directory', async () => {
     const bundle = await BookBundle.from('/bundle')
     assert.deepStrictEqual(bundle.images().sort(), ['empty.jpg', 'orphan.jpg'])
-    assert.deepStrictEqual(bundle.modules().sort(), ['m00001', 'm00002', 'm00003'])
+    assert.deepStrictEqual(bundle.modules().sort(), ['m00001', 'm00002', 'm00003', 'm00004', 'm00005'])
     assert.deepStrictEqual(bundle.collections().sort(), [
       'bad-document-link.collection.xml',
       'duplicate-module.collection.xml',
+      'normal-with-subcollection.collection.xml',
       'normal.collection.xml'
     ])
+  })
+  it('tracks and caches used images per module', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const images = expect(await bundle.moduleImages('m00001'))
+    assert.deepStrictEqual(Array.from(images), ['empty.jpg'])
+    const cached = expect(await bundle.moduleImages('m00001'))
+    assert(cacheEquals(images, cached))
+  })
+  it('tracks and caches declared ids per module', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const ids = expect(await bundle.moduleIds('m00001'))
+    assert.deepStrictEqual(Array.from(ids).sort(), ['para', 'para2'])
+    const cached = expect(await bundle.moduleIds('m00001'))
+    assert(cacheEquals(ids, cached))
+  })
+  it('removes duplicates from tracked ids per module', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const ids = expect(await bundle.moduleIds('m00002'))
+    assert.deepStrictEqual(Array.from(ids), ['duplicate'])
+  })
+  it('tracks and caches declared links per module', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const links = expect(await bundle.moduleLinks('m00001')).sort((a, b) => a.moduleid.localeCompare(b.moduleid))
+    const expected = [
+      {
+        moduleid: 'm00001',
+        targetid: 'para'
+      }, {
+        moduleid: 'm99999',
+        targetid: 'other'
+      }
+    ];
+    // We don't care about equality of the cache properties, just copy them
+    (expected as any).cacheKey = links.cacheKey;
+    (expected as any).resetCacheKey = links.resetCacheKey
+    assert.deepStrictEqual(links, expected)
+    const cached = expect(await bundle.moduleLinks('m00001'))
+    assert(cacheEquals(links, cached))
+  })
+  it('tracks and caches titles per module', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const title = expect(await bundle.moduleTitle('m00001'))
+    const expected: ModuleTitle = { title: 'Introduction', moduleid: 'm00001' };
+    // We don't care about equality of the cache properties, just copy them
+    (expected as any).cacheKey = title.cacheKey;
+    (expected as any).resetCacheKey = title.resetCacheKey
+    assert.deepStrictEqual(title, expected)
+    const cached = expect(await bundle.moduleTitle('m00001'))
+    assert(cacheEquals(title, cached))
+  })
+  it('Allows existant but empty module titles', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const title = expect(await bundle.moduleTitle('m00004'))
+    const expected: ModuleTitle = { title: '', moduleid: 'm00004' };
+    // We don't care about equality of the cache properties, just copy them
+    (expected as any).cacheKey = title.cacheKey;
+    (expected as any).resetCacheKey = title.resetCacheKey
+    assert.deepStrictEqual(title, expected)
+    const cached = expect(await bundle.moduleTitle('m00004'))
+    assert(cacheEquals(title, cached))
+  })
+  it('reports module as unnamed if no title exists', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const title = expect(await bundle.moduleTitle('m00005'))
+    const expected: ModuleTitle = { title: 'Unnamed Module', moduleid: 'm00005' };
+    // We don't care about equality of the cache properties, just copy them
+    (expected as any).cacheKey = title.cacheKey;
+    (expected as any).resetCacheKey = title.resetCacheKey
+    assert.deepStrictEqual(title, expected)
+    const cached = expect(await bundle.moduleTitle('m00005'))
+    assert(cacheEquals(title, cached))
+  })
+  it('tracks and caches orphaned modules', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphaned = await bundle.orphanedModules()
+    assert.deepStrictEqual(Array.from(orphaned).sort(), ['m00002', 'm00003', 'm00004', 'm00005'])
+    assert(cacheEquals(orphaned, await bundle.orphanedModules()))
+  })
+  it('tracks and caches orphaned images', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphaned = await bundle.orphanedImages()
+    assert.deepStrictEqual(Array.from(orphaned).sort(), ['orphan.jpg'])
+    assert(cacheEquals(orphaned, await bundle.orphanedImages()))
+  })
+  it('tracks and caches table of contents trees', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const tree = expect(await bundle.collectionTree('normal.collection.xml'))
+    const expected: TocTreeCollection = {
+      type: 'collection',
+      title: 'normal',
+      slug: 'normal',
+      children: [
+        {
+          type: 'module',
+          title: 'Introduction',
+          moduleid: 'm00001',
+          subtitle: 'm00001'
+        }
+      ]
+    };
+    // We don't care about equality of the cache properties, just copy them
+    (expected as any).cacheKey = tree.cacheKey;
+    (expected as any).resetCacheKey = tree.resetCacheKey
+    assert.deepStrictEqual(tree, expected)
+    assert(cacheEquals(tree, expect(await bundle.collectionTree('normal.collection.xml'))))
+  })
+  it('tracks and caches table of contents trees containing subcollections', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const tree = expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
+    const expected: TocTreeCollection = {
+      type: 'collection',
+      title: 'normal-with-subcollection',
+      slug: 'normal-with-subcollection',
+      children: [{
+        type: 'module',
+        title: 'Introduction',
+        moduleid: 'm00001',
+        subtitle: 'm00001'
+      }, {
+        type: 'subcollection',
+        title: 'subcollection',
+        children: [{
+          type: 'module',
+          title: 'Introduction',
+          moduleid: 'm00001',
+          subtitle: 'm00001'
+        }]
+      }]
+    };
+    // We don't care about equality of the cache properties, just copy them
+    (expected as any).cacheKey = tree.cacheKey;
+    (expected as any).resetCacheKey = tree.resetCacheKey
+    assert.deepStrictEqual(tree, expected)
+    assert(cacheEquals(tree, expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))))
+  })
+  it('busts caches when a module is created', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphanedModules = await bundle.orphanedModules()
+    bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/modules/m00000/index.cnxml' })
+    const orphanedModulesAgain = await bundle.orphanedModules()
+    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
   })
 })
 describe('BookBundle caching', () => {
@@ -776,43 +957,91 @@ describe('BookBundle caching', () => {
     })
     it('will change its key on reset', () => {
       const cachified = cachify({})
-      const cloned = {...cachified}
+      const cloned = { ...cachified }
       cachified.resetCacheKey()
       assert.notDeepStrictEqual(cachified, cloned)
+      assert(!cacheEquals(cachified, cloned))
     })
   })
   describe('cache equality', () => {
     it('checks for equality only on the cache key', () => {
-      const cachified = cachify({prop: 'apples'})
-      const cloneCache = {...cachified, prop: 'oranges'}
-      const cloneData = cachify({prop: 'apples'})
+      const cachified = cachify({ prop: 'apples' })
+      const cloneCache = { ...cachified, prop: 'oranges' }
+      const cloneData = cachify({ prop: 'apples' })
       assert(cacheEquals(cachified, cloneCache))
       assert(!cacheEquals(cachified, cloneData))
     })
     it('can check for equality for lists of cached items', () => {
-      const a = cachify({item: 'a'})
-      const b = cachify({item: 'b'})
-      const c = cachify({item: 'c'})
+      const a = cachify({ item: 'a' })
+      const b = cachify({ item: 'b' })
+      const c = cachify({ item: 'c' })
       const arr = [a, b, c]
       const clone = [a, b, c]
       assert(cacheListsEqual(arr, clone))
     })
+    it('can check for equality for lists of cached items', () => {
+      const a = cachify({ item: 'a' })
+      const b = cachify({ item: 'b' })
+      const arr = [a]
+      const other = [b]
+      assert(!cacheListsEqual(arr, other))
+    })
+    it('determines lists of varying length are unequal', () => {
+      const a = cachify({ item: 'a' })
+      const b = cachify({ item: 'b' })
+      const c = cachify({ item: 'c' })
+      const arr = [a, b, c]
+      const other = [a, b]
+      assert(!cacheListsEqual(arr, other))
+    })
     it('can check for equality for arg lists of cached items', () => {
-      const a = cachify({item: 'a'})
-      const b = cachify({item: 'b'})
-      const c = cachify({item: 'c'})
+      const a = cachify({ item: 'a' })
+      const b = cachify({ item: 'b' })
+      const c = cachify({ item: 'c' })
       const arr = [a, [b, c]]
       const clone = [a, [b, c]]
       assert(cacheArgsEqual(arr, clone))
     })
+    it('can check for equality for arg lists of cached items', () => {
+      const a = cachify({ item: 'a' })
+      const b = cachify({ item: 'b' })
+      const c = cachify({ item: 'c' })
+      const arr = [a, [b, c]]
+      const other = [a, b]
+      assert(!cacheArgsEqual(arr, other))
+    })
+    it('can check for equality for arg lists of cached items', () => {
+      const a = cachify({ item: 'a' })
+      const b = cachify({ item: 'b' })
+      const c = cachify({ item: 'c' })
+      const arr = [a, [b, c]]
+      const other = [b, [b, c]]
+      assert(!cacheArgsEqual(arr, other))
+    })
+    it('can check for equality for arg lists of cached items', () => {
+      const a = cachify({ item: 'a' })
+      const b = cachify({ item: 'b' })
+      const c = cachify({ item: 'c' })
+      const arr = [a, [b, c]]
+      const other = [a, [c, b]]
+      assert(!cacheArgsEqual(arr, other))
+    })
+    it('determines arg lists of varying length are unequal', () => {
+      const a = cachify({ item: 'a' })
+      const b = cachify({ item: 'b' })
+      const c = cachify({ item: 'c' })
+      const arr = [a, [b, c]]
+      const other = [a]
+      assert(!cacheArgsEqual(arr, other))
+    })
   })
   describe('cacheSort', () => {
     it('sorts cached items in cacheKey order to ensure memoization works', () => {
-      const resetCacheKey = () => {}
+      const resetCacheKey = (): void => {}
       const a = { cacheKey: 'a', resetCacheKey }
       const b = { cacheKey: 'b', resetCacheKey }
       const c = { cacheKey: 'c', resetCacheKey }
-      assert.deepStrictEqual(cacheSort([b,c,a]), [a,b,c])
+      assert.deepStrictEqual(cacheSort([b, c, a]), [a, b, c])
     })
   })
 })

@@ -17,16 +17,37 @@ export const NS_METADATA = 'http://cnx.rice.edu/mdml'
 
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
-interface Link {
+export interface Link {
   moduleid: string
   targetid: string
 }
+export interface FileData { data: string }
+export interface ModuleTitle { title: string, moduleid: string }
 
 export type Cachified<T> = T & CacheVerified
 export interface CacheVerified {
   cacheKey: string
   resetCacheKey: () => void
 }
+
+const cachify_next = <T extends object>(inner: T) => {
+  const key = uuidv4()
+  const handler = {
+    get: (target: any, prop: any, receiver: any) => {
+      const found = target[prop]
+      if (prop === 'cacheKey') {
+        return key
+      }
+      if (found instanceof Function) {
+        return found.bind(target)
+      }
+      return found
+    }
+  }
+  return new Proxy(inner, handler) as Cachified<T>
+}
+
+
 export const cacheEquals = (one: CacheVerified, other: CacheVerified): boolean => {
   return one.cacheKey === other.cacheKey
 }
@@ -53,9 +74,6 @@ export const cacheArgsEqual = (args: Array<CacheVerified | CacheVerified[]>, oth
     const item = args[i]
     const otherItem = otherArgs[i]
     if (item instanceof Array !== otherItem instanceof Array) {
-      return false
-    }
-    if (item instanceof Set !== otherItem instanceof Set) {
       return false
     }
     if (item instanceof Array) {
@@ -89,12 +107,9 @@ const memoizeOneCache = <T extends (this: any, ...newArgs: any[]) => ReturnType<
   return memoizeOne(args, cacheArgsEqual)
 }
 
-interface FileData {data: string}
-interface ModuleTitle {title: string, moduleid: string}
-
 class ModuleInfo {
   private fileDataInternal: Cachified<FileData> | null = null
-  constructor(private readonly bundle: BookBundle, private readonly moduleid: string) {}
+  constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
   async fileData(): Promise<Cachified<FileData>> {
     if (this.fileDataInternal == null) {
       const modulePath = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
@@ -147,7 +162,9 @@ class ModuleInfo {
       const images = new Set<string>()
       const imageNodes = select('//cnxml:image[@src]', document) as Element[]
       for (const imageNode of imageNodes) {
-        images.add(expect(imageNode.getAttribute('src'), 'selection requires attribute exists'))
+        const source = expect(imageNode.getAttribute('src'), 'selection requires attribute exists')
+        const basename = path.basename(source)
+        images.add(basename)
       }
       return cachify(images)
     }
@@ -163,7 +180,9 @@ class ModuleInfo {
       const links: Link[] = []
       const linkNodes = select('//cnxml:link[@target-id]', document) as Element[]
       for (const linkNode of linkNodes) {
-        const documentid = linkNode.getAttribute('document') ?? this.moduleid
+        let documentid = linkNode.getAttribute('document')
+        documentid = documentid == null ? this.moduleid : documentid
+        documentid = documentid === '' ? this.moduleid : documentid
         links.push({
           moduleid: documentid,
           targetid: expect(linkNode.getAttribute('target-id'), 'selection requires attribute exists')
@@ -177,26 +196,30 @@ class ModuleInfo {
     const fileData = await this.fileData()
     const guessedTitle = this._guessFromFileData(fileData)
     if (guessedTitle != null) {
-      return cachify({ title: guessedTitle, moduleid: this.moduleid })
+      return guessedTitle
     }
     const document = await this.document()
-    return cachify({ title: this._titleFromDocument(document), moduleid: this.moduleid })
+    return this._titleFromDocument(document)
+  }
+
+  private _moduleTitleFromString(titleString: string): ModuleTitle {
+    return { title: titleString, moduleid: this.moduleid }
   }
 
   _titleFromDocument = memoizeOneCache(
-    (document: Cachified<Document>): string => {
+    (document: Cachified<Document>): Cachified<ModuleTitle> => {
       try {
         const metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
         const moduleTitle = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent
-        return moduleTitle ?? 'Unnamed Module'
+        return cachify(this._moduleTitleFromString(moduleTitle ?? 'Unnamed Module'))
       } catch {
-        return 'Unnamed Module'
+        return cachify(this._moduleTitleFromString('Unnamed Module'))
       }
     }
   )
 
   _guessFromFileData = memoizeOneCache(
-    ({ data }: Cachified<FileData>): string | null => {
+    ({ data }: Cachified<FileData>): Cachified<ModuleTitle> | null => {
       const titleTagStart = data.indexOf('<md:title>')
       const titleTagEnd = data.indexOf('</md:title>')
       if (titleTagStart === -1 || titleTagEnd === -1) {
@@ -209,13 +232,13 @@ class ModuleInfo {
         return null
       }
       const moduleTitle = data.substring(actualTitleStart, titleTagEnd).trim()
-      return moduleTitle
+      return cachify(this._moduleTitleFromString(moduleTitle))
     }
   )
 }
 class CollectionInfo {
   private fileDataInternal: Cachified<FileData> | null = null
-  constructor(private readonly bundle: BookBundle, private readonly filename: string) {}
+  constructor(private readonly bundle: BookBundle, readonly filename: string) {}
   async fileData(): Promise<Cachified<FileData>> {
     if (this.fileDataInternal == null) {
       const modulePath = path.join(this.bundle.workspaceRoot(), 'collections', this.filename)
@@ -343,46 +366,53 @@ export class BookBundle {
     return this.collectionsInternal.has(filename)
   }
 
-  async orphanedImages(): Promise<Set<string>> {
+  async orphanedImages(): Promise<Cachified<Set<string>>> {
     const usedImagesPerModule = await Promise.all(Array.from(this.modulesInternal.values()).map(async module => await module.imagesUsed()))
     return this._orphanedImages(this.imagesInternal, cacheSort(usedImagesPerModule))
   }
 
   private readonly _orphanedImages = memoizeOneCache(
-    (allImages: Cachified<Set<string>>, usedImagesPerModule: Array<Cachified<Set<string>>>): Set<string> => {
+    (allImages: Cachified<Set<string>>, usedImagesPerModule: Array<Cachified<Set<string>>>): Cachified<Set<string>> => {
       const orphanImages = new Set(allImages)
       for (const moduleImages of usedImagesPerModule) {
         for (const image of moduleImages) {
           orphanImages.delete(image)
         }
       }
-      return orphanImages
+      return cachify(orphanImages)
     }
   )
 
-  async orphanedModules(): Promise<Set<string>> {
+  async orphanedModules(): Promise<Cachified<Set<string>>> {
     const usedModulesPerCollection = await Promise.all(Array.from(this.collectionsInternal.values()).map(async collection => await collection.modulesUsed()))
+    console.error(this)
     return this._orphanedModules(this.modulesInternal, cacheSort(usedModulesPerCollection))
   }
 
-  private readonly _orphanedModules = memoizeOneCache(
-    (allModules: Cachified<Map<string, ModuleInfo>>, usedModulesPerCollection: Array<Cachified<Set<string>>>): Set<string> => {
+  private readonly _orphanedModules = memoizeOne(
+    (allModules: Cachified<Map<string, ModuleInfo>>, usedModulesPerCollection: Array<Cachified<Set<string>>>): Cachified<Set<string>> => {
       const orphanModules = new Set(allModules.keys())
       for (const collectionModules of usedModulesPerCollection) {
         for (const module of collectionModules) {
           orphanModules.delete(module)
         }
       }
-      return orphanModules
+      return cachify(orphanModules)
+    },
+    (a,b) => {
+      console.error(a)
+      console.error(b)
+      console.error('compare called')
+      return false
     }
   )
 
-  async moduleTitle(moduleid: string): Promise<string | null> {
+  async moduleTitle(moduleid: string): Promise<Cachified<ModuleTitle> | null> {
     const moduleInfo = this.modulesInternal.get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return (await moduleInfo.title()).title
+    return await moduleInfo.title()
   }
 
   async isIdInModule(id: string, moduleid: string): Promise<boolean> {
@@ -405,23 +435,37 @@ export class BookBundle {
     return elements.length === 1
   }
 
-  async moduleLinks(moduleid: string): Promise<Link[]> {
+  async moduleLinks(moduleid: string): Promise<Cachified<Link[]> | null> {
     const moduleInfo = this.modulesInternal.get(moduleid)
     if (moduleInfo == null) {
-      return []
+      return null
     }
     return await moduleInfo.linksDelared()
   }
 
-  async moduleImages(moduleid: string): Promise<Set<string>> {
+  async moduleIds(moduleid: string): Promise<Cachified<Set<string>> | null> {
     const moduleInfo = this.modulesInternal.get(moduleid)
     if (moduleInfo == null) {
-      return new Set()
+      return null
+    }
+    return this._moduleIds(await moduleInfo.idsDeclared())
+  }
+
+  private readonly _moduleIds = memoizeOneCache(
+    (moduleIdsAsMap: Cachified<Map<string, Element[]>>): Cachified<Set<string>> => {
+      return cachify(new Set(moduleIdsAsMap.keys()))
+    }
+  )
+
+  async moduleImages(moduleid: string): Promise<Cachified<Set<string>> | null> {
+    const moduleInfo = this.modulesInternal.get(moduleid)
+    if (moduleInfo == null) {
+      return null
     }
     return await moduleInfo.imagesUsed()
   }
 
-  async collectionTree(filename: string): Promise<TocTreeCollection | null> {
+  async collectionTree(filename: string): Promise<Cachified<TocTreeCollection> | null> {
     const collectionInfo = this.collectionsInternal.get(filename)
     if (collectionInfo == null) {
       return null
@@ -430,10 +474,11 @@ export class BookBundle {
   }
 
   async moduleAsTreeObject(moduleid: string): Promise<TocTreeModule> {
+    const title = await this.moduleTitle(moduleid)
     return {
       type: 'module',
       moduleid: moduleid,
-      title: (await this.moduleTitle(moduleid)) ?? 'Unnamed Module',
+      title: title?.title ?? 'Unnamed Module',
       subtitle: moduleid
     }
   }
