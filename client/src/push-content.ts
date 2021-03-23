@@ -13,7 +13,7 @@ export const pushContent = () => async () => {
   _pushContent(getRepo, vscode.window.showInformationMessage, vscode.window.showErrorMessage)
 }
 
-export const _pushContent = (_getRepo: () => Repository, infoReporter: (msg: string) => void, errorReporter: (msg: string) => void) => async () => {
+export const _pushContent = (_getRepo: () => Repository, infoReporter: (msg: string) => Thenable<string | undefined>, errorReporter: (msg: string) => Thenable<string | undefined>) => async () => {
   const repo = _getRepo()
   const commitOptions: CommitOptions = { all: true }
 

@@ -2,7 +2,7 @@ import assert from 'assert'
 import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
-import { GitErrorCodes, Repository } from '../../git-api/git.d'
+import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
 import 'source-map-support/register'
 import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
 import { activate } from './../../extension'
@@ -14,7 +14,6 @@ import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
 import { DOMParser } from 'xmldom'
 import * as xpath from 'xpath-ts'
-import * as sinon from 'sinon'
 import { Substitute } from '@fluffy-spoon/substitute'
 
 // Test runs in out/test/suite, not src/test/suite
@@ -63,15 +62,6 @@ const resetTestData = async (): Promise<void> => {
   fs.mkdirpSync(TEST_DATA_DIR)
   fs.copySync(ORIGIN_DATA_DIR, TEST_DATA_DIR)
 }
-
-// TODO Where does this go?
-const stubRepo = Substitute.for<Repository>()
-
-const getRepo = (): Repository => {
-  return stubRepo
-}
-
-const ignore = (msg: string) => { }
 
 suite('Unsaved Files', function (this: Suite) {
   this.beforeEach(resetTestData)
@@ -294,7 +284,7 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(modified, testData)
     assert.notStrictEqual(modified, before)
   })
-  test('panel disposed and refocused', async () => {
+  test('panel disposed and rewfocused', async () => {
     await assert.doesNotReject(async () => {
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
@@ -319,43 +309,81 @@ suite('Extension Test Suite', function (this: Suite) {
     populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(!fs.existsSync(testXsdPath))
   })
-  // Push Content Tests
+})
+
+// Push Content Tests
+const ignore = async (msg: string): Promise<string | undefined> => { return undefined }
+const makeCaptureMessage = (messages: string[]): (msg: string) => Promise<string | undefined> => {
+  const captureMessage = async (msg: string): Promise<string | undefined> => {
+    messages.push(msg)
+    return undefined
+  }
+  return captureMessage
+}
+const commitOptions: CommitOptions = { all: true }
+
+suite('Push Button Test Suite', function (this: Suite) {
   test('getRepo returns repository', async () => {
     const repo = pushContent.getRepo()
     assert.notStrictEqual(repo.rootUri, undefined)
   })
   test('push with no conflict', async () => {
     const messages: string[] = []
-    stubRepo.commit = sinon.stub().throws()
-    stubRepo.pull = sinon.stub().returns(Promise.resolve())
-    stubRepo.push = sinon.stub().returns(Promise.resolve())
-    await assert.doesNotReject(pushContent._pushContent(getRepo, messages.push.bind(messages), ignore))
+    const captureMessage = makeCaptureMessage(messages)
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, captureMessage, ignore))
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Successful content push.')
   })
   test('push with merge conflict', async () => {
     const messages: string[] = []
-    stubRepo.commit = sinon.stub().returns(Promise.resolve())
-    stubRepo.pull = sinon.stub().throws(() => {
-      const error: any = new Error()
-      error.gitErrorCode = GitErrorCodes.Conflict
-      return error
-    })
-    stubRepo.push = sinon.stub().returns(Promise.resolve())
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, messages.push.bind(messages)))
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.gitErrorCode = GitErrorCodes.Conflict
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().rejects(error)
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Content conflict, please resolve.')
   })
   test('push with no changes', async () => {
     const messages: string[] = []
-    stubRepo.commit = sinon.stub().throws(() => {
-      const error: any = new Error()
-      error.stdout = 'nothing to commit.'
-      return error
-    })
-    stubRepo.pull = sinon.stub().returns(Promise.resolve())
-    stubRepo.push = sinon.stub().returns(Promise.resolve())
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, messages.push.bind(messages)))
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.stdout = 'nothing to commit.'
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).rejects(error)
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'No changes to push.')
   })
