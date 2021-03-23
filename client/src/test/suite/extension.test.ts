@@ -366,6 +366,27 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Content conflict, please resolve.')
   })
+  test('unknown commit error', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.gitErrorCode = ''
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().rejects(error)
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Push failed: ')
+  })
   test('push with no changes', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
@@ -386,5 +407,26 @@ suite('Push Button Test Suite', function (this: Suite) {
     await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'No changes to push.')
+  })
+  test('unknown push error', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.stdout = ''
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).rejects(error)
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Push failed: ')
   })
 })
