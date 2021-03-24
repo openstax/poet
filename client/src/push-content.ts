@@ -1,4 +1,4 @@
-import vscode from 'vscode'
+import vscode, { InputBoxOptions } from 'vscode'
 import { expect } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git-api/git'
 
@@ -18,6 +18,26 @@ export const _pushContent = (_getRepo: () => Repository, infoReporter: (msg: str
   const commitOptions: CommitOptions = { all: true }
 
   let commitSucceeded = false
+
+  // let message = ""
+
+
+  // vscode.window.showInputBox({ prompt: 'Push Message: ', placeHolder: '...' }).then(value => {
+  //   if (value === undefined) {
+  //     void errorReporter('Push cancelled.')
+  //     throw new Error('cancelled');
+  //   }
+  //   // handle valid values
+  // });
+
+  await vscode.window.showInputBox({
+    prompt: 'Push Message: ',
+    placeHolder: '...',
+    validateInput: text => {
+      vscode.window.showInformationMessage(`Validating: ${text}`);  // you don't need this
+      return text === '123' ? null : 'Not 123!';  // return null if validates
+    }
+  });
 
   try {
     await repo.commit('poet commit', commitOptions)
