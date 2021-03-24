@@ -17,6 +17,7 @@ import { DOMParser } from 'xmldom'
 import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
+import { ExtensionServerRequest } from '../../../../common/src/requests'
 
 // Test runs in out/client/src/test/suite, not src/client/src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../../../')
@@ -163,6 +164,22 @@ suite('Extension Test Suite', function (this: Suite) {
       assert.notStrictEqual(html, undefined)
       assert.notStrictEqual(html.indexOf('html'), -1)
     })
+  }).timeout(5000)
+  test('toc editor handle refresh', async () => {
+    const requests: any[] = []
+    const mockClient = {
+      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    }
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel, mockClient as unknown as LanguageClient)
+      await handler({ type: 'refresh' })
+    })
+    const expected = [
+      [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
+    ]
+    assert.deepStrictEqual(requests, expected)
   }).timeout(5000)
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
