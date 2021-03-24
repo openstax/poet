@@ -45,7 +45,8 @@
       {
         "command": "openstax.showPreviewToSide",
         "title": "Show Preview/Visual Editor",
-        "category": "Openstax"
+        "category": "Openstax",
+        "icon": "$(preview)"
       },
       {
         "command": "openstax.showTocEditor",
