@@ -403,9 +403,6 @@ export class BookBundle {
     if (moduleInfo == null) {
       return false
     }
-    console.error((await moduleInfo.idsDeclared()).inner)
-    console.error(id)
-    console.error((await moduleInfo.idsDeclared()).inner.has(id))
     return (await moduleInfo.idsDeclared()).inner.has(id)
   }
 
