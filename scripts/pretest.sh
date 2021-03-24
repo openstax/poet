@@ -23,4 +23,4 @@ if [[ "$(uname)" == 'Darwin' ]]; then
 fi
 
 find ./client/out -name *.html -exec sed -i ${macos_arg} -E "s/(script-src.+)[;]/\1 'unsafe-eval';/g" {} \;
-nyc instrument --compact=false --source-map --in-place ./client/out/ ./client/out/
+nyc instrument --exclude 'client/out/client/src/test/**/*' --compact=false --source-map --in-place ./client/out/ ./client/out/
