@@ -10,7 +10,7 @@ rm -rf ./server/out/
 $(npm bin)/tsc --build
 npm run webpack
 
-cp -r ./client/dist/* ./client/out/client/src/
+cp -r ./client/dist/* ./client/out/
 test_repo_dest=./client/out/client/src/test/data/test-repo
 mkdir -p "${test_repo_dest}"
 cp -r ./collections/ "${test_repo_dest}"
