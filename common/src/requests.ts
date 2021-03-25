@@ -3,7 +3,7 @@ import { TocTreeModule, TocTreeCollection } from './toc-tree'
 export enum ExtensionServerRequest {
   BundleTrees = 'bundle-trees',
   BundleModules = 'bundle-modules',
-  BundleOrphanedModules = 'bundle-orphaned-moduled'
+  BundleOrphanedModules = 'bundle-orphaned-modules'
 }
 export interface BundleTreesArgs {
   workspaceUri: string
