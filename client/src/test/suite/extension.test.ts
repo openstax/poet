@@ -2,6 +2,7 @@ import assert from 'assert'
 import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
+import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
 import 'source-map-support/register'
 import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
 import { activate } from './../../extension'
@@ -9,9 +10,11 @@ import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_ME
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
 import { commandToPanelType, OpenstaxCommand } from '../../extension-types'
+import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
 import { DOMParser } from 'xmldom'
 import * as xpath from 'xpath-ts'
+import { Substitute } from '@fluffy-spoon/substitute'
 
 // Test runs in out/test/suite, not src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../')
@@ -285,8 +288,8 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('panel disposed and refocused', async () => {
     await assert.doesNotReject(async () => {
-      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})
-      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})
+      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
+      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
     })
   }).timeout(5000)
   test('schema files are populated when not existing', async () => {
@@ -307,5 +310,125 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(fs.existsSync(testXsdPath))
     populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(!fs.existsSync(testXsdPath))
+  })
+})
+
+// Push Content Tests
+const ignore = async (msg: string): Promise<string | undefined> => { return undefined }
+const makeCaptureMessage = (messages: string[]): (msg: string) => Promise<string | undefined> => {
+  const captureMessage = async (msg: string): Promise<string | undefined> => {
+    messages.push(msg)
+    return undefined
+  }
+  return captureMessage
+}
+const commitOptions: CommitOptions = { all: true }
+
+suite('Push Button Test Suite', function (this: Suite) {
+  test('getRepo returns repository', async () => {
+    const repo = pushContent.getRepo()
+    assert.notStrictEqual(repo.rootUri, undefined)
+  })
+  test('push with no conflict', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, captureMessage, ignore)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Successful content push.')
+  })
+  test('push with merge conflict', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.gitErrorCode = GitErrorCodes.Conflict
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().rejects(error)
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Content conflict, please resolve.')
+  })
+  test('unknown commit error', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.gitErrorCode = ''
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().rejects(error)
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Push failed: ')
+  })
+  test('push with no changes', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.stdout = 'nothing to commit.'
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).rejects(error)
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'No changes to push.')
+  })
+  test('unknown push error', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.stdout = ''
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).rejects(error)
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Push failed: ')
   })
 })

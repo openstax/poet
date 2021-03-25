@@ -38,7 +38,8 @@
     "onLanguage:xml",
     "onCommand:openstax.showPreviewToSide",
     "onCommand:openstax.showTocEditor",
-    "onCommand:openstax.showImageUpload"
+    "onCommand:openstax.showImageUpload",
+    "onCommand:openstax.pushContent"
   ],
   "contributes": {
     "commands": [
@@ -56,6 +57,11 @@
       {
         "command": "openstax.showImageUpload",
         "title": "Show Image Upload",
+        "category": "Openstax"
+      },
+      {
+        "command": "openstax.pushContent",
+        "title": "Push Content",
         "category": "Openstax"
       }
     ],
@@ -83,7 +89,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageUpload)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageUpload)\n[Push Content](command:openstax.pushContent)"
       }
     ],
     "menus": {
@@ -143,14 +149,16 @@
     }
   },
   "extensionDependencies": [
-    "redhat.vscode-xml"
+    "vscode.git"
   ],
   "devDependencies": {
     "@babel/cli": "^7.12.10",
     "@babel/plugin-transform-react-jsx": "^7.12.12",
     "@cypress/code-coverage": "^3.9.2",
+    "@fluffy-spoon/substitute": "^1.197.0",
     "@types/chai": "^4.2.14",
     "@types/fs-extra": "^9.0.7",
+    "@types/sinon": "^9.0.11",
     "@typescript-eslint/eslint-plugin": "^4.14.2",
     "@typescript-eslint/parser": "^4.9.0",
     "babel-loader": "^8.2.2",
@@ -166,9 +174,11 @@
     "fs-extra": "^9.1.0",
     "node-loader": "^1.0.2",
     "nyc": "^15.1.0",
+    "sinon": "^9.2.4",
     "source-map-support": "^0.5.19",
     "style-loader": "^2.0.0",
     "ts-loader": "^8.0.14",
+    "ts-mockito": "^2.6.1",
     "typescript": "^4.1.2",
     "vsce": "^1.83.0",
     "vscode-languageclient": "^7.0.0",
