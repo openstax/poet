@@ -521,6 +521,10 @@ export class BookBundle {
       func(filename)
       return
     } else if (itemType === 'modules') {
+      if (!itemPathRelative.endsWith(`${sep}index.cnxml`)) {
+        // Directory or some irrelevant file was edited
+        return
+      }
       const indexOfSecondSep = itemPathRelative.indexOf(sep, indexOfFirstSep + 1)
       const moduleid = itemPathRelative.substring(indexOfFirstSep + 1, indexOfSecondSep)
       const func = {
