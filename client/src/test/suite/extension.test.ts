@@ -341,7 +341,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, captureMessage, ignore))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, captureMessage, ignore)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Successful content push.')
   })
@@ -362,7 +362,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Content conflict, please resolve.')
   })
@@ -383,7 +383,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
   })
@@ -404,7 +404,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'No changes to push.')
   })
@@ -425,7 +425,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
   })
