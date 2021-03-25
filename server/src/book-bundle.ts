@@ -269,7 +269,7 @@ class CollectionInfo {
     const document = await this.document()
     const modulesUsed = Array.from((await this.modulesUsed()).inner)
     const moduleTitles = await Promise.all(modulesUsed.map(async module => await this.bundle.moduleTitle(module)))
-    const moduleTitlesDefined = moduleTitles.filter(t => t !== undefined) as Array<Cachified<ModuleTitle>>
+    const moduleTitlesDefined = moduleTitles.filter(t => t != null) as Array<Cachified<ModuleTitle>>
     return this._tree(document, cacheSort(moduleTitlesDefined))
   }
 
