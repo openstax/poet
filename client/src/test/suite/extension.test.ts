@@ -284,7 +284,7 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(modified, testData)
     assert.notStrictEqual(modified, before)
   })
-  test('panel disposed and rewfocused', async () => {
+  test('panel disposed and refocused', async () => {
     await assert.doesNotReject(async () => {
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
