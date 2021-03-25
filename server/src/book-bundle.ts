@@ -507,10 +507,12 @@ export class BookBundle {
 
   processChange(change: FileEvent): void {
     const itemPath = URI.parse(change.uri).fsPath
-    const itemPathRelative = itemPath.replace(path.join(this.workspaceRoot(), '/'), '')
-    const itemType = itemPathRelative.substring(0, itemPathRelative.indexOf('/'))
+    const sep = path.join('/')
+    const itemPathRelative = itemPath.replace(`${this.workspaceRoot()}${sep}`, '')
+    const indexOfFirstSep = itemPathRelative.indexOf(sep)
+    const itemType = itemPathRelative.substring(0, indexOfFirstSep)
     if (itemType === 'collections') {
-      const filename = itemPathRelative.replace(path.join(itemType, '/'), '')
+      const filename = itemPathRelative.substring(indexOfFirstSep + 1)
       const func = {
         [FileChangeType.Created]: this.onCollectionCreated,
         [FileChangeType.Changed]: this.onCollectionChanged,
@@ -519,9 +521,8 @@ export class BookBundle {
       func(filename)
       return
     } else if (itemType === 'modules') {
-      const moduleid = itemPathRelative
-        .replace(path.join(itemType, '/'), '')
-        .replace(path.join('/', 'index.cnxml'), '')
+      const indexOfSecondSep = itemPathRelative.indexOf(sep, indexOfFirstSep + 1)
+      const moduleid = itemPathRelative.substring(indexOfFirstSep + 1, indexOfSecondSep)
       const func = {
         [FileChangeType.Created]: this.onModuleCreated,
         [FileChangeType.Changed]: this.onModuleChanged,
@@ -530,8 +531,7 @@ export class BookBundle {
       func(moduleid)
       return
     } else if (itemType === 'media') {
-      const mediaFilename = itemPathRelative
-        .replace(path.join(itemType, '/'), '')
+      const mediaFilename = itemPathRelative.substring(indexOfFirstSep + 1)
       const func = {
         [FileChangeType.Created]: this.onImageCreated,
         [FileChangeType.Changed]: this.onImageChanged,

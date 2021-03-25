@@ -119,8 +119,11 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
     const workspaces = expect(await connection.workspace.getWorkspaceFolders(), 'workspace must be open for event to occur')
     if (workspaces == null) { return }
     for (const change of changes) {
-      const workspaceChanged = expect(workspaces.find((workspace) => change.uri.startsWith(workspace.uri)), 'file must exist in workspace')
-      console.log(`changed: ${workspaceChanged.uri}`)
+      const changedFileUri = URI.parse(change.uri)
+      if (changedFileUri.scheme !== 'file') {
+        continue
+      }
+      const workspaceChanged = expect(workspaces.find((workspace) => change.uri.startsWith(workspace.uri)), `file ${changedFileUri.fsPath} must exist in workspace`)
       if (!workspaceBookBundles.has(workspaceChanged.uri)) {
         await createBookBundleForWorkspace(workspaceChanged)
         return
@@ -134,19 +137,25 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
 })
 
 connection.onRequest('onDidChangeWorkspaceFolders', async (event) => {
-  console.log('workspace event')
   for (const workspace of event.removed) {
-    removeBookBundleForWorkspace(workspace)
+    const workspaceCompat: WorkspaceFolder = {
+      uri: workspace.uri.external,
+      name: workspace.uri.name
+    }
+    removeBookBundleForWorkspace(workspaceCompat)
   }
   for (const workspace of event.added) {
+    const workspaceCompat: WorkspaceFolder = {
+      uri: workspace.uri.external,
+      name: workspace.uri.name
+    }
     try {
-      await createBookBundleForWorkspace(workspace)
+      await createBookBundleForWorkspace(workspaceCompat)
     } catch (err) {
-      connection.console.log(`Could not parse ${workspace.uri as string} as a book bundle`)
+      connection.console.log(`Could not parse ${workspaceCompat.uri} as a book bundle`)
     }
   }
 })
-connection.onRequest('echo', message => message)
 
 connection.onRequest(ExtensionServerRequest.BundleTrees, async ({ workspaceUri }: BundleTreesArgs): Promise<BundleTreesResponse> => {
   const bundle = workspaceBookBundles.get(workspaceUri)
