@@ -9,12 +9,13 @@ rm -rf ./server/out/
 
 $(npm bin)/tsc --build
 npm run webpack
+
 cp -r ./client/dist/* ./client/out/
-mkdir ./client/out/test/data/
-mkdir ./client/out/test/data/test-repo/
-cp -r ./collections/ ./client/out/test/data/test-repo/
-cp -r ./media/ ./client/out/test/data/test-repo/
-cp -r ./modules/ ./client/out/test/data/test-repo/
+test_repo_dest=./client/out/client/src/test/data/test-repo
+mkdir -p "${test_repo_dest}"
+cp -r ./collections/ "${test_repo_dest}"
+cp -r ./media/ "${test_repo_dest}"
+cp -r ./modules/ "${test_repo_dest}"
 
 macos_arg=''
 if [[ "$(uname)" == 'Darwin' ]]; then
@@ -22,4 +23,4 @@ if [[ "$(uname)" == 'Darwin' ]]; then
 fi
 
 find ./client/out -name *.html -exec sed -i ${macos_arg} -E "s/(script-src.+)[;]/\1 'unsafe-eval';/g" {} \;
-nyc instrument --compact=false --source-map --in-place ./client/out/ ./client/out/
+nyc instrument --exclude 'client/out/client/src/test/**/*' --compact=false --source-map --in-place ./client/out/ ./client/out/

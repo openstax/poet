@@ -10,12 +10,11 @@
   "engines": {
     "vscode": "^1.39.0"
   },
-  "main": "./client/dist/extension.js",
+  "main": "./client/dist/client/src/extension.js",
   "scripts": {
-    "coverage": "nyc --exclude ./src/test npm run test",
     "cypress:open": "cypress open",
     "vscode:prepublish": "npm run _webpack_ -- --mode production",
-    "_webpack_": "webpack --stats=errors-warnings --config ./client/webpack.config.js --config ./server/webpack.config.js",
+    "_webpack_": "webpack --stats=minimal --config ./client/webpack.config.js --config ./server/webpack.config.js",
     "webpack": "npm run _webpack_ -- --mode development",
     "webpack:watch": "npm run _webpack_ -- --mode development --watch",
     "package": "vsce package",
@@ -24,9 +23,9 @@
     "lint": "eslint . --ext ts,js,jsx,tsx,json",
     "lint:fix": "npm run lint -- --fix",
     "test:compile": "./scripts/pretest.sh",
-    "test:client": "node ./client/out/test/runTest.js",
+    "test:client": "node ./client/out/client/src/test/runTest.js",
     "test:cypress": "cypress run --quiet",
-    "test:server": "nyc ./server/node_modules/.bin/mocha ./server/out/test/server.test.js",
+    "test:server": "nyc ./server/node_modules/.bin/mocha ./server/out/server/src/test/server.test.js",
     "test": "npm run test:compile && npm run test:server && npm run test:client && npm run test:cypress",
     "posttest": "nyc report",
     "postinstall": "cd ./client/ && npm install && cd ../server/ && npm install"

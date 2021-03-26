@@ -26,6 +26,8 @@ jobs:
           xvfb-run -a npm run test
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v1
+        with:
+          gcov_path_exclude: client/src/test/**/*
       - name: Lint
         run: |
           npm run lint

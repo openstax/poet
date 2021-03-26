@@ -234,7 +234,7 @@ async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
   return diagnostics
 }
 
-function generateDiagnostic(severity: DiagnosticSeverity,
+export function generateDiagnostic(severity: DiagnosticSeverity,
   startPosition: Position, endPosition: Position, message: string,
   diagnosticSource: string): Diagnostic {
   const diagnostic: Diagnostic = {
@@ -365,4 +365,14 @@ export class ValidationQueue {
       diagnostics
     })
   }
+}
+
+/**
+ * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
+ */
+export function expect<T>(value: T | null | undefined, message?: string): T {
+  if (value == null) {
+    throw new Error(message ?? 'Unwrapped a null value')
+  }
+  return value
 }
