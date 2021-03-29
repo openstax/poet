@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import path from 'path'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { handleMessage, showTocEditor } from './panel-toc-editor'
+import { refreshPanel, showTocEditor } from './panel-toc-editor'
 import { showImageUpload } from './panel-image-upload'
 import { showCnxmlPreview } from './panel-cnxml-preview'
 import { pushContent } from './push-content'
@@ -58,7 +58,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
     const activeTocEditor = activePanelsByType[PanelType.TOC_EDITOR]
     if (activeTocEditor != null) {
       try {
-        await handleMessage(activeTocEditor, client)({ type: 'refresh' })
+        await refreshPanel(activeTocEditor, client)
       } catch { /* Panel was probably disposed */ }
     }
   })

@@ -154,38 +154,39 @@ export const showTocEditor = (panelType: PanelType, resourceRootDir: string, act
   panel.reveal(vscode.ViewColumn.One)
   activePanelsByType[panelType] = panel
 
-  panel.webview.onDidReceiveMessage(ensureCatch(handleMessage(panel, client)))
+  panel.webview.onDidReceiveMessage(ensureCatch(handleMessageFromWebviewPanel(panel, client)))
 }
 
-export const handleMessage = (panel: vscode.WebviewPanel, client: LanguageClient) => async (message: PanelIncomingMessage): Promise<void> => {
-  const refreshPanel = async (): Promise<void> => {
-    const uri = expect(getRootPathUri(), 'no workspace root from which to generate trees')
-    const trees = await requestBundleTrees(client, { workspaceUri: uri.toString() })
-    const allModules = await requestBundleModules(client, { workspaceUri: uri.toString() })
-    const orphanModules = await requestBundleOrphanedModules(client, { workspaceUri: uri.toString() })
-    if (trees == null || allModules == null || orphanModules == null) {
-      throw new Error('Server cannot properly find workspace')
-    }
-    const collectionAllModules: TocTreeCollection = {
-      type: 'collection',
-      title: 'All Modules',
-      slug: 'mock-slug__source-only',
-      children: allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
-    }
-    const collectionOrphanModules: TocTreeCollection = {
-      type: 'collection',
-      title: 'Orphan Modules',
-      slug: 'mock-slug__source-only',
-      children: orphanModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
-    }
-    const out = {
-      uneditable: [collectionAllModules, collectionOrphanModules],
-      editable: trees
-    }
-    await panel.webview.postMessage(out)
+export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageClient): Promise<void> => {
+  const uri = expect(getRootPathUri(), 'no workspace root from which to generate trees')
+  const trees = await requestBundleTrees(client, { workspaceUri: uri.toString() })
+  const allModules = await requestBundleModules(client, { workspaceUri: uri.toString() })
+  const orphanModules = await requestBundleOrphanedModules(client, { workspaceUri: uri.toString() })
+  if (trees == null || allModules == null || orphanModules == null) {
+    throw new Error('Server cannot properly find workspace')
   }
+  const collectionAllModules: TocTreeCollection = {
+    type: 'collection',
+    title: 'All Modules',
+    slug: 'mock-slug__source-only',
+    children: allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
+  }
+  const collectionOrphanModules: TocTreeCollection = {
+    type: 'collection',
+    title: 'Orphan Modules',
+    slug: 'mock-slug__source-only',
+    children: orphanModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
+  }
+  const out = {
+    uneditable: [collectionAllModules, collectionOrphanModules],
+    editable: trees
+  }
+  await panel.webview.postMessage(out)
+}
+
+export const handleMessageFromWebviewPanel = (panel: vscode.WebviewPanel, client: LanguageClient) => async (message: PanelIncomingMessage): Promise<void> => {
   if (message.type === 'refresh') {
-    await refreshPanel()
+    await refreshPanel(panel, client)
   } else if (message.type === 'error') {
     throw new Error(message.message)
   } else if (message.type === 'debug') {
