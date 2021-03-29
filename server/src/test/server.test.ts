@@ -25,7 +25,8 @@ import {
   FileChangeType,
   Position
 } from 'vscode-languageserver'
-import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, BookBundle, ModuleTitle, recachify } from '../book-bundle'
+import { BookBundle, ModuleTitle } from '../book-bundle'
+import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, recachify } from '../cachify'
 import { TocTreeCollection } from '../../../common/src/toc-tree'
 
 function expect<T>(value: T | null | undefined): T {
