@@ -2,7 +2,7 @@
 import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../../client/src/panel-toc-editor'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
-  const htmlPath = './client/out/toc-editor.html'
+  const htmlPath = './client/out/client/src/toc-editor.html'
 
   describe('toc-editor Webview Tests', () => {
     function sendMessage(msg: PanelOutgoingMessage): void {
@@ -491,12 +491,11 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.get('.panel-editable .node-title-rename')
           .eq(0)
           .type('abc', { delay: 50 })
+          .blur()
         cy.then(() => {
-          expect(messagesFromWidget).to.have.length(4)
+          expect(messagesFromWidget).to.have.length(2)
           expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect(messagesFromWidget[1]).to.deep.equal({ type: 'module-rename', moduleid: 'm00001', newName: 'Introductiona' })
-          expect(messagesFromWidget[2]).to.deep.equal({ type: 'module-rename', moduleid: 'm00001', newName: 'Introductionab' })
-          expect(messagesFromWidget[3]).to.deep.equal({ type: 'module-rename', moduleid: 'm00001', newName: 'Introductionabc' })
+          expect(messagesFromWidget[1]).to.deep.equal({ type: 'module-rename', moduleid: 'm00001', newName: 'Introductionabc' })
         })
       })
       it('can tell the extension to rename subcollection', () => {
@@ -507,11 +506,11 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.get('.panel-editable .node-title-rename')
           .eq(0)
           .type('abc', { delay: 50 })
+          .blur()
         cy.then(() => {
-          expect(messagesFromWidget).to.have.length(4)
+          expect(messagesFromWidget).to.have.length(2)
           expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          // Don't care how we get there, just that we get there.
-          expect((messagesFromWidget[3] as WriteTreeSignal).treeData.children[0].title).to.equal('subcollectionabc')
+          expect((messagesFromWidget[1] as WriteTreeSignal).treeData.children[0].title).to.equal('subcollectionabc')
         })
       })
     })

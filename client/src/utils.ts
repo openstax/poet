@@ -1,6 +1,7 @@
 
 import vscode from 'vscode'
 import path from 'path'
+import fs from 'fs'
 import {
   LanguageClient,
   LanguageClientOptions,
@@ -71,8 +72,10 @@ export function getRootPathUri(): vscode.Uri | null {
  * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
  */
 export function expect<T>(value: T | null | undefined, message?: string): T {
+  message = message ?? 'Unwrapped a null value'
   if (value == null) {
-    throw new Error(message ?? 'Unwrapped a null value')
+    void vscode.window.showErrorMessage(message)
+    throw new Error(message)
   }
   return value
 }
@@ -90,6 +93,32 @@ export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: a
       throw err
     })
   }
+}
+
+export function populateXsdSchemaFiles(resourceRootDir: string): void {
+  const relResourcePath = 'xsd'
+  const relTargetPath = '.xsd'
+  const uri = getRootPathUri()
+  if (uri == null) {
+    return
+  }
+
+  const targetPath = path.join(uri.fsPath, relTargetPath)
+  const sourcePath = path.join(resourceRootDir, relResourcePath)
+
+  // Delete any existing directory and create a new one to ensure no old
+  // schema files are kept around
+  fs.rmdirSync(targetPath, { recursive: true })
+  fs.mkdirSync(targetPath)
+
+  // Copy all schema files
+  const schemaFiles = fs.readdirSync(sourcePath)
+  schemaFiles.forEach(val => {
+    fs.copyFileSync(
+      path.join(sourcePath, val),
+      path.join(targetPath, val)
+    )
+  })
 }
 
 export function launchLanguageServer(context: vscode.ExtensionContext): LanguageClient {
@@ -114,7 +143,14 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
     // Register the server for XML documents
-    documentSelector: [{ scheme: 'file', language: 'xml' }]
+    documentSelector: [{ scheme: 'file', language: 'xml' }],
+    synchronize: {
+      fileEvents: [
+        vscode.workspace.createFileSystemWatcher('**/media/**'),
+        vscode.workspace.createFileSystemWatcher('**/modules/**'),
+        vscode.workspace.createFileSystemWatcher('**/collections/**')
+      ]
+    }
   }
 
   // Create the language client and start the client.
