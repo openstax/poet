@@ -27,11 +27,6 @@
       <xs:group ref="cnxml:quote"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="note">
-    <xs:sequence>
-      <xs:group ref="cnxml:note"/>
-    </xs:sequence>
-  </xs:group>
   <xs:group name="list">
     <xs:sequence>
       <xs:group ref="cnxml:list"/>
@@ -234,26 +229,6 @@
   <xs:group name="sup_2">
     <xs:sequence>
       <xs:group ref="cnxml:sup1"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="code_3">
-    <xs:sequence>
-      <xs:group ref="cnxml:code2"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="preformat_3">
-    <xs:sequence>
-      <xs:group ref="cnxml:preformat2"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="quote_3">
-    <xs:sequence>
-      <xs:group ref="cnxml:quote2"/>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="note_2">
-    <xs:sequence>
-      <xs:group ref="cnxml:note1"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="item">

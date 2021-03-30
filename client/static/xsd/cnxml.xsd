@@ -110,7 +110,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -165,7 +165,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -197,10 +197,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:media"/>
           <xs:element ref="cnxml:footnote"/>
@@ -214,7 +214,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -266,7 +266,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -291,7 +291,6 @@
         <xs:choice>
           <xs:element ref="cnxml:media"/>
           <xs:element ref="cnxml:table"/>
-          <xs:group ref="mathml:code_3"/>
           <xs:group ref="mathml:code"/>
           <xs:sequence>
             <xs:element ref="cnxml:subfigure"/>
@@ -319,9 +318,7 @@
     <xs:sequence>
       <xs:element name="code">
         <xs:complexType mixed="true">
-          <xs:sequence>
-            <xs:element minOccurs="0" ref="cnxml:label"/>
-            <xs:group minOccurs="0" ref="mathml:title_3"/>
+          <xs:choice>
             <xs:choice minOccurs="0" maxOccurs="unbounded">
               <xs:element ref="mathml:math"/>
               <xs:group ref="mathml:span_2"/>
@@ -332,10 +329,10 @@
               <xs:group ref="mathml:emphasis_2"/>
               <xs:group ref="mathml:sub_2"/>
               <xs:group ref="mathml:sup_2"/>
-              <xs:group ref="mathml:code_3"/>
-              <xs:group ref="mathml:preformat_3"/>
-              <xs:group ref="mathml:quote_3"/>
-              <xs:group ref="mathml:note_2"/>
+              <xs:group ref="mathml:code"/>
+              <xs:group ref="mathml:preformat"/>
+              <xs:group ref="mathml:quote"/>
+              <xs:element ref="cnxml:note"/>
               <xs:group ref="mathml:list"/>
               <xs:element ref="cnxml:media"/>
               <xs:element ref="cnxml:footnote"/>
@@ -343,21 +340,48 @@
               <xs:element ref="cnxml:newline"/>
               <xs:element ref="cnxml:space"/>
             </xs:choice>
-            <xs:element minOccurs="0" ref="cnxml:caption"/>
-          </xs:sequence>
-          <xs:attribute name="display" use="required">
+            <xs:sequence>
+              <xs:element minOccurs="0" ref="cnxml:label"/>
+              <xs:group minOccurs="0" ref="mathml:title_3"/>
+              <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element ref="mathml:math"/>
+                <xs:group ref="mathml:span_2"/>
+                <xs:group ref="mathml:term_2"/>
+                <xs:group ref="mathml:cite_2"/>
+                <xs:element ref="cnxml:cite-title"/>
+                <xs:group ref="mathml:foreign_2"/>
+                <xs:group ref="mathml:emphasis_2"/>
+                <xs:group ref="mathml:sub_2"/>
+                <xs:group ref="mathml:sup_2"/>
+                <xs:group ref="mathml:code"/>
+                <xs:group ref="mathml:preformat"/>
+                <xs:group ref="mathml:quote"/>
+                <xs:element ref="cnxml:note"/>
+                <xs:group ref="mathml:list"/>
+                <xs:element ref="cnxml:media"/>
+                <xs:element ref="cnxml:footnote"/>
+                <xs:element ref="cnxml:link"/>
+                <xs:element ref="cnxml:newline"/>
+                <xs:element ref="cnxml:space"/>
+              </xs:choice>
+              <xs:element minOccurs="0" ref="cnxml:caption"/>
+            </xs:sequence>
+          </xs:choice>
+          <xs:attribute name="display">
             <xs:simpleType>
               <xs:restriction base="xs:token">
+                <xs:enumeration value="inline"/>
+                <xs:enumeration value="none"/>
                 <xs:enumeration value="block"/>
                 <xs:enumeration value="none"/>
               </xs:restriction>
             </xs:simpleType>
           </xs:attribute>
-          <xs:attribute ref="xml:lang"/>
-          <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
           <xs:attribute name="lang"/>
           <xs:attribute name="type"/>
+          <xs:attribute name="id" type="xs:ID"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
           <xs:anyAttribute processContents="strict"/>
         </xs:complexType>
       </xs:element>
@@ -367,10 +391,47 @@
     <xs:sequence>
       <xs:element name="preformat">
         <xs:complexType mixed="true">
-          <xs:sequence>
-            <xs:group minOccurs="0" ref="mathml:title_3"/>
+          <xs:choice>
+            <xs:sequence>
+              <xs:group minOccurs="0" ref="mathml:title_3"/>
+              <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:group ref="mathml:para"/>
+                <xs:element ref="mathml:math"/>
+                <xs:group ref="mathml:span_2"/>
+                <xs:group ref="mathml:term_2"/>
+                <xs:group ref="mathml:cite_2"/>
+                <xs:element ref="cnxml:cite-title"/>
+                <xs:group ref="mathml:foreign_2"/>
+                <xs:group ref="mathml:emphasis_2"/>
+                <xs:group ref="mathml:sub_2"/>
+                <xs:group ref="mathml:sup_2"/>
+                <xs:group ref="mathml:code"/>
+                <xs:group ref="mathml:preformat"/>
+                <xs:group ref="mathml:quote"/>
+                <xs:element ref="cnxml:note"/>
+                <xs:group ref="mathml:list"/>
+                <xs:element ref="cnxml:media"/>
+                <xs:element ref="cnxml:footnote"/>
+                <xs:element ref="cnxml:link"/>
+                <xs:element ref="cnxml:newline"/>
+                <xs:element ref="cnxml:space"/>
+                <xs:element ref="cnxml:div"/>
+                <xs:element ref="cnxml:definition"/>
+                <xs:element ref="cnxml:example"/>
+                <xs:element ref="cnxml:figure"/>
+                <xs:group ref="mathml:code"/>
+                <xs:group ref="mathml:preformat"/>
+                <xs:group ref="mathml:quote"/>
+                <xs:element ref="cnxml:note"/>
+                <xs:element ref="cnxml:media"/>
+                <xs:group ref="mathml:list"/>
+                <xs:element ref="cnxml:table"/>
+                <xs:element ref="cnxml:rule"/>
+                <xs:element ref="cnxml:equation"/>
+                <xs:element ref="cnxml:exercise"/>
+              </xs:choice>
+            </xs:sequence>
             <xs:choice minOccurs="0" maxOccurs="unbounded">
-              <xs:group ref="mathml:para"/>
               <xs:element ref="mathml:math"/>
               <xs:group ref="mathml:span_2"/>
               <xs:group ref="mathml:term_2"/>
@@ -380,43 +441,31 @@
               <xs:group ref="mathml:emphasis_2"/>
               <xs:group ref="mathml:sub_2"/>
               <xs:group ref="mathml:sup_2"/>
-              <xs:group ref="mathml:code_3"/>
-              <xs:group ref="mathml:preformat_3"/>
-              <xs:group ref="mathml:quote_3"/>
-              <xs:group ref="mathml:note_2"/>
+              <xs:group ref="mathml:code"/>
+              <xs:group ref="mathml:preformat"/>
+              <xs:group ref="mathml:quote"/>
+              <xs:element ref="cnxml:note"/>
               <xs:group ref="mathml:list"/>
               <xs:element ref="cnxml:media"/>
               <xs:element ref="cnxml:footnote"/>
               <xs:element ref="cnxml:link"/>
               <xs:element ref="cnxml:newline"/>
               <xs:element ref="cnxml:space"/>
-              <xs:element ref="cnxml:div"/>
-              <xs:element ref="cnxml:definition"/>
-              <xs:element ref="cnxml:example"/>
-              <xs:element ref="cnxml:figure"/>
-              <xs:group ref="mathml:code"/>
-              <xs:group ref="mathml:preformat"/>
-              <xs:group ref="mathml:quote"/>
-              <xs:group ref="mathml:note"/>
-              <xs:element ref="cnxml:media"/>
-              <xs:group ref="mathml:list"/>
-              <xs:element ref="cnxml:table"/>
-              <xs:element ref="cnxml:rule"/>
-              <xs:element ref="cnxml:equation"/>
-              <xs:element ref="cnxml:exercise"/>
             </xs:choice>
-          </xs:sequence>
-          <xs:attribute ref="xml:lang"/>
-          <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          </xs:choice>
           <xs:attribute name="display">
             <xs:simpleType>
               <xs:restriction base="xs:token">
                 <xs:enumeration value="block"/>
                 <xs:enumeration value="none"/>
+                <xs:enumeration value="inline"/>
+                <xs:enumeration value="none"/>
               </xs:restriction>
             </xs:simpleType>
           </xs:attribute>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:anyAttribute processContents="strict"/>
         </xs:complexType>
       </xs:element>
@@ -426,57 +475,85 @@
     <xs:sequence>
       <xs:element name="quote">
         <xs:complexType mixed="true">
-          <xs:sequence>
-            <xs:element minOccurs="0" ref="cnxml:label"/>
-            <xs:group minOccurs="0" ref="mathml:title_3"/>
-            <xs:choice minOccurs="0" maxOccurs="unbounded">
-              <xs:group ref="mathml:para"/>
-              <xs:element ref="mathml:math"/>
-              <xs:group ref="mathml:span_2"/>
-              <xs:group ref="mathml:term_2"/>
-              <xs:group ref="mathml:cite_2"/>
-              <xs:element ref="cnxml:cite-title"/>
-              <xs:group ref="mathml:foreign_2"/>
-              <xs:group ref="mathml:emphasis_2"/>
-              <xs:group ref="mathml:sub_2"/>
-              <xs:group ref="mathml:sup_2"/>
-              <xs:group ref="mathml:code_3"/>
-              <xs:group ref="mathml:preformat_3"/>
-              <xs:group ref="mathml:quote_3"/>
-              <xs:group ref="mathml:note_2"/>
-              <xs:group ref="mathml:list"/>
-              <xs:element ref="cnxml:media"/>
-              <xs:element ref="cnxml:footnote"/>
-              <xs:element ref="cnxml:link"/>
-              <xs:element ref="cnxml:newline"/>
-              <xs:element ref="cnxml:space"/>
-              <xs:element ref="cnxml:div"/>
-              <xs:element ref="cnxml:definition"/>
-              <xs:element ref="cnxml:example"/>
-              <xs:element ref="cnxml:figure"/>
-              <xs:group ref="mathml:code"/>
-              <xs:group ref="mathml:preformat"/>
-              <xs:group ref="mathml:quote"/>
-              <xs:group ref="mathml:note"/>
-              <xs:element ref="cnxml:media"/>
-              <xs:group ref="mathml:list"/>
-              <xs:element ref="cnxml:table"/>
-              <xs:element ref="cnxml:rule"/>
-              <xs:element ref="cnxml:equation"/>
-              <xs:element ref="cnxml:exercise"/>
-            </xs:choice>
-          </xs:sequence>
+          <xs:choice>
+            <xs:sequence>
+              <xs:element minOccurs="0" ref="cnxml:label"/>
+              <xs:group minOccurs="0" ref="mathml:title_3"/>
+              <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:group ref="mathml:para"/>
+                <xs:element ref="mathml:math"/>
+                <xs:group ref="mathml:span_2"/>
+                <xs:group ref="mathml:term_2"/>
+                <xs:group ref="mathml:cite_2"/>
+                <xs:element ref="cnxml:cite-title"/>
+                <xs:group ref="mathml:foreign_2"/>
+                <xs:group ref="mathml:emphasis_2"/>
+                <xs:group ref="mathml:sub_2"/>
+                <xs:group ref="mathml:sup_2"/>
+                <xs:group ref="mathml:code"/>
+                <xs:group ref="mathml:preformat"/>
+                <xs:group ref="mathml:quote"/>
+                <xs:element ref="cnxml:note"/>
+                <xs:group ref="mathml:list"/>
+                <xs:element ref="cnxml:media"/>
+                <xs:element ref="cnxml:footnote"/>
+                <xs:element ref="cnxml:link"/>
+                <xs:element ref="cnxml:newline"/>
+                <xs:element ref="cnxml:space"/>
+                <xs:element ref="cnxml:div"/>
+                <xs:element ref="cnxml:definition"/>
+                <xs:element ref="cnxml:example"/>
+                <xs:element ref="cnxml:figure"/>
+                <xs:group ref="mathml:code"/>
+                <xs:group ref="mathml:preformat"/>
+                <xs:group ref="mathml:quote"/>
+                <xs:element ref="cnxml:note"/>
+                <xs:element ref="cnxml:media"/>
+                <xs:group ref="mathml:list"/>
+                <xs:element ref="cnxml:table"/>
+                <xs:element ref="cnxml:rule"/>
+                <xs:element ref="cnxml:equation"/>
+                <xs:element ref="cnxml:exercise"/>
+              </xs:choice>
+            </xs:sequence>
+            <xs:sequence>
+              <xs:element minOccurs="0" ref="cnxml:label"/>
+              <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element ref="mathml:math"/>
+                <xs:group ref="mathml:span_2"/>
+                <xs:group ref="mathml:term_2"/>
+                <xs:group ref="mathml:cite_2"/>
+                <xs:element ref="cnxml:cite-title"/>
+                <xs:group ref="mathml:foreign_2"/>
+                <xs:group ref="mathml:emphasis_2"/>
+                <xs:group ref="mathml:sub_2"/>
+                <xs:group ref="mathml:sup_2"/>
+                <xs:group ref="mathml:code"/>
+                <xs:group ref="mathml:preformat"/>
+                <xs:group ref="mathml:quote"/>
+                <xs:element ref="cnxml:note"/>
+                <xs:group ref="mathml:list"/>
+                <xs:element ref="cnxml:media"/>
+                <xs:element ref="cnxml:footnote"/>
+                <xs:element ref="cnxml:link"/>
+                <xs:element ref="cnxml:newline"/>
+                <xs:element ref="cnxml:space"/>
+              </xs:choice>
+            </xs:sequence>
+          </xs:choice>
           <xs:attribute name="display">
             <xs:simpleType>
               <xs:restriction base="xs:token">
                 <xs:enumeration value="block"/>
+                <xs:enumeration value="none"/>
+                <xs:enumeration value="inline"/>
                 <xs:enumeration value="none"/>
               </xs:restriction>
             </xs:simpleType>
           </xs:attribute>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
           <xs:attribute name="window">
             <xs:simpleType>
@@ -496,97 +573,121 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="note">
-    <xs:sequence>
-      <xs:element name="note">
-        <xs:complexType mixed="true">
-          <xs:sequence>
-            <xs:element minOccurs="0" ref="cnxml:label"/>
-            <xs:group minOccurs="0" ref="mathml:title_3"/>
-            <xs:choice minOccurs="0" maxOccurs="unbounded">
-              <xs:group ref="mathml:para"/>
-              <xs:element ref="mathml:math"/>
-              <xs:group ref="mathml:span_2"/>
-              <xs:group ref="mathml:term_2"/>
-              <xs:group ref="mathml:cite_2"/>
-              <xs:element ref="cnxml:cite-title"/>
-              <xs:group ref="mathml:foreign_2"/>
-              <xs:group ref="mathml:emphasis_2"/>
-              <xs:group ref="mathml:sub_2"/>
-              <xs:group ref="mathml:sup_2"/>
-              <xs:group ref="mathml:code_3"/>
-              <xs:group ref="mathml:preformat_3"/>
-              <xs:group ref="mathml:quote_3"/>
-              <xs:group ref="mathml:note_2"/>
-              <xs:group ref="mathml:list"/>
-              <xs:element ref="cnxml:media"/>
-              <xs:element ref="cnxml:footnote"/>
-              <xs:element ref="cnxml:link"/>
-              <xs:element ref="cnxml:newline"/>
-              <xs:element ref="cnxml:space"/>
-              <xs:element ref="cnxml:div"/>
-              <xs:element ref="cnxml:definition"/>
-              <xs:element ref="cnxml:example"/>
-              <xs:element ref="cnxml:figure"/>
-              <xs:group ref="mathml:code"/>
-              <xs:group ref="mathml:preformat"/>
-              <xs:group ref="mathml:quote"/>
-              <xs:group ref="mathml:note"/>
-              <xs:element ref="cnxml:media"/>
-              <xs:group ref="mathml:list"/>
-              <xs:element ref="cnxml:table"/>
-              <xs:element ref="cnxml:rule"/>
-              <xs:element ref="cnxml:equation"/>
-              <xs:element ref="cnxml:exercise"/>
-            </xs:choice>
-          </xs:sequence>
-          <xs:attribute name="display">
+  <xs:element name="note">
+    <xs:complexType mixed="true">
+      <xs:choice>
+        <xs:sequence>
+          <xs:element minOccurs="0" ref="cnxml:label"/>
+          <xs:group minOccurs="0" ref="mathml:title_3"/>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:para"/>
+            <xs:element ref="mathml:math"/>
+            <xs:group ref="mathml:span_2"/>
+            <xs:group ref="mathml:term_2"/>
+            <xs:group ref="mathml:cite_2"/>
+            <xs:element ref="cnxml:cite-title"/>
+            <xs:group ref="mathml:foreign_2"/>
+            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
+            <xs:group ref="mathml:list"/>
+            <xs:element ref="cnxml:media"/>
+            <xs:element ref="cnxml:footnote"/>
+            <xs:element ref="cnxml:link"/>
+            <xs:element ref="cnxml:newline"/>
+            <xs:element ref="cnxml:space"/>
+            <xs:element ref="cnxml:div"/>
+            <xs:element ref="cnxml:definition"/>
+            <xs:element ref="cnxml:example"/>
+            <xs:element ref="cnxml:figure"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
+            <xs:element ref="cnxml:media"/>
+            <xs:group ref="mathml:list"/>
+            <xs:element ref="cnxml:table"/>
+            <xs:element ref="cnxml:rule"/>
+            <xs:element ref="cnxml:equation"/>
+            <xs:element ref="cnxml:exercise"/>
+          </xs:choice>
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element minOccurs="0" ref="cnxml:label"/>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element ref="mathml:math"/>
+            <xs:group ref="mathml:span_2"/>
+            <xs:group ref="mathml:term_2"/>
+            <xs:group ref="mathml:cite_2"/>
+            <xs:element ref="cnxml:cite-title"/>
+            <xs:group ref="mathml:foreign_2"/>
+            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
+            <xs:group ref="mathml:list"/>
+            <xs:element ref="cnxml:media"/>
+            <xs:element ref="cnxml:footnote"/>
+            <xs:element ref="cnxml:link"/>
+            <xs:element ref="cnxml:newline"/>
+            <xs:element ref="cnxml:space"/>
+          </xs:choice>
+        </xs:sequence>
+      </xs:choice>
+      <xs:attribute name="display">
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="block"/>
+            <xs:enumeration value="none"/>
+            <xs:enumeration value="inline"/>
+            <xs:enumeration value="none"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute name="id" type="xs:ID"/>
+      <xs:attribute name="type">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
             <xs:simpleType>
               <xs:restriction base="xs:token">
-                <xs:enumeration value="block"/>
-                <xs:enumeration value="none"/>
+                <xs:enumeration value="note"/>
               </xs:restriction>
             </xs:simpleType>
-          </xs:attribute>
-          <xs:attribute ref="xml:lang"/>
-          <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
-          <xs:attribute name="type">
             <xs:simpleType>
-              <xs:union memberTypes="xs:token">
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="note"/>
-                  </xs:restriction>
-                </xs:simpleType>
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="aside"/>
-                  </xs:restriction>
-                </xs:simpleType>
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="warning"/>
-                  </xs:restriction>
-                </xs:simpleType>
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="tip"/>
-                  </xs:restriction>
-                </xs:simpleType>
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="important"/>
-                  </xs:restriction>
-                </xs:simpleType>
-              </xs:union>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="aside"/>
+              </xs:restriction>
             </xs:simpleType>
-          </xs:attribute>
-          <xs:anyAttribute processContents="strict"/>
-        </xs:complexType>
-      </xs:element>
-    </xs:sequence>
-  </xs:group>
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="warning"/>
+              </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="tip"/>
+              </xs:restriction>
+            </xs:simpleType>
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="important"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:anyAttribute processContents="strict"/>
+    </xs:complexType>
+  </xs:element>
   <xs:element name="media">
     <xs:complexType>
       <xs:sequence>
@@ -844,10 +945,10 @@
               <xs:group ref="mathml:emphasis_2"/>
               <xs:group ref="mathml:sub_2"/>
               <xs:group ref="mathml:sup_2"/>
-              <xs:group ref="mathml:code_3"/>
-              <xs:group ref="mathml:preformat_3"/>
-              <xs:group ref="mathml:quote_3"/>
-              <xs:group ref="mathml:note_2"/>
+              <xs:group ref="mathml:code"/>
+              <xs:group ref="mathml:preformat"/>
+              <xs:group ref="mathml:quote"/>
+              <xs:element ref="cnxml:note"/>
               <xs:group ref="mathml:list"/>
               <xs:element ref="cnxml:media"/>
               <xs:element ref="cnxml:footnote"/>
@@ -861,7 +962,7 @@
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
-              <xs:group ref="mathml:note"/>
+              <xs:element ref="cnxml:note"/>
               <xs:element ref="cnxml:media"/>
               <xs:group ref="mathml:list"/>
               <xs:element ref="cnxml:table"/>
@@ -1199,10 +1300,10 @@
         <xs:group ref="mathml:emphasis_2"/>
         <xs:group ref="mathml:sub_2"/>
         <xs:group ref="mathml:sup_2"/>
-        <xs:group ref="mathml:code_3"/>
-        <xs:group ref="mathml:preformat_3"/>
-        <xs:group ref="mathml:quote_3"/>
-        <xs:group ref="mathml:note_2"/>
+        <xs:group ref="mathml:code"/>
+        <xs:group ref="mathml:preformat"/>
+        <xs:group ref="mathml:quote"/>
+        <xs:element ref="cnxml:note"/>
         <xs:group ref="mathml:list"/>
         <xs:element ref="cnxml:media"/>
         <xs:element ref="cnxml:footnote"/>
@@ -1228,10 +1329,10 @@
         <xs:group ref="mathml:emphasis_2"/>
         <xs:group ref="mathml:sub_2"/>
         <xs:group ref="mathml:sup_2"/>
-        <xs:group ref="mathml:code_3"/>
-        <xs:group ref="mathml:preformat_3"/>
-        <xs:group ref="mathml:quote_3"/>
-        <xs:group ref="mathml:note_2"/>
+        <xs:group ref="mathml:code"/>
+        <xs:group ref="mathml:preformat"/>
+        <xs:group ref="mathml:quote"/>
+        <xs:element ref="cnxml:note"/>
         <xs:group ref="mathml:list"/>
         <xs:element ref="cnxml:media"/>
         <xs:element ref="cnxml:footnote"/>
@@ -1281,10 +1382,10 @@
             <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
             <xs:group ref="mathml:list"/>
             <xs:element ref="cnxml:media"/>
             <xs:element ref="cnxml:footnote"/>
@@ -1314,10 +1415,10 @@
             <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
             <xs:group ref="mathml:list"/>
             <xs:element ref="cnxml:media"/>
             <xs:element ref="cnxml:footnote"/>
@@ -1378,10 +1479,10 @@
             <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
             <xs:group ref="mathml:list"/>
             <xs:element ref="cnxml:media"/>
             <xs:element ref="cnxml:footnote"/>
@@ -1424,10 +1525,10 @@
             <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
             <xs:group ref="mathml:list"/>
             <xs:element ref="cnxml:media"/>
             <xs:element ref="cnxml:footnote"/>
@@ -1468,10 +1569,10 @@
         <xs:group ref="mathml:emphasis_2"/>
         <xs:group ref="mathml:sub_2"/>
         <xs:group ref="mathml:sup_2"/>
-        <xs:group ref="mathml:code_3"/>
-        <xs:group ref="mathml:preformat_3"/>
-        <xs:group ref="mathml:quote_3"/>
-        <xs:group ref="mathml:note_2"/>
+        <xs:group ref="mathml:code"/>
+        <xs:group ref="mathml:preformat"/>
+        <xs:group ref="mathml:quote"/>
+        <xs:element ref="cnxml:note"/>
         <xs:group ref="mathml:list"/>
         <xs:element ref="cnxml:media"/>
         <xs:element ref="cnxml:footnote"/>
@@ -1519,10 +1620,10 @@
             <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
             <xs:group ref="mathml:list"/>
             <xs:element ref="cnxml:media"/>
             <xs:element ref="cnxml:footnote"/>
@@ -1565,10 +1666,10 @@
             <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
             <xs:group ref="mathml:list"/>
             <xs:element ref="cnxml:media"/>
             <xs:element ref="cnxml:footnote"/>
@@ -1629,10 +1730,10 @@
             <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
             <xs:group ref="mathml:list"/>
             <xs:element ref="cnxml:media"/>
             <xs:element ref="cnxml:footnote"/>
@@ -1662,10 +1763,10 @@
             <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
+            <xs:group ref="mathml:code"/>
+            <xs:group ref="mathml:preformat"/>
+            <xs:group ref="mathml:quote"/>
+            <xs:element ref="cnxml:note"/>
             <xs:group ref="mathml:list"/>
             <xs:element ref="cnxml:media"/>
             <xs:element ref="cnxml:footnote"/>
@@ -1673,223 +1774,6 @@
             <xs:element ref="cnxml:newline"/>
             <xs:element ref="cnxml:space"/>
           </xs:choice>
-          <xs:attribute ref="xml:lang"/>
-          <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" type="xs:ID"/>
-          <xs:anyAttribute processContents="strict"/>
-        </xs:complexType>
-      </xs:element>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="code2">
-    <xs:sequence>
-      <xs:element name="code">
-        <xs:complexType mixed="true">
-          <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:element ref="mathml:math"/>
-            <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:term_2"/>
-            <xs:group ref="mathml:cite_2"/>
-            <xs:element ref="cnxml:cite-title"/>
-            <xs:group ref="mathml:foreign_2"/>
-            <xs:group ref="mathml:emphasis_2"/>
-            <xs:group ref="mathml:sub_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
-            <xs:group ref="mathml:list"/>
-            <xs:element ref="cnxml:media"/>
-            <xs:element ref="cnxml:footnote"/>
-            <xs:element ref="cnxml:link"/>
-            <xs:element ref="cnxml:newline"/>
-            <xs:element ref="cnxml:space"/>
-          </xs:choice>
-          <xs:attribute name="display">
-            <xs:simpleType>
-              <xs:restriction base="xs:token">
-                <xs:enumeration value="inline"/>
-                <xs:enumeration value="none"/>
-              </xs:restriction>
-            </xs:simpleType>
-          </xs:attribute>
-          <xs:attribute name="lang"/>
-          <xs:attribute name="type"/>
-          <xs:attribute name="id" type="xs:ID"/>
-          <xs:attribute ref="xml:lang"/>
-          <xs:attribute name="class" type="xs:token"/>
-          <xs:anyAttribute processContents="strict"/>
-        </xs:complexType>
-      </xs:element>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="preformat2">
-    <xs:sequence>
-      <xs:element name="preformat">
-        <xs:complexType mixed="true">
-          <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:element ref="mathml:math"/>
-            <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:term_2"/>
-            <xs:group ref="mathml:cite_2"/>
-            <xs:element ref="cnxml:cite-title"/>
-            <xs:group ref="mathml:foreign_2"/>
-            <xs:group ref="mathml:emphasis_2"/>
-            <xs:group ref="mathml:sub_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:code_3"/>
-            <xs:group ref="mathml:preformat_3"/>
-            <xs:group ref="mathml:quote_3"/>
-            <xs:group ref="mathml:note_2"/>
-            <xs:group ref="mathml:list"/>
-            <xs:element ref="cnxml:media"/>
-            <xs:element ref="cnxml:footnote"/>
-            <xs:element ref="cnxml:link"/>
-            <xs:element ref="cnxml:newline"/>
-            <xs:element ref="cnxml:space"/>
-          </xs:choice>
-          <xs:attribute name="display" use="required">
-            <xs:simpleType>
-              <xs:restriction base="xs:token">
-                <xs:enumeration value="inline"/>
-                <xs:enumeration value="none"/>
-              </xs:restriction>
-            </xs:simpleType>
-          </xs:attribute>
-          <xs:attribute ref="xml:lang"/>
-          <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" type="xs:ID"/>
-          <xs:anyAttribute processContents="strict"/>
-        </xs:complexType>
-      </xs:element>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="quote2">
-    <xs:sequence>
-      <xs:element name="quote">
-        <xs:complexType mixed="true">
-          <xs:sequence>
-            <xs:element minOccurs="0" ref="cnxml:label"/>
-            <xs:choice minOccurs="0" maxOccurs="unbounded">
-              <xs:element ref="mathml:math"/>
-              <xs:group ref="mathml:span_2"/>
-              <xs:group ref="mathml:term_2"/>
-              <xs:group ref="mathml:cite_2"/>
-              <xs:element ref="cnxml:cite-title"/>
-              <xs:group ref="mathml:foreign_2"/>
-              <xs:group ref="mathml:emphasis_2"/>
-              <xs:group ref="mathml:sub_2"/>
-              <xs:group ref="mathml:sup_2"/>
-              <xs:group ref="mathml:code_3"/>
-              <xs:group ref="mathml:preformat_3"/>
-              <xs:group ref="mathml:quote_3"/>
-              <xs:group ref="mathml:note_2"/>
-              <xs:group ref="mathml:list"/>
-              <xs:element ref="cnxml:media"/>
-              <xs:element ref="cnxml:footnote"/>
-              <xs:element ref="cnxml:link"/>
-              <xs:element ref="cnxml:newline"/>
-              <xs:element ref="cnxml:space"/>
-            </xs:choice>
-          </xs:sequence>
-          <xs:attribute name="display" use="required">
-            <xs:simpleType>
-              <xs:restriction base="xs:token">
-                <xs:enumeration value="inline"/>
-                <xs:enumeration value="none"/>
-              </xs:restriction>
-            </xs:simpleType>
-          </xs:attribute>
-          <xs:attribute name="window">
-            <xs:simpleType>
-              <xs:restriction base="xs:token">
-                <xs:enumeration value="replace"/>
-                <xs:enumeration value="new"/>
-              </xs:restriction>
-            </xs:simpleType>
-          </xs:attribute>
-          <xs:attribute name="url"/>
-          <xs:attribute name="document"/>
-          <xs:attribute name="version"/>
-          <xs:attribute name="target-id"/>
-          <xs:attribute name="resource"/>
-          <xs:attribute name="type"/>
-          <xs:attribute ref="xml:lang"/>
-          <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" type="xs:ID"/>
-          <xs:anyAttribute processContents="strict"/>
-        </xs:complexType>
-      </xs:element>
-    </xs:sequence>
-  </xs:group>
-  <xs:group name="note1">
-    <xs:sequence>
-      <xs:element name="note">
-        <xs:complexType mixed="true">
-          <xs:sequence>
-            <xs:element minOccurs="0" ref="cnxml:label"/>
-            <xs:choice minOccurs="0" maxOccurs="unbounded">
-              <xs:element ref="mathml:math"/>
-              <xs:group ref="mathml:span_2"/>
-              <xs:group ref="mathml:term_2"/>
-              <xs:group ref="mathml:cite_2"/>
-              <xs:element ref="cnxml:cite-title"/>
-              <xs:group ref="mathml:foreign_2"/>
-              <xs:group ref="mathml:emphasis_2"/>
-              <xs:group ref="mathml:sub_2"/>
-              <xs:group ref="mathml:sup_2"/>
-              <xs:group ref="mathml:code_3"/>
-              <xs:group ref="mathml:preformat_3"/>
-              <xs:group ref="mathml:quote_3"/>
-              <xs:group ref="mathml:note_2"/>
-              <xs:group ref="mathml:list"/>
-              <xs:element ref="cnxml:media"/>
-              <xs:element ref="cnxml:footnote"/>
-              <xs:element ref="cnxml:link"/>
-              <xs:element ref="cnxml:newline"/>
-              <xs:element ref="cnxml:space"/>
-            </xs:choice>
-          </xs:sequence>
-          <xs:attribute name="display" use="required">
-            <xs:simpleType>
-              <xs:restriction base="xs:token">
-                <xs:enumeration value="inline"/>
-                <xs:enumeration value="none"/>
-              </xs:restriction>
-            </xs:simpleType>
-          </xs:attribute>
-          <xs:attribute name="type">
-            <xs:simpleType>
-              <xs:union memberTypes="xs:token">
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="note"/>
-                  </xs:restriction>
-                </xs:simpleType>
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="aside"/>
-                  </xs:restriction>
-                </xs:simpleType>
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="warning"/>
-                  </xs:restriction>
-                </xs:simpleType>
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="tip"/>
-                  </xs:restriction>
-                </xs:simpleType>
-                <xs:simpleType>
-                  <xs:restriction base="xs:token">
-                    <xs:enumeration value="important"/>
-                  </xs:restriction>
-                </xs:simpleType>
-              </xs:union>
-            </xs:simpleType>
-          </xs:attribute>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
@@ -1913,10 +1797,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:media"/>
           <xs:element ref="cnxml:footnote"/>
@@ -1930,7 +1814,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -2065,10 +1949,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:media"/>
           <xs:element ref="cnxml:footnote"/>
@@ -2082,7 +1966,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -2105,7 +1989,6 @@
         <xs:choice>
           <xs:element ref="cnxml:media"/>
           <xs:element ref="cnxml:table"/>
-          <xs:group ref="mathml:code_3"/>
           <xs:group ref="mathml:code"/>
         </xs:choice>
         <xs:element minOccurs="0" ref="cnxml:caption"/>
@@ -2129,10 +2012,10 @@
         <xs:group ref="mathml:emphasis_2"/>
         <xs:group ref="mathml:sub_2"/>
         <xs:group ref="mathml:sup_2"/>
-        <xs:group ref="mathml:code_3"/>
-        <xs:group ref="mathml:preformat_3"/>
-        <xs:group ref="mathml:quote_3"/>
-        <xs:group ref="mathml:note_2"/>
+        <xs:group ref="mathml:code"/>
+        <xs:group ref="mathml:preformat"/>
+        <xs:group ref="mathml:quote"/>
+        <xs:element ref="cnxml:note"/>
         <xs:group ref="mathml:list"/>
         <xs:element ref="cnxml:media"/>
         <xs:element ref="cnxml:footnote"/>
@@ -2161,10 +2044,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:media"/>
           <xs:element ref="cnxml:footnote"/>
@@ -2178,7 +2061,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -2208,10 +2091,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:object"/>
           <xs:element ref="cnxml:image"/>
@@ -2267,10 +2150,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:object"/>
           <xs:element ref="cnxml:image"/>
@@ -2328,10 +2211,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:object"/>
           <xs:element ref="cnxml:image"/>
@@ -2420,10 +2303,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:object"/>
           <xs:element ref="cnxml:image"/>
@@ -2512,10 +2395,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:object"/>
           <xs:element ref="cnxml:image"/>
@@ -2575,10 +2458,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:object"/>
           <xs:element ref="cnxml:image"/>
@@ -2687,10 +2570,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:object"/>
           <xs:element ref="cnxml:image"/>
@@ -2757,10 +2640,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:media"/>
           <xs:element ref="cnxml:footnote"/>
@@ -2774,7 +2657,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -2825,10 +2708,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:object"/>
           <xs:element ref="cnxml:image"/>
@@ -2887,10 +2770,10 @@
                 <xs:group ref="mathml:emphasis_2"/>
                 <xs:group ref="mathml:sub_2"/>
                 <xs:group ref="mathml:sup_2"/>
-                <xs:group ref="mathml:code_3"/>
-                <xs:group ref="mathml:preformat_3"/>
-                <xs:group ref="mathml:quote_3"/>
-                <xs:group ref="mathml:note_2"/>
+                <xs:group ref="mathml:code"/>
+                <xs:group ref="mathml:preformat"/>
+                <xs:group ref="mathml:quote"/>
+                <xs:element ref="cnxml:note"/>
                 <xs:group ref="mathml:list"/>
                 <xs:element ref="cnxml:media"/>
                 <xs:element ref="cnxml:footnote"/>
@@ -2904,7 +2787,7 @@
                 <xs:group ref="mathml:code"/>
                 <xs:group ref="mathml:preformat"/>
                 <xs:group ref="mathml:quote"/>
-                <xs:group ref="mathml:note"/>
+                <xs:element ref="cnxml:note"/>
                 <xs:element ref="cnxml:media"/>
                 <xs:group ref="mathml:list"/>
                 <xs:element ref="cnxml:table"/>
@@ -2922,10 +2805,10 @@
                 <xs:group ref="mathml:emphasis_2"/>
                 <xs:group ref="mathml:sub_2"/>
                 <xs:group ref="mathml:sup_2"/>
-                <xs:group ref="mathml:code_3"/>
-                <xs:group ref="mathml:preformat_3"/>
-                <xs:group ref="mathml:quote_3"/>
-                <xs:group ref="mathml:note_2"/>
+                <xs:group ref="mathml:code"/>
+                <xs:group ref="mathml:preformat"/>
+                <xs:group ref="mathml:quote"/>
+                <xs:element ref="cnxml:note"/>
                 <xs:group ref="mathml:list"/>
                 <xs:element ref="cnxml:media"/>
                 <xs:element ref="cnxml:footnote"/>
@@ -3001,7 +2884,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -3032,7 +2915,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -3063,7 +2946,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -3094,7 +2977,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -3135,10 +3018,10 @@
           <xs:group ref="mathml:emphasis_2"/>
           <xs:group ref="mathml:sub_2"/>
           <xs:group ref="mathml:sup_2"/>
-          <xs:group ref="mathml:code_3"/>
-          <xs:group ref="mathml:preformat_3"/>
-          <xs:group ref="mathml:quote_3"/>
-          <xs:group ref="mathml:note_2"/>
+          <xs:group ref="mathml:code"/>
+          <xs:group ref="mathml:preformat"/>
+          <xs:group ref="mathml:quote"/>
+          <xs:element ref="cnxml:note"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:media"/>
           <xs:element ref="cnxml:footnote"/>
@@ -3152,7 +3035,7 @@
           <xs:group ref="mathml:code"/>
           <xs:group ref="mathml:preformat"/>
           <xs:group ref="mathml:quote"/>
-          <xs:group ref="mathml:note"/>
+          <xs:element ref="cnxml:note"/>
           <xs:element ref="cnxml:media"/>
           <xs:group ref="mathml:list"/>
           <xs:element ref="cnxml:table"/>
@@ -3382,10 +3265,10 @@
         <xs:group ref="mathml:emphasis_2"/>
         <xs:group ref="mathml:sub_2"/>
         <xs:group ref="mathml:sup_2"/>
-        <xs:group ref="mathml:code_3"/>
-        <xs:group ref="mathml:preformat_3"/>
-        <xs:group ref="mathml:quote_3"/>
-        <xs:group ref="mathml:note_2"/>
+        <xs:group ref="mathml:code"/>
+        <xs:group ref="mathml:preformat"/>
+        <xs:group ref="mathml:quote"/>
+        <xs:element ref="cnxml:note"/>
         <xs:group ref="mathml:list"/>
         <xs:element ref="cnxml:media"/>
         <xs:element ref="cnxml:footnote"/>
@@ -3399,7 +3282,7 @@
         <xs:group ref="mathml:code"/>
         <xs:group ref="mathml:preformat"/>
         <xs:group ref="mathml:quote"/>
-        <xs:group ref="mathml:note"/>
+        <xs:element ref="cnxml:note"/>
         <xs:element ref="cnxml:media"/>
         <xs:group ref="mathml:list"/>
         <xs:element ref="cnxml:table"/>
