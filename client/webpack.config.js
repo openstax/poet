@@ -42,7 +42,7 @@ const viewConfig = {
   devtool: 'source-map',
   entry: {
     'toc-editor': './src/webview-js/toc-editor/toc-editor.jsx',
-    'image-upload': './src/webview-js/image-upload/image-upload.js',
+    'image-upload': './src/webview-js/image-upload/image-upload.ts',
     'cnxml-preview': './src/webview-js/cnxml-preview/cnxml-preview.js'
   },
   output: {
@@ -59,6 +59,12 @@ const viewConfig = {
   },
   module: {
     rules: [{
+      test: /\.m?tsx?$/,
+      exclude: /node_modules/,
+      use: {
+        loader: 'ts-loader'
+      }
+    }, {
       test: /\.m?jsx?$/,
       exclude: /node_modules/,
       use: {
@@ -80,9 +86,9 @@ const viewConfig = {
   plugins: [
     // @ts-ignore
     new CopyWebpackPlugin({
-      patterns: [
-        { from: 'static' }
-      ]
+      patterns: [{
+        from: 'static'
+      }]
     })
   ]
 }

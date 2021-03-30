@@ -1,13 +1,14 @@
-let vscode
-let pending = []
+declare let acquireVsCodeApi: any;
+let vscode: any
+let pending: { mediaName: any; data: string | ArrayBuffer | null }[] = []
 
 window.addEventListener('load', () => {
   vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 
-  const dropArea = document.getElementById('drop-area')
-  const preview = document.getElementById('preview')
-  const uploadButton = document.getElementById('trigger-upload')
-  const cancelButton = document.getElementById('cancel-upload')
+  const dropArea = document.getElementById('drop-area') as HTMLElement
+  const preview = document.getElementById('preview') as HTMLElement
+  const uploadButton = document.getElementById('trigger-upload') as HTMLElement
+  const cancelButton = document.getElementById('cancel-upload') as HTMLElement
 
   const clearPending = () => {
     pending = []
@@ -16,7 +17,7 @@ window.addEventListener('load', () => {
     }
   }
 
-  const preventDefaults = (e) => {
+  const preventDefaults = (e: Event) => {
     e.preventDefault()
     e.stopPropagation()
   };
@@ -25,15 +26,15 @@ window.addEventListener('load', () => {
     dropArea.addEventListener(eventName, preventDefaults, false)
   })
 
-  const previewFile = (file) => {
+  const previewFile = (file: File) => {
     const reader = new FileReader()
     reader.readAsDataURL(file)
     reader.onloadend = function () {
       const container = document.createElement('div')
       const name = document.createElement('p')
       name.textContent = file.name
-      const img = document.createElement('img')
-      img.src = reader.result
+      const img = document.createElement('img') as HTMLImageElement
+      img.src = reader.result as string;
       container.appendChild(name)
       container.appendChild(img)
       preview.appendChild(container)
@@ -45,13 +46,15 @@ window.addEventListener('load', () => {
     }
   }
 
-  const handleDrop = (e) => {
-    const files = e.dataTransfer.files;
+  const handleDrop = (e: DragEvent) => {
+    const files = e.dataTransfer?.files;
 
-    ([...files]).forEach(previewFile)
+    if (files) {
+      ([...files]).forEach(previewFile)
+    }
   }
 
-  const handleUpload = (e) => {
+  const handleUpload = (e: Event) => {
     e.preventDefault()
     vscode.postMessage({
       mediaUploads: pending
@@ -59,7 +62,7 @@ window.addEventListener('load', () => {
     clearPending()
   }
 
-  const handleCancel = (e) => {
+  const handleCancel = (e: Event) => {
     e.preventDefault()
     clearPending()
   }
