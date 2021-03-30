@@ -2,24 +2,30 @@ import assert from 'assert'
 import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
+import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
 import 'source-map-support/register'
 import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
 import { activate, deactivate } from './../../extension'
-import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, TocTreeCollection } from './../../panel-toc-editor'
+import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
+import { TocTreeCollection } from '../../../../common/src/toc-tree'
 import { commandToPanelType, OpenstaxCommand } from '../../extension-types'
+import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
 import { DOMParser } from 'xmldom'
 import * as xpath from 'xpath-ts'
+import { Substitute } from '@fluffy-spoon/substitute'
+import { LanguageClient } from 'vscode-languageclient/node'
+import { ExtensionServerRequest } from '../../../../common/src/requests'
 
-// Test runs in out/test/suite, not src/test/suite
-const ORIGIN_DATA_DIR = path.join(__dirname, '../../../src/test/data/test-repo')
+// Test runs in out/client/src/test/suite, not src/client/src/test/suite
+const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../../../')
 const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
 const TEST_OUT_DIR = path.join(__dirname, '../../')
 
 const contextStub = {
-  asAbsolutePath: (relPath: string) => path.resolve(__dirname, '../../../../', relPath)
+  asAbsolutePath: (relPath: string) => path.resolve(__dirname, '../../../../../../', relPath)
 }
 const extensionExports = activate(contextStub as any)
 
@@ -48,7 +54,7 @@ const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscod
   await vscode.commands.executeCommand(command)
   // Wait for panel to load
   await sleep(1000)
-  const panel = expect(extensionExports.activePanelsByType[commandToPanelType[command]])
+  const panel = expect((await extensionExports).activePanelsByType[commandToPanelType[command]])
   await func(panel)
   panel.dispose()
 }
@@ -57,16 +63,19 @@ const resetTestData = async (): Promise<void> => {
   await vscode.workspace.saveAll(true)
   fs.rmdirSync(TEST_DATA_DIR, { recursive: true })
   fs.mkdirpSync(TEST_DATA_DIR)
-  fs.copySync(ORIGIN_DATA_DIR, TEST_DATA_DIR)
+  fs.copySync(path.join(ORIGIN_DATA_DIR, 'collections'), path.join(TEST_DATA_DIR, 'collections'))
+  fs.copySync(path.join(ORIGIN_DATA_DIR, 'media'), path.join(TEST_DATA_DIR, 'media'))
+  fs.copySync(path.join(ORIGIN_DATA_DIR, 'modules'), path.join(TEST_DATA_DIR, 'modules'))
 }
 
 suite('Unsaved Files', function (this: Suite) {
   this.beforeEach(resetTestData)
   test('show cnxml preview with no file open', async () => {
+    const activationExports = await extensionExports
     assert.strictEqual(vscode.window.activeTextEditor, undefined)
     await vscode.commands.executeCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW)
     await sleep(1000) // Wait for panel to load
-    const panel = extensionExports.activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
+    const panel = activationExports.activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
     assert.strictEqual(panel, undefined)
   })
 })
@@ -160,6 +169,22 @@ suite('Extension Test Suite', function (this: Suite) {
       assert.notStrictEqual(html.indexOf('html'), -1)
     })
   }).timeout(5000)
+  test('toc editor handle refresh', async () => {
+    const requests: any[] = []
+    const mockClient = {
+      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    }
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel, mockClient as unknown as LanguageClient)
+      await handler({ type: 'refresh' })
+    })
+    const expected = [
+      [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
+    ]
+    assert.deepStrictEqual(requests, expected)
+  }).timeout(5000)
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
@@ -183,7 +208,7 @@ suite('Extension Test Suite', function (this: Suite) {
       }]
     }
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       await handler({ type: 'write-tree', treeData: mockEditAddModule })
     })
     const after = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
@@ -192,14 +217,14 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('toc editor handle error message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       assert.rejects(handler({ type: 'error', message: 'test' }))
     })
   }).timeout(5000)
   test('toc editor handle subcollection create', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       await handler({ type: 'subcollection-create', slug: 'test' })
     })
     const uri = expect(getRootPathUri())
@@ -214,7 +239,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toc editor handle module create', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       await handler({ type: 'module-create' })
     })
     const uri = expect(getRootPathUri())
@@ -228,7 +253,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toc editor handle module rename', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel)
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
       await handler({ type: 'module-rename', moduleid: 'm00003', newName: 'rename' })
     })
     const uri = expect(getRootPathUri())
@@ -287,8 +312,8 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('panel disposed and refocused', async () => {
     await assert.doesNotReject(async () => {
-      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})
-      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {})
+      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
+      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
     })
   }).timeout(5000)
   test('schema files are populated when not existing', async () => {
@@ -313,5 +338,125 @@ suite('Extension Test Suite', function (this: Suite) {
 
   this.afterAll(async () => {
     await deactivate()
+  })
+})
+
+// Push Content Tests
+const ignore = async (msg: string): Promise<string | undefined> => { return undefined }
+const makeCaptureMessage = (messages: string[]): (msg: string) => Promise<string | undefined> => {
+  const captureMessage = async (msg: string): Promise<string | undefined> => {
+    messages.push(msg)
+    return undefined
+  }
+  return captureMessage
+}
+const commitOptions: CommitOptions = { all: true }
+
+suite('Push Button Test Suite', function (this: Suite) {
+  test('getRepo returns repository', async () => {
+    const repo = pushContent.getRepo()
+    assert.notStrictEqual(repo.rootUri, undefined)
+  })
+  test('push with no conflict', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, captureMessage, ignore)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Successful content push.')
+  })
+  test('push with merge conflict', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.gitErrorCode = GitErrorCodes.Conflict
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().rejects(error)
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Content conflict, please resolve.')
+  })
+  test('unknown commit error', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.gitErrorCode = ''
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().rejects(error)
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Push failed: ')
+  })
+  test('push with no changes', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.stdout = 'nothing to commit.'
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).rejects(error)
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'No changes to push.')
+  })
+  test('unknown push error', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const error: any = new Error()
+
+    error.stdout = ''
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).rejects(error)
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Push failed: ')
   })
 })

@@ -72,8 +72,10 @@ export function getRootPathUri(): vscode.Uri | null {
  * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
  */
 export function expect<T>(value: T | null | undefined, message?: string): T {
+  message = message ?? 'Unwrapped a null value'
   if (value == null) {
-    throw new Error(message ?? 'Unwrapped a null value')
+    void vscode.window.showErrorMessage(message)
+    throw new Error(message)
   }
   return value
 }
@@ -141,7 +143,14 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
     // Register the server for XML documents
-    documentSelector: [{ scheme: 'file', language: 'xml' }]
+    documentSelector: [{ scheme: 'file', language: 'xml' }],
+    synchronize: {
+      fileEvents: [
+        vscode.workspace.createFileSystemWatcher('**/media/**'),
+        vscode.workspace.createFileSystemWatcher('**/modules/**'),
+        vscode.workspace.createFileSystemWatcher('**/collections/**')
+      ]
+    }
   }
 
   // Create the language client and start the client.
