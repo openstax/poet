@@ -2,9 +2,10 @@ import assert from 'assert'
 import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
+import SinonRoot from 'sinon'
 import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
 import 'source-map-support/register'
-import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
+import { expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
 import { activate, deactivate } from './../../extension'
 import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
@@ -31,6 +32,10 @@ const extensionExports = activate(contextStub as any)
 
 async function sleep(ms: number): Promise<void> {
   return await new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function expect<T>(value: T | null | undefined): T {
+  return expectOrig(value, 'test_assertion')
 }
 
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
@@ -81,7 +86,10 @@ suite('Unsaved Files', function (this: Suite) {
 })
 
 suite('Extension Test Suite', function (this: Suite) {
+  const sinon = SinonRoot.createSandbox()
   this.beforeEach(resetTestData)
+  this.afterEach(() => sinon.restore())
+  
   test('expect unwraps non-null', () => {
     const maybe: string | null = 'test'
     assert.doesNotThrow(() => { expect(maybe) })
@@ -92,7 +100,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('expect throws on null with custom message', async () => {
     const maybe: string | null = null
-    assert.throws(() => { expect(maybe, 'my-message') })
+    assert.throws(() => { expectOrig(maybe, 'my-message') })
   })
   test('getRootPathUri', () => {
     const uri = expect(getRootPathUri())
@@ -110,6 +118,21 @@ suite('Extension Test Suite', function (this: Suite) {
      * const uriAgain = expect(getRootPathUri())
      * assert.strictEqual(uriAgain.fsPath, TEST_DATA_DIR)
      */
+  })
+  test('ensureCatch throws when its argument throws', async () => {
+    const errMessage = 'I am an error'
+    async function fn(): Promise<void> { throw new Error(errMessage) }
+    const s = sinon.spy(vscode.window, 'showErrorMessage')
+    const wrapped = ensureCatch(fn)
+
+    try {
+      await wrapped()
+      assert.fail('ensureCatch should have thrown an error')
+    } catch(err) {
+      assert.strictEqual(err.message, errMessage)
+    }
+    // Verify that a message was sent to the user
+    assert.strictEqual(s.callCount, 1)
   })
   test('addBaseHref', () => {
     const uri = expect(getRootPathUri())
@@ -160,6 +183,23 @@ suite('Extension Test Suite', function (this: Suite) {
     const roots = getLocalResourceRoots([], uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') }))
     assert.strictEqual(roots.length, 1)
     assert.strictEqual(roots[0].fsPath, TEST_DATA_DIR)
+  })
+  test('getLocalResourceRoots works when there is no folder for a resource', () => {
+    sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(undefined)
+
+    function getBaseRoots(scheme: any) {
+      const resource = {
+        scheme: scheme,
+        fsPath: '/some/path/to/file'
+      } as vscode.Uri
+      return getLocalResourceRoots([], resource)
+    }
+    assert.strictEqual(getBaseRoots('file').length, 1)
+    assert.strictEqual(getBaseRoots('').length, 1)
+    assert.strictEqual(getBaseRoots('a-custom-scheme').length, 0)
+
+    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
+    assert.strictEqual(getBaseRoots(undefined).length, 0)
   })
   test('show toc editor', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
@@ -334,6 +374,10 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(fs.existsSync(testXsdPath))
     populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(!fs.existsSync(testXsdPath))
+  })
+  test('schema-generation does not run when there is no workspace', async () => {
+    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
+    populateXsdSchemaFiles('')
   })
 
   this.afterAll(async () => {
