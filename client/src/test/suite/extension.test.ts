@@ -427,7 +427,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('push with merge conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const error: any = new Error()
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = GitErrorCodes.Conflict
 
@@ -448,7 +448,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('unknown commit error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const error: any = new Error()
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = ''
 
@@ -469,7 +469,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('push with no changes', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const error: any = new Error()
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = 'nothing to commit.'
 
@@ -490,7 +490,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('unknown push error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const error: any = new Error()
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = ''
 
