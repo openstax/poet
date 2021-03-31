@@ -19,8 +19,8 @@ const FS_SEP = path.join('/')
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
 export interface Link {
-  moduleid: string,
-  targetid: string,
+  moduleid: string
+  targetid: string
   element: any
 }
 
@@ -29,15 +29,15 @@ export interface FileData { data: string }
 export interface ModuleTitle { title: string, moduleid: string }
 
 export interface ImageSource {
-  name: string,
-  path: string,
-  element: any,
-  inBundleMedia: boolean,
+  name: string
+  path: string
+  element: any
+  inBundleMedia: boolean
   exists: boolean
 }
 
 export interface ModuleLink {
-  moduleid: string,
+  moduleid: string
   element: any
 }
 
@@ -414,7 +414,7 @@ export class BookBundle {
     }
     return URI.from({
       scheme: 'file',
-      path: path.join(this.workspaceRoot(), item.type, item.key),
+      path: path.join(this.workspaceRoot(), item.type, item.key)
     }).toString()
   }
 

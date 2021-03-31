@@ -1,14 +1,12 @@
 import {
   Diagnostic,
   DiagnosticSeverity,
-  Position,
-  Connection
+  Position
 } from 'vscode-languageserver/node'
 import fs from 'fs'
 
 export const IMAGEPATH_DIAGNOSTIC_SOURCE = 'Image validation'
 export const LINK_DIAGNOSTIC_SOURCE = 'Link validation'
-
 
 export function generateDiagnostic(severity: DiagnosticSeverity,
   startPosition: Position, endPosition: Position, message: string,
@@ -153,8 +151,8 @@ export function expect<T>(value: T | null | undefined, message: string): T {
   return value
 }
 
-export const fileExists = async (filepath: string) => {
+export const fileExists = async (filepath: string): Promise<boolean> => {
   let exists = true
-  await fs.promises.access(filepath).catch(err => { exists = false })
+  await fs.promises.access(filepath).catch(_err => { exists = false })
   return exists
 }

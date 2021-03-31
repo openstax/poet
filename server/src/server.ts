@@ -31,7 +31,7 @@ import {
 } from '../../common/src/requests'
 
 import { BookBundle } from './book-bundle'
-import { BundleValidationQueue } from './bundle-validator'
+import { BundleValidationQueue } from './bundle-validation'
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -104,8 +104,8 @@ documents.onDidOpen(event => {
       await createBookBundleForWorkspace(workspaceChanged)
       return
     }
-    const [bundleChanged, bundleValidator] = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')
-    bundleValidator.addRequest({causeUri: event.document.uri})
+    const bundleValidator = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')[1]
+    bundleValidator.addRequest({ causeUri: event.document.uri })
   }
   inner().catch(err => { throw err })
 })
@@ -125,7 +125,7 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
       }
       const [bundleChanged, bundleValidator] = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')
       bundleChanged.processChange(change)
-      bundleValidator.addRequest({causeUri: change.uri})
+      bundleValidator.addRequest({ causeUri: change.uri })
     }
     await connection.sendRequest('onDidChangeWatchedFiles')
   }
