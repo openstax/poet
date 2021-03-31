@@ -5,8 +5,9 @@ import {
   parseXMLString,
   validateImagePaths,
   validateLinks,
-  IMAGEPATH_DIAGNOSTIC_SOURCE,
-  LINK_DIAGNOSTIC_SOURCE,
+  DIAGNOSTIC_SOURCE,
+  IMAGEPATH_DIAGNOSTIC_CODE,
+  LINK_DIAGNOSTIC_CODE,
   getCurrentModules,
   ValidationQueue,
   ValidationRequest,
@@ -115,7 +116,8 @@ describe('validateImagePaths', function () {
         end: inputDocument.positionAt(image2Location + '<image src="../../media/image2.jpg" />'.length)
       },
       message: 'Image file ../../media/image2.jpg doesn\'t exist!',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      code: IMAGEPATH_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     const expectedDiagnostic2: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -124,7 +126,8 @@ describe('validateImagePaths', function () {
         end: inputDocument.positionAt(image3Location + '<image src="../../media/image3.jpg" />'.length)
       },
       message: 'Image file ../../media/image3.jpg doesn\'t exist!',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      code: IMAGEPATH_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
   })
@@ -152,7 +155,8 @@ describe('validateImagePaths', function () {
         end: inputDocument.positionAt(image2Location + '<image src="../../media/image2.jpg" />'.length)
       },
       message: 'Image file ../../media/image2.jpg doesn\'t exist!',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      code: IMAGEPATH_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     const expectedDiagnostic2: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -161,7 +165,8 @@ describe('validateImagePaths', function () {
         end: inputDocument.positionAt(image2DupLocation + '<image src="../../media/image2.jpg" />'.length)
       },
       message: 'Image file ../../media/image2.jpg doesn\'t exist!',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      code: IMAGEPATH_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
   })
@@ -317,7 +322,8 @@ describe('validateLinks', function () {
         end: inputDocument.positionAt(linkLocation + '<link target-id="para2" />'.length)
       },
       message: 'Target for link doesn\'t exist!: para2',
-      source: LINK_DIAGNOSTIC_SOURCE
+      code: LINK_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -345,7 +351,8 @@ describe('validateLinks', function () {
         end: inputDocument.positionAt(linkLocation + '<link target-id="para1" />'.length)
       },
       message: 'Target for link is not unique!: para1',
-      source: LINK_DIAGNOSTIC_SOURCE
+      code: LINK_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -371,7 +378,8 @@ describe('validateLinks', function () {
         end: inputDocument.positionAt(linkLocation + '<link document="m00002" />'.length)
       },
       message: 'Target document for link doesn\'t exist!: m00002',
-      source: LINK_DIAGNOSTIC_SOURCE
+      code: LINK_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -405,7 +413,8 @@ describe('validateLinks', function () {
         end: inputDocument.positionAt(linkLocation + '<link document="m00001" target-id="para2"/>'.length)
       },
       message: 'Target ID in document doesn\'t exist!: para2',
-      source: LINK_DIAGNOSTIC_SOURCE
+      code: LINK_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -436,7 +445,8 @@ describe('validateLinks', function () {
         end: inputDocument.positionAt(linkLocation + '<link document="m00001" target-id="dup"/>'.length)
       },
       message: 'Target ID in document is not unique!: dup',
-      source: LINK_DIAGNOSTIC_SOURCE
+      code: LINK_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -467,7 +477,8 @@ describe('validateLinks', function () {
         end: inputDocument.positionAt(linkLocation + '<link document="empty" target-id="para1"/>'.length)
       },
       message: 'Could not parse target document!: empty',
-      source: LINK_DIAGNOSTIC_SOURCE
+      code: LINK_DIAGNOSTIC_CODE,
+      source: DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })

@@ -18,8 +18,9 @@ import path from 'path'
 import glob from 'glob'
 
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
-export const IMAGEPATH_DIAGNOSTIC_SOURCE = 'Image validation'
-export const LINK_DIAGNOSTIC_SOURCE = 'Link validation'
+export const DIAGNOSTIC_SOURCE = 'cnxml'
+export const IMAGEPATH_DIAGNOSTIC_CODE = 'Image validation'
+export const LINK_DIAGNOSTIC_CODE = 'Link validation'
 
 export function parseXMLString(textDocument: TextDocument): Document | null {
   const text = textDocument.getText()
@@ -57,7 +58,7 @@ export async function validateImagePaths(textDocument: TextDocument, xmlData: Do
       startPosition,
       endPosition,
       `Image file ${String(imageSrc)} doesn't exist!`,
-      IMAGEPATH_DIAGNOSTIC_SOURCE
+      IMAGEPATH_DIAGNOSTIC_CODE
     )
     diagnostics.push(diagnostic)
   }
@@ -118,7 +119,7 @@ async function validateOtherPageLinks(xmlData: Document, knownModules: Map<strin
       startPosition,
       endPosition,
       '',
-      LINK_DIAGNOSTIC_SOURCE
+      LINK_DIAGNOSTIC_CODE
     )
 
     if (linkTargetModule === '') {
@@ -213,7 +214,7 @@ async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
       startPosition,
       endPosition,
       '',
-      LINK_DIAGNOSTIC_SOURCE
+      LINK_DIAGNOSTIC_CODE
     )
     const linkTargetId: string = linkElement.getAttribute('target-id')
     if ((linkTargetId === '') || (validTargetIds.has(linkTargetId))) {
@@ -236,7 +237,7 @@ async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
 
 export function generateDiagnostic(severity: DiagnosticSeverity,
   startPosition: Position, endPosition: Position, message: string,
-  diagnosticSource: string): Diagnostic {
+  diagnosticCode: string): Diagnostic {
   const diagnostic: Diagnostic = {
     severity: severity,
     range: {
@@ -244,7 +245,8 @@ export function generateDiagnostic(severity: DiagnosticSeverity,
       end: endPosition
     },
     message: message,
-    source: diagnosticSource
+    source: DIAGNOSTIC_SOURCE,
+    code: diagnosticCode
   }
   return diagnostic
 }
