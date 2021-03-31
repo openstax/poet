@@ -87,8 +87,8 @@ export function expect<T>(value: T | null | undefined, message: string): T {
  * as the resulting thrown error being uncatchable.
  */
 export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: any[]) => Promise<any> {
-  return (...args: any[]) => {
-    return func(...args).catch((err: Error) => {
+  return async (...args: any[]) => {
+    return await func(...args).catch((err: Error) => {
       void vscode.window.showErrorMessage(err.message)
       throw err
     })

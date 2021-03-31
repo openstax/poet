@@ -89,7 +89,7 @@ suite('Extension Test Suite', function (this: Suite) {
   const sinon = SinonRoot.createSandbox()
   this.beforeEach(resetTestData)
   this.afterEach(() => sinon.restore())
-  
+
   test('expect unwraps non-null', () => {
     const maybe: string | null = 'test'
     assert.doesNotThrow(() => { expect(maybe) })
@@ -128,7 +128,7 @@ suite('Extension Test Suite', function (this: Suite) {
     try {
       await wrapped()
       assert.fail('ensureCatch should have thrown an error')
-    } catch(err) {
+    } catch (err) {
       assert.strictEqual(err.message, errMessage)
     }
     // Verify that a message was sent to the user
@@ -185,19 +185,18 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(roots[0].fsPath, TEST_DATA_DIR)
   })
   test('getLocalResourceRoots works when there is no folder for a resource', () => {
-
-    function getBaseRoots(scheme: any) {
+    function getBaseRoots(scheme: any): readonly vscode.Uri[] {
       const resource = {
         scheme: scheme,
         fsPath: '/some/path/to/file'
-      } as vscode.Uri
+      } as any as vscode.Uri
       return getLocalResourceRoots([], resource)
     }
-    const folder = {} as vscode.WorkspaceFolder // the content does not matter
+    const folder = {} as any as vscode.WorkspaceFolder // the content does not matter
     const s = sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(folder)
-    sinon.stub(vscode.workspace, 'workspaceFolders').get(()=> [{uri: '/some/path/does/not/matter'}])
+    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => [{ uri: '/some/path/does/not/matter' }])
     assert.strictEqual(getBaseRoots('CASE-T-T-?').length, 1)
-    sinon.stub(vscode.workspace, 'workspaceFolders').get(()=> undefined)
+    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
     assert.strictEqual(getBaseRoots('CASE-T-F-?').length, 0)
     s.restore()
     sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(undefined)
