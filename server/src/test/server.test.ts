@@ -12,7 +12,7 @@ import {
   ValidationRequest,
   ModuleInformation,
   calculateElementPositions,
-  expect
+  expect as expectOrig
 } from './../utils'
 
 import assert from 'assert'
@@ -27,6 +27,10 @@ import {
 } from 'vscode-languageserver'
 import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, BookBundle, ModuleTitle, recachify } from '../book-bundle'
 import { TocTreeCollection } from '../../../common/src/toc-tree'
+
+function expect<T>(value: T | null | undefined): T {
+  return expectOrig(value, 'test_assertion')
+}
 
 describe('parseXMLString', function () {
   it('should return null on a new / empty XML', async function () {

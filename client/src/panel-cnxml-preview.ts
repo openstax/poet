@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
-import { fixResourceReferences, fixCspSourceReferences, addBaseHref, getLocalResourceRoots, expect, ensureCatch } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, addBaseHref, getLocalResourceRoots, ensureCatch } from './utils'
 import { PanelType } from './extension-types'
 
 export interface PanelIncomingMessage {
@@ -9,30 +9,15 @@ export interface PanelIncomingMessage {
 }
 
 export const getContents = (uri?: vscode.Uri): [string | undefined, vscode.TextEditor | undefined, vscode.Uri | undefined] => {
-  let maybeResource = uri
-  let contents: string | null = null
+  let contents: string | undefined
   const editor = vscode.window.activeTextEditor
 
   if (editor != null) {
     const activeDocument = editor.document
-    if (activeDocument.uri === uri) {
-      contents = activeDocument.getText()
-    }
-    // support previewing XML that has not been saved yet
-    if (!(maybeResource instanceof vscode.Uri)) {
-      maybeResource = activeDocument.uri
-      contents = activeDocument.getText()
-    }
+    contents = activeDocument.getText()
+    return [contents, editor, activeDocument.uri]
   }
-  if (maybeResource == null) {
-    return [undefined, editor, undefined]
-  }
-  const resource = expect(maybeResource)
-
-  if (contents == null) {
-    contents = fs.readFileSync(resource.fsPath, 'utf-8')
-  }
-  return [contents, editor, resource]
+  return [contents, editor, uri]
 }
 
 export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async (uri?: vscode.Uri, previewSettings?: any) => {
