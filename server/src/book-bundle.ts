@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import { FileChangeType, FileEvent } from 'vscode-languageserver/node'
 import * as xpath from 'xpath-ts'
-import { expect } from './utils'
+import { expect, fileExists } from './utils'
 import { TocTreeModule, TocTreeCollection, TocTreeElement } from '../../common/src/toc-tree'
 import {
   URI
@@ -14,11 +14,14 @@ export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 export const NS_METADATA = 'http://cnx.rice.edu/mdml'
 
+const FS_SEP = path.join('/')
+
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
 export interface Link {
-  moduleid: string
-  targetid: string
+  moduleid: string,
+  targetid: string,
+  element: any
 }
 
 export interface FileData { data: string }
@@ -26,8 +29,26 @@ export interface FileData { data: string }
 export interface ModuleTitle { title: string, moduleid: string }
 
 export interface ImageSource {
-  name: string
-  path: string
+  name: string,
+  path: string,
+  element: any,
+  inBundleMedia: boolean,
+  exists: boolean
+}
+
+export interface ModuleLink {
+  moduleid: string,
+  element: any
+}
+
+export type BundleItemType = 'collections' | 'modules' | 'media'
+const isBundleItemType = (value: string): value is BundleItemType => {
+  return value === 'collections' || value === 'modules' || value === 'media'
+}
+
+export interface BundleItem {
+  type: BundleItemType
+  key: string
 }
 
 class ModuleInfo {
@@ -80,6 +101,32 @@ class ModuleInfo {
     return this._imagesUsed(document)
   }
 
+  async imageSources(): Promise<Cachified<ImageSource[]>> {
+    const document = await this.document()
+    return await this._imageSources(document)
+  }
+
+  private readonly _imageSources = memoizeOneCache(
+    async ({ inner: doc }: Cachified<Document>) => {
+      const imageNodes = select('//cnxml:image[@src]', doc) as Element[]
+      const imageSourceFromNode = async (imageNode: Element): Promise<ImageSource> => {
+        const source = expect(imageNode.getAttribute('src'), 'selection requires attribute exists')
+        const basename = path.basename(source)
+        // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
+        const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), source)
+        const inBundleMedia = this.bundle.imageExists(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
+        return {
+          name: basename,
+          path: source,
+          inBundleMedia,
+          exists: inBundleMedia || await fileExists(source),
+          element: imageNode
+        }
+      }
+      return cachify(await Promise.all(imageNodes.map(async (imageNode) => await imageSourceFromNode(imageNode))))
+    }
+  )
+
   private readonly _imagesUsed = memoizeOneCache(
     ({ inner: doc }: Cachified<Document>) => {
       const images = new Set<string>()
@@ -108,7 +155,8 @@ class ModuleInfo {
         documentid = documentid === '' ? this.moduleid : documentid
         links.push({
           moduleid: documentid,
-          targetid: expect(linkNode.getAttribute('target-id'), 'selection requires attribute exists')
+          targetid: expect(linkNode.getAttribute('target-id'), 'selection requires attribute exists'),
+          element: linkNode
         })
       }
       return cachify(links)
@@ -184,17 +232,21 @@ class CollectionInfo {
     }
   )
 
-  async modulesUsed(): Promise<Cachified<Set<string>>> {
+  async modulesUsed(): Promise<Cachified<ModuleLink[]>> {
     const document = await this.document()
     return this._modulesUsed(document)
   }
 
   private readonly _modulesUsed = memoizeOneCache(
     ({ inner: doc }: Cachified<Document>) => {
-      const modules = new Set<string>()
-      const moduleNodes = select('//col:module[@document]', doc) as Element[]
+      const modules: ModuleLink[] = []
+      const moduleNodes = select('//col:module', doc) as Element[]
       for (const moduleNode of moduleNodes) {
-        modules.add(expect(moduleNode.getAttribute('document'), 'selection requires attribute exists'))
+        const moduleid = moduleNode.getAttribute('document') ?? ''
+        modules.push({
+          element: moduleNode,
+          moduleid: moduleid
+        })
       }
       return cachify(modules)
     }
@@ -202,8 +254,8 @@ class CollectionInfo {
 
   async tree(): Promise<Cachified<TocTreeCollection>> {
     const document = await this.document()
-    const modulesUsed = Array.from((await this.modulesUsed()).inner)
-    const moduleTitles = await Promise.all(modulesUsed.map(async module => await this.bundle.moduleTitle(module)))
+    const modulesUsed = await this.modulesUsed()
+    const moduleTitles = await Promise.all(modulesUsed.inner.map(async moduleLink => await this.bundle.moduleTitle(moduleLink.moduleid)))
     const moduleTitlesDefined = moduleTitles.filter(t => t != null) as Array<Cachified<ModuleTitle>>
     return this._tree(document, cacheSort(moduleTitlesDefined))
   }
@@ -242,19 +294,19 @@ export class BookBundle {
     const collections = cachify(new Map<string, CollectionInfo>())
     const bundle = new BookBundle(workspaceRoot, images, modules, collections)
     const loadImages = async (bundle: BookBundle, set: Set<string>): Promise<void> => {
-      const foundImages = await fs.promises.readdir(path.join(workspaceRoot, 'media'))
+      const foundImages = await fs.promises.readdir(bundle.mediaDirectory())
       for (const image of foundImages) {
         set.add(image)
       }
     }
     const loadModules = async (bundle: BookBundle, map: Map<string, ModuleInfo>): Promise<void> => {
-      const foundModules = await fs.promises.readdir(path.join(workspaceRoot, 'modules'))
+      const foundModules = await fs.promises.readdir(bundle.moduleDirectory())
       for (const module of foundModules) {
         map.set(module, new ModuleInfo(bundle, module))
       }
     }
     const loadCollections = async (bundle: BookBundle, map: Map<string, CollectionInfo>): Promise<void> => {
-      const foundCollections = await fs.promises.readdir(path.join(workspaceRoot, 'collections'))
+      const foundCollections = await fs.promises.readdir(bundle.collectionDirectory())
       for (const collection of foundCollections) {
         map.set(collection, new CollectionInfo(bundle, collection))
       }
@@ -267,16 +319,40 @@ export class BookBundle {
     return this.workspaceRootInternal
   }
 
+  mediaDirectory(): string {
+    return path.resolve(this.workspaceRoot(), 'media')
+  }
+
+  moduleDirectory(): string {
+    return path.resolve(this.workspaceRoot(), 'modules')
+  }
+
+  collectionDirectory(): string {
+    return path.resolve(this.workspaceRoot(), 'collections')
+  }
+
   images(): string[] {
     return Array.from(this.imagesInternal.inner.values())
+  }
+
+  mediaItems(): BundleItem[] {
+    return Array.from(this.imagesInternal.inner.values()).map(key => ({ type: 'media', key: key }))
   }
 
   modules(): string[] {
     return Array.from(this.modulesInternal.inner.keys())
   }
 
+  moduleItems(): BundleItem[] {
+    return Array.from(this.modulesInternal.inner.keys()).map(key => ({ type: 'modules', key: key }))
+  }
+
   collections(): string[] {
     return Array.from(this.collectionsInternal.inner.keys())
+  }
+
+  collectionItems(): BundleItem[] {
+    return Array.from(this.collectionsInternal.inner.keys()).map(key => ({ type: 'collections', key: key }))
   }
 
   imageExists(name: string): boolean {
@@ -289,6 +365,57 @@ export class BookBundle {
 
   collectionExists(filename: string): boolean {
     return this.collectionsInternal.inner.has(filename)
+  }
+
+  containsBundleItem(item: BundleItem): boolean {
+    const existsFunc = {
+      collections: this.collectionExists,
+      modules: this.moduleExists,
+      media: this.imageExists
+    }[item.type].bind(this)
+    return existsFunc(item.key)
+  }
+
+  bundleItemFromUri(uri: string): BundleItem | null {
+    const itemPath = URI.parse(uri).fsPath
+    const itemPathRelative = itemPath.replace(`${this.workspaceRoot()}${FS_SEP}`, '')
+    const indexOfFirstSep = itemPathRelative.indexOf(FS_SEP)
+    const itemType = itemPathRelative.substring(0, indexOfFirstSep)
+    if (!isBundleItemType(itemType)) {
+      return null
+    }
+    if (itemType === 'modules') {
+      if (!itemPathRelative.endsWith(`${FS_SEP}index.cnxml`)) {
+        // Directory or some irrelevant file was edited
+        return null
+      }
+      const indexOfSecondSep = itemPathRelative.indexOf(FS_SEP, indexOfFirstSep + 1)
+      const moduleid = itemPathRelative.substring(indexOfFirstSep + 1, indexOfSecondSep)
+      return {
+        type: itemType,
+        key: moduleid
+      }
+    }
+    return {
+      type: itemType,
+      key: itemPathRelative.substring(indexOfFirstSep + 1)
+    }
+  }
+
+  bundleItemToUri(item: BundleItem): string | null {
+    if (!this.containsBundleItem(item)) {
+      return null
+    }
+    if (item.type === 'modules') {
+      return URI.from({
+        scheme: 'file',
+        path: path.join(this.workspaceRoot(), item.type, item.key, 'index.cnxml')
+      }).toString()
+    }
+    return URI.from({
+      scheme: 'file',
+      path: path.join(this.workspaceRoot(), item.type, item.key),
+    }).toString()
   }
 
   async orphanedImages(): Promise<Cachified<Set<string>>> {
@@ -314,16 +441,24 @@ export class BookBundle {
   }
 
   private readonly _orphanedModules = memoizeOneCache(
-    (allModules: Cachified<Map<string, ModuleInfo>>, usedModulesPerCollection: Array<Cachified<Set<string>>>): Cachified<Set<string>> => {
+    (allModules: Cachified<Map<string, ModuleInfo>>, usedModulesPerCollection: Array<Cachified<ModuleLink[]>>): Cachified<Set<string>> => {
       const orphanModules = new Set(allModules.inner.keys())
       for (const collectionModules of usedModulesPerCollection) {
-        for (const module of collectionModules.inner) {
-          orphanModules.delete(module)
+        for (const moduleLink of collectionModules.inner) {
+          orphanModules.delete(moduleLink.moduleid)
         }
       }
       return cachify(orphanModules)
     }
   )
+
+  async modulesUsed(filename: string): Promise<Cachified<ModuleLink[]> | null> {
+    const collectionInfo = this.collectionsInternal.inner.get(filename)
+    if (collectionInfo == null) {
+      return null
+    }
+    return await collectionInfo.modulesUsed()
+  }
 
   async moduleTitle(moduleid: string): Promise<Cachified<ModuleTitle> | null> {
     const moduleInfo = this.modulesInternal.inner.get(moduleid)
@@ -374,6 +509,14 @@ export class BookBundle {
       return cachify(new Set(moduleIdsAsMap.inner.keys()))
     }
   )
+
+  async moduleImageSources(moduleid: string): Promise<Cachified<ImageSource[]> | null> {
+    const moduleInfo = this.modulesInternal.inner.get(moduleid)
+    if (moduleInfo == null) {
+      return null
+    }
+    return await moduleInfo.imageSources()
+  }
 
   async moduleImages(moduleid: string): Promise<Cachified<Set<string>> | null> {
     const moduleInfo = this.modulesInternal.inner.get(moduleid)
@@ -441,45 +584,31 @@ export class BookBundle {
   }
 
   processChange(change: FileEvent): void {
-    const itemPath = URI.parse(change.uri).fsPath
-    const sep = path.join('/')
-    const itemPathRelative = itemPath.replace(`${this.workspaceRoot()}${sep}`, '')
-    const indexOfFirstSep = itemPathRelative.indexOf(sep)
-    const itemType = itemPathRelative.substring(0, indexOfFirstSep)
-    if (itemType === 'collections') {
-      const filename = itemPathRelative.substring(indexOfFirstSep + 1)
-      const func = {
+    const item = this.bundleItemFromUri(change.uri)
+    if (item == null) {
+      return
+    }
+    if (!this.containsBundleItem(item)) {
+      throw new Error(`BUG: Key '${item.key}' invalid for item type '${item.type}'`)
+    }
+    const func = {
+      collections: {
         [FileChangeType.Created]: this.onCollectionCreated,
         [FileChangeType.Changed]: this.onCollectionChanged,
         [FileChangeType.Deleted]: this.onCollectionDeleted
-      }[change.type].bind(this)
-      func(filename)
-      return
-    } else if (itemType === 'modules') {
-      if (!itemPathRelative.endsWith(`${sep}index.cnxml`)) {
-        // Directory or some irrelevant file was edited
-        return
-      }
-      const indexOfSecondSep = itemPathRelative.indexOf(sep, indexOfFirstSep + 1)
-      const moduleid = itemPathRelative.substring(indexOfFirstSep + 1, indexOfSecondSep)
-      const func = {
+      },
+      modules: {
         [FileChangeType.Created]: this.onModuleCreated,
         [FileChangeType.Changed]: this.onModuleChanged,
         [FileChangeType.Deleted]: this.onModuleDeleted
-      }[change.type].bind(this)
-      func(moduleid)
-      return
-    } else if (itemType === 'media') {
-      const mediaFilename = itemPathRelative.substring(indexOfFirstSep + 1)
-      const func = {
+      },
+      media: {
         [FileChangeType.Created]: this.onImageCreated,
         [FileChangeType.Changed]: this.onImageChanged,
         [FileChangeType.Deleted]: this.onImageDeleted
-      }[change.type].bind(this)
-      func(mediaFilename)
-      return
-    }
-    throw new Error('unreachable')
+      }
+    }[item.type][change.type].bind(this)
+    func(item.key)
   }
 }
 
