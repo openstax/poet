@@ -242,6 +242,6 @@ function replaceCollectionContent(document: XMLDocument, treeData: TocTreeCollec
   const content = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
 
   const newContent = document.createElementNS(NS_COLLECTION, 'content')
-  expect(content.parentNode).replaceChild(newContent, content)
+  expect(content.parentNode, 'expected a parent element').replaceChild(newContent, content)
   populateTreeDataToXML(document, newContent, treeData)
 }

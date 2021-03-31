@@ -38,7 +38,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
   const lazilyFocusOrOpenPanelOfType = (type: PanelType) => {
     return (...args: any[]) => {
       if (activePanelsByType[type] != null) {
-        const activePanel = expect(activePanelsByType[type])
+        const activePanel = expect(activePanelsByType[type], `Could not find panel type '${type}'`)
         try {
           activePanel.reveal(defaultLocationByType[type])
           return
@@ -71,8 +71,5 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
 }
 
 export async function deactivate(): Promise<void> {
-  if (client === undefined) {
-    return
-  }
-  return await client.stop()
+  await expect(client, 'Expected client to have been activated').stop()
 }
