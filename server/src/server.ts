@@ -83,8 +83,10 @@ connection.onInitialized(() => {
       for (const workspace of currentWorkspaces) {
         try {
           await createBookBundleForWorkspace(workspace)
+          const bundleValidator = expect(workspaceBookBundles.get(workspace.uri), 'already returned if key missing')[1]
+          bundleValidator.addRequest()
         } catch (err) {
-          connection.console.log(`Could not parse ${workspace.uri} as a book bundle`)
+          connection.console.error(`Could not parse ${workspace.uri} as a book bundle`)
         }
       }
     }
@@ -148,7 +150,7 @@ connection.onRequest('onDidChangeWorkspaceFolders', async (event) => {
     try {
       await createBookBundleForWorkspace(workspaceCompat)
     } catch (err) {
-      connection.console.log(`Could not parse ${workspaceCompat.uri} as a book bundle`)
+      connection.console.error(`Could not parse ${workspaceCompat.uri} as a book bundle`)
     }
   }
 })

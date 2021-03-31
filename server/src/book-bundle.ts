@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import { FileChangeType, FileEvent } from 'vscode-languageserver/node'
 import * as xpath from 'xpath-ts'
-import { expect, fileExists } from './utils'
+import { expect, fileExistsAt } from './utils'
 import { TocTreeModule, TocTreeCollection, TocTreeElement } from '../../common/src/toc-tree'
 import {
   URI
@@ -20,7 +20,7 @@ const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS
 
 export interface Link {
   moduleid: string
-  targetid: string
+  targetid: string | null
   element: any
 }
 
@@ -113,13 +113,13 @@ class ModuleInfo {
         const source = expect(imageNode.getAttribute('src'), 'selection requires attribute exists')
         const basename = path.basename(source)
         // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
-        const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), source)
+        const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), this.moduleid, source)
         const inBundleMedia = this.bundle.imageExists(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
         return {
           name: basename,
           path: source,
           inBundleMedia,
-          exists: inBundleMedia || await fileExists(source),
+          exists: inBundleMedia || (source !== '' && await fileExistsAt(mediaSourceResolved)),
           element: imageNode
         }
       }
@@ -148,16 +148,29 @@ class ModuleInfo {
   private readonly _linksDeclared = memoizeOneCache(
     ({ inner: doc }: Cachified<Document>) => {
       const links: Link[] = []
-      const linkNodes = select('//cnxml:link[@target-id]', doc) as Element[]
+      const linkNodes = select('//cnxml:link', doc) as Element[]
       for (const linkNode of linkNodes) {
-        let documentid = linkNode.getAttribute('document')
-        documentid = documentid == null ? this.moduleid : documentid
-        documentid = documentid === '' ? this.moduleid : documentid
-        links.push({
-          moduleid: documentid,
-          targetid: expect(linkNode.getAttribute('target-id'), 'selection requires attribute exists'),
-          element: linkNode
-        })
+        const toDocument = linkNode.hasAttribute('document')
+        const toTargetId = linkNode.hasAttribute('target-id')
+        if (toTargetId && !toDocument) {
+          links.push({
+            moduleid: this.moduleid,
+            targetid: expect(linkNode.getAttribute('target-id'), 'logic requires attribute exists'),
+            element: linkNode
+          })
+        } else if (toDocument && !toTargetId) {
+          links.push({
+            moduleid: expect(linkNode.getAttribute('document'), 'logic requires attribute exists'),
+            targetid: null,
+            element: linkNode
+          })
+        } else if (toDocument && toTargetId) {
+          links.push({
+            moduleid: expect(linkNode.getAttribute('document'), 'logic requires attribute exists'),
+            targetid: expect(linkNode.getAttribute('target-id'), 'logic requires attribute exists'),
+            element: linkNode
+          })
+        }
       }
       return cachify(links)
     }
@@ -587,9 +600,6 @@ export class BookBundle {
     const item = this.bundleItemFromUri(change.uri)
     if (item == null) {
       return
-    }
-    if (!this.containsBundleItem(item)) {
-      throw new Error(`BUG: Key '${item.key}' invalid for item type '${item.type}'`)
     }
     const func = {
       collections: {

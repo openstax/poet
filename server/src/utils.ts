@@ -65,82 +65,6 @@ export function calculateElementPositions(element: any): Position[] {
   return [startPosition, endPosition]
 }
 
-// export interface ValidationRequest {
-//   textDocument: TextDocument
-//   version: number
-// }
-
-// export class ValidationQueue {
-//   private queue: ValidationRequest[]
-//   private timer: NodeJS.Immediate | undefined
-
-//   constructor(private readonly connection: Connection) {
-//     this.queue = []
-//   }
-
-//   public addRequest(request: ValidationRequest): void {
-//     this.dropOldVersions(request)
-//     this.queue.push(request)
-//     this.trigger()
-//   }
-
-//   private dropOldVersions(request: ValidationRequest): void {
-//     // It's possible to get validation requests for the same document before
-//     // we've processed older ones. We can use the document version (which
-//     // increases after each change, even if it's undo / redo) to prune the queue
-//     const updatedQueue = this.queue.filter(entry => {
-//       const isOlderVersion = (entry.textDocument.uri === request.textDocument.uri) && (entry.version < request.version)
-//       const isDifferentDocument = (entry.textDocument.uri !== request.textDocument.uri)
-//       return (!isOlderVersion || isDifferentDocument)
-//     })
-
-//     this.queue = updatedQueue
-//   }
-
-//   private trigger(): void {
-//     if (this.timer !== undefined || this.queue.length === 0) {
-//       // Either the queue is empty, or we're already set to process the next
-//       // entry
-//       return
-//     }
-
-//     this.timer = setImmediate(() => {
-//       this.processQueue().finally(() => {
-//         this.timer = undefined
-//         this.trigger()
-//       })
-//     })
-//   }
-
-//   private async processQueue(): Promise<void> {
-//     const request = this.queue.shift()
-//     if (request === undefined) {
-//       return
-//     }
-//     const textDocument = request.textDocument
-//     let workspaceFolders = await this.connection.workspace.getWorkspaceFolders()
-//     if (workspaceFolders == null) {
-//       workspaceFolders = []
-//     }
-//     const diagnostics: Diagnostic[] = []
-//     const xmlData = parseXMLString(textDocument)
-//     const knownModules = await getCurrentModules(workspaceFolders)
-
-//     if (xmlData != null) {
-//       const imageValidation: Promise<Diagnostic[]> = validateImagePaths(textDocument, xmlData)
-//       const linkValidation: Promise<Diagnostic[]> = validateLinks(xmlData, knownModules)
-//       await Promise.all([imageValidation, linkValidation]).then(results => {
-//         results.forEach(diags => diagnostics.push(...diags))
-//       })
-//     }
-
-//     this.connection.sendDiagnostics({
-//       uri: textDocument.uri,
-//       diagnostics
-//     })
-//   }
-// }
-
 /**
  * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
  */
@@ -151,8 +75,15 @@ export function expect<T>(value: T | null | undefined, message: string): T {
   return value
 }
 
-export const fileExists = async (filepath: string): Promise<boolean> => {
+export const fileExistsAt = async (filepath: string): Promise<boolean> => {
   let exists = true
-  await fs.promises.access(filepath).catch(_err => { exists = false })
+  try {
+    const stat = await fs.promises.stat(filepath)
+    exists = stat.isFile()
+  } catch (err) {
+    exists = false
+  }
   return exists
 }
+
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
