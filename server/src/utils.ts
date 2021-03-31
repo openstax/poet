@@ -234,7 +234,7 @@ async function validateSamePageLinks(xmlData: Document): Promise<Diagnostic[]> {
   return diagnostics
 }
 
-function generateDiagnostic(severity: DiagnosticSeverity,
+export function generateDiagnostic(severity: DiagnosticSeverity,
   startPosition: Position, endPosition: Position, message: string,
   diagnosticSource: string): Diagnostic {
   const diagnostic: Diagnostic = {
@@ -340,29 +340,38 @@ export class ValidationQueue {
 
   private async processQueue(): Promise<void> {
     const request = this.queue.shift()
-    if (request === undefined) {
-      return
-    }
-    const textDocument = request.textDocument
-    let workspaceFolders = await this.connection.workspace.getWorkspaceFolders()
-    if (workspaceFolders == null) {
-      workspaceFolders = []
-    }
-    const diagnostics: Diagnostic[] = []
-    const xmlData = parseXMLString(textDocument)
-    const knownModules = await getCurrentModules(workspaceFolders)
+    if (request !== undefined) {
+      const textDocument = request.textDocument
+      let workspaceFolders = await this.connection.workspace.getWorkspaceFolders()
+      if (workspaceFolders == null) {
+        workspaceFolders = []
+      }
+      const diagnostics: Diagnostic[] = []
+      const xmlData = parseXMLString(textDocument)
+      const knownModules = await getCurrentModules(workspaceFolders)
 
-    if (xmlData != null) {
-      const imageValidation: Promise<Diagnostic[]> = validateImagePaths(textDocument, xmlData)
-      const linkValidation: Promise<Diagnostic[]> = validateLinks(xmlData, knownModules)
-      await Promise.all([imageValidation, linkValidation]).then(results => {
-        results.forEach(diags => diagnostics.push(...diags))
+      if (xmlData != null) {
+        const imageValidation: Promise<Diagnostic[]> = validateImagePaths(textDocument, xmlData)
+        const linkValidation: Promise<Diagnostic[]> = validateLinks(xmlData, knownModules)
+        await Promise.all([imageValidation, linkValidation]).then(results => {
+          results.forEach(diags => diagnostics.push(...diags))
+        })
+      }
+
+      this.connection.sendDiagnostics({
+        uri: textDocument.uri,
+        diagnostics
       })
     }
-
-    this.connection.sendDiagnostics({
-      uri: textDocument.uri,
-      diagnostics
-    })
   }
+}
+
+/**
+ * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
+ */
+export function expect<T>(value: T | null | undefined, message: string): T {
+  if (value == null) {
+    throw new Error(message)
+  }
+  return value
 }

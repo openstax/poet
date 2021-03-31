@@ -2,11 +2,14 @@
 
 set -xeo pipefail
 
+
+test_repo_dest=./client/out/client/src/test/data/test-repo
+
 cp -r ./client/dist/* ./client/out/
-[[ -d ./client/out/test/data/test-repo/ ]] || mkdir -p ./client/out/test/data/test-repo/
-cp -r ./collections/ ./client/out/test/data/test-repo/
-cp -r ./media/ ./client/out/test/data/test-repo/
-cp -r ./modules/ ./client/out/test/data/test-repo/
+[[ -d "${test_repo_dest}" ]] || mkdir -p "${test_repo_dest}"
+cp -r ./collections/ "${test_repo_dest}"
+cp -r ./media/ "${test_repo_dest}"
+cp -r ./modules/ "${test_repo_dest}"
 
 macos_arg=''
 if [[ "$(uname)" == 'Darwin' ]]; then
@@ -14,7 +17,7 @@ if [[ "$(uname)" == 'Darwin' ]]; then
 fi
 
 echo '==> Instrument the client source files'
-$(npm bin)/nyc instrument --compact=false --source-map --in-place ./client/out/ ./client/out/
+$(npm bin)/nyc instrument --exclude 'client/out/client/src/test/**/*' --compact=false --source-map --in-place ./client/out/ ./client/out/
 
 echo '==> Edit the Cypress HTML files to load javascript'
 find ./client/out/ -name *.html -exec sed -i ${macos_arg} -E "s/(script-src.+)[;]/\1 'unsafe-eval';/g" {} \;
