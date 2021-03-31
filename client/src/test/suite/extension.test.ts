@@ -185,7 +185,6 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(roots[0].fsPath, TEST_DATA_DIR)
   })
   test('getLocalResourceRoots works when there is no folder for a resource', () => {
-    sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(undefined)
 
     function getBaseRoots(scheme: any) {
       const resource = {
@@ -194,12 +193,18 @@ suite('Extension Test Suite', function (this: Suite) {
       } as vscode.Uri
       return getLocalResourceRoots([], resource)
     }
+    const folder = {} as vscode.WorkspaceFolder // the content does not matter
+    const s = sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(folder)
+    sinon.stub(vscode.workspace, 'workspaceFolders').get(()=> [{uri: '/some/path/does/not/matter'}])
+    assert.strictEqual(getBaseRoots('CASE-T-T-?').length, 1)
+    sinon.stub(vscode.workspace, 'workspaceFolders').get(()=> undefined)
+    assert.strictEqual(getBaseRoots('CASE-T-F-?').length, 0)
+    s.restore()
+    sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(undefined)
+    assert.strictEqual(getBaseRoots('CASE-F-?-F').length, 0)
+    // CASE-F-?-T
     assert.strictEqual(getBaseRoots('file').length, 1)
     assert.strictEqual(getBaseRoots('').length, 1)
-    assert.strictEqual(getBaseRoots('a-custom-scheme').length, 0)
-
-    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
-    assert.strictEqual(getBaseRoots(undefined).length, 0)
   })
   test('show toc editor', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
