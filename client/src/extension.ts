@@ -10,7 +10,7 @@ import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-type
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
 // Only one instance of each type allowed at any given time
-const activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel} = {}
+const activePanelsByType: { [key in PanelType]?: vscode.WebviewPanel } = {}
 const extensionExports = {
   activePanelsByType
 }
@@ -24,12 +24,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
   populateXsdSchemaFiles(resourceRootDir)
   await client.onReady()
 
-  const activationByType: {[key in PanelType]: any} = {
+  const activationByType: { [key in PanelType]: any } = {
     [PanelType.TOC_EDITOR]: ensureCatch(showTocEditor(PanelType.TOC_EDITOR, resourceRootDir, activePanelsByType, client)),
     [PanelType.IMAGE_UPLOAD]: ensureCatch(showImageUpload(PanelType.IMAGE_UPLOAD, resourceRootDir, activePanelsByType)),
     [PanelType.CNXML_PREVIEW]: ensureCatch(showCnxmlPreview(PanelType.CNXML_PREVIEW, resourceRootDir, activePanelsByType))
   }
-  const defaultLocationByType: {[key in PanelType]: vscode.ViewColumn} = {
+  const defaultLocationByType: { [key in PanelType]: vscode.ViewColumn } = {
     [PanelType.TOC_EDITOR]: vscode.ViewColumn.One,
     [PanelType.IMAGE_UPLOAD]: vscode.ViewColumn.One,
     [PanelType.CNXML_PREVIEW]: vscode.ViewColumn.Two

@@ -10,15 +10,14 @@ export const getRepo = (): Repository => {
 }
 
 export const validateMessage = (message: string) => {
-  vscode.window.showInformationMessage(`Validating: ${message}`);  // you don't need this
-  return message.length > 2 ? null : 'Too short!';  // return null if validates
+  return message.length > 2 ? null : 'Too short!';
 }
 
 export const getMessage = async (): Promise<string | undefined> => {
   const message = await vscode.window.showInputBox({
     prompt: 'Push Message: ',
     placeHolder: '...',
-    validateInput: text => { return text }
+    validateInput: validateMessage
   })
   return message
 }
