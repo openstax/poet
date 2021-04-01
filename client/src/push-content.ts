@@ -1,4 +1,4 @@
-import vscode, { InputBoxOptions } from 'vscode'
+import vscode from 'vscode'
 import { expect } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git-api/git'
 
@@ -9,8 +9,8 @@ export const getRepo = (): Repository => {
   return result
 }
 
-export const validateMessage = (message: string) => {
-  return message.length > 2 ? null : 'Too short!';
+export const validateMessage = (message: string): string | null => {
+  return message.length > 2 ? null : 'Too short!'
 }
 
 export const getMessage = async (): Promise<string | undefined> => {
@@ -35,7 +35,7 @@ export const _pushContent = (_getRepo: () => Repository, _getMessage: () => Then
   const commitMessage = await _getMessage()
   if (commitMessage != null) {
     try {
-      await repo.commit(commitMessage as string, commitOptions)
+      await repo.commit(commitMessage, commitOptions)
       commitSucceeded = true
     } catch (e) {
       console.log(e)
