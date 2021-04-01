@@ -15,6 +15,7 @@ import { Suite } from 'mocha'
 import { DOMParser } from 'xmldom'
 import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
+import { promises } from 'dns'
 
 // Test runs in out/test/suite, not src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../src/test/data/test-repo')
@@ -312,13 +313,17 @@ suite('Extension Test Suite', function (this: Suite) {
 })
 
 // Push Content Tests
-const ignore = async (msg: string): Promise<string | undefined> => { return undefined }
-const makeCaptureMessage = (messages: string[]): (msg: string) => Promise<string | undefined> => {
-  const captureMessage = async (msg: string): Promise<string | undefined> => {
-    messages.push(msg)
+const ignore = async (message: string): Promise<string | undefined> => { return undefined }
+const makeCaptureMessage = (messages: string[]): (message: string) => Promise<string | undefined> => {
+  const captureMessage = async (message: string): Promise<string | undefined> => {
+    messages.push(message)
     return undefined
   }
   return captureMessage
+}
+const makeMockInputMessage = (message: string): () => Promise<string | undefined> => {
+  const mockMessageInput = async (): Promise<string | undefined> => { return message }
+  return mockMessageInput
 }
 const commitOptions: CommitOptions = { all: true }
 
@@ -330,6 +335,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('push with no conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
 
     const getRepo = (): Repository => {
       const stubRepo = Substitute.for<Repository>()
@@ -341,13 +347,14 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, captureMessage, ignore))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, captureMessage, ignore))
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Successful content push.')
   })
   test('push with merge conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
     const error: any = new Error()
 
     error.gitErrorCode = GitErrorCodes.Conflict
@@ -362,13 +369,14 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage))
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Content conflict, please resolve.')
   })
   test('unknown commit error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
     const error: any = new Error()
 
     error.gitErrorCode = ''
@@ -383,13 +391,14 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage))
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
   })
   test('push with no changes', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
     const error: any = new Error()
 
     error.stdout = 'nothing to commit.'
@@ -404,13 +413,14 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage))
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'No changes to push.')
   })
   test('unknown push error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
     const error: any = new Error()
 
     error.stdout = ''
@@ -425,7 +435,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage))
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage))
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
   })
