@@ -348,10 +348,6 @@ export class BookBundle {
     return Array.from(this.imagesInternal.inner.values())
   }
 
-  mediaItems(): BundleItem[] {
-    return Array.from(this.imagesInternal.inner.values()).map(key => ({ type: 'media', key: key }))
-  }
-
   modules(): string[] {
     return Array.from(this.modulesInternal.inner.keys())
   }

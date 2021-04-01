@@ -85,5 +85,3 @@ export const fileExistsAt = async (filepath: string): Promise<boolean> => {
   }
   return exists
 }
-
-export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))

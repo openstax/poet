@@ -1,7 +1,4 @@
 import {
-  TextDocument
-} from 'vscode-languageserver-textdocument'
-import {
   IMAGEPATH_DIAGNOSTIC_SOURCE,
   LINK_DIAGNOSTIC_SOURCE,
   calculateElementPositions,
@@ -21,7 +18,73 @@ import {
 import { BookBundle, ModuleTitle } from '../book-bundle'
 import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, recachify } from '../cachify'
 import { TocTreeCollection } from '../../../common/src/toc-tree'
-import { validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
+import { BundleValidationQueue, BundleValidationRequest, validateCollection, validateCollectionModules, validateModule, validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
+import { DOMParser } from 'xmldom'
+
+describe('general bundle validation', function () {
+  before(function () {
+    mockfs({
+      '/bundle/collections': {},
+      '/bundle/modules': {},
+      '/bundle/media': {}
+    })
+  })
+  after(function () {
+    mockfs.restore()
+  })
+  it('returns null when a bundle item does not exist', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    assert.strictEqual(await validateCollection(bundle, 'no-exist'), null)
+    assert.strictEqual(await validateCollectionModules(bundle, 'no-exist'), null)
+    assert.strictEqual(await validateModule(bundle, 'no-exist'), null)
+    assert.strictEqual(await validateModuleLinks(bundle, 'no-exist'), null)
+    assert.strictEqual(await validateModuleImagePaths(bundle, 'no-exist'), null)
+  })
+})
+
+describe('validateCollectionModules', function () {
+  before(function () {
+    mockfs({
+      '/bundle/collections/valid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>valid</md:title>
+            <md:slug>valid</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="module" />
+          </col:content>
+        </col:collection>
+      `,
+      '/bundle/collections/invalid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>invalid</md:title>
+            <md:slug>invalid</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="no-exist" />
+          </col:content>
+        </col:collection>
+      `,
+      '/bundle/modules/module/index.cnxml': '',
+      '/bundle/media': {}
+    })
+  })
+  after(function () {
+    mockfs.restore()
+  })
+  it('should return no diagnostics when collection is valid', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const diagnostics = expect(await validateCollectionModules(bundle, 'valid.xml'), 'collection exists')
+    assert.strictEqual(diagnostics.length, 0)
+  })
+  it('should return diagnostics when collection is invalid', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const diagnostics = expect(await validateCollectionModules(bundle, 'invalid.xml'), 'collection exists')
+    assert.strictEqual(diagnostics.length, 1)
+  })
+})
 
 function expect<T>(value: T | null | undefined): T {
   return expectOrig(value, 'test_assertion')
@@ -373,217 +436,271 @@ describe('validateLinks', function () {
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
 })
-// describe('ValidationQueue', function () {
-//   const connection: any = {}
 
-//   it('should queue requests when added', async () => {
-//     const validationQueue: ValidationQueue = new ValidationQueue(connection)
-//     const inputDocument = TextDocument.create('', '', 0, '')
-//     sinon.stub(validationQueue, 'processQueue' as any)
-//     sinon.stub(validationQueue, 'trigger' as any)
-//     const validationRequest: ValidationRequest = {
-//       textDocument: inputDocument,
-//       version: inputDocument.version
-//     }
+describe('ValidationQueue', function () {
+  const noConnection: any = {}
+  before(function () {
+    mockfs({
+      '/bundle/media': {},
+      '/bundle/collections/valid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>valid</md:title>
+            <md:slug>valid</md:slug>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/collections/invalid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>invalid</md:title>
+            <md:slug>invalid</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="no-exist" />
+          </col:content>
+        </col:collection>
+      `,
+      '/bundle/modules/valid/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content />
+        </document>
+      `,
+      '/bundle/modules/invalid/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <link document="no-exist" />
+          </content>
+        </document>
+      `,
+    })
+  })
+  after(function () {
+    mockfs.restore()
+  })
+  it('will error when validation is requested for an uri that is not in the bundle', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/no-exist/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    assert.rejects((validationQueue as any).processQueue())
+  })
+  it('will log error when validation is requested for an uri that is not in the bundle', async () => {
+    const clock = sinon.useFakeTimers()
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      console: {
+        error: sinon.stub()
+      }
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/no-exist/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    clock.next()
+    await (validationQueue as any).timer
+    assert.notStrictEqual(validationQueue.errorEncountered, undefined)
+    assert(connection.console.error.calledOnce)
+    clock.restore()
+  }).timeout(5000)
+  it('should queue all bundle items when a request is made', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    // The triggering uri is added twice (once in normal position, once prioritized before the rest of the bundle items)
+    assert.strictEqual((validationQueue as any).queue.length, 5)
+  })
+  it('should drop old items when a request is made', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest1: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+    }
+    const validationRequest2: BundleValidationRequest = {
+      causeUri: 'file:///bundle/collections/valid.xml'
+    }
+    validationQueue.addRequest(validationRequest1)
+    validationQueue.addRequest(validationRequest2)
+    // The triggering uri is added twice (once in normal position, once prioritized before the rest of the bundle items)
+    assert.strictEqual((validationQueue as any).queue.length, 5)
+  })
+  it('should self-trigger when adding requests', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    const triggerStub = sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    assert(triggerStub.calledOnce)
+  })
+  it('should process items upon triggering', async () => {
+    const clock = sinon.useFakeTimers()
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    const processQueueSpy = sinon.spy(validationQueue as any, 'processQueue')
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    // All of the requests should still be in the queue
+    assert.strictEqual((validationQueue as any).queue.length, 5)
+    // Advance the event loop and ensure the queue is consumed
+    clock.next()
+    await (validationQueue as any).timer
+    assert.strictEqual((validationQueue as any).queue.length, 4)
+    assert(processQueueSpy.calledOnce)
+    clock.restore()
+  })
+  it('should not send diagnostics when processing valid document', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/collections/valid.xml'
+    }
+    validationQueue.addRequest(validationRequest)
+    await (validationQueue as any).processQueue()
+    assert(connection.sendDiagnostics.notCalled)
+  })
+  it('should not send diagnostics when processing valid document', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    await (validationQueue as any).processQueue()
+    assert(connection.sendDiagnostics.notCalled)
+  })
+  it('should send diagnostics when processing invalid document', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/collections/invalid.xml'
+    }
+    validationQueue.addRequest(validationRequest)
+    await (validationQueue as any).processQueue()
+    assert(connection.sendDiagnostics.calledOnce)
+  })
+  it('should send diagnostics when processing invalid document', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/invalid/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    await (validationQueue as any).processQueue()
+    assert(connection.sendDiagnostics.calledOnce)
+  })
+  it('should do nothing when processing empty queue', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    const promise = (validationQueue as any).processQueue()
+    assert.doesNotReject(promise)
+  })
+})
 
-//     validationQueue.addRequest(validationRequest)
-//     assert.strictEqual((validationQueue as any).queue.length, 1)
+describe('calculateElementPositions', function () {
+  it('should return start and end positions using siblings when available', async () => {
+    const xmlContent = `
+      <document>
+        <content>
+          <image src="" />
+        </content>
+      </document>
+    `
+    const xmlData = new DOMParser().parseFromString(xmlContent)
+    const elements = xpath.select('//image', xmlData) as Element[]
+    const imageElement = elements[0]
+    assert(imageElement.nextSibling != null)
+    const expectedStart: Position = {
+      line: 3,
+      character: 10
+    }
+    const expectedEnd: Position = {
+      line: 3,
+      character: 26
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    assert.deepStrictEqual(result, [expectedStart, expectedEnd])
+  })
+  it('should return start and end positions based on attributes when no siblings', async () => {
+    const xmlContent = `
+      <document>
+        <content><image src="value" /></content>
+      </document>
+    `
+    const xmlData = new DOMParser().parseFromString(xmlContent)
+    const elements = xpath.select('//image', xmlData) as Node[]
+    const imageElement = elements[0] as Element
 
-//     sinon.restore()
-//   })
-//   it('should drop old version when adding requests', async () => {
-//     const validationQueue: ValidationQueue = new ValidationQueue(connection)
-//     const inputDocument1v0 = TextDocument.create('file:///test1.cnxml', '', 0, '')
-//     const inputDocument1v1 = TextDocument.create('file:///test1.cnxml', '', 1, '')
-//     const inputDocument2v0 = TextDocument.create('file:///test2.cnxml', '', 0, '')
-//     const documents: TextDocument[] = [inputDocument1v0, inputDocument1v1, inputDocument2v0]
-//     sinon.stub(validationQueue, 'processQueue' as any)
-//     sinon.stub(validationQueue, 'trigger' as any)
+    assert(imageElement.nextSibling === null)
+    const expectedStart: Position = {
+      line: 2,
+      character: 17
+    }
+    const expectedEnd: Position = {
+      line: 2,
+      character: 35
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    assert.deepStrictEqual(result, [expectedStart, expectedEnd])
+  })
+  it('should return start and end positions based on tag when no siblings or attributes', async () => {
+    const xmlContent = `
+      <document>
+        <content><image /></content>
+      </document>
+    `
+    const xmlData = new DOMParser().parseFromString(xmlContent)
+    const elements = xpath.select('//image', xmlData) as Node[]
+    const imageElement = elements[0] as Element
 
-//     documents.forEach(element => {
-//       const validationRequest: ValidationRequest = {
-//         textDocument: element,
-//         version: element.version
-//       }
-//       validationQueue.addRequest(validationRequest)
-//     })
-
-//     assert.strictEqual((validationQueue as any).queue.length, 2)
-//     const entry0 = (validationQueue as any).queue[0]
-//     const entry1 = (validationQueue as any).queue[1]
-//     assert.strictEqual(entry0.textDocument.uri, inputDocument1v1.uri)
-//     assert.strictEqual(entry0.version, inputDocument1v1.version)
-//     assert.strictEqual(entry1.textDocument.uri, inputDocument2v0.uri)
-//     assert.strictEqual(entry1.version, inputDocument2v0.version)
-
-//     sinon.restore()
-//   })
-//   it('should self-invoke trigger() when adding requests', async () => {
-//     const validationQueue: ValidationQueue = new ValidationQueue(connection)
-//     const inputDocument = TextDocument.create('', '', 0, '')
-//     sinon.stub(validationQueue, 'processQueue' as any)
-//     const triggerStub = sinon.stub(validationQueue, 'trigger' as any)
-//     const validationRequest: ValidationRequest = {
-//       textDocument: inputDocument,
-//       version: inputDocument.version
-//     }
-
-//     validationQueue.addRequest(validationRequest)
-//     assert(triggerStub.calledOnce)
-
-//     sinon.restore()
-//   })
-//   it('should queue requests when triggering processing', async () => {
-//     const clock = sinon.useFakeTimers()
-//     const validationQueue: ValidationQueue = new ValidationQueue(connection)
-//     const inputDocument1 = TextDocument.create('file:///test1.cnxml', '', 0, '')
-//     const inputDocument2 = TextDocument.create('file:///test2.cnxml', '', 0, '')
-//     const inputDocument3 = TextDocument.create('file:///test3.cnxml', '', 0, '')
-//     const inputDocument4 = TextDocument.create('file:///test4.cnxml', '', 0, '')
-//     const documents: TextDocument[] = [
-//       inputDocument1, inputDocument2, inputDocument3, inputDocument4
-//     ]
-
-//     documents.forEach(element => {
-//       const validationRequest: ValidationRequest = {
-//         textDocument: element,
-//         version: element.version
-//       }
-//       validationQueue.addRequest(validationRequest)
-//     })
-
-//     // All of the requests should still be in the queue
-//     assert.strictEqual((validationQueue as any).queue.length, 4)
-//     // Advance the event loop and ensure the queue is consumed
-//     clock.next()
-//     assert.strictEqual((validationQueue as any).queue.length, 3)
-//     sinon.restore()
-//   })
-//   it('should remove queue entries when processing', async () => {
-//     const validationQueue: ValidationQueue = new ValidationQueue(connection)
-//     const inputDocument = TextDocument.create('', '', 0, '')
-//     const workspaceFoldersStub = sinon.stub().resolves(null)
-//     sinon.stub(validationQueue, 'trigger' as any).callsFake(
-//       function () {
-//         (validationQueue as any).processQueue()
-//       }
-//     )
-//     connection.workspace = {
-//       getWorkspaceFolders: workspaceFoldersStub
-//     } as any
-
-//     const validationRequest: ValidationRequest = {
-//       textDocument: inputDocument,
-//       version: inputDocument.version
-//     }
-
-//     validationQueue.addRequest(validationRequest)
-//     assert.strictEqual((validationQueue as any).queue.length, 0)
-
-//     sinon.restore()
-//   })
-//   it('should send diagnostics when processing document', async () => {
-//     const validationQueue: ValidationQueue = new ValidationQueue(connection)
-//     const inputDocument = TextDocument.create('', '', 0, '<document></document>')
-//     const sendDiagnosticsStub = sinon.stub()
-//     sinon.stub(validationQueue, 'trigger' as any)
-
-//     connection.sendDiagnostics = sendDiagnosticsStub
-
-//     const validationRequest: ValidationRequest = {
-//       textDocument: inputDocument,
-//       version: inputDocument.version
-//     }
-
-//     validationQueue.addRequest(validationRequest)
-//     await (validationQueue as any).processQueue()
-//     assert.strictEqual(sendDiagnosticsStub.callCount, 1)
-//     sinon.restore()
-//   })
-// })
-
-// describe('calculateElementPositions', function () {
-//   it('should return start and end positions using siblings when available', async () => {
-//     const xmlContent = `
-//       <document>
-//         <content>
-//           <image src="" />
-//         </content>
-//       </document>
-//     `
-//     const document = TextDocument.create(
-//       'file:///modules/m12345/index.cnxml', '', 0, xmlContent
-//     )
-//     const xmlData = parseXMLString(document)
-//     assert(xmlData != null)
-//     const elements = xpath.select('//image', xmlData) as Node[]
-//     const imageElement = elements[0] as Element
-
-//     assert(imageElement.nextSibling != null)
-//     const expectedStart: Position = {
-//       line: 3,
-//       character: 10
-//     }
-//     const expectedEnd: Position = {
-//       line: 3,
-//       character: 26
-//     }
-//     const result: Position[] = calculateElementPositions(imageElement)
-//     assert.deepStrictEqual(result, [expectedStart, expectedEnd])
-//   })
-//   it('should return start and end positions based on attributes when no siblings', async () => {
-//     const xmlContent = `
-//       <document>
-//         <content><image src="value" /></content>
-//       </document>
-//     `
-//     const document = TextDocument.create(
-//       'file:///modules/m12345/index.cnxml', '', 0, xmlContent
-//     )
-//     const xmlData = parseXMLString(document)
-//     assert(xmlData != null)
-//     const elements = xpath.select('//image', xmlData) as Node[]
-//     const imageElement = elements[0] as Element
-
-//     assert(imageElement.nextSibling === null)
-//     const expectedStart: Position = {
-//       line: 2,
-//       character: 17
-//     }
-//     const expectedEnd: Position = {
-//       line: 2,
-//       character: 35
-//     }
-//     const result: Position[] = calculateElementPositions(imageElement)
-//     assert.deepStrictEqual(result, [expectedStart, expectedEnd])
-//   })
-//   it('should return start and end positions based on tag when no siblings or attributes', async () => {
-//     const xmlContent = `
-//       <document>
-//         <content><image /></content>
-//       </document>
-//     `
-//     const document = TextDocument.create(
-//       'file:///modules/m12345/index.cnxml', '', 0, xmlContent
-//     )
-//     const xmlData = parseXMLString(document)
-//     assert(xmlData != null)
-//     const elements = xpath.select('//image', xmlData) as Node[]
-//     const imageElement = elements[0] as Element
-
-//     assert(imageElement.nextSibling === null)
-//     const expectedStart: Position = {
-//       line: 2,
-//       character: 17
-//     }
-//     const expectedEnd: Position = {
-//       line: 2,
-//       character: 23
-//     }
-//     const result: Position[] = calculateElementPositions(imageElement)
-//     assert.deepStrictEqual(result, [expectedStart, expectedEnd])
-//   })
-// })
+    assert(imageElement.nextSibling === null)
+    const expectedStart: Position = {
+      line: 2,
+      character: 17
+    }
+    const expectedEnd: Position = {
+      line: 2,
+      character: 23
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    assert.deepStrictEqual(result, [expectedStart, expectedEnd])
+  })
+})
 describe('BookBundle', () => {
   before(function () {
     mockfs({

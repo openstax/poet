@@ -1,6 +1,6 @@
 import { Connection, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver/node'
 import { BookBundle, BundleItem } from './book-bundle'
-import { calculateElementPositions, expect, generateDiagnostic, sleep } from './utils'
+import { calculateElementPositions, expect, generateDiagnostic } from './utils'
 
 enum DiagnosticSource {
   ImagePath = 'Image validation',
@@ -14,6 +14,7 @@ export interface BundleValidationRequest {
 export class BundleValidationQueue {
   private queue: BundleItem[] = []
   private timer: NodeJS.Immediate | undefined
+  errorEncountered: Error | undefined
 
   constructor(private readonly bundle: BookBundle, private readonly connection: Connection) {}
 
@@ -35,21 +36,30 @@ export class BundleValidationQueue {
   }
 
   private async processQueue(): Promise<void> {
+    // This is slower than pop, but we shouldn't ever have more than a couple hundred items.
+    // It's still sub-ms total to shift all the items in total
     const item = this.queue.shift()
     if (item === undefined) {
       return
     }
-    this.connection.console.log(`Validating: ${item.type} -> ${item.key} `)
     const uri = expect(this.bundle.bundleItemToUri(item), 'item must be in bundle')
     if (item.type === 'collections') {
+      const diagnostics = expect(await validateCollection(this.bundle, item.key), 'collection must be in bundle')
+      if (diagnostics.length === 0) {
+        return
+      }
       this.connection.sendDiagnostics({
         uri,
-        diagnostics: expect(await validateCollection(this.bundle, item.key), 'collection must be in bundle')
+        diagnostics
       })
     } else if (item.type === 'modules') {
+      const diagnostics = expect(await validateModule(this.bundle, item.key), 'module must be in bundle')
+      if (diagnostics.length === 0) {
+        return
+      }
       this.connection.sendDiagnostics({
         uri,
-        diagnostics: expect(await validateModule(this.bundle, item.key), 'module must be in bundle')
+        diagnostics
       })
     } else {
       this.connection.console.error(`Ignoring unexpected item of type '${item.type}' and key ${item.key} in queue`)
@@ -57,25 +67,27 @@ export class BundleValidationQueue {
   }
 
   private trigger(): void {
-    if (this.queue.length === 0) {
-      this.connection.console.log('Validation queue empty')
-    }
     if (this.timer !== undefined || this.queue.length === 0) {
       // Either the queue is empty, or we're already set to process the next
       // entry
       return
     }
 
-    this.timer = setImmediate(() => {
-      this.processQueue().finally(() => {
+    const processNext = () => {
+      this.processQueue().catch(err => {
+        this.errorEncountered = err
+        this.connection.console.error(`Error occured while processing validation queue`)
+      }).finally(() => {
         this.timer = undefined
         this.trigger()
       })
-    })
+    }
+
+    this.timer = setImmediate(processNext)
   }
 }
 
-const validateCollection = async (bundle: BookBundle, filename: string): Promise<Diagnostic[] | null> => {
+export const validateCollection = async (bundle: BookBundle, filename: string): Promise<Diagnostic[] | null> => {
   const collectionExists = bundle.collectionExists(filename)
   if (!collectionExists) {
     return null
