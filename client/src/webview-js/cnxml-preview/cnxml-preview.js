@@ -86,11 +86,7 @@ function messageHandler(message) {
   vdom_patch(preview, newVDom, currentVDom)
   currentVDom = newVDom
 
-  if (window.MathJax) {
-    window.MathJax.Hub.Typeset(preview)
-  } else {
-    document.body.append('[MathJax is not loaded]')
-  }
+  window.MathJax ? window.MathJax.Hub.Typeset(preview) : document.body.append('[MathJax is not loaded]')
 }
 
 function sendUpdatedXML() {

@@ -71,9 +71,10 @@ export function getRootPathUri(): vscode.Uri | null {
 /**
  * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
  */
-export function expect<T>(value: T | null | undefined, message?: string): T {
+export function expect<T>(value: T | null | undefined, message: string): T {
   if (value == null) {
-    throw new Error(message ?? 'Unwrapped a null value')
+    void vscode.window.showErrorMessage(message)
+    throw new Error(message)
   }
   return value
 }
@@ -85,9 +86,10 @@ export function expect<T>(value: T | null | undefined, message?: string): T {
  * This comes at the cost of not preserving the original return type as well
  * as the resulting thrown error being uncatchable.
  */
-export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: any[]) => void {
-  return (...args: any[]) => {
-    func(...args).catch((err: Error) => {
+export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: any[]) => Promise<any> {
+  return async (...args: any[]) => {
+    return await func(...args).catch((err: Error) => {
+      void vscode.window.showErrorMessage(err.message)
       throw err
     })
   }
@@ -141,7 +143,14 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
     // Register the server for XML documents
-    documentSelector: [{ scheme: 'file', language: 'xml' }]
+    documentSelector: [{ scheme: 'file', language: 'xml' }],
+    synchronize: {
+      fileEvents: [
+        vscode.workspace.createFileSystemWatcher('**/media/**'),
+        vscode.workspace.createFileSystemWatcher('**/modules/**'),
+        vscode.workspace.createFileSystemWatcher('**/collections/**')
+      ]
+    }
   }
 
   // Create the language client and start the client.

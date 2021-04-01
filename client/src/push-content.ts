@@ -3,7 +3,7 @@ import { expect } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git-api/git'
 
 export const getRepo = (): Repository => {
-  const gitExtension = expect(vscode.extensions.getExtension<GitExtension>('vscode.git')).exports
+  const gitExtension = expect(vscode.extensions.getExtension<GitExtension>('vscode.git'), 'Expected vscode.git extension to be installed').exports
   const api = gitExtension.getAPI(1)
   const result: Repository = api.repositories[0]
   return result
@@ -23,18 +23,6 @@ export const getMessage = async (): Promise<string | undefined> => {
   return message
 }
 
-// export const getMessage = async (): Promise<string | undefined> => {
-//   const message = await vscode.window.showInputBox({
-//     prompt: 'Push Message: ',
-//     placeHolder: '...',
-//     validateInput: text => {
-//       vscode.window.showInformationMessage(`Validating: ${text}`);  // you don't need this
-//       return text.length < 2 ? null : 'Too short!';  // return null if validates
-//     }
-//   });
-//   return message;
-// }
-
 export const pushContent = () => async () => {
   await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
 }
@@ -44,17 +32,6 @@ export const _pushContent = (_getRepo: () => Repository, _getMessage: () => Then
   const commitOptions: CommitOptions = { all: true }
 
   let commitSucceeded = false
-
-  // let message = ""
-
-
-  // vscode.window.showInputBox({ prompt: 'Push Message: ', placeHolder: '...' }).then(value => {
-  //   if (value === undefined) {
-  //     void errorReporter('Push cancelled.')
-  //     throw new Error('cancelled');
-  //   }
-  //   // handle valid values
-  // });
 
   const commitMessage = await _getMessage()
   if (commitMessage != null) {

@@ -122,6 +122,6 @@ The CNXML schema validation in the extension is performed using XSD files genera
 ```bash
 $ git -C ../cnxml checkout poet-schema
 $ java -jar jing.jar -s ../cnxml/cnxml/xml/cnxml/schema/rng/0.7/cnxml-jing.rng > cnxml-simplified.rng
-$ java -jar trang.jar -I rng -O xsd -o any-attribute-process-contents=strict cnxml-simplified.rng client/static/xsd/mathml.xsd
+$ java -jar trang.jar -I rng -O xsd cnxml-simplified.rng client/static/xsd/mathml.xsd
 $ rm cnxml-simplified.rng
 ```
