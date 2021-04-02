@@ -73,10 +73,10 @@ export class BundleValidationQueue {
       return
     }
 
-    const processNext = () => {
+    const processNext = (): void => {
       this.processQueue().catch(err => {
         this.errorEncountered = err
-        this.connection.console.error(`Error occured while processing validation queue`)
+        this.connection.console.error('Error occured while processing validation queue')
       }).finally(() => {
         this.timer = undefined
         this.trigger()

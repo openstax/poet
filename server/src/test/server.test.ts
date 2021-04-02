@@ -155,7 +155,7 @@ describe('validateImagePaths', function () {
             <image src="../../stray.jpg" />
           </content>
         </document>
-      `,
+      `
     })
   })
   after(function () {
@@ -180,7 +180,7 @@ describe('validateImagePaths', function () {
         start: Position.create(6, 12),
         end: Position.create(6, 52)
       },
-      message: `Image file '../../media/no-exist.jpg' does not exist`,
+      message: 'Image file \'../../media/no-exist.jpg\' does not exist',
       source: IMAGEPATH_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
@@ -194,7 +194,7 @@ describe('validateImagePaths', function () {
         start: Position.create(6, 12),
         end: Position.create(6, 43)
       },
-      message: `Image file '../../stray.jpg' exists, but not in the bundle media directory`,
+      message: 'Image file \'../../stray.jpg\' exists, but not in the bundle media directory',
       source: IMAGEPATH_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
@@ -208,7 +208,7 @@ describe('validateImagePaths', function () {
         start: Position.create(6, 12),
         end: Position.create(6, 48)
       },
-      message: `Image file '../../media/dupe.jpg' does not exist`,
+      message: 'Image file \'../../media/dupe.jpg\' does not exist',
       source: IMAGEPATH_DIAGNOSTIC_SOURCE
     }
     const expectedDiagnostic2: Diagnostic = {
@@ -217,7 +217,7 @@ describe('validateImagePaths', function () {
         start: Position.create(7, 12),
         end: Position.create(7, 48)
       },
-      message: `Image file '../../media/dupe.jpg' does not exist`,
+      message: 'Image file \'../../media/dupe.jpg\' does not exist',
       source: IMAGEPATH_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
@@ -231,7 +231,7 @@ describe('validateImagePaths', function () {
         start: Position.create(7, 12),
         end: Position.create(7, 28)
       },
-      message: `Image file '' does not exist`,
+      message: 'Image file \'\' does not exist',
       source: IMAGEPATH_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
@@ -326,7 +326,7 @@ describe('validateLinks', function () {
             <para id="para" />
           </content>
         </document>
-      `,
+      `
     })
   })
   after(function () {
@@ -346,7 +346,7 @@ describe('validateLinks', function () {
         start: Position.create(6, 12),
         end: Position.create(6, 33)
       },
-      message: `Target ID '' in document 'link-empty-target' does not exist`,
+      message: 'Target ID \'\' in document \'link-empty-target\' does not exist',
       source: LINK_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
@@ -360,7 +360,7 @@ describe('validateLinks', function () {
         start: Position.create(6, 12),
         end: Position.create(6, 32)
       },
-      message: `Target document '' for link cannot be found in the bundle`,
+      message: 'Target document \'\' for link cannot be found in the bundle',
       source: LINK_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
@@ -384,7 +384,7 @@ describe('validateLinks', function () {
         start: Position.create(6, 12),
         end: Position.create(6, 41)
       },
-      message: `Target ID 'no-exist' in document 'links-invalid-target' does not exist`,
+      message: 'Target ID \'no-exist\' in document \'links-invalid-target\' does not exist',
       source: LINK_DIAGNOSTIC_SOURCE
     }
     const expectedDiagnostic2: Diagnostic = {
@@ -393,7 +393,7 @@ describe('validateLinks', function () {
         start: Position.create(7, 12),
         end: Position.create(7, 73)
       },
-      message: `Target ID 'no-exist' in document 'links-invalid-target' does not exist`,
+      message: 'Target ID \'no-exist\' in document \'links-invalid-target\' does not exist',
       source: LINK_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
@@ -407,7 +407,7 @@ describe('validateLinks', function () {
         start: Position.create(6, 12),
         end: Position.create(6, 37)
       },
-      message: `Target ID 'para' in document 'links-duplicate-target' is not unique`,
+      message: 'Target ID \'para\' in document \'links-duplicate-target\' is not unique',
       source: LINK_DIAGNOSTIC_SOURCE
     }
     const expectedDiagnostic2: Diagnostic = {
@@ -416,7 +416,7 @@ describe('validateLinks', function () {
         start: Position.create(7, 12),
         end: Position.create(7, 71)
       },
-      message: `Target ID 'para' in document 'links-duplicate-target' is not unique`,
+      message: 'Target ID \'para\' in document \'links-duplicate-target\' is not unique',
       source: LINK_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
@@ -430,7 +430,7 @@ describe('validateLinks', function () {
         start: Position.create(6, 12),
         end: Position.create(6, 40)
       },
-      message: `Target document 'no-exist' for link cannot be found in the bundle`,
+      message: 'Target document \'no-exist\' for link cannot be found in the bundle',
       source: LINK_DIAGNOSTIC_SOURCE
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
@@ -479,7 +479,7 @@ describe('ValidationQueue', function () {
             <link document="no-exist" />
           </content>
         </document>
-      `,
+      `
     })
   })
   after(function () {
@@ -493,7 +493,7 @@ describe('ValidationQueue', function () {
       causeUri: 'file:///bundle/modules/no-exist/index.cnxml'
     }
     validationQueue.addRequest(validationRequest)
-    assert.rejects((validationQueue as any).processQueue())
+    await assert.rejects((validationQueue as any).processQueue())
   })
   it('will log error when validation is requested for an uri that is not in the bundle', async () => {
     const clock = sinon.useFakeTimers()
@@ -628,7 +628,7 @@ describe('ValidationQueue', function () {
     const bundle = await BookBundle.from('/bundle')
     const validationQueue = new BundleValidationQueue(bundle, noConnection)
     const promise = (validationQueue as any).processQueue()
-    assert.doesNotReject(promise)
+    await assert.doesNotReject(promise)
   })
 })
 
