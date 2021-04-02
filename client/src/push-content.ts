@@ -3,7 +3,7 @@ import { expect } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git-api/git'
 
 export const getRepo = (): Repository => {
-  const gitExtension = expect(vscode.extensions.getExtension<GitExtension>('vscode.git')).exports
+  const gitExtension = expect(vscode.extensions.getExtension<GitExtension>('vscode.git'), 'Expected vscode.git extension to be installed').exports
   const api = gitExtension.getAPI(1)
   const result: Repository = api.repositories[0]
   return result

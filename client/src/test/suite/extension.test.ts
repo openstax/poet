@@ -2,10 +2,11 @@ import assert from 'assert'
 import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
+import SinonRoot from 'sinon'
 import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
 import 'source-map-support/register'
-import { expect, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
-import { activate } from './../../extension'
+import { expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
+import { activate, deactivate } from './../../extension'
 import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
@@ -31,6 +32,10 @@ const extensionExports = activate(contextStub as any)
 
 async function sleep(ms: number): Promise<void> {
   return await new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function expect<T>(value: T | null | undefined): T {
+  return expectOrig(value, 'test_assertion')
 }
 
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
@@ -81,14 +86,21 @@ suite('Unsaved Files', function (this: Suite) {
 })
 
 suite('Extension Test Suite', function (this: Suite) {
+  const sinon = SinonRoot.createSandbox()
   this.beforeEach(resetTestData)
+  this.afterEach(() => sinon.restore())
+
   test('expect unwraps non-null', () => {
     const maybe: string | null = 'test'
     assert.doesNotThrow(() => { expect(maybe) })
   })
-  test('expect unwraps null', async () => {
+  test('expect throws on null', async () => {
     const maybe: string | null = null
     assert.throws(() => { expect(maybe) })
+  })
+  test('expect throws on null with custom message', async () => {
+    const maybe: string | null = null
+    assert.throws(() => { expectOrig(maybe, 'my-message') })
   })
   test('getRootPathUri', () => {
     const uri = expect(getRootPathUri())
@@ -106,6 +118,21 @@ suite('Extension Test Suite', function (this: Suite) {
      * const uriAgain = expect(getRootPathUri())
      * assert.strictEqual(uriAgain.fsPath, TEST_DATA_DIR)
      */
+  })
+  test('ensureCatch throws when its argument throws', async () => {
+    const errMessage = 'I am an error'
+    async function fn(): Promise<void> { throw new Error(errMessage) }
+    const s = sinon.spy(vscode.window, 'showErrorMessage')
+    const wrapped = ensureCatch(fn)
+
+    try {
+      await wrapped()
+      assert.fail('ensureCatch should have thrown an error')
+    } catch (err) {
+      assert.strictEqual(err.message, errMessage)
+    }
+    // Verify that a message was sent to the user
+    assert.strictEqual(s.callCount, 1)
   })
   test('addBaseHref', () => {
     const uri = expect(getRootPathUri())
@@ -156,6 +183,27 @@ suite('Extension Test Suite', function (this: Suite) {
     const roots = getLocalResourceRoots([], uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') }))
     assert.strictEqual(roots.length, 1)
     assert.strictEqual(roots[0].fsPath, TEST_DATA_DIR)
+  })
+  test('getLocalResourceRoots works when there is no folder for a resource', () => {
+    function getBaseRoots(scheme: any): readonly vscode.Uri[] {
+      const resource = {
+        scheme: scheme,
+        fsPath: '/some/path/to/file'
+      } as any as vscode.Uri
+      return getLocalResourceRoots([], resource)
+    }
+    const folder = {} as any as vscode.WorkspaceFolder // the content does not matter
+    const s = sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(folder)
+    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => [{ uri: '/some/path/does/not/matter' }])
+    assert.strictEqual(getBaseRoots('CASE-T-T-?').length, 1)
+    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
+    assert.strictEqual(getBaseRoots('CASE-T-F-?').length, 0)
+    s.restore()
+    sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(undefined)
+    assert.strictEqual(getBaseRoots('CASE-F-?-F').length, 0)
+    // CASE-F-?-T
+    assert.strictEqual(getBaseRoots('file').length, 1)
+    assert.strictEqual(getBaseRoots('').length, 1)
   })
   test('show toc editor', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
@@ -331,6 +379,14 @@ suite('Extension Test Suite', function (this: Suite) {
     populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(!fs.existsSync(testXsdPath))
   })
+  test('schema-generation does not run when there is no workspace', async () => {
+    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
+    populateXsdSchemaFiles('')
+  })
+
+  this.afterAll(async () => {
+    await deactivate()
+  })
 })
 
 // Push Content Tests
@@ -370,7 +426,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('push with merge conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const error: any = new Error()
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = GitErrorCodes.Conflict
 
@@ -391,7 +447,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('unknown commit error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const error: any = new Error()
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = ''
 
@@ -412,7 +468,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('push with no changes', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const error: any = new Error()
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = 'nothing to commit.'
 
@@ -433,7 +489,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('unknown push error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const error: any = new Error()
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = ''
 
