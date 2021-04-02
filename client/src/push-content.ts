@@ -33,35 +33,33 @@ export const _pushContent = (_getRepo: () => Repository, _getMessage: () => Then
   let commitSucceeded = false
 
   const commitMessage = await _getMessage()
-  if (commitMessage != null) {
-    try {
-      await repo.commit(commitMessage, commitOptions)
-      commitSucceeded = true
-    } catch (e) {
-      console.log(e)
-      if (e.stdout == null) { throw e }
-      if ((e.stdout as string).includes('nothing to commit')) {
-        void errorReporter('No changes to push.')
-      } else {
-        const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
-        void errorReporter(`Push failed: ${message}`)
-      }
+  if (commitMessage == null) { return }
+  try {
+    await repo.commit(commitMessage, commitOptions)
+    commitSucceeded = true
+  } catch (e) {
+    console.log(e)
+    if (e.stdout == null) { throw e }
+    if ((e.stdout as string).includes('nothing to commit')) {
+      void errorReporter('No changes to push.')
+    } else {
+      const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
+      void errorReporter(`Push failed: ${message}`)
     }
+  }
 
-    if (commitSucceeded) {
-      try {
-        await repo.pull()
-        await repo.push()
-        void infoReporter('Successful content push.')
-      } catch (e) {
-        console.log(e)
-        if (e.gitErrorCode == null) { throw e }
-        if (e.gitErrorCode === GitErrorCodes.Conflict) {
-          void errorReporter('Content conflict, please resolve.')
-        } else {
-          void errorReporter(`Push failed: ${e.message as string}`)
-        }
-      }
+  if (!commitSucceeded) { return }
+  try {
+    await repo.pull()
+    await repo.push()
+    void infoReporter('Successful content push.')
+  } catch (e) {
+    console.log(e)
+    if (e.gitErrorCode == null) { throw e }
+    if (e.gitErrorCode === GitErrorCodes.Conflict) {
+      void errorReporter('Content conflict, please resolve.')
+    } else {
+      void errorReporter(`Push failed: ${e.message as string}`)
     }
   }
 }
