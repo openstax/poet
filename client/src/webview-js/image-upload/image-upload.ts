@@ -1,6 +1,11 @@
-declare let acquireVsCodeApi: any;
+declare let acquireVsCodeApi: any
 let vscode: any
-let pending: { mediaName: any; data: string | ArrayBuffer | null }[] = []
+
+interface PendingEntry {
+  mediaName: string
+  data: string | ArrayBuffer | null
+}
+let pending: PendingEntry[] = []
 
 window.addEventListener('load', () => {
   vscode = acquireVsCodeApi() // eslint-disable-line no-undef
@@ -10,14 +15,16 @@ window.addEventListener('load', () => {
   const uploadButton = document.getElementById('trigger-upload') as HTMLElement
   const cancelButton = document.getElementById('cancel-upload') as HTMLElement
 
-  const clearPending = () => {
+  const clearPending = (): void => {
     pending = []
-    while (preview.firstChild) {
-      preview.firstChild.remove()
+    if (preview.firstChild !== null) {
+      while (preview.firstChild) { // eslint-disable-line @typescript-eslint/strict-boolean-expressions
+        preview.firstChild.remove()
+      }
     }
   }
 
-  const preventDefaults = (e: Event) => {
+  const preventDefaults = (e: Event): void => {
     e.preventDefault()
     e.stopPropagation()
   };
@@ -26,15 +33,15 @@ window.addEventListener('load', () => {
     dropArea.addEventListener(eventName, preventDefaults, false)
   })
 
-  const previewFile = (file: File) => {
+  const previewFile = (file: File): void => {
     const reader = new FileReader()
     reader.readAsDataURL(file)
     reader.onloadend = function () {
       const container = document.createElement('div')
       const name = document.createElement('p')
       name.textContent = file.name
-      const img = document.createElement('img') as HTMLImageElement
-      img.src = reader.result as string;
+      const img = document.createElement('img')
+      img.src = reader.result as string
       container.appendChild(name)
       container.appendChild(img)
       preview.appendChild(container)
@@ -46,15 +53,15 @@ window.addEventListener('load', () => {
     }
   }
 
-  const handleDrop = (e: DragEvent) => {
-    const files = e.dataTransfer?.files;
+  const handleDrop = (e: DragEvent): void => {
+    const files = e.dataTransfer?.files
 
-    if (files) {
+    if (files) { // eslint-disable-line @typescript-eslint/strict-boolean-expressions
       ([...files]).forEach(previewFile)
     }
   }
 
-  const handleUpload = (e: Event) => {
+  const handleUpload = (e: Event): void => {
     e.preventDefault()
     vscode.postMessage({
       mediaUploads: pending
@@ -62,7 +69,7 @@ window.addEventListener('load', () => {
     clearPending()
   }
 
-  const handleCancel = (e: Event) => {
+  const handleCancel = (e: Event): void => {
     e.preventDefault()
     clearPending()
   }
