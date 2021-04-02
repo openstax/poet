@@ -21,6 +21,10 @@ import { TocTreeCollection } from '../../../common/src/toc-tree'
 import { BundleValidationQueue, BundleValidationRequest, validateCollection, validateCollectionModules, validateModule, validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
 import { DOMParser } from 'xmldom'
 
+function expect<T>(value: T | null | undefined): T {
+  return expectOrig(value, 'test_assertion')
+}
+
 describe('general bundle validation', function () {
   before(function () {
     mockfs({
@@ -76,19 +80,15 @@ describe('validateCollectionModules', function () {
   })
   it('should return no diagnostics when collection is valid', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const diagnostics = expect(await validateCollectionModules(bundle, 'valid.xml'), 'collection exists')
+    const diagnostics = expect(await validateCollectionModules(bundle, 'valid.xml'))
     assert.strictEqual(diagnostics.length, 0)
   })
   it('should return diagnostics when collection is invalid', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const diagnostics = expect(await validateCollectionModules(bundle, 'invalid.xml'), 'collection exists')
+    const diagnostics = expect(await validateCollectionModules(bundle, 'invalid.xml'))
     assert.strictEqual(diagnostics.length, 1)
   })
 })
-
-function expect<T>(value: T | null | undefined): T {
-  return expectOrig(value, 'test_assertion')
-}
 
 describe('validateImagePaths', function () {
   before(function () {
