@@ -214,6 +214,7 @@ class ModuleInfo {
       if (titleTagEnd - actualTitleStart > 280) {
         // If the title is so long you can't tweet it,
         // then something probably went wrong.
+        /* istanbul ignore next */
         return null
       }
       const moduleTitle = data.substring(actualTitleStart, titleTagEnd).trim()
@@ -391,6 +392,7 @@ export class BookBundle {
     const indexOfFirstSep = itemPathRelative.indexOf(FS_SEP)
     const itemType = itemPathRelative.substring(0, indexOfFirstSep)
     if (!isBundleItemType(itemType)) {
+      // given uri is probably not in this workspace
       return null
     }
     if (itemType === 'modules') {

@@ -13,7 +13,7 @@ import {
   FileChangeType,
   Position
 } from 'vscode-languageserver'
-import { BookBundle, ModuleTitle } from '../book-bundle'
+import { BookBundle, BundleItem, ModuleTitle } from '../book-bundle'
 import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, recachify } from '../cachify'
 import { TocTreeCollection } from '../../../common/src/toc-tree'
 import { BundleValidationQueue, BundleValidationRequest, DiagnosticCode, validateCollection, validateCollectionModules, validateModule, validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
@@ -831,6 +831,47 @@ describe('BookBundle', () => {
   after(function () {
     mockfs.restore()
   })
+  describe('BundleItem interface', function () {
+    it('can convert workspace uris to BundleItem', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      const uri = 'file:///bundle/collections/normal.collection.xml'
+      const expected = {
+        type: 'collections',
+        key: 'normal.collection.xml'
+      }
+      assert.deepStrictEqual(bundle.bundleItemFromUri(uri), expected)
+    })
+    it('can convert BundleItem to a workspace uri', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      const item: BundleItem = {
+        type: 'collections',
+        key: 'normal.collection.xml'
+      }
+      const expected = 'file:///bundle/collections/normal.collection.xml'
+      assert.deepStrictEqual(bundle.bundleItemToUri(item), expected)
+    })
+    it('returns a null value when converting an incorrect workspace uri', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      const uri = 'file:///bundle2/collections/normal.collection.xml'
+      assert.strictEqual(bundle.bundleItemFromUri(uri), null)
+    })
+    it('returns a null value when uri points to a directory, not a potential file', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      assert.strictEqual(bundle.bundleItemFromUri('file:///bundle/collections'), null)
+      assert.strictEqual(bundle.bundleItemFromUri('file:///bundle/modules'), null)
+      assert.strictEqual(bundle.bundleItemFromUri('file:///bundle/media'), null)
+      assert.strictEqual(bundle.bundleItemFromUri('file:///bundle/modules/moduleid'), null)
+    })
+    it('can convert workspace uris to BundleItem, even for non-existent items', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      const uri = 'file:///bundle/collections/does-not-exist.collection.xml'
+      const expected = {
+        type: 'collections',
+        key: 'does-not-exist.collection.xml'
+      }
+      assert.deepStrictEqual(bundle.bundleItemFromUri(uri), expected)
+    })
+  })
   it('can be created from a bundle directory', async () => {
     const bundle = await BookBundle.from('/bundle')
     assert.deepStrictEqual(bundle.images().sort(), ['empty.jpg', 'orphan.jpg'])
@@ -995,6 +1036,14 @@ describe('BookBundle', () => {
       subtitle: 'm00001'
     }
     assert.deepStrictEqual(module, expected)
+  })
+  it('does not bust caches when non-relevant uris are processed as a change', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphanedModules = await bundle.orphanedModules()
+    bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/modules/m00000' })
+    bundle.processChange({ type: FileChangeType.Created, uri: '/bundle2/modules/m00000/index.cnxml' })
+    const orphanedModulesAgain = await bundle.orphanedModules()
+    assert(cacheEquals(orphanedModules, orphanedModulesAgain))
   })
   it('busts caches when a module is created', async () => {
     const bundle = await BookBundle.from('/bundle')
