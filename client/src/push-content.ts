@@ -1,6 +1,32 @@
 import vscode from 'vscode'
-import { expect } from './utils'
+import { expect, getErrorDiagnosticsBySource } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git-api/git'
+
+export enum DiagnosticSource {
+  xml = 'xml',
+  cnxml = 'cnxml'
+}
+
+export const PushValidationModal = {
+  cnxmlErrorMsg: 'There are outstanding validation errors that must be resolved before pushing is allowed.',
+  xmlErrorMsg: 'There are outstanding schema errors. Are you sure you want to push these changes?',
+  xmlErrorIgnoreItem: 'Yes, I know more than you'
+}
+
+export const canPush = async (errorsBySource: Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>): Promise<boolean> => {
+  if (errorsBySource.has(DiagnosticSource.cnxml)) {
+    void vscode.window.showErrorMessage(PushValidationModal.cnxmlErrorMsg, { modal: true })
+    return false
+  } else if (errorsBySource.has(DiagnosticSource.xml)) {
+    const selectedItem = await vscode.window.showErrorMessage(PushValidationModal.xmlErrorMsg, { modal: true }, PushValidationModal.xmlErrorIgnoreItem)
+    if (selectedItem === PushValidationModal.xmlErrorIgnoreItem) {
+      return true
+    } else {
+      return false
+    }
+  }
+  return true
+}
 
 export const getRepo = (): Repository => {
   const gitExtension = expect(vscode.extensions.getExtension<GitExtension>('vscode.git'), 'Expected vscode.git extension to be installed').exports
@@ -10,7 +36,9 @@ export const getRepo = (): Repository => {
 }
 
 export const pushContent = () => async () => {
-  await _pushContent(getRepo, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+  if (await canPush(getErrorDiagnosticsBySource())) {
+    await _pushContent(getRepo, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+  }
 }
 
 export const _pushContent = (_getRepo: () => Repository, infoReporter: (msg: string) => Thenable<string | undefined>, errorReporter: (msg: string) => Thenable<string | undefined>) => async () => {

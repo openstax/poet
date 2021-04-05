@@ -406,6 +406,51 @@ suite('Extension Test Suite', function (this: Suite) {
     expected.set('source2', [[file1Uri, file1Diag2], [file2Uri, file2Diag1]])
     assert.deepStrictEqual(errorsBySource, expected)
   })
+  test('canPush returns correct values', async () => {
+    const fileUri = { path: '/test.cnxml', scheme: 'file' } as any as vscode.Uri
+    const cnxmlError = {
+      severity: vscode.DiagnosticSeverity.Error,
+      source: pushContent.DiagnosticSource.cnxml
+    } as any as vscode.Diagnostic
+    const xmlError = {
+      severity: vscode.DiagnosticSeverity.Error,
+      source: pushContent.DiagnosticSource.xml
+    } as any as vscode.Diagnostic
+    const errorsBySource = new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>()
+    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
+
+    // No errors
+    assert(await pushContent.canPush(errorsBySource))
+
+    // CNXML errors
+    errorsBySource.set(pushContent.DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    assert(!(await pushContent.canPush(errorsBySource)))
+    assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true }))
+
+    // Both CNXML and XML errors
+    errorsBySource.clear()
+    showErrorMsgStub.reset()
+    errorsBySource.set(pushContent.DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    errorsBySource.set(pushContent.DiagnosticSource.xml, [[fileUri, xmlError]])
+    assert(!(await pushContent.canPush(errorsBySource)))
+    assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true }))
+
+    // XML errors, user cancels
+    errorsBySource.clear()
+    showErrorMsgStub.reset()
+    showErrorMsgStub.returns(Promise.resolve(undefined))
+    errorsBySource.set(pushContent.DiagnosticSource.xml, [[fileUri, xmlError]])
+    assert(!(await pushContent.canPush(errorsBySource)))
+    assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
+
+    // XML errors, user overrides
+    errorsBySource.clear()
+    showErrorMsgStub.reset()
+    showErrorMsgStub.returns(Promise.resolve(pushContent.PushValidationModal.xmlErrorIgnoreItem as any as vscode.MessageItem))
+    errorsBySource.set(pushContent.DiagnosticSource.xml, [[fileUri, xmlError]])
+    assert(await pushContent.canPush(errorsBySource))
+    assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
+  })
 
   this.afterAll(async () => {
     await deactivate()
