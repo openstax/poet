@@ -17,8 +17,6 @@ import {
 } from 'vscode-uri'
 
 import {
-  ValidationQueue,
-  ValidationRequest,
   expect
 } from './utils'
 
@@ -33,6 +31,7 @@ import {
 } from '../../common/src/requests'
 
 import { BookBundle } from './book-bundle'
+import { BundleValidationQueue } from './bundle-validation'
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -41,8 +40,7 @@ const connection = createConnection(ProposedFeatures.all)
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
 
-const workspaceBookBundles: Map<string, BookBundle> = new Map()
-const validationQueue: ValidationQueue = new ValidationQueue(connection)
+const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
 
 const getWorkspaceRootPath = (workspace: WorkspaceFolder): string => {
   return URI.parse(workspace.uri).fsPath
@@ -50,7 +48,9 @@ const getWorkspaceRootPath = (workspace: WorkspaceFolder): string => {
 
 const createBookBundleForWorkspace = async (workspace: WorkspaceFolder): Promise<void> => {
   const workspaceRoot = getWorkspaceRootPath(workspace)
-  workspaceBookBundles.set(workspace.uri, await BookBundle.from(workspaceRoot))
+  const bundle = await BookBundle.from(workspaceRoot)
+  const bundleValidator = new BundleValidationQueue(bundle, connection)
+  workspaceBookBundles.set(workspace.uri, [bundle, bundleValidator])
 }
 
 const removeBookBundleForWorkspace = (workspace: WorkspaceFolder): void => {
@@ -83,8 +83,10 @@ connection.onInitialized(() => {
       for (const workspace of currentWorkspaces) {
         try {
           await createBookBundleForWorkspace(workspace)
+          const bundleValidator = expect(workspaceBookBundles.get(workspace.uri), 'already returned if key missing')[1]
+          bundleValidator.addRequest()
         } catch (err) {
-          connection.console.log(`Could not parse ${workspace.uri} as a book bundle`)
+          connection.console.error(`Could not parse ${workspace.uri} as a book bundle`)
         }
       }
     }
@@ -93,31 +95,26 @@ connection.onInitialized(() => {
 })
 
 documents.onDidOpen(event => {
-  connection.console.log(
-    `Language server received an open event for ${event.document.uri}`
-  )
-})
-
-documents.onDidClose(event => {
-  connection.console.log(
-    `Language server received a close event for ${event.document.uri}`
-  )
-})
-
-documents.onDidChangeContent(async event => {
-  const textDocument = event.document
-  const request: ValidationRequest = {
-    textDocument: textDocument,
-    version: textDocument.version
+  const inner = async (): Promise<void> => {
+    const workspaces = expect(await connection.workspace.getWorkspaceFolders(), 'workspace must be open for event to occur')
+    const eventUri = URI.parse(event.document.uri)
+    if (eventUri.scheme !== 'file') {
+      return
+    }
+    const workspaceChanged = expect(workspaces.find((workspace) => event.document.uri.startsWith(workspace.uri)), `file ${eventUri.fsPath} must exist in workspace`)
+    if (!workspaceBookBundles.has(workspaceChanged.uri)) {
+      await createBookBundleForWorkspace(workspaceChanged)
+      return
+    }
+    const bundleValidator = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')[1]
+    bundleValidator.addRequest({ causeUri: event.document.uri })
   }
-
-  validationQueue.addRequest(request)
+  inner().catch(err => { throw err })
 })
 
 connection.onDidChangeWatchedFiles(({ changes }) => {
   const inner = async (): Promise<void> => {
     const workspaces = expect(await connection.workspace.getWorkspaceFolders(), 'workspace must be open for event to occur')
-    if (workspaces == null) { return }
     for (const change of changes) {
       const changedFileUri = URI.parse(change.uri)
       if (changedFileUri.scheme !== 'file') {
@@ -128,8 +125,9 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
         await createBookBundleForWorkspace(workspaceChanged)
         return
       }
-      const bundleChanged = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')
+      const [bundleChanged, bundleValidator] = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')
       bundleChanged.processChange(change)
+      bundleValidator.addRequest({ causeUri: change.uri })
     }
     await connection.sendRequest('onDidChangeWatchedFiles')
   }
@@ -152,29 +150,32 @@ connection.onRequest('onDidChangeWorkspaceFolders', async (event) => {
     try {
       await createBookBundleForWorkspace(workspaceCompat)
     } catch (err) {
-      connection.console.log(`Could not parse ${workspaceCompat.uri} as a book bundle`)
+      connection.console.error(`Could not parse ${workspaceCompat.uri} as a book bundle`)
     }
   }
 })
 
 connection.onRequest(ExtensionServerRequest.BundleTrees, async ({ workspaceUri }: BundleTreesArgs): Promise<BundleTreesResponse> => {
-  const bundle = workspaceBookBundles.get(workspaceUri)
-  if (bundle == null) { return null }
+  const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
+  if (bundleAndValidator == null) { return null }
+  const bundle = bundleAndValidator[0]
   const trees = await Promise.all(bundle.collections().map(async collection => expect(await bundle.collectionTree(collection), 'collection must exist').inner))
   return trees
 })
 
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
-  const bundle = workspaceBookBundles.get(workspaceUri)
-  if (bundle == null) { return null }
+  const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
+  if (bundleAndValidator == null) { return null }
+  const bundle = bundleAndValidator[0]
   const orphanModules = Array.from((await bundle.orphanedModules()).inner)
   const result = await Promise.all(orphanModules.map(async m => await bundle.moduleAsTreeObject(m)))
   return result
 })
 
 connection.onRequest(ExtensionServerRequest.BundleModules, async ({ workspaceUri }: BundleModulesArgs): Promise<BundleModulesResponse> => {
-  const bundle = workspaceBookBundles.get(workspaceUri)
-  if (bundle == null) { return null }
+  const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
+  if (bundleAndValidator == null) { return null }
+  const bundle = bundleAndValidator[0]
   const modules = bundle.modules()
   const result = await Promise.all(modules.map(async m => await bundle.moduleAsTreeObject(m)))
   return result
