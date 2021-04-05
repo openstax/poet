@@ -166,3 +166,25 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
 
   return client
 }
+
+export function getErrorDiagnosticsBySource(): Map<string, Array<[vscode.Uri, vscode.Diagnostic]>> {
+  const errorsBySource = new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>()
+  const diagnostics = vscode.languages.getDiagnostics()
+  let uri, fileDiagnostics
+
+  for ([uri, fileDiagnostics] of diagnostics) {
+    for (const diag of fileDiagnostics.filter(d => d.severity === vscode.DiagnosticSeverity.Error)) {
+      const source = diag.source
+      if (source === undefined) {
+        continue
+      }
+      if (errorsBySource.has(source)) {
+        errorsBySource.get(source)?.push([uri, diag])
+      } else {
+        errorsBySource.set(source, [[uri, diag]])
+      }
+    }
+  }
+
+  return errorsBySource
+}

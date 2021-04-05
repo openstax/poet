@@ -5,7 +5,11 @@ import vscode from 'vscode'
 import SinonRoot from 'sinon'
 import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
 import 'source-map-support/register'
-import { expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
+import {
+  expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots,
+  fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles,
+  getErrorDiagnosticsBySource
+} from './../../utils'
 import { activate, deactivate } from './../../extension'
 import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
@@ -382,6 +386,25 @@ suite('Extension Test Suite', function (this: Suite) {
   test('schema-generation does not run when there is no workspace', async () => {
     sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
     populateXsdSchemaFiles('')
+  })
+  test('getErrorDiagnostics returns expected errors', async () => {
+    const file1Uri = { path: '/test1.cnxml', scheme: 'file' } as any as vscode.Uri
+    const file1Diag1 = { severity: vscode.DiagnosticSeverity.Error, source: 'source1' } as any as vscode.Diagnostic
+    const file1Diag2 = { severity: vscode.DiagnosticSeverity.Error, source: 'source2' } as any as vscode.Diagnostic
+    const file1Diag3 = { severity: vscode.DiagnosticSeverity.Warning, source: 'source2' } as any as vscode.Diagnostic
+    const file2Uri = { path: '/test2.cnxml', scheme: 'file' } as any as vscode.Uri
+    const file2Diag1 = { severity: vscode.DiagnosticSeverity.Error, source: 'source2' } as any as vscode.Diagnostic
+    const file2Diag2 = { severity: vscode.DiagnosticSeverity.Error, source: undefined } as any as vscode.Diagnostic
+    const testDiagnostics: Array<[vscode.Uri, vscode.Diagnostic[]]> = [
+      [file1Uri, [file1Diag1, file1Diag2, file1Diag3]],
+      [file2Uri, [file2Diag1, file2Diag2]]
+    ]
+    sinon.stub(vscode.languages, 'getDiagnostics').returns(testDiagnostics)
+    const errorsBySource = getErrorDiagnosticsBySource()
+    const expected = new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>()
+    expected.set('source1', [[file1Uri, file1Diag1]])
+    expected.set('source2', [[file1Uri, file1Diag2], [file2Uri, file2Diag1]])
+    assert.deepStrictEqual(errorsBySource, expected)
   })
 
   this.afterAll(async () => {
