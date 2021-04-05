@@ -42,15 +42,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
     [PanelType.CNXML_PREVIEW]: vscode.ViewColumn.Two
   }
 
-  const lazilyFocusOrOpenPanelOfType = (type: PanelType) => {
+  const lazilyFocusOrOpenPanelOfType = (type: PanelType, hardRefocus: boolean) => {
     return (...args: any[]) => {
       if (activePanelsByType[type] != null) {
         const activePanel = expect(activePanelsByType[type], `Could not find panel type '${type}'`)
         try {
-          activePanel.reveal(defaultLocationByType[type])
-          return
+          if (!hardRefocus) {
+            activePanel.reveal(defaultLocationByType[type])
+            return
+          }
+          activePanel.dispose()
         } catch (err) {
-          // Panel was probably disposed
+          // Panel was probably disposed already
           return activationByType[type](...args)
         }
       }
@@ -62,9 +65,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
     await client.sendRequest('onDidChangeWorkspaceFolders', event)
   })
   client.onRequest('onDidChangeWatchedFiles', ensureCatch(refreshTocPanel))
-  vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR]))
-  vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD]))
-  vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR], false))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD], false))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW], true))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))
 
   return extensionExports

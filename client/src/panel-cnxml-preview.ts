@@ -20,7 +20,7 @@ export const getContents = (uri?: vscode.Uri): [string | undefined, vscode.TextE
   return [contents, editor, uri]
 }
 
-export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async (uri?: vscode.Uri, previewSettings?: any) => {
+export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}) => async () => {
   let [contents, editor, resource] = getContents()
   if (contents == null || resource == null) { return }
   const definitelyResource = resource
