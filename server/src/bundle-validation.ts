@@ -45,18 +45,12 @@ export class BundleValidationQueue {
     const uri = expect(this.bundle.bundleItemToUri(item), 'item must be in bundle')
     if (item.type === 'collections') {
       const diagnostics = expect(await validateCollection(this.bundle, item.key), 'collection must be in bundle')
-      if (diagnostics.length === 0) {
-        return
-      }
       this.connection.sendDiagnostics({
         uri,
         diagnostics
       })
     } else if (item.type === 'modules') {
       const diagnostics = expect(await validateModule(this.bundle, item.key), 'module must be in bundle')
-      if (diagnostics.length === 0) {
-        return
-      }
       this.connection.sendDiagnostics({
         uri,
         diagnostics

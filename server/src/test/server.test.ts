@@ -580,33 +580,41 @@ describe('ValidationQueue', function () {
     assert(processQueueSpy.calledOnce)
     clock.restore()
   })
-  it('should not send diagnostics when processing valid document', async () => {
+  it('should send empty diagnostics when processing valid document', async () => {
     const bundle = await BookBundle.from('/bundle')
     const connection = {
       sendDiagnostics: sinon.stub()
     }
     const validationQueue = new BundleValidationQueue(bundle, connection as any)
     sinon.stub(validationQueue, 'trigger' as any)
+    const causeUri = 'file:///bundle/collections/valid.xml'
     const validationRequest: BundleValidationRequest = {
-      causeUri: 'file:///bundle/collections/valid.xml'
+      causeUri
     }
     validationQueue.addRequest(validationRequest)
     await (validationQueue as any).processQueue()
-    assert(connection.sendDiagnostics.notCalled)
+    assert(connection.sendDiagnostics.calledOnceWith({
+      uri: causeUri,
+      diagnostics: []
+    }))
   })
-  it('should not send diagnostics when processing valid document', async () => {
+  it('should send empty diagnostics when processing valid document', async () => {
     const bundle = await BookBundle.from('/bundle')
     const connection = {
       sendDiagnostics: sinon.stub()
     }
     const validationQueue = new BundleValidationQueue(bundle, connection as any)
     sinon.stub(validationQueue, 'trigger' as any)
+    const causeUri = 'file:///bundle/modules/valid/index.cnxml'
     const validationRequest: BundleValidationRequest = {
-      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+      causeUri
     }
     validationQueue.addRequest(validationRequest)
     await (validationQueue as any).processQueue()
-    assert(connection.sendDiagnostics.notCalled)
+    assert(connection.sendDiagnostics.calledOnceWith({
+      uri: causeUri,
+      diagnostics: []
+    }))
   })
   it('should send diagnostics when processing invalid document', async () => {
     const bundle = await BookBundle.from('/bundle')
