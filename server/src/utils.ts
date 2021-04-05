@@ -5,7 +5,7 @@ import {
 } from 'vscode-languageserver/node'
 import fs from 'fs'
 
-const SOURCE = 'cnxml language server'
+const SOURCE = 'cnxml'
 
 export function generateDiagnostic(severity: DiagnosticSeverity,
   startPosition: Position, endPosition: Position, message: string,

@@ -19,7 +19,7 @@ import { TocTreeCollection } from '../../../common/src/toc-tree'
 import { BundleValidationQueue, BundleValidationRequest, DiagnosticCode, validateCollection, validateCollectionModules, validateModule, validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
 import { DOMParser } from 'xmldom'
 
-const DIAGNOSTIC_SOURCE = 'cnxml language server'
+const DIAGNOSTIC_SOURCE = 'cnxml'
 
 function expect<T>(value: T | null | undefined): T {
   return expectOrig(value, 'test_assertion')
