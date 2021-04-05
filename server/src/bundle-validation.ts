@@ -2,7 +2,7 @@ import { Connection, Diagnostic, DiagnosticSeverity } from 'vscode-languageserve
 import { BookBundle, BundleItem } from './book-bundle'
 import { calculateElementPositions, expect, generateDiagnostic } from './utils'
 
-enum DiagnosticSource {
+export enum DiagnosticCode {
   ImagePath = 'Image validation',
   Link = 'Link validation'
 }
@@ -115,7 +115,7 @@ export const validateCollectionModules = async (bundle: BookBundle, filename: st
       startPosition,
       endPosition,
       message,
-      DiagnosticSource.Link
+      DiagnosticCode.Link
     )
     diagnostics.push(diagnostic)
   }
@@ -153,7 +153,7 @@ export const validateModuleImagePaths = async (bundle: BookBundle, moduleid: str
       startPosition,
       endPosition,
       message,
-      DiagnosticSource.ImagePath
+      DiagnosticCode.ImagePath
     )
     diagnostics.push(diagnostic)
   }
@@ -174,7 +174,7 @@ export const validateModuleLinks = async (bundle: BookBundle, moduleid: string):
         startPosition,
         endPosition,
         message,
-        DiagnosticSource.Link
+        DiagnosticCode.Link
       )
       diagnostics.push(diagnostic)
     }

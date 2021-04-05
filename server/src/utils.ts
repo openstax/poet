@@ -5,12 +5,11 @@ import {
 } from 'vscode-languageserver/node'
 import fs from 'fs'
 
-export const IMAGEPATH_DIAGNOSTIC_SOURCE = 'Image validation'
-export const LINK_DIAGNOSTIC_SOURCE = 'Link validation'
+const SOURCE = 'cnxml language server'
 
 export function generateDiagnostic(severity: DiagnosticSeverity,
   startPosition: Position, endPosition: Position, message: string,
-  diagnosticSource: string): Diagnostic {
+  diagnosticCode: string): Diagnostic {
   const diagnostic: Diagnostic = {
     severity: severity,
     range: {
@@ -18,7 +17,8 @@ export function generateDiagnostic(severity: DiagnosticSeverity,
       end: endPosition
     },
     message: message,
-    source: diagnosticSource
+    source: SOURCE,
+    code: diagnosticCode
   }
   return diagnostic
 }

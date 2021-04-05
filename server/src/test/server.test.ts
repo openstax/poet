@@ -1,6 +1,4 @@
 import {
-  IMAGEPATH_DIAGNOSTIC_SOURCE,
-  LINK_DIAGNOSTIC_SOURCE,
   calculateElementPositions,
   expect as expectOrig
 } from './../utils'
@@ -18,8 +16,10 @@ import {
 import { BookBundle, ModuleTitle } from '../book-bundle'
 import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, recachify } from '../cachify'
 import { TocTreeCollection } from '../../../common/src/toc-tree'
-import { BundleValidationQueue, BundleValidationRequest, validateCollection, validateCollectionModules, validateModule, validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
+import { BundleValidationQueue, BundleValidationRequest, DiagnosticCode, validateCollection, validateCollectionModules, validateModule, validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
 import { DOMParser } from 'xmldom'
+
+const DIAGNOSTIC_SOURCE = 'cnxml language server'
 
 function expect<T>(value: T | null | undefined): T {
   return expectOrig(value, 'test_assertion')
@@ -181,7 +181,8 @@ describe('validateImagePaths', function () {
         end: Position.create(6, 52)
       },
       message: 'Image file \'../../media/no-exist.jpg\' does not exist',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -195,7 +196,8 @@ describe('validateImagePaths', function () {
         end: Position.create(6, 43)
       },
       message: 'Image file \'../../stray.jpg\' exists, but not in the bundle media directory',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -209,7 +211,8 @@ describe('validateImagePaths', function () {
         end: Position.create(6, 48)
       },
       message: 'Image file \'../../media/dupe.jpg\' does not exist',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
     }
     const expectedDiagnostic2: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -218,7 +221,8 @@ describe('validateImagePaths', function () {
         end: Position.create(7, 48)
       },
       message: 'Image file \'../../media/dupe.jpg\' does not exist',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
   })
@@ -232,7 +236,8 @@ describe('validateImagePaths', function () {
         end: Position.create(7, 28)
       },
       message: 'Image file \'\' does not exist',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -347,7 +352,8 @@ describe('validateLinks', function () {
         end: Position.create(6, 33)
       },
       message: 'Target ID \'\' in document \'link-empty-target\' does not exist',
-      source: LINK_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -361,7 +367,8 @@ describe('validateLinks', function () {
         end: Position.create(6, 32)
       },
       message: 'Target document \'\' for link cannot be found in the bundle',
-      source: LINK_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
@@ -385,7 +392,8 @@ describe('validateLinks', function () {
         end: Position.create(6, 41)
       },
       message: 'Target ID \'no-exist\' in document \'links-invalid-target\' does not exist',
-      source: LINK_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
     const expectedDiagnostic2: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -394,7 +402,8 @@ describe('validateLinks', function () {
         end: Position.create(7, 73)
       },
       message: 'Target ID \'no-exist\' in document \'links-invalid-target\' does not exist',
-      source: LINK_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
   })
@@ -408,7 +417,8 @@ describe('validateLinks', function () {
         end: Position.create(6, 37)
       },
       message: 'Target ID \'para\' in document \'links-duplicate-target\' is not unique',
-      source: LINK_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
     const expectedDiagnostic2: Diagnostic = {
       severity: DiagnosticSeverity.Error,
@@ -417,7 +427,8 @@ describe('validateLinks', function () {
         end: Position.create(7, 71)
       },
       message: 'Target ID \'para\' in document \'links-duplicate-target\' is not unique',
-      source: LINK_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
   })
@@ -431,7 +442,8 @@ describe('validateLinks', function () {
         end: Position.create(6, 40)
       },
       message: 'Target document \'no-exist\' for link cannot be found in the bundle',
-      source: LINK_DIAGNOSTIC_SOURCE
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
