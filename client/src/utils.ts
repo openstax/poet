@@ -178,10 +178,12 @@ export function getErrorDiagnosticsBySource(): Map<string, Array<[vscode.Uri, vs
       if (source === undefined) {
         continue
       }
-      if (errorsBySource.has(source)) {
-        errorsBySource.get(source)?.push([uri, diag])
-      } else {
+
+      const existingErrors = errorsBySource.get(source)
+      if (existingErrors === undefined) {
         errorsBySource.set(source, [[uri, diag]])
+      } else {
+        existingErrors.push([uri, diag])
       }
     }
   }
