@@ -3,7 +3,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
 import SinonRoot from 'sinon'
-import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
+import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch } from '../../git-api/git.d'
 import 'source-map-support/register'
 import { expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
 import { activate, deactivate } from './../../extension'
@@ -401,6 +401,9 @@ const makeCaptureMessage = (messages: string[]): (msg: string) => Promise<string
 const commitOptions: CommitOptions = { all: true }
 
 suite('Push Button Test Suite', function (this: Suite) {
+  const sinon = SinonRoot.createSandbox()
+  this.afterEach(() => sinon.restore())
+
   test('getRepo returns repository', async () => {
     const repo = pushContent.getRepo()
     assert.notStrictEqual(repo.rootUri, undefined)
@@ -506,5 +509,38 @@ suite('Push Button Test Suite', function (this: Suite) {
     await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
+  })
+  test('push to new branch', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const pushStub = sinon.stub()
+    const newBranchName = 'newbranch'
+
+    // This is inconsistent with the rest of this test suite, but it seems we can't use
+    // a Substitute mock for this test case because setting return values on properties
+    // requires disabling strict checking.
+    // (https://github.com/ffMathy/FluffySpoon.JavaScript.Testing.Faking#strict-mode)
+    const getRepo = (): Repository => {
+      const repoBranch = {
+        upstream: undefined,
+        name: newBranchName
+      } as any as Branch
+      const repoState = {
+        HEAD: repoBranch
+      } as any as RepositoryState
+      const stubRepo = {
+        state: repoState,
+        pull: sinon.stub(),
+        push: pushStub,
+        commit: sinon.stub()
+      } as any as Repository
+
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(getRepo, captureMessage, ignore)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Successful content push.')
+    assert(pushStub.calledOnceWith('origin', newBranchName, true))
   })
 })
