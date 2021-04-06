@@ -10,8 +10,8 @@ import {
   fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles,
   getErrorDiagnosticsBySource
 } from './../../utils'
-import { activate, deactivate } from './../../extension'
-import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA } from './../../panel-toc-editor'
+import { activate, deactivate, refreshTocPanel } from './../../extension'
+import { handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
 import { TocTreeCollection } from '../../../../common/src/toc-tree'
@@ -233,6 +233,31 @@ suite('Extension Test Suite', function (this: Suite) {
     ]
     assert.deepStrictEqual(requests, expected)
   }).timeout(5000)
+  test('toc editor handle refresh from extension base', async () => {
+    const requests: any[] = []
+    const mockClient = {
+      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    }
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      await refreshTocPanel(mockClient as unknown as LanguageClient)
+    })
+    const expected = [
+      [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
+    ]
+    assert.deepStrictEqual(requests, expected)
+  }).timeout(5000)
+  test('toc editor handle refresh from extension base without existing panel', async () => {
+    const requests: any[] = []
+    const mockClient = {
+      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    }
+    const panel = expect((await extensionExports).activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR]])
+    console.error(panel)
+    await refreshTocPanel(mockClient as unknown as LanguageClient)
+    assert.deepStrictEqual(requests, [])
+  })
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
@@ -266,8 +291,13 @@ suite('Extension Test Suite', function (this: Suite) {
   test('toc editor handle error message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      assert.rejects(handler({ type: 'error', message: 'test' }))
+      await assert.rejects(async () => await handler({ type: 'error', message: 'test' }))
+    })
+  }).timeout(5000)
+  test('toc editor handle unexpected message', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      await assert.rejects(async () => await handler({ type: 'foo' } as unknown as TocPanelIncomingMessage))
     })
   }).timeout(5000)
   test('toc editor handle subcollection create', async () => {
@@ -299,13 +329,26 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(moduleTitle.length, 1)
     assert.strictEqual(moduleTitle[0].textContent, 'New Module')
   })
-  test('toc editor handle module rename', async () => {
+  test('toc editor handle module rename best case', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
-      await handler({ type: 'module-rename', moduleid: 'm00003', newName: 'rename' })
+      await handler({ type: 'module-rename', moduleid: 'm00001', newName: 'rename' })
     })
     const uri = expect(getRootPathUri())
-    const modulePath = path.join(uri.fsPath, 'modules', 'm00003', 'index.cnxml')
+    const modulePath = path.join(uri.fsPath, 'modules', 'm00001', 'index.cnxml')
+    const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
+    const document = new DOMParser().parseFromString(moduleData)
+    const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
+    assert.strictEqual(moduleTitle.length, 1)
+    assert.strictEqual(moduleTitle[0].textContent, 'rename')
+  })
+  test('toc editor handle module rename worst case', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      await handler({ type: 'module-rename', moduleid: 'm00002', newName: 'rename' })
+    })
+    const uri = expect(getRootPathUri())
+    const modulePath = path.join(uri.fsPath, 'modules', 'm00002', 'index.cnxml')
     const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
     const document = new DOMParser().parseFromString(moduleData)
     const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
