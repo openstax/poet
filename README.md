@@ -33,8 +33,7 @@ Go to your [settings](https://gitpod.io/settings/) view and select "Enable Featu
 ## How to create the .vsix extension for Theia or gitpod
 
 1. Update the version in `package.json` if desired (e.g. to associate with an issue, `0.0.0-dev-cnx1234`)
-1. `npm run build`
-1. `npm run package`
+1. `npm run build:production`
 
 ## How to upload the .vsix extension to gitpod (Code editor)
 
