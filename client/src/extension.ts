@@ -16,11 +16,40 @@ const extensionExports = {
 }
 let client: LanguageClient
 
-export const refreshTocPanel = async (clientInner: LanguageClient): Promise<void> => {
+const defaultLocationByType: {[key in PanelType]: vscode.ViewColumn} = {
+  [PanelType.TOC_EDITOR]: vscode.ViewColumn.One,
+  [PanelType.IMAGE_UPLOAD]: vscode.ViewColumn.One,
+  [PanelType.CNXML_PREVIEW]: vscode.ViewColumn.Two
+}
+
+export const refreshTocPanel = (clientInner: LanguageClient) => async () => {
   const activeTocEditor = activePanelsByType[PanelType.TOC_EDITOR]
   if (activeTocEditor != null) {
     await refreshPanel(activeTocEditor, clientInner)
   }
+}
+
+export const createLazyPanelOpener = (activationByType: {[key in PanelType]: any}) => (type: PanelType, hardRefocus: boolean) => {
+  return (...args: any[]) => {
+    if (activePanelsByType[type] != null) {
+      const activePanel = expect(activePanelsByType[type], `Could not find panel type '${type}'`)
+      try {
+        if (!hardRefocus) {
+          activePanel.reveal(defaultLocationByType[type])
+          return
+        }
+        activePanel.dispose()
+      } catch (err) {
+        // Panel was probably disposed already
+        return activationByType[type](...args)
+      }
+    }
+    return activationByType[type](...args)
+  }
+}
+
+export const forwardOnDidChangeWorkspaceFolders = (clientInner: LanguageClient) => async (event: vscode.WorkspaceFoldersChangeEvent) => {
+  await clientInner.sendRequest('onDidChangeWorkspaceFolders', event)
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<(typeof extensionExports)> {
@@ -36,35 +65,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
     [PanelType.IMAGE_UPLOAD]: ensureCatch(showImageUpload(PanelType.IMAGE_UPLOAD, resourceRootDir, activePanelsByType)),
     [PanelType.CNXML_PREVIEW]: ensureCatch(showCnxmlPreview(PanelType.CNXML_PREVIEW, resourceRootDir, activePanelsByType))
   }
-  const defaultLocationByType: {[key in PanelType]: vscode.ViewColumn} = {
-    [PanelType.TOC_EDITOR]: vscode.ViewColumn.One,
-    [PanelType.IMAGE_UPLOAD]: vscode.ViewColumn.One,
-    [PanelType.CNXML_PREVIEW]: vscode.ViewColumn.Two
-  }
 
-  const lazilyFocusOrOpenPanelOfType = (type: PanelType, hardRefocus: boolean) => {
-    return (...args: any[]) => {
-      if (activePanelsByType[type] != null) {
-        const activePanel = expect(activePanelsByType[type], `Could not find panel type '${type}'`)
-        try {
-          if (!hardRefocus) {
-            activePanel.reveal(defaultLocationByType[type])
-            return
-          }
-          activePanel.dispose()
-        } catch (err) {
-          // Panel was probably disposed already
-          return activationByType[type](...args)
-        }
-      }
-      return activationByType[type](...args)
-    }
-  }
+  const lazilyFocusOrOpenPanelOfType = createLazyPanelOpener(activationByType)
 
-  vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
-    await client.sendRequest('onDidChangeWorkspaceFolders', event)
-  })
-  client.onRequest('onDidChangeWatchedFiles', ensureCatch(refreshTocPanel))
+  vscode.workspace.onDidChangeWorkspaceFolders(ensureCatch(forwardOnDidChangeWorkspaceFolders(client)))
+  client.onRequest('onDidChangeWatchedFiles', ensureCatch(refreshTocPanel(client)))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR], false))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD], false))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW], true))
