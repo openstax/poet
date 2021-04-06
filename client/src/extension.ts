@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import path from 'path'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { handleMessage, showTocEditor } from './panel-toc-editor'
+import { refreshPanel, showTocEditor } from './panel-toc-editor'
 import { showImageUpload } from './panel-image-upload'
 import { showCnxmlPreview } from './panel-cnxml-preview'
 import { pushContent } from './push-content'
@@ -15,6 +15,13 @@ const extensionExports = {
   activePanelsByType
 }
 let client: LanguageClient
+
+export const refreshTocPanel = async (clientInner: LanguageClient): Promise<void> => {
+  const activeTocEditor = activePanelsByType[PanelType.TOC_EDITOR]
+  if (activeTocEditor != null) {
+    await refreshPanel(activeTocEditor, clientInner)
+  }
+}
 
 export async function activate(context: vscode.ExtensionContext): Promise<(typeof extensionExports)> {
   // detect Theia. Alert the user if they are running Theia
@@ -54,14 +61,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
   vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
     await client.sendRequest('onDidChangeWorkspaceFolders', event)
   })
-  client.onRequest('onDidChangeWatchedFiles', async () => {
-    const activeTocEditor = activePanelsByType[PanelType.TOC_EDITOR]
-    if (activeTocEditor != null) {
-      try {
-        await handleMessage(activeTocEditor, client)({ type: 'refresh' })
-      } catch { /* Panel was probably disposed */ }
-    }
-  })
+  client.onRequest('onDidChangeWatchedFiles', ensureCatch(refreshTocPanel))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR]))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD]))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]))
