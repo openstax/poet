@@ -17,13 +17,10 @@ export const canPush = async (errorsBySource: Map<string, Array<[vscode.Uri, vsc
   if (errorsBySource.has(DiagnosticSource.cnxml)) {
     void vscode.window.showErrorMessage(PushValidationModal.cnxmlErrorMsg, { modal: true })
     return false
-  } else if (errorsBySource.has(DiagnosticSource.xml)) {
+  }
+  if (errorsBySource.has(DiagnosticSource.xml)) {
     const selectedItem = await vscode.window.showErrorMessage(PushValidationModal.xmlErrorMsg, { modal: true }, PushValidationModal.xmlErrorIgnoreItem)
-    if (selectedItem === PushValidationModal.xmlErrorIgnoreItem) {
-      return true
-    } else {
-      return false
-    }
+    return selectedItem === PushValidationModal.xmlErrorIgnoreItem
   }
   return true
 }
