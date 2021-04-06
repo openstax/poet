@@ -6,7 +6,7 @@ import SinonRoot from 'sinon'
 import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
 import 'source-map-support/register'
 import { expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
-import { activate, deactivate } from './../../extension'
+import { activate, deactivate, refreshTocPanel } from './../../extension'
 import { handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
@@ -229,6 +229,31 @@ suite('Extension Test Suite', function (this: Suite) {
     ]
     assert.deepStrictEqual(requests, expected)
   }).timeout(5000)
+  test('toc editor handle refresh from extension base', async () => {
+    const requests: any[] = []
+    const mockClient = {
+      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    }
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      await refreshTocPanel(mockClient as unknown as LanguageClient)
+    })
+    const expected = [
+      [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
+    ]
+    assert.deepStrictEqual(requests, expected)
+  }).timeout(5000)
+  test('toc editor handle refresh from extension base without existing panel', async () => {
+    const requests: any[] = []
+    const mockClient = {
+      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    }
+    const panel = expect((await extensionExports).activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR]])
+    console.error(panel)
+    await refreshTocPanel(mockClient as unknown as LanguageClient)
+    assert.deepStrictEqual(requests, [])
+  })
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')

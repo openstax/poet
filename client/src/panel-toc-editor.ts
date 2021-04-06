@@ -158,6 +158,15 @@ export const showTocEditor = (panelType: PanelType, resourceRootDir: string, act
 }
 
 export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageClient): Promise<void> => {
+  try {
+    // This attempted access will throw if the panel is disposed
+    /* eslint-disable-next-line @typescript-eslint/no-unused-expressions */
+    panel.webview.html
+  } catch {
+    // Do no work if the panel is disposed
+    return
+  }
+
   const uri = expect(getRootPathUri(), 'no workspace root from which to generate trees')
   const trees = await requestBundleTrees(client, { workspaceUri: uri.toString() })
   const allModules = await requestBundleModules(client, { workspaceUri: uri.toString() })
