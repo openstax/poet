@@ -163,19 +163,22 @@ export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageC
   const allModules = await requestBundleModules(client, { workspaceUri: uri.toString() })
   const orphanModules = await requestBundleOrphanedModules(client, { workspaceUri: uri.toString() })
   if (trees == null || allModules == null || orphanModules == null) {
+    /* istanbul ignore next */
     throw new Error('Server cannot properly find workspace')
   }
+  const allModulesSorted = allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
+  const orphanModulesSorted = orphanModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
   const collectionAllModules: TocTreeCollection = {
     type: 'collection',
     title: 'All Modules',
     slug: 'mock-slug__source-only',
-    children: allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
+    children: allModulesSorted
   }
   const collectionOrphanModules: TocTreeCollection = {
     type: 'collection',
     title: 'Orphan Modules',
     slug: 'mock-slug__source-only',
-    children: orphanModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
+    children: orphanModulesSorted
   }
   const out = {
     uneditable: [collectionAllModules, collectionOrphanModules],
@@ -190,6 +193,8 @@ export const handleMessageFromWebviewPanel = (panel: vscode.WebviewPanel, client
   } else if (message.type === 'error') {
     throw new Error(message.message)
   } else if (message.type === 'debug') {
+    // For debugging purposes only
+    /* istanbul ignore next */
     console.debug(message.item)
   } else if (message.type === 'module-create') {
     await createBlankModule()
