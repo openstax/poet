@@ -512,6 +512,9 @@ const makeCaptureMessage = (messages: string[]): (msg: string) => Promise<string
 const commitOptions: CommitOptions = { all: true }
 
 suite('Push Button Test Suite', function (this: Suite) {
+  const sinon = SinonRoot.createSandbox()
+  this.afterEach(() => sinon.restore())
+
   test('getRepo returns repository', async () => {
     const repo = pushContent.getRepo()
     assert.notStrictEqual(repo.rootUri, undefined)
@@ -617,5 +620,19 @@ suite('Push Button Test Suite', function (this: Suite) {
     await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
+  })
+  test('pushContent does not invoke _pushContent when canPush is false', async () => {
+    sinon.stub(pushContent, 'canPush').resolves(false)
+    const stubPushContentHelperInner = sinon.stub()
+    sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    await pushContent.pushContent()()
+    assert(stubPushContentHelperInner.notCalled)
+  })
+  test('pushContent invokes _pushContent when canPush is true', async () => {
+    sinon.stub(pushContent, 'canPush').resolves(true)
+    const stubPushContentHelperInner = sinon.stub()
+    sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    await pushContent.pushContent()()
+    assert(stubPushContentHelperInner.calledOnce)
   })
 })
