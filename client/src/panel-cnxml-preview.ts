@@ -1,8 +1,9 @@
 import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
-import { fixResourceReferences, fixCspSourceReferences, addBaseHref, getLocalResourceRoots, ensureCatch } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, addBaseHref, getLocalResourceRoots, ensureCatch, expect } from './utils'
 import { PanelType } from './extension-types'
+import { DOMParser, XMLSerializer } from 'xmldom'
 
 export interface PanelIncomingMessage {
   xml?: string
@@ -87,6 +88,17 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
       await updatePreview()
     }
   })
+}
+
+const ELEMENT_NODE = 1
+export const tagElementsWithLineNumbers = (doc: Document) => {
+  const root = doc.documentElement
+  const stack: Element[] = [root]
+  while (stack.length > 0) {
+    const current = expect(stack.pop(), 'stack length is non-zero')
+    current.setAttribute('data-line', (current as any).lineNumber)
+    stack.push(...Array.from(current.childNodes).filter(node => node.nodeType === ELEMENT_NODE) as Element[])
+  }
 }
 
 export const handleMessage = (resource: vscode.Uri) => async (message: PanelIncomingMessage) => {

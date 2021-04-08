@@ -13,12 +13,12 @@ import {
 import { activate, createLazyPanelOpener, deactivate, forwardOnDidChangeWorkspaceFolders, refreshTocPanel } from './../../extension'
 import { handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
-import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
+import { handleMessage as cnxmlPreviewHandleMessage, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
 import { TocTreeCollection } from '../../../../common/src/toc-tree'
 import { commandToPanelType, OpenstaxCommand, PanelType } from '../../extension-types'
 import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
-import { DOMParser } from 'xmldom'
+import { DOMParser, XMLSerializer } from 'xmldom'
 import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
@@ -208,6 +208,20 @@ suite('Extension Test Suite', function (this: Suite) {
     // CASE-F-?-T
     assert.strictEqual(getBaseRoots('file').length, 1)
     assert.strictEqual(getBaseRoots('').length, 1)
+  })
+  test('tagElementsWithLineNumbers', async () => {
+    const xml = `
+      <document>
+        <div><span>Test</span><div/></div>
+      </document>`
+    const doc = new DOMParser().parseFromString(xml)
+    tagElementsWithLineNumbers(doc)
+    const out = new XMLSerializer().serializeToString(doc)
+    const expected = `
+      <document data-line="2">
+        <div data-line="3"><span data-line="3">Test</span><div data-line="3"/></div>
+      </document>`
+    assert.strictEqual(out, expected)
   })
   test('show toc editor', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
