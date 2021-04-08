@@ -1,11 +1,16 @@
+export enum TocTreeElementType {
+  collection = 'collection',
+  subcollection = 'subcollection',
+  module = 'module'
+}
 export interface TocTreeModule {
-  type: 'module'
+  type: TocTreeElementType.module
   moduleid: string
   title: string
   subtitle?: string
 }
 export interface TocTreeCollection {
-  type: 'collection' | 'subcollection'
+  type: TocTreeElementType.collection | TocTreeElementType.subcollection
   title: string
   slug?: string
   expanded?: boolean // Only only by dnd tree library

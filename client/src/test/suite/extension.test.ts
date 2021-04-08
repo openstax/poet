@@ -14,7 +14,7 @@ import { activate, createLazyPanelOpener, deactivate, forwardOnDidChangeWorkspac
 import { handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
-import { TocTreeCollection } from '../../../../common/src/toc-tree'
+import { TocTreeCollection, TocTreeElementType } from '../../../../common/src/toc-tree'
 import { commandToPanelType, OpenstaxCommand, PanelType } from '../../extension-types'
 import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
@@ -263,19 +263,19 @@ suite('Extension Test Suite', function (this: Suite) {
     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
     const before = fs.readFileSync(collectionPath)
     const mockEditAddModule: TocTreeCollection = {
-      type: 'collection',
+      type: TocTreeElementType.collection,
       title: 'test collection',
       slug: 'test',
       children: [{
-        type: 'subcollection',
+        type: TocTreeElementType.subcollection,
         title: 'subcollection',
         children: [{
-          type: 'module',
+          type: TocTreeElementType.module,
           moduleid: 'm00001',
           title: 'Introduction'
         }]
       }, {
-        type: 'module',
+        type: TocTreeElementType.module,
         moduleid: 'm00002',
         title: 'Unnamed Module'
       }]

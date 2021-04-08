@@ -5,7 +5,7 @@ import path from 'path'
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
-import { TocTreeCollection } from '../../common/src/toc-tree'
+import { TocTreeCollection, TocTreeElementType } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { BundleModulesArgs, BundleModulesResponse, BundleOrphanedModulesArgs, BundleOrphanedModulesResponse, BundleTreesArgs, BundleTreesResponse, ExtensionServerRequest } from '../../common/src/requests'
@@ -99,10 +99,10 @@ async function createSubcollection(slug: string): Promise<void> {
   const contentRoot = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
   // make a fake tree data collection to populate the new subcollection to the content root
   populateTreeDataToXML(document, contentRoot, {
-    type: 'collection',
+    type: TocTreeElementType.collection,
     title: 'fake',
     children: [{
-      type: 'subcollection',
+      type: TocTreeElementType.subcollection,
       title: 'New Subcollection',
       children: []
     }]
@@ -178,13 +178,13 @@ export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageC
   const allModulesSorted = allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
   const orphanModulesSorted = orphanModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
   const collectionAllModules: TocTreeCollection = {
-    type: 'collection',
+    type: TocTreeElementType.collection,
     title: 'All Modules',
     slug: 'mock-slug__source-only',
     children: allModulesSorted
   }
   const collectionOrphanModules: TocTreeCollection = {
-    type: 'collection',
+    type: TocTreeElementType.collection,
     title: 'Orphan Modules',
     slug: 'mock-slug__source-only',
     children: orphanModulesSorted
@@ -243,11 +243,11 @@ function populateTreeDataToXML(document: XMLDocument, root: any, treeData: TocTr
     title.appendChild(titleContent)
     element.appendChild(title)
     root.appendChild(element)
-    if (child.type === 'subcollection') {
+    if (child.type === TocTreeElementType.subcollection) {
       const contentWrapper = document.createElementNS(NS_COLLECTION, 'content')
       element.appendChild(contentWrapper)
       populateTreeDataToXML(document, contentWrapper, child)
-    } else if (child.type === 'module') {
+    } else if (child.type === TocTreeElementType.module) {
       element.setAttribute('document', child.moduleid)
     }
   }
