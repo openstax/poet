@@ -7,6 +7,7 @@ import { showCnxmlPreview } from './panel-cnxml-preview'
 import { pushContent } from './push-content'
 import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
 import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-types'
+import { ToCTreesProvider } from './toc-trees'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
 // Only one instance of each type allowed at any given time
@@ -74,6 +75,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD], false))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW], true))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))
+  vscode.window.registerTreeDataProvider('tocTrees', new ToCTreesProvider(client))
 
   return extensionExports
 }
