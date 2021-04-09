@@ -67,7 +67,7 @@
         "category": "Openstax"
       },
       {
-        "command": "openstax.refreshToCtrees",
+        "command": "openstax.refreshTocTrees",
         "title": "Refresh ToC Trees",
         "category": "Openstax",
         "icon": "$(refresh)"
@@ -131,7 +131,7 @@
       ],
       "view/title": [
         {
-          "command": "openstax.refreshToCtrees",
+          "command": "openstax.refreshTocTrees",
           "when": "view == tocTrees",
           "group": "navigation"
         }
