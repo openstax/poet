@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { getRootPathUri, expect } from './utils'
+import { getRootPathUri, expect, constructCollectionUri, constructModuleUri } from './utils'
 import { ExtensionServerRequest, BundleTreesResponse } from '../../common/src/requests'
 import { TocTreeCollection, TocTreeElementType, TocTreeModule } from '../../common/src/toc-tree'
 
@@ -25,7 +25,7 @@ export class ToCTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
     if (element === undefined) {
       const children: TocTreeItem[] = []
       bundleTrees.forEach(collection => {
-        children.push(TocTreeItem.fromCollection(collection))
+        children.push(TocTreeItem.fromCollection(collection, uri))
       })
       return children
     }
@@ -39,31 +39,42 @@ export class TocTreeItem extends vscode.TreeItem {
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly children: TocTreeItem[],
+    public readonly command?: vscode.Command,
     public readonly description?: string
   ) {
     super(label, collapsibleState)
   }
 
-  static fromCollection(treeCollection: TocTreeCollection): TocTreeItem {
+  static fromCollection(treeCollection: TocTreeCollection, workspaceUri: vscode.Uri): TocTreeItem {
     const collapsibleState = vscode.TreeItemCollapsibleState.Collapsed
     const children: TocTreeItem[] = []
 
     treeCollection.children.forEach(element => {
       if (element.type === TocTreeElementType.module) {
-        children.push(TocTreeItem.fromModule(element))
+        children.push(TocTreeItem.fromModule(element, workspaceUri))
       } else {
-        children.push(TocTreeItem.fromCollection(element))
+        children.push(TocTreeItem.fromCollection(element, workspaceUri))
       }
     })
 
-    return new TocTreeItem(treeCollection.title, collapsibleState, children)
+    if ((treeCollection.type === TocTreeElementType.subcollection) || (treeCollection.slug == null)) {
+      return new TocTreeItem(treeCollection.title, collapsibleState, children)
+    }
+
+    return new TocTreeItem(
+      treeCollection.title,
+      collapsibleState,
+      children,
+      { title: 'open', command: 'vscode.open', arguments: [constructCollectionUri(workspaceUri, treeCollection.slug)] }
+    )
   }
 
-  static fromModule(treeModule: TocTreeModule): TocTreeItem {
+  static fromModule(treeModule: TocTreeModule, workspaceUri: vscode.Uri): TocTreeItem {
     return new TocTreeItem(
       treeModule.title,
       vscode.TreeItemCollapsibleState.None,
       [],
+      { title: 'open', command: 'vscode.open', arguments: [constructModuleUri(workspaceUri, treeModule.moduleid)] },
       treeModule.moduleid
     )
   }

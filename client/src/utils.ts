@@ -69,6 +69,20 @@ export function getRootPathUri(): vscode.Uri | null {
 }
 
 /**
+ * Return the URI of a module based upon the expected convention
+ */
+export function constructModuleUri(workspaceUri: vscode.Uri, moduleid: string): vscode.Uri {
+  return workspaceUri.with({ path: path.join(workspaceUri.path, 'modules', moduleid, 'index.cnxml') })
+}
+
+/**
+ * Return the URI of a collection based upon the expected convention
+ */
+export function constructCollectionUri(workspaceUri: vscode.Uri, slug: string): vscode.Uri {
+  return workspaceUri.with({ path: path.join(workspaceUri.fsPath, 'collections', `${slug}.collection.xml`) })
+}
+
+/**
  * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
  */
 export function expect<T>(value: T | null | undefined, message: string): T {
