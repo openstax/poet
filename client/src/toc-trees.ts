@@ -5,7 +5,14 @@ import { ExtensionServerRequest, BundleTreesResponse } from '../../common/src/re
 import { TocTreeCollection, TocTreeElementType, TocTreeModule } from '../../common/src/toc-tree'
 
 export class ToCTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
+  private readonly _onDidChangeTreeData: vscode.EventEmitter<TocTreeItem | undefined > = new vscode.EventEmitter<TocTreeItem | undefined >()
+  readonly onDidChangeTreeData: vscode.Event<TocTreeItem | undefined > = this._onDidChangeTreeData.event
+
   constructor(private readonly client: LanguageClient) {
+  }
+
+  refresh(): void {
+    this._onDidChangeTreeData.fire(undefined)
   }
 
   getTreeItem(element: TocTreeItem): TocTreeItem {
