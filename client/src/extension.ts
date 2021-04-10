@@ -1,12 +1,13 @@
 import vscode from 'vscode'
 import path from 'path'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { refreshPanel, showTocEditor } from './panel-toc-editor'
+import { refreshPanel, showTocEditor, TocEditorPanel } from './panel-toc-editor'
 import { showImageUpload } from './panel-image-upload'
 import { showCnxmlPreview } from './panel-cnxml-preview'
 import { pushContent } from './push-content'
 import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
 import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-types'
+import { PanelManager } from './panel'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
 // Only one instance of each type allowed at any given time
@@ -68,9 +69,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
 
   const lazilyFocusOrOpenPanelOfType = createLazyPanelOpener(activationByType)
 
+  const hostContext = {
+    resourceRootDir,
+    client
+  }
+  const tocPanelManager = new PanelManager(hostContext, TocEditorPanel)
+
   vscode.workspace.onDidChangeWorkspaceFolders(ensureCatch(forwardOnDidChangeWorkspaceFolders(client)))
-  client.onRequest('onDidChangeWatchedFiles', ensureCatch(refreshTocPanel(client)))
-  vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR], false))
+  // client.onRequest('onDidChangeWatchedFiles', ensureCatch(refreshTocPanel(client)))
+  // vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR], false))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, tocPanelManager.revealOrNew.bind(tocPanelManager))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD], false))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW], true))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))

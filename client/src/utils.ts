@@ -95,6 +95,15 @@ export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: a
   }
 }
 
+export function ensureCatchSync(func: (...args: any[]) => Promise<any>): (...args: any[]) => void {
+  return (...args: any[]) => {
+    func(...args).catch((err: Error) => {
+      void vscode.window.showErrorMessage(err.message)
+      throw err
+    })
+  }
+}
+
 export function populateXsdSchemaFiles(resourceRootDir: string): void {
   const relResourcePath = 'xsd'
   const relTargetPath = '.xsd'

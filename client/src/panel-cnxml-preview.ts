@@ -9,6 +9,33 @@ export interface PanelIncomingMessage {
   xml?: string
 }
 
+export interface RefreshSignal {
+  type: 'refresh'
+  xml: string
+}
+
+export interface ScrollToLineSignal {
+  type: 'scroll-to-line'
+  line: number
+}
+
+export type PanelOutgoingMessage = (
+  RefreshSignal
+  | ScrollToLineSignal
+)
+
+const postMessageToCnxmlPreviewPanel = async (panel: vscode.WebviewPanel, message: PanelOutgoingMessage): Promise<void> => {
+  await panel.webview.postMessage(message)
+}
+
+const refreshPanelContentUsingActiveEditor = async (panel: vscode.WebviewPanel) => {
+  const editor = vscode.window.activeTextEditor
+  if (editor == null) {
+    
+  }
+  // ...
+}
+
 export const getContents = (uri?: vscode.Uri): [string | undefined, vscode.TextEditor | undefined, vscode.Uri | undefined] => {
   let contents: string | undefined
   const editor = vscode.window.activeTextEditor
@@ -48,7 +75,10 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
   panel.webview.html = html
 
   const xml = contents
-  await panel.webview.postMessage({ xml })
+  const initialDoc = new DOMParser().parseFromString(xml)
+  tagElementsWithLineNumbers(initialDoc)
+  const initialLineTaggedContents = new XMLSerializer().serializeToString(initialDoc)
+  await postMessageToCnxmlPreviewPanel(panel, { type: 'refresh', xml: initialLineTaggedContents })
   let throttleTimer = setTimeout(() => {
     updatePreview().catch((err) => { throw new Error(err) })
   }, 200)
@@ -67,7 +97,19 @@ export const showCnxmlPreview = (panelType: PanelType, resourceRootDir: string, 
     const newContents = document.getText()
     if (contents !== newContents) {
       contents = newContents
-      await panel.webview.postMessage({ xml: contents })
+      const doc = new DOMParser().parseFromString(contents)
+      tagElementsWithLineNumbers(doc)
+      const lineTaggedContents = new XMLSerializer().serializeToString(doc)
+      await postMessageToCnxmlPreviewPanel(panel, { type: 'refresh', xml: lineTaggedContents })
+    }
+    const activeEditor = vscode.window.activeTextEditor
+    const activeEditorForResource = activeEditor?.document === document
+    if (activeEditor != null && activeEditorForResource) {
+      const firstVisiblePosition = activeEditor.visibleRanges[0].start
+      const lineNumber = firstVisiblePosition.line
+      const lineContent = activeEditor.document.lineAt(lineNumber)
+      const progress = firstVisiblePosition.character / (lineContent.text.length + 2)
+      await postMessageToCnxmlPreviewPanel(panel, { type: 'scroll-to-line', line: lineNumber + progress + 1 })
     }
     throttleTimer = setTimeout(() => {
       updatePreview().catch((err) => { throw new Error(err) })

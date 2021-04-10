@@ -9,6 +9,7 @@ import { TocTreeCollection } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { BundleModulesArgs, BundleModulesResponse, BundleOrphanedModulesArgs, BundleOrphanedModulesResponse, BundleTreesArgs, BundleTreesResponse, ExtensionServerRequest } from '../../common/src/requests'
+import { ExtensionHostContext, Panel } from './panel'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -259,4 +260,34 @@ function replaceCollectionContent(document: XMLDocument, treeData: TocTreeCollec
   const newContent = document.createElementNS(NS_COLLECTION, 'content')
   expect(content.parentNode, 'expected a parent element').replaceChild(newContent, content)
   populateTreeDataToXML(document, newContent, treeData)
+}
+
+const initTocEditor = (context: ExtensionHostContext) => () => {
+  const panel = vscode.window.createWebviewPanel(
+    PanelType.TOC_EDITOR,
+    'Table of Contents Editor',
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true
+    }
+  )
+
+  let html = fs.readFileSync(path.join(context.resourceRootDir, 'toc-editor.html'), 'utf-8')
+  html = fixResourceReferences(panel.webview, html, context.resourceRootDir)
+  html = fixCspSourceReferences(panel.webview, html)
+  panel.webview.html = html
+  panel.reveal(vscode.ViewColumn.One)
+  return panel
+}
+
+export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMessage> {
+  constructor(private readonly context: ExtensionHostContext) {
+    super(initTocEditor(context))
+  
+    this.registerDisposable(this.context.client.onRequest('onDidChangeWatchedFiles', async () => {
+      await refreshPanel(this.panel, this.context.client)
+    }))
+  }
+
+  readonly handleMessage = handleMessageFromWebviewPanel(this.panel, this.context.client)
 }

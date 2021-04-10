@@ -19,9 +19,60 @@ window.addEventListener('load', () => {
 
   // Handle the message inside the webview
   window.addEventListener('message', event => {
-    messageHandler(event.data)
+    const request = event.data
+    const type = request.type
+    if (type === 'refresh') {
+      handleRefresh(request.xml)
+    } else if (type === 'scroll-to-line') {
+      scrollToElementOfSourceLine(parseFloat(request.line))
+    } else {
+      throw new Error('Unexpected request type $\'{type}\'')
+    }
   })
 })
+
+const sourceLineElements = () => {
+  const elements = []
+  for (const element of document.querySelectorAll('[data-line]')) {
+    const line = parseInt(element.getAttribute('data-line'))
+    elements.push({ line, element })
+  }
+  return elements
+}
+
+const elementsOfSourceLine = (line) => {
+  const lineOfInterest = Math.floor(line)
+  const elements = sourceLineElements()
+  let previous = elements[0] ?? null
+  const next = null
+  for (const entry of elements) {
+    if (entry.line === lineOfInterest) {
+      return { previous: entry, next: entry }
+    } else if (entry.line > lineOfInterest) {
+      return { previous, next: entry }
+    }
+    previous = entry
+  }
+  return { previous, next }
+}
+
+const scrollToElementOfSourceLine = (line) => {
+  const { previous, next } = elementsOfSourceLine(line)
+  if (previous == null) {
+    return
+  }
+  const previousBounds = previous.element.getBoundingClientRect()
+  let scrollOffset
+  if (next != null && next.line !== previous.line) {
+    const betweenProgress = (line - previous.line) / (next.line - previous.line)
+    const elementOffset = next.element.getBoundingClientRect().top - previousBounds.top
+    scrollOffset = previousBounds.top + (betweenProgress * elementOffset)
+  } else {
+    const progressInElement = line - Math.floor(line)
+    scrollOffset = previousBounds.top + (previousBounds.height * progressInElement)
+  }
+  window.scroll(window.scrollX, window.scrollY + scrollOffset)
+}
 
 const elementMap = new Map()
 elementMap.set('image', 'img')
@@ -39,10 +90,7 @@ elementMap.set('metadata', null) // Removes the element entirely
 
 let currentVDom
 
-function messageHandler(message) {
-  const xml = message.xml
-  if (!xml) throw new Error('Missing XML field on the message')
-
+const handleRefresh = (xml) => {
   textarea.value = xml
 
   const parser = new DOMParser()
