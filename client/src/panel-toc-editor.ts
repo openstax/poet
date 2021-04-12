@@ -4,7 +4,7 @@ import path from 'path'
 
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect } from './utils'
 import { TocTreeCollection } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
@@ -137,27 +137,6 @@ async function renameModule(id: string, newName: string): Promise<void> {
   await vscode.workspace.fs.writeFile(moduleUri, Buffer.from(newData))
 }
 
-export const showTocEditor = (panelType: PanelType, resourceRootDir: string, activePanelsByType: {[key in PanelType]?: vscode.WebviewPanel}, client: LanguageClient) => async () => {
-  const panel = vscode.window.createWebviewPanel(
-    panelType,
-    'Table of Contents Editor',
-    vscode.ViewColumn.One,
-    {
-      enableScripts: true
-    }
-  )
-
-  let html = fs.readFileSync(path.join(resourceRootDir, 'toc-editor.html'), 'utf-8')
-  html = fixResourceReferences(panel.webview, html, resourceRootDir)
-  html = fixCspSourceReferences(panel.webview, html)
-  panel.webview.html = html
-
-  panel.reveal(vscode.ViewColumn.One)
-  activePanelsByType[panelType] = panel
-
-  panel.webview.onDidReceiveMessage(ensureCatch(handleMessageFromWebviewPanel(panel, client)))
-}
-
 export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageClient): Promise<void> => {
   try {
     // This attempted access will throw if the panel is disposed
@@ -262,13 +241,19 @@ function replaceCollectionContent(document: XMLDocument, treeData: TocTreeCollec
   populateTreeDataToXML(document, newContent, treeData)
 }
 
-const initTocEditor = (context: ExtensionHostContext) => () => {
+const initPanel = (context: ExtensionHostContext) => () => {
+  const localResourceRoots = [vscode.Uri.file(context.resourceRootDir)]
+  const workspaceRoot = getRootPathUri()
+  if (workspaceRoot != null) {
+    localResourceRoots.push(workspaceRoot)
+  }
   const panel = vscode.window.createWebviewPanel(
     PanelType.TOC_EDITOR,
     'Table of Contents Editor',
     vscode.ViewColumn.One,
     {
-      enableScripts: true
+      enableScripts: true,
+      localResourceRoots
     }
   )
 
@@ -276,14 +261,13 @@ const initTocEditor = (context: ExtensionHostContext) => () => {
   html = fixResourceReferences(panel.webview, html, context.resourceRootDir)
   html = fixCspSourceReferences(panel.webview, html)
   panel.webview.html = html
-  panel.reveal(vscode.ViewColumn.One)
   return panel
 }
 
 export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMessage> {
   constructor(private readonly context: ExtensionHostContext) {
-    super(initTocEditor(context))
-  
+    super(initPanel(context))
+
     this.registerDisposable(this.context.client.onRequest('onDidChangeWatchedFiles', async () => {
       await refreshPanel(this.panel, this.context.client)
     }))

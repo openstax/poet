@@ -13,7 +13,6 @@ class Disposer implements Disposable {
 
   private disposeAll(): void {
     for (const disposable of this.registeredDisposables) {
-      console.log(disposable)
       disposable.dispose()
     }
     this.registeredDisposables = []
@@ -54,6 +53,8 @@ export abstract class Panel<InMessage, OutMessage> implements Disposable, Messag
     this.panel = initPanel()
     this.registerDisposable(this.panel)
     this.panel.onDidDispose(() => this.dispose())
+
+    // FIXME: Dispose this
     this.panel.webview.onDidReceiveMessage((message) => {
       this.handleMessage(message).catch((err: Error) => {
         void vscode.window.showErrorMessage(err.message)
@@ -105,28 +106,8 @@ export interface ExtensionHostContext {
   client: LanguageClient
 }
 
-class Test extends Panel<void, void> {
-  async handleMessage(message: void): Promise<void> {
-
-  }
-
-  constructor(context: ExtensionHostContext) {
-    super(() => {
-      const panel = vscode.window.createWebviewPanel(
-        'test',
-        'test',
-        vscode.ViewColumn.One,
-        {
-          enableScripts: true
-        }
-      )
-      return panel
-    })
-  }
-}
-
-export class PanelManager<U, V, T extends Panel<U, V>> {
-  private panel: T | null = null
+export class PanelManager<T extends Panel<unknown, unknown>> {
+  private _panel: T | null = null
 
   constructor(
     private readonly context: ExtensionHostContext,
@@ -134,19 +115,21 @@ export class PanelManager<U, V, T extends Panel<U, V>> {
   ) {}
 
   newPanel(): void {
-    if (this.panel != null) {
-      this.panel.dispose()
+    if (this._panel != null) {
+      this._panel.dispose()
     }
-    this.panel = new this.PanelClass(this.context)
+    this._panel = new this.PanelClass(this.context)
   }
 
   revealOrNew(): void {
-    if (this.panel != null && !this.panel.disposed()) {
-      this.panel.reveal()
+    if (this._panel != null && !this._panel.disposed()) {
+      this._panel.reveal()
       return
     }
     this.newPanel()
   }
-}
 
-// new PanelManager({} as unknown as ExtensionHostContext, Test)
+  panel(): T | null {
+    return this._panel
+  }
+}

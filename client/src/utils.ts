@@ -43,22 +43,6 @@ export function addBaseHref(webview: vscode.Webview, resource: vscode.Uri, html:
   return html.replace(re, baseUri)
 }
 
-export function getLocalResourceRoots(roots: vscode.Uri[], resource: vscode.Uri): readonly vscode.Uri[] {
-  const baseRoots = roots
-
-  const folder = vscode.workspace.getWorkspaceFolder(resource)
-  if (folder != null) {
-    const workspaceRoots = vscode.workspace.workspaceFolders?.map(folder => folder.uri)
-    if (workspaceRoots != null) {
-      baseRoots.push(...workspaceRoots)
-    }
-  } else if (resource.scheme === '' || resource.scheme === 'file') {
-    baseRoots.push(vscode.Uri.file(path.dirname(resource.fsPath)))
-  }
-
-  return baseRoots
-}
-
 /**
  * Return the root path of the workspace, or null if it does not exist
  */
@@ -89,15 +73,6 @@ export function expect<T>(value: T | null | undefined, message: string): T {
 export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: any[]) => Promise<any> {
   return async (...args: any[]) => {
     return await func(...args).catch((err: Error) => {
-      void vscode.window.showErrorMessage(err.message)
-      throw err
-    })
-  }
-}
-
-export function ensureCatchSync(func: (...args: any[]) => Promise<any>): (...args: any[]) => void {
-  return (...args: any[]) => {
-    func(...args).catch((err: Error) => {
       void vscode.window.showErrorMessage(err.message)
       throw err
     })

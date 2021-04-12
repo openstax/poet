@@ -6,6 +6,80 @@ let textarea
 
 const MATH_WRAPPER_TAGNAME = 'mathwrapper'
 
+// YANK THESE TYPES https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/preview-src/scroll-sync.ts
+
+const getElementBoundsOfInfluence = ({ element }) => {
+  const myBounds = element.getBoundingClientRect()
+
+  // Some code line elements may contain other code line elements.
+  // In those cases, only take the height up to that child.
+  const codeLineChild = element.querySelector('[data-line]')
+  if (codeLineChild) {
+    const childBounds = codeLineChild.getBoundingClientRect()
+    const height = Math.max(1, (childBounds.top - myBounds.top))
+    return {
+      top: myBounds.top,
+      height: height
+    }
+  }
+  return {
+    top: myBounds.top,
+    height: Math.max(1, myBounds.height)
+  }
+}
+
+const getLineElementsAtPageOffset = (offset) => {
+  const lines = sourceLineElements()
+  const position = offset - window.scrollY
+  let lo = -1
+  let hi = lines.length - 1
+  while (lo + 1 < hi) {
+    const mid = Math.floor((lo + hi) / 2)
+    const bounds = getElementBoundsOfInfluence(lines[mid])
+    if (bounds.top + bounds.height >= position) {
+      hi = mid
+    } else {
+      lo = mid
+    }
+  }
+  const hiElement = lines[hi]
+  const hiBounds = getElementBoundsOfInfluence(hiElement)
+  if (hi >= 1 && hiBounds.top > position) {
+    const loElement = lines[lo]
+    return { previous: loElement, next: hiElement }
+  }
+  if (hi > 1 && hi < lines.length && hiBounds.top + hiBounds.height > position) {
+    return { previous: hiElement, next: lines[hi + 1] }
+  }
+  return { previous: hiElement }
+}
+
+const getEditorLineNumberForPageOffset = (offset) => {
+  const { previous, next } = getLineElementsAtPageOffset(offset)
+  if (previous) {
+    const previousBounds = getElementBoundsOfInfluence(previous)
+    const offsetFromPrevious = (offset - window.scrollY - previousBounds.top)
+    if (next != null && previousBounds.top !== getElementBoundsOfInfluence(next).top) {
+      const progressBetweenElements = offsetFromPrevious / (getElementBoundsOfInfluence(next).top - previousBounds.top)
+      const line = previous.line + progressBetweenElements * (next.line - previous.line)
+      return Math.max(line, 1)
+    } else {
+      const progressWithinElement = offsetFromPrevious / (previousBounds.height)
+      const line = previous.line + progressWithinElement
+      return Math.max(line, 1)
+    }
+  }
+  return null
+}
+
+window.addEventListener('scroll', () => {
+  const line = getEditorLineNumberForPageOffset(window.scrollY)
+  if (line != null && !isNaN(line)) {
+    console.log('scroll event')
+    vscode.postMessage({ type: 'scroll-in-editor', line })
+  }
+})
+
 window.addEventListener('load', () => {
   // https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
   vscode = acquireVsCodeApi() // eslint-disable-line no-undef
@@ -43,16 +117,17 @@ const sourceLineElements = () => {
 const elementsOfSourceLine = (line) => {
   const lineOfInterest = Math.floor(line)
   const elements = sourceLineElements()
-  let previous = elements[0] ?? null
-  const next = null
-  for (const entry of elements) {
-    if (entry.line === lineOfInterest) {
-      return { previous: entry, next: entry }
-    } else if (entry.line > lineOfInterest) {
-      return { previous, next: entry }
-    }
-    previous = entry
+  const nextIndex = elements.findIndex(entry => {
+    return entry.line > lineOfInterest
+  })
+  if (nextIndex <= 0) {
+    return { previous: elements[0] ?? null, next: elements[0] ?? null }
   }
+  const next = elements[nextIndex]
+  const previousLine = elements[nextIndex - 1].line
+  const previous = elements.find(entry => {
+    return entry.line === previousLine
+  })
   return { previous, next }
 }
 
@@ -68,6 +143,7 @@ const scrollToElementOfSourceLine = (line) => {
     const elementOffset = next.element.getBoundingClientRect().top - previousBounds.top
     scrollOffset = previousBounds.top + (betweenProgress * elementOffset)
   } else {
+    // This should only happen when everything is on one line, I think?
     const progressInElement = line - Math.floor(line)
     scrollOffset = previousBounds.top + (previousBounds.height * progressInElement)
   }
@@ -75,6 +151,7 @@ const scrollToElementOfSourceLine = (line) => {
 }
 
 const elementMap = new Map()
+elementMap.set('media', 'div')
 elementMap.set('image', 'img')
 elementMap.set('para', 'p')
 elementMap.set('list', 'ul')

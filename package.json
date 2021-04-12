@@ -40,7 +40,7 @@
     "onLanguage:xml",
     "onCommand:openstax.showPreviewToSide",
     "onCommand:openstax.showTocEditor",
-    "onCommand:openstax.showImageUpload",
+    "onCommand:openstax.showImageManager",
     "onCommand:openstax.pushContent"
   ],
   "contributes": {
@@ -57,7 +57,7 @@
         "category": "Openstax"
       },
       {
-        "command": "openstax.showImageUpload",
+        "command": "openstax.showImageManager",
         "title": "Show Image Upload",
         "category": "Openstax"
       },
@@ -91,7 +91,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageUpload)\n[Push Content](command:openstax.pushContent)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageManager)\n[Push Content](command:openstax.pushContent)"
       }
     ],
     "menus": {
@@ -126,7 +126,7 @@
     },
     "keybindings": [
       {
-        "command": "markdown.showPreviewToSide",
+        "command": "openstax.showPreviewToSide",
         "key": "shift+ctrl+v",
         "mac": "shift+cmd+v",
         "when": "editorLangId == xml && !notebookEditorFocused"

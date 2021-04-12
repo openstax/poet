@@ -6,16 +6,19 @@ import SinonRoot from 'sinon'
 import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch } from '../../git-api/git.d'
 import 'source-map-support/register'
 import {
-  expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots,
+  expect as expectOrig, ensureCatch, getRootPathUri,
   fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles,
   getErrorDiagnosticsBySource
 } from './../../utils'
-import { activate, createLazyPanelOpener, deactivate, forwardOnDidChangeWorkspaceFolders, refreshTocPanel } from './../../extension'
-import { handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage } from './../../panel-toc-editor'
-import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
-import { handleMessage as cnxmlPreviewHandleMessage, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
+import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../../extension'
+import {
+  handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA,
+  refreshPanel as refreshTocPanel, PanelIncomingMessage as TocPanelIncomingMessage
+} from './../../panel-toc-editor'
+import { ImageManagerPanel } from './../../panel-image-manager'
+import { CnxmlPreviewPanel, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
 import { TocTreeCollection } from '../../../../common/src/toc-tree'
-import { commandToPanelType, OpenstaxCommand, PanelType } from '../../extension-types'
+import { OpenstaxCommand } from '../../extension-types'
 import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
 import { DOMParser, XMLSerializer } from 'xmldom'
@@ -24,14 +27,25 @@ import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../../../common/src/requests'
 
+const ROOT_DIR_REL = '../../../../../../'
+const ROOT_DIR_ABS = path.resolve(__dirname, ROOT_DIR_REL)
+
 // Test runs in out/client/src/test/suite, not src/client/src/test/suite
-const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../../../')
+const ORIGIN_DATA_DIR = ROOT_DIR_ABS
 const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
 const TEST_OUT_DIR = path.join(__dirname, '../../')
 
 const contextStub = {
-  asAbsolutePath: (relPath: string) => path.resolve(__dirname, '../../../../../../', relPath)
+  asAbsolutePath: (relPath: string) => path.resolve(ROOT_DIR_ABS, relPath)
 }
+const resourceRootDir = TEST_OUT_DIR
+const createMockClient = (): LanguageClient => {
+  return {
+    sendRequest: SinonRoot.stub(),
+    onRequest: SinonRoot.stub()
+  } as unknown as LanguageClient
+}
+
 const extensionExports = activate(contextStub as any)
 
 async function sleep(ms: number): Promise<void> {
@@ -63,8 +77,9 @@ const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscod
   await vscode.commands.executeCommand(command)
   // Wait for panel to load
   await sleep(1000)
-  const panel = expect((await extensionExports).activePanelsByType[commandToPanelType[command]])
-  await func(panel)
+  const panelManager = expect((await extensionExports)[command])
+  const panel = expect(panelManager.panel())
+  await func((panel as any).panel)
   panel.dispose()
 }
 
@@ -84,8 +99,9 @@ suite('Unsaved Files', function (this: Suite) {
     assert.strictEqual(vscode.window.activeTextEditor, undefined)
     await vscode.commands.executeCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW)
     await sleep(1000) // Wait for panel to load
-    const panel = activationExports.activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
-    assert.strictEqual(panel, undefined)
+    const panel = expect(activationExports[OpenstaxCommand.SHOW_CNXML_PREVIEW].panel())
+    assert((panel as any).panel.webview.html.includes('No resource available to preview'))
+    panel.dispose()
   })
 })
 
@@ -182,33 +198,6 @@ suite('Extension Test Suite', function (this: Suite) {
       }
     )
   })
-  test('getLocalResourceRoots', () => {
-    const uri = expect(getRootPathUri())
-    const roots = getLocalResourceRoots([], uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') }))
-    assert.strictEqual(roots.length, 1)
-    assert.strictEqual(roots[0].fsPath, TEST_DATA_DIR)
-  })
-  test('getLocalResourceRoots works when there is no folder for a resource', () => {
-    function getBaseRoots(scheme: any): readonly vscode.Uri[] {
-      const resource = {
-        scheme: scheme,
-        fsPath: '/some/path/to/file'
-      } as any as vscode.Uri
-      return getLocalResourceRoots([], resource)
-    }
-    const folder = {} as any as vscode.WorkspaceFolder // the content does not matter
-    const s = sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(folder)
-    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => [{ uri: '/some/path/does/not/matter' }])
-    assert.strictEqual(getBaseRoots('CASE-T-T-?').length, 1)
-    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
-    assert.strictEqual(getBaseRoots('CASE-T-F-?').length, 0)
-    s.restore()
-    sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(undefined)
-    assert.strictEqual(getBaseRoots('CASE-F-?-F').length, 0)
-    // CASE-F-?-T
-    assert.strictEqual(getBaseRoots('file').length, 1)
-    assert.strictEqual(getBaseRoots('').length, 1)
-  })
   test('tagElementsWithLineNumbers', async () => {
     const xml = `
       <document>
@@ -253,8 +242,7 @@ suite('Extension Test Suite', function (this: Suite) {
       sendRequest: (...args: any[]) => { requests.push(args); return [] }
     }
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const refresher = refreshTocPanel(mockClient as unknown as LanguageClient)
-      await refresher()
+      await refreshTocPanel(panel, mockClient as unknown as LanguageClient)
     })
     const expected = [
       [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
@@ -263,15 +251,6 @@ suite('Extension Test Suite', function (this: Suite) {
     ]
     assert.deepStrictEqual(requests, expected)
   }).timeout(5000)
-  test('toc editor handle refresh from extension base without existing panel', async () => {
-    const requests: any[] = []
-    const mockClient = {
-      sendRequest: (...args: any[]) => { requests.push(args); return [] }
-    }
-    const refresher = refreshTocPanel(mockClient as unknown as LanguageClient)
-    await refresher()
-    assert.deepStrictEqual(requests, [])
-  })
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
@@ -370,7 +349,7 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(moduleTitle[0].textContent, 'rename')
   })
   test('show image upload', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, async (panel) => {
       const html = panel.webview.html
       assert.notStrictEqual(html, null)
       assert.notStrictEqual(html, undefined)
@@ -379,15 +358,15 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('image upload handle message', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
-    const handler = imageUploadHandleMessage()
-    await handler({ mediaUploads: [{ mediaName: 'urgent2.jpg', data: 'data:image/jpeg;base64,' + data }] })
+    const panel = new ImageManagerPanel({ resourceRootDir, client: createMockClient() })
+    await panel.handleMessage({ mediaUploads: [{ mediaName: 'urgent2.jpg', data: 'data:image/jpeg;base64,' + data }] })
     const uploaded = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent2.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, uploaded)
   })
   test('image upload handle message ignore duplicate image', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
-    const handler = imageUploadHandleMessage()
-    await handler({ mediaUploads: [{ mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0' }] })
+    const panel = new ImageManagerPanel({ resourceRootDir, client: createMockClient() })
+    await panel.handleMessage({ mediaUploads: [{ mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0' }] })
     const newData = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, newData)
   })
@@ -409,8 +388,8 @@ suite('Extension Test Suite', function (this: Suite) {
     const document = await vscode.workspace.openTextDocument(resource)
     const before = document.getText()
     const testData = '<document>Test</document>'
-    const handler = cnxmlPreviewHandleMessage(resource)
-    await handler({ xml: testData })
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
+    await panel.handleMessage({type: 'direct-edit', xml: testData })
     const modified = document.getText()
     assert.strictEqual(modified, testData)
     assert.notStrictEqual(modified, before)
@@ -421,67 +400,6 @@ suite('Extension Test Suite', function (this: Suite) {
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
     })
   }).timeout(5000)
-  test('panel opener opens new panel if it does not exist', async () => {
-    const mockPanelActivationByType = {
-      [PanelType.TOC_EDITOR]: sinon.stub(),
-      [PanelType.IMAGE_UPLOAD]: sinon.stub(),
-      [PanelType.CNXML_PREVIEW]: sinon.stub()
-    }
-    const opener = createLazyPanelOpener(mockPanelActivationByType)
-    const result = opener(PanelType.IMAGE_UPLOAD, false)
-    result('test')
-    assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].calledOnceWith('test'))
-    assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
-    assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
-  })
-  test('panel opener opens new panel if it exists, but is disposed', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {})
-    const mockPanelActivationByType = {
-      [PanelType.TOC_EDITOR]: sinon.stub(),
-      [PanelType.IMAGE_UPLOAD]: sinon.stub(),
-      [PanelType.CNXML_PREVIEW]: sinon.stub()
-    }
-    const opener = createLazyPanelOpener(mockPanelActivationByType)
-    const result = opener(PanelType.IMAGE_UPLOAD, false)
-    result('test')
-    assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].calledOnceWith('test'))
-    assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
-    assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
-  })
-  test('panel opener focuses new panel on soft refocus if it exists', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
-      const revealStub = sinon.stub(panel, 'reveal')
-      const mockPanelActivationByType = {
-        [PanelType.TOC_EDITOR]: sinon.stub(),
-        [PanelType.IMAGE_UPLOAD]: sinon.stub(),
-        [PanelType.CNXML_PREVIEW]: sinon.stub()
-      }
-      const opener = createLazyPanelOpener(mockPanelActivationByType)
-      const result = opener(PanelType.IMAGE_UPLOAD, false)
-      result('test')
-      assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].notCalled)
-      assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
-      assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
-      assert(revealStub.calledOnce)
-    })
-  })
-  test('panel opener opens new panel on hard refocus even if it exists', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
-      const revealStub = sinon.stub(panel, 'reveal')
-      const mockPanelActivationByType = {
-        [PanelType.TOC_EDITOR]: sinon.stub(),
-        [PanelType.IMAGE_UPLOAD]: sinon.stub(),
-        [PanelType.CNXML_PREVIEW]: sinon.stub()
-      }
-      const opener = createLazyPanelOpener(mockPanelActivationByType)
-      const result = opener(PanelType.IMAGE_UPLOAD, true)
-      result('test')
-      assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].calledOnceWith('test'))
-      assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
-      assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
-      assert(revealStub.notCalled)
-    })
-  })
   test('schema files are populated when not existing', async () => {
     const uri = expect(getRootPathUri())
     const schemaPath = path.join(uri.path, '.xsd')

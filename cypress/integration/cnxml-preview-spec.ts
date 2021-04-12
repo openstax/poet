@@ -1,29 +1,28 @@
 // Shares a namespace with the other specfiles if not scoped
+import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/panel-cnxml-preview'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/cnxml-preview.html'
 
-  interface WidgetMessage {xml: string}
-
   describe('cnxml-preview Webview Tests', () => {
-    function sendMessage(msg: WidgetMessage): void {
+    function sendMessage(msg: PanelOutgoingMessage): void {
       cy.window().then($window => {
         $window.postMessage(msg, '*')
       })
     }
     function sendXml(xmlStr: string): void {
-      sendMessage({ xml: xmlStr })
+      sendMessage({ type: 'refresh', xml: xmlStr })
     }
 
     // When the browser calls vscode.postMessage(...) that message is added to this array
-    let messagesFromWidget: WidgetMessage[] = []
+    let messagesFromWidget: PanelIncomingMessage[] = []
 
     beforeEach(() => {
       // Load the HTML file and inject the acquireVsCodeApi() stub.
       cy.visit(htmlPath, {
         onBeforeLoad: (contentWindow): void => {
           class API {
-            postMessage(msg: WidgetMessage): void { messagesFromWidget.push(msg) }
+            postMessage(msg: PanelIncomingMessage): void { messagesFromWidget.push(msg) }
           }
           (contentWindow as any).acquireVsCodeApi = () => { return new API() }
         }
@@ -34,8 +33,8 @@
       messagesFromWidget = []
     })
 
-    it('Errors when something other than an object with an xml field is sent', () => {
-      sendMessage(({ somethingOtherThanXml: 'hello' } as unknown as WidgetMessage))
+    it('Errors when malformed outgoing message is sent', () => {
+      sendMessage(({ type: 'xml', somethingOtherThanXml: 'hello' } as unknown as PanelOutgoingMessage))
       cy.get('#preview *').should('not.exist')
     })
 
