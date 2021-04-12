@@ -10,7 +10,7 @@ import {
   fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles,
   getErrorDiagnosticsBySource
 } from './../../utils'
-import { activate, createLazyPanelOpener, deactivate, forwardOnDidChangeWorkspaceFolders, refreshTocPanel } from './../../extension'
+import { activate, createLazyPanelOpener, deactivate, forwardOnDidChangeWorkspaceFolders, refreshTocPanel, invokeRefreshers } from './../../extension'
 import { handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
@@ -23,6 +23,8 @@ import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../../../common/src/requests'
+import { TocTreesProvider, TocTreeItem } from './../../toc-trees'
+import * as utils from './../../utils' // Used for dependency mocking in tests
 
 // Test runs in out/client/src/test/suite, not src/client/src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../../../')
@@ -566,6 +568,128 @@ suite('Extension Test Suite', function (this: Suite) {
       ['onDidChangeWorkspaceFolders', 'test_event']
     ]
     assert.deepStrictEqual(requests, expected)
+  })
+  test('TocTreesProvider returns expected TocTreeItems', async () => {
+    const sendRequestMock = sinon.stub()
+    const mockClient: LanguageClient = {
+      sendRequest: sendRequestMock
+    } as any as LanguageClient
+    const fakeTreeCollection: TocTreeCollection[] = []
+    fakeTreeCollection.push(
+      {
+        type: TocTreeElementType.collection,
+        title: 'Collection1',
+        slug: 'collection1',
+        children: [{
+          type: TocTreeElementType.subcollection,
+          title: 'subcollection',
+          children: [{
+            type: TocTreeElementType.module,
+            moduleid: 'm00001',
+            title: 'Module1'
+          },
+          {
+            type: TocTreeElementType.module,
+            moduleid: 'm00002',
+            title: 'Module2'
+          }]
+        }]
+      },
+      {
+        type: TocTreeElementType.collection,
+        title: 'Collection2',
+        slug: 'collection2',
+        children: [{
+          type: TocTreeElementType.module,
+          moduleid: 'm00003',
+          title: 'Module3'
+        }]
+      }
+    )
+    const fakeWorkspacePath = '/tmp/fakeworkspace'
+    sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file(fakeWorkspacePath))
+    const module1Item = new TocTreeItem(
+      'Module1',
+      vscode.TreeItemCollapsibleState.None,
+      [],
+      {
+        title: 'open',
+        command: 'vscode.open',
+        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/modules/m00001/index.cnxml`)]
+      },
+      'm00001'
+    )
+    const module2Item = new TocTreeItem(
+      'Module2',
+      vscode.TreeItemCollapsibleState.None,
+      [],
+      {
+        title: 'open',
+        command: 'vscode.open',
+        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/modules/m00002/index.cnxml`)]
+      },
+      'm00002'
+    )
+    const module3Item = new TocTreeItem(
+      'Module3',
+      vscode.TreeItemCollapsibleState.None,
+      [],
+      {
+        title: 'open',
+        command: 'vscode.open',
+        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/modules/m00003/index.cnxml`)]
+      },
+      'm00003'
+    )
+    const subcollectionItem = new TocTreeItem(
+      'subcollection',
+      vscode.TreeItemCollapsibleState.Collapsed,
+      [module1Item, module2Item]
+    )
+    const collection1Item = new TocTreeItem(
+      'Collection1',
+      vscode.TreeItemCollapsibleState.Collapsed,
+      [subcollectionItem],
+      {
+        title: 'open',
+        command: 'vscode.open',
+        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/collections/collection1.collection.xml`)]
+      }
+    )
+    const collection2Item = new TocTreeItem(
+      'Collection2',
+      vscode.TreeItemCollapsibleState.Collapsed,
+      [module3Item],
+      {
+        title: 'open',
+        command: 'vscode.open',
+        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/collections/collection2.collection.xml`)]
+      }
+    )
+
+    const tocTreesProvider = new TocTreesProvider(mockClient)
+    sendRequestMock.onCall(0).resolves(null)
+    sendRequestMock.onCall(1).resolves(fakeTreeCollection)
+    sendRequestMock.onCall(2).resolves(fakeTreeCollection)
+
+    assert.deepStrictEqual(await tocTreesProvider.getChildren(undefined), [])
+    assert.deepStrictEqual(await tocTreesProvider.getChildren(undefined), [collection1Item, collection2Item])
+    assert.deepStrictEqual(await tocTreesProvider.getChildren(collection2Item), [module3Item])
+    assert.deepStrictEqual(tocTreesProvider.getTreeItem(collection2Item), collection2Item)
+  })
+  test('TocTreesProvider fires event on refresh', async () => {
+    const mockClient: LanguageClient = {} as any as LanguageClient
+    const tocTreesProvider = new TocTreesProvider(mockClient)
+    const eventFire = sinon.stub((tocTreesProvider as any)._onDidChangeTreeData, 'fire')
+    tocTreesProvider.refresh()
+    assert(eventFire.calledOnce)
+  })
+  test('invokeRefreshers calls functions', async () => {
+    const func1 = sinon.stub().resolves()
+    const func2 = sinon.stub().resolves()
+    await invokeRefreshers([func1, func2])()
+    assert(func1.calledOnce)
+    assert(func2.calledOnce)
   })
 
   this.afterAll(async () => {
