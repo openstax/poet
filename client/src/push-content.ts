@@ -59,9 +59,15 @@ export const _pushContent = (_getRepo: () => Repository, infoReporter: (msg: str
   }
 
   if (commitSucceeded) {
+    const head = expect(repo.state.HEAD, 'This does not appear to be a git repository. Create one first')
+    const branchName = expect(head.name, 'You do not appear to have a branch checked out. Maybe you checked out a commit or are in the middle of rebasing?')
     try {
-      await repo.pull()
-      await repo.push()
+      if (head.upstream != null) {
+        await repo.pull()
+        await repo.push()
+      } else {
+        await repo.push('origin', branchName, true)
+      }
       void infoReporter('Successful content push.')
     } catch (e) {
       console.log(e)
