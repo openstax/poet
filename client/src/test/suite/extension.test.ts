@@ -3,15 +3,19 @@ import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
 import SinonRoot from 'sinon'
-import { GitErrorCodes, Repository, CommitOptions } from '../../git-api/git.d'
+import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch } from '../../git-api/git.d'
 import 'source-map-support/register'
-import { expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots, fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles } from './../../utils'
-import { activate, deactivate } from './../../extension'
-import { handleMessage as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA } from './../../panel-toc-editor'
+import {
+  expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots,
+  fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles,
+  getErrorDiagnosticsBySource
+} from './../../utils'
+import { activate, createLazyPanelOpener, deactivate, forwardOnDidChangeWorkspaceFolders, refreshTocPanel } from './../../extension'
+import { handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage } from './../../panel-toc-editor'
 import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
 import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
 import { TocTreeCollection } from '../../../../common/src/toc-tree'
-import { commandToPanelType, OpenstaxCommand } from '../../extension-types'
+import { commandToPanelType, OpenstaxCommand, PanelType } from '../../extension-types'
 import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
 import { DOMParser } from 'xmldom'
@@ -229,6 +233,31 @@ suite('Extension Test Suite', function (this: Suite) {
     ]
     assert.deepStrictEqual(requests, expected)
   }).timeout(5000)
+  test('toc editor handle refresh from extension base', async () => {
+    const requests: any[] = []
+    const mockClient = {
+      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    }
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const refresher = refreshTocPanel(mockClient as unknown as LanguageClient)
+      await refresher()
+    })
+    const expected = [
+      [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+      [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
+    ]
+    assert.deepStrictEqual(requests, expected)
+  }).timeout(5000)
+  test('toc editor handle refresh from extension base without existing panel', async () => {
+    const requests: any[] = []
+    const mockClient = {
+      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    }
+    const refresher = refreshTocPanel(mockClient as unknown as LanguageClient)
+    await refresher()
+    assert.deepStrictEqual(requests, [])
+  })
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
@@ -262,8 +291,13 @@ suite('Extension Test Suite', function (this: Suite) {
   test('toc editor handle error message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      assert.rejects(handler({ type: 'error', message: 'test' }))
+      await assert.rejects(async () => await handler({ type: 'error', message: 'test' }))
+    })
+  }).timeout(5000)
+  test('toc editor handle unexpected message', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      await assert.rejects(async () => await handler({ type: 'foo' } as unknown as TocPanelIncomingMessage))
     })
   }).timeout(5000)
   test('toc editor handle subcollection create', async () => {
@@ -295,13 +329,26 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(moduleTitle.length, 1)
     assert.strictEqual(moduleTitle[0].textContent, 'New Module')
   })
-  test('toc editor handle module rename', async () => {
+  test('toc editor handle module rename best case', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
-      await handler({ type: 'module-rename', moduleid: 'm00003', newName: 'rename' })
+      await handler({ type: 'module-rename', moduleid: 'm00001', newName: 'rename' })
     })
     const uri = expect(getRootPathUri())
-    const modulePath = path.join(uri.fsPath, 'modules', 'm00003', 'index.cnxml')
+    const modulePath = path.join(uri.fsPath, 'modules', 'm00001', 'index.cnxml')
+    const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
+    const document = new DOMParser().parseFromString(moduleData)
+    const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
+    assert.strictEqual(moduleTitle.length, 1)
+    assert.strictEqual(moduleTitle[0].textContent, 'rename')
+  })
+  test('toc editor handle module rename worst case', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      await handler({ type: 'module-rename', moduleid: 'm00002', newName: 'rename' })
+    })
+    const uri = expect(getRootPathUri())
+    const modulePath = path.join(uri.fsPath, 'modules', 'm00002', 'index.cnxml')
     const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
     const document = new DOMParser().parseFromString(moduleData)
     const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
@@ -360,6 +407,67 @@ suite('Extension Test Suite', function (this: Suite) {
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
     })
   }).timeout(5000)
+  test('panel opener opens new panel if it does not exist', async () => {
+    const mockPanelActivationByType = {
+      [PanelType.TOC_EDITOR]: sinon.stub(),
+      [PanelType.IMAGE_UPLOAD]: sinon.stub(),
+      [PanelType.CNXML_PREVIEW]: sinon.stub()
+    }
+    const opener = createLazyPanelOpener(mockPanelActivationByType)
+    const result = opener(PanelType.IMAGE_UPLOAD, false)
+    result('test')
+    assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].calledOnceWith('test'))
+    assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
+    assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
+  })
+  test('panel opener opens new panel if it exists, but is disposed', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => { })
+    const mockPanelActivationByType = {
+      [PanelType.TOC_EDITOR]: sinon.stub(),
+      [PanelType.IMAGE_UPLOAD]: sinon.stub(),
+      [PanelType.CNXML_PREVIEW]: sinon.stub()
+    }
+    const opener = createLazyPanelOpener(mockPanelActivationByType)
+    const result = opener(PanelType.IMAGE_UPLOAD, false)
+    result('test')
+    assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].calledOnceWith('test'))
+    assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
+    assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
+  })
+  test('panel opener focuses new panel on soft refocus if it exists', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
+      const revealStub = sinon.stub(panel, 'reveal')
+      const mockPanelActivationByType = {
+        [PanelType.TOC_EDITOR]: sinon.stub(),
+        [PanelType.IMAGE_UPLOAD]: sinon.stub(),
+        [PanelType.CNXML_PREVIEW]: sinon.stub()
+      }
+      const opener = createLazyPanelOpener(mockPanelActivationByType)
+      const result = opener(PanelType.IMAGE_UPLOAD, false)
+      result('test')
+      assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].notCalled)
+      assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
+      assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
+      assert(revealStub.calledOnce)
+    })
+  })
+  test('panel opener opens new panel on hard refocus even if it exists', async () => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
+      const revealStub = sinon.stub(panel, 'reveal')
+      const mockPanelActivationByType = {
+        [PanelType.TOC_EDITOR]: sinon.stub(),
+        [PanelType.IMAGE_UPLOAD]: sinon.stub(),
+        [PanelType.CNXML_PREVIEW]: sinon.stub()
+      }
+      const opener = createLazyPanelOpener(mockPanelActivationByType)
+      const result = opener(PanelType.IMAGE_UPLOAD, true)
+      result('test')
+      assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].calledOnceWith('test'))
+      assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
+      assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
+      assert(revealStub.notCalled)
+    })
+  })
   test('schema files are populated when not existing', async () => {
     const uri = expect(getRootPathUri())
     const schemaPath = path.join(uri.path, '.xsd')
@@ -383,6 +491,82 @@ suite('Extension Test Suite', function (this: Suite) {
     sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
     populateXsdSchemaFiles('')
   })
+  test('getErrorDiagnostics returns expected errors', async () => {
+    const file1Uri = { path: '/test1.cnxml', scheme: 'file' } as any as vscode.Uri
+    const file1Diag1 = { severity: vscode.DiagnosticSeverity.Error, source: 'source1' } as any as vscode.Diagnostic
+    const file1Diag2 = { severity: vscode.DiagnosticSeverity.Error, source: 'source2' } as any as vscode.Diagnostic
+    const file1Diag3 = { severity: vscode.DiagnosticSeverity.Warning, source: 'source2' } as any as vscode.Diagnostic
+    const file2Uri = { path: '/test2.cnxml', scheme: 'file' } as any as vscode.Uri
+    const file2Diag1 = { severity: vscode.DiagnosticSeverity.Error, source: 'source2' } as any as vscode.Diagnostic
+    const file2Diag2 = { severity: vscode.DiagnosticSeverity.Error, source: undefined } as any as vscode.Diagnostic
+    const testDiagnostics: Array<[vscode.Uri, vscode.Diagnostic[]]> = [
+      [file1Uri, [file1Diag1, file1Diag2, file1Diag3]],
+      [file2Uri, [file2Diag1, file2Diag2]]
+    ]
+    sinon.stub(vscode.languages, 'getDiagnostics').returns(testDiagnostics)
+    const errorsBySource = getErrorDiagnosticsBySource()
+    const expected = new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>()
+    expected.set('source1', [[file1Uri, file1Diag1]])
+    expected.set('source2', [[file1Uri, file1Diag2], [file2Uri, file2Diag1]])
+    assert.deepStrictEqual(errorsBySource, expected)
+  })
+  test('canPush returns correct values', async () => {
+    const fileUri = { path: '/test.cnxml', scheme: 'file' } as any as vscode.Uri
+    const cnxmlError = {
+      severity: vscode.DiagnosticSeverity.Error,
+      source: pushContent.DiagnosticSource.cnxml
+    } as any as vscode.Diagnostic
+    const xmlError = {
+      severity: vscode.DiagnosticSeverity.Error,
+      source: pushContent.DiagnosticSource.xml
+    } as any as vscode.Diagnostic
+    const errorsBySource = new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>()
+    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
+
+    // No errors
+    assert(await pushContent.canPush(errorsBySource))
+
+    // CNXML errors
+    errorsBySource.set(pushContent.DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    assert(!(await pushContent.canPush(errorsBySource)))
+    assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true }))
+
+    // Both CNXML and XML errors
+    errorsBySource.clear()
+    showErrorMsgStub.reset()
+    errorsBySource.set(pushContent.DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    errorsBySource.set(pushContent.DiagnosticSource.xml, [[fileUri, xmlError]])
+    assert(!(await pushContent.canPush(errorsBySource)))
+    assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true }))
+
+    // XML errors, user cancels
+    errorsBySource.clear()
+    showErrorMsgStub.reset()
+    showErrorMsgStub.returns(Promise.resolve(undefined))
+    errorsBySource.set(pushContent.DiagnosticSource.xml, [[fileUri, xmlError]])
+    assert(!(await pushContent.canPush(errorsBySource)))
+    assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
+
+    // XML errors, user overrides
+    errorsBySource.clear()
+    showErrorMsgStub.reset()
+    showErrorMsgStub.returns(Promise.resolve(pushContent.PushValidationModal.xmlErrorIgnoreItem as any as vscode.MessageItem))
+    errorsBySource.set(pushContent.DiagnosticSource.xml, [[fileUri, xmlError]])
+    assert(await pushContent.canPush(errorsBySource))
+    assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
+  })
+  test('forwardOnDidChangeWorkspaceFolders simply forwards any argument to client', async () => {
+    const requests: any = []
+    const mockClient = {
+      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    }
+    const forwarder = forwardOnDidChangeWorkspaceFolders(mockClient as unknown as LanguageClient)
+    await forwarder('test_event' as unknown as vscode.WorkspaceFoldersChangeEvent)
+    const expected = [
+      ['onDidChangeWorkspaceFolders', 'test_event']
+    ]
+    assert.deepStrictEqual(requests, expected)
+  })
 
   this.afterAll(async () => {
     await deactivate()
@@ -405,6 +589,9 @@ const makeMockInputMessage = (message: string): () => Promise<string | undefined
 const commitOptions: CommitOptions = { all: true }
 
 suite('Push Button Test Suite', function (this: Suite) {
+  const sinon = SinonRoot.createSandbox()
+  this.afterEach(() => sinon.restore())
+
   test('getRepo returns repository', async () => {
     const repo = pushContent.getRepo()
     assert.notStrictEqual(repo.rootUri, undefined)
@@ -515,5 +702,52 @@ suite('Push Button Test Suite', function (this: Suite) {
     await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
+  })
+  test('pushContent does not invoke _pushContent when canPush is false', async () => {
+    sinon.stub(pushContent, 'canPush').resolves(false)
+    const stubPushContentHelperInner = sinon.stub()
+    sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    await pushContent.pushContent()()
+    assert(stubPushContentHelperInner.notCalled)
+  })
+  test('pushContent invokes _pushContent when canPush is true', async () => {
+    sinon.stub(pushContent, 'canPush').resolves(true)
+    const stubPushContentHelperInner = sinon.stub()
+    sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    await pushContent.pushContent()()
+    assert(stubPushContentHelperInner.calledOnce)
+  })
+  test('push to new branch', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
+    const pushStub = sinon.stub()
+    const newBranchName = 'newbranch'
+
+    // This is inconsistent with the rest of this test suite, but it seems we can't use
+    // a Substitute mock for this test case because setting return values on properties
+    // requires disabling strict checking.
+    // (https://github.com/ffMathy/FluffySpoon.JavaScript.Testing.Faking#strict-mode)
+    const getRepo = (): Repository => {
+      const repoBranch = {
+        upstream: undefined,
+        name: newBranchName
+      } as any as Branch
+      const repoState = {
+        HEAD: repoBranch
+      } as any as RepositoryState
+      const stubRepo = {
+        state: repoState,
+        pull: sinon.stub(),
+        push: pushStub,
+        commit: sinon.stub()
+      } as any as Repository
+
+      return stubRepo
+    }
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'Successful content push.')
+    assert(pushStub.calledOnceWith('origin', newBranchName, true))
   })
 })

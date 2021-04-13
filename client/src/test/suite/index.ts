@@ -33,6 +33,7 @@ export async function run(): Promise<void> {
         })
       } catch (err) {
         console.error(err)
+        console.error('errorstack', err.stack)
         reject(err)
       }
     })
@@ -40,7 +41,10 @@ export async function run(): Promise<void> {
     const destDir = path.join(__dirname, '../../../../../../.nyc_output')
     const dest = path.join(destDir, 'coverage.json')
     const coverage = (global as any).__coverage__
-    if (coverage === undefined) { throw new Error('Did not collect code coverage') }
+    if (coverage === undefined) {
+      console.error('Did not find coverage data on global.__coverage__ . Failing')
+      throw new Error('Did not collect code coverage')
+    }
     // Change all the paths to include ./client/...
     console.log(`Extracting the code coverage from __coverage__ and writing it to ${dest}`)
     mkdirpSync(destDir)

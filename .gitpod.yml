@@ -3,5 +3,5 @@ image:
   file: .gitpod.Dockerfile
 
 tasks:
-  - init: npm install && npm run build && npm run package
+  - init: npm install && npm run build:production
     command: printf '\n\n 🎉🎉 The plugin is available in the Explorer 🎉🎉\n\nRight-click the .vsix file and click "Install Extension VSIX" to test it.\n\nRun "npm test" to run tests\n'
