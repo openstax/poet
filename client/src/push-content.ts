@@ -43,6 +43,7 @@ export const getMessage = async (): Promise<string | undefined> => {
     placeHolder: '...',
     validateInput: validateMessage
   })
+  /* istanbul ignore next */
   return message
 }
 
