@@ -20,6 +20,10 @@ export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
   }
 
   async getChildren(element?: TocTreeItem): Promise<TocTreeItem[]> {
+    if (element !== undefined) {
+      return element.children
+    }
+
     const uri = expect(getRootPathUri(), 'No workspace root for ToC trees')
     const bundleTrees: BundleTreesResponse = await this.client.sendRequest(
       ExtensionServerRequest.BundleTrees,
@@ -29,15 +33,11 @@ export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
       return []
     }
 
-    if (element === undefined) {
-      const children: TocTreeItem[] = []
-      bundleTrees.forEach(collection => {
-        children.push(TocTreeItem.fromCollection(collection, uri))
-      })
-      return children
-    }
-
-    return element.children
+    const children: TocTreeItem[] = []
+    bundleTrees.forEach(collection => {
+      children.push(TocTreeItem.fromCollection(collection, uri))
+    })
+    return children
   }
 }
 

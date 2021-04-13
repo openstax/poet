@@ -670,7 +670,6 @@ suite('Extension Test Suite', function (this: Suite) {
     const tocTreesProvider = new TocTreesProvider(mockClient)
     sendRequestMock.onCall(0).resolves(null)
     sendRequestMock.onCall(1).resolves(fakeTreeCollection)
-    sendRequestMock.onCall(2).resolves(fakeTreeCollection)
 
     assert.deepStrictEqual(await tocTreesProvider.getChildren(undefined), [])
     assert.deepStrictEqual(await tocTreesProvider.getChildren(undefined), [collection1Item, collection2Item])
