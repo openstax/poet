@@ -29,7 +29,7 @@ export interface RefreshOutgoing {
 
 // Line is one-indexed
 export interface ScrollToLineOutgoing {
-  type: 'scroll-to-line'
+  type: 'scroll-in-preview'
   line: number
 }
 
@@ -167,7 +167,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     const lineNumber = firstVisiblePosition.line
     const lineContent = editor.document.lineAt(lineNumber)
     const progress = firstVisiblePosition.character / (lineContent.text.length + 2)
-    await this.postMessage({ type: 'scroll-to-line', line: lineNumber + progress + 1 })
+    await this.postMessage({ type: 'scroll-in-preview', line: lineNumber + progress + 1 })
   }
 
   private async tryRebindToActiveResource(force: boolean): Promise<void> {

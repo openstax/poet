@@ -2,7 +2,7 @@
 import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../../client/src/panel-toc-editor'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
-  const htmlPath = './client/out/client/src/toc-editor.html'
+  const htmlPath = './client/dist/client/src/toc-editor.html'
 
   describe('toc-editor Webview Tests', () => {
     function sendMessage(msg: PanelOutgoingMessage): void {

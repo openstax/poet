@@ -1,7 +1,7 @@
 // Shares a namespace with the other specfiles if not scoped
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
-  const htmlPath = './client/out/client/src/image-upload.html'
+  const htmlPath = './client/dist/client/src/image-upload.html'
 
   interface WidgetMessage {
     mediaUploads: Array<{

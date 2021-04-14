@@ -2,7 +2,7 @@
 import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/panel-cnxml-preview'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
-  const htmlPath = './client/out/client/src/cnxml-preview.html'
+  const htmlPath = './client/dist/client/src/cnxml-preview.html'
 
   describe('cnxml-preview Webview Tests', () => {
     function sendMessage(msg: PanelOutgoingMessage): void {
@@ -12,6 +12,9 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
     }
     function sendXml(xmlStr: string): void {
       sendMessage({ type: 'refresh', xml: xmlStr })
+    }
+    function scrollToLine(line: number): void {
+      sendMessage({ type: 'scroll-in-preview', line })
     }
 
     // When the browser calls vscode.postMessage(...) that message is added to this array
@@ -62,7 +65,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
       cy.get('#advancedDetails').click() // expand
       cy.get('#sendButton').click().then(() => {
         expect(messagesFromWidget.length).equal(1)
-        expect(messagesFromWidget[0].xml).equal('<howdy/>')
+        expect(messagesFromWidget[0]).to.deep.equal({ type: 'direct-edit', xml: '<howdy/>' })
       })
     })
 
@@ -81,6 +84,67 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
       it('Removes some elements like metadata', () => {
         sendXml('<document><metadata><para>Para in a metadata</para></metadata></document>')
         cy.get('#preview p').should('not.exist')
+      })
+    })
+
+    describe('Scroll handling', () => {
+      beforeEach(() => {
+        const nLines = (n: number) => `<pre>${'\n'.repeat(n)}</pre>`
+        sendXml(`
+          <document data-line="1">
+          ${nLines(100)}
+          <para data-line="2">Line 2</para>
+          ${nLines(100)}
+          <para data-line="3">Line 3</para>
+          ${nLines(100)}
+          <para data-line="4">Line 4</para>
+          ${nLines(100)}
+          <para data-line="5">Line 5</para>
+          ${nLines(100)}
+          </document>`
+        )
+      })
+      it('scrolls to an element based on its line in the source', () => {
+        scrollToLine(2)
+        cy.get('[data-line="2"]').then(el => {
+          cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
+        })
+        // Depending on whether or not tests are run headless, the window scroll event may not have fired upon call to scrollToLine
+        cy.then(() => {
+          if (messagesFromWidget.length === 0) {
+            // Ensure the event fired
+            cy.window().trigger('scroll')
+          }
+        })
+        cy.then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'scroll-in-editor', line: 2 })
+        })
+      })
+      it('scrolls to an element based on its line in the source', () => {
+        scrollToLine(4)
+        cy.get('[data-line="4"]').then(el => {
+          cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
+        })
+        // Depending on whether or not tests are run headless, the window scroll event may not have fired upon call to scrollToLine
+        cy.then(() => {
+          if (messagesFromWidget.length === 0) {
+            // Ensure the event fired
+            cy.window().trigger('scroll')
+          }
+        })
+        cy.then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'scroll-in-editor', line: 4 })
+        })
+      })
+      it('provides a scroll location to the editor upon scroll', () => {
+        cy.get('[data-line="2"').scrollIntoView()
+        cy.window().trigger('scroll')
+        cy.then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'scroll-in-editor', line: 2 })
+        })
       })
     })
 

@@ -75,7 +75,6 @@ const getEditorLineNumberForPageOffset = (offset) => {
 window.addEventListener('scroll', () => {
   const line = getEditorLineNumberForPageOffset(window.scrollY)
   if (line != null && !isNaN(line)) {
-    console.log('scroll event')
     vscode.postMessage({ type: 'scroll-in-editor', line })
   }
 })
@@ -97,10 +96,10 @@ window.addEventListener('load', () => {
     const type = request.type
     if (type === 'refresh') {
       handleRefresh(request.xml)
-    } else if (type === 'scroll-to-line') {
+    } else if (type === 'scroll-in-preview') {
       scrollToElementOfSourceLine(parseFloat(request.line))
     } else {
-      throw new Error('Unexpected request type $\'{type}\'')
+      throw new Error(`Unexpected request type ${type}`)
     }
   })
 })
@@ -216,7 +215,7 @@ const handleRefresh = (xml) => {
 
 function sendUpdatedXML() {
   const xml = textarea.value
-  vscode.postMessage({ xml })
+  vscode.postMessage({ type: 'direct-edit', xml })
 }
 
 /* VirtualDOM */
