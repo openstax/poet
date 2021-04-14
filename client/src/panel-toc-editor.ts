@@ -9,6 +9,7 @@ import { TocTreeCollection } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { BundleModulesArgs, BundleModulesResponse, BundleOrphanedModulesArgs, BundleOrphanedModulesResponse, BundleTreesArgs, BundleTreesResponse, ExtensionServerRequest } from '../../common/src/requests'
+import { v4 as uuidv4 } from 'uuid'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -66,15 +67,20 @@ const requestBundleModules = async (client: LanguageClient, args: BundleModulesA
   return await client.sendRequest(ExtensionServerRequest.BundleModules, args)
 }
 
-async function createBlankModule(): Promise<string> {
+const moduleTemplate = (newModuleId: string) => {
   const template = `
-<document xmlns="http://cnx.rice.edu/cnxml">
-  <metadata xmlns:md="http://cnx.rice.edu/mdml">
-    <md:title>New Module</md:title>
-  </metadata>
-  <content>
-  </content>
-</document>`.trim()
+  <document xmlns="http://cnx.rice.edu/cnxml">
+    <metadata xmlns:md="http://cnx.rice.edu/mdml">
+      <md:title>New Module</md:title>
+      <md:content-id>${newModuleId}</md:content-id>
+      <md:uuid>${uuidv4()}</md:uuid>
+    </metadata>
+    <content>
+    </content>
+  </document>`.trim()
+  return template
+}
+async function createBlankModule(): Promise<string> {
   const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
   let moduleNumber = 0
   const moduleDirs = new Set(await fsPromises.readdir(path.join(uri.fsPath, 'modules')))
@@ -86,7 +92,7 @@ async function createBlankModule(): Promise<string> {
       continue
     }
     const newModuleUri = uri.with({ path: path.join(uri.path, 'modules', newModuleId, 'index.cnxml') })
-    await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(template))
+    await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(moduleTemplate(newModuleId)))
     return newModuleId
   }
 }
