@@ -43,6 +43,9 @@ const getLineElementsAtPageOffset = (offset) => {
     }
   }
   const hiElement = lines[hi]
+  if (hiElement === undefined) {
+    return { previous: undefined, next: undefined }
+  }
   const hiBounds = getElementBoundsOfInfluence(hiElement)
   if (hi >= 1 && hiBounds.top > position) {
     const loElement = lines[lo]
@@ -56,7 +59,7 @@ const getLineElementsAtPageOffset = (offset) => {
 
 const getEditorLineNumberForPageOffset = (offset) => {
   const { previous, next } = getLineElementsAtPageOffset(offset)
-  if (previous) {
+  if (previous != null) {
     const previousBounds = getElementBoundsOfInfluence(previous)
     const offsetFromPrevious = (offset - window.scrollY - previousBounds.top)
     if (next != null && previousBounds.top !== getElementBoundsOfInfluence(next).top) {

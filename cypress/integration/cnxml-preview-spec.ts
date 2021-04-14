@@ -1,8 +1,8 @@
 // Shares a namespace with the other specfiles if not scoped
-import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/panel-cnxml-preview'
+import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } from '../../client/src/panel-cnxml-preview'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
-  const htmlPath = './client/dist/client/src/cnxml-preview.html'
+  const htmlPath = './client/out/client/src/cnxml-preview.html'
 
   describe('cnxml-preview Webview Tests', () => {
     function sendMessage(msg: PanelOutgoingMessage): void {
@@ -13,7 +13,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
     function sendXml(xmlStr: string): void {
       sendMessage({ type: 'refresh', xml: xmlStr })
     }
-    function scrollToLine(line: number): void {
+    function sendScrollToLine(line: number): void {
       sendMessage({ type: 'scroll-in-preview', line })
     }
 
@@ -105,45 +105,83 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
         )
       })
       it('scrolls to an element based on its line in the source', () => {
-        scrollToLine(2)
+        cy.awaitInternalEvent('scroll', () => {
+          sendScrollToLine(2)
+        })
         cy.get('[data-line="2"]').then(el => {
           cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
         })
-        // Depending on whether or not tests are run headless, the window scroll event may not have fired upon call to scrollToLine
-        cy.then(() => {
-          if (messagesFromWidget.length === 0) {
-            // Ensure the event fired
-            cy.window().trigger('scroll')
-          }
-        })
         cy.then(() => {
           expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'scroll-in-editor', line: 2 })
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(2, 0.01)
         })
       })
       it('scrolls to an element based on its line in the source', () => {
-        scrollToLine(4)
+        cy.awaitInternalEvent('scroll', () => {
+          sendScrollToLine(2.5)
+        })
+        cy.get('[data-line]').then(el => {
+          const halfDistanceBetween = Math.floor((el.get(2).offsetTop - el.get(1).offsetTop) / 2)
+          cy.window().its('scrollY').should('equal', el.get(1).offsetTop + halfDistanceBetween)
+        })
+        cy.then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(2.5, 0.01)
+        })
+      })
+      it('scrolls to an element based on its line in the source', () => {
+        cy.awaitInternalEvent('scroll', () => {
+          sendScrollToLine(4)
+        })
         cy.get('[data-line="4"]').then(el => {
           cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
         })
-        // Depending on whether or not tests are run headless, the window scroll event may not have fired upon call to scrollToLine
-        cy.then(() => {
-          if (messagesFromWidget.length === 0) {
-            // Ensure the event fired
-            cy.window().trigger('scroll')
-          }
-        })
         cy.then(() => {
           expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'scroll-in-editor', line: 4 })
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.01)
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
-        cy.get('[data-line="2"').scrollIntoView()
-        cy.window().trigger('scroll')
-        cy.then(() => {
+        cy.awaitInternalEvent('scroll', () => {
+          cy.get('[data-line="2"').scrollIntoView()
+        }).then(() => {
           expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'scroll-in-editor', line: 2 })
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(2, 0.01)
+        })
+      })
+      it('provides a scroll location to the editor upon scroll', () => {
+        cy.awaitInternalEvent('scroll', () => {
+          cy.get('[data-line]').then(el => {
+            const halfDistanceBetween = Math.floor((el.get(2).offsetTop - el.get(1).offsetTop) / 2)
+            cy.window().then(win => {
+              win.scrollTo(win.scrollX, el.get(1).offsetTop + halfDistanceBetween)
+            })
+          })
+        }).then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(2.5, 0.01)
+        })
+      })
+      it('provides a scroll location to the editor upon scroll', () => {
+        cy.awaitInternalEvent('scroll', () => {
+          cy.get('[data-line="4"').scrollIntoView()
+        }).then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.01)
+        })
+      })
+      it('sends no scroll event on xml without line tagging', () => {
+        sendXml('<document />')
+        cy.awaitInternalEvent('scroll', () => {
+          cy.window().trigger('scroll')
+        }).then(() => {
+          expect(messagesFromWidget).to.be.empty
         })
       })
     })
