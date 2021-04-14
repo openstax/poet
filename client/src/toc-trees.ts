@@ -7,8 +7,14 @@ import { TocTreeCollection, TocTreeElementType, TocTreeModule } from '../../comm
 export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
   private readonly _onDidChangeTreeData: vscode.EventEmitter<TocTreeItem | undefined > = new vscode.EventEmitter<TocTreeItem | undefined >()
   readonly onDidChangeTreeData: vscode.Event<TocTreeItem | undefined > = this._onDidChangeTreeData.event
+  private isFilterMode = false
 
   constructor(private readonly client: LanguageClient) {
+  }
+
+  toggleFilterMode(): void {
+    this.isFilterMode = !this.isFilterMode
+    this.refresh()
   }
 
   refresh(): void {
@@ -16,6 +22,15 @@ export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
   }
 
   getTreeItem(element: TocTreeItem): TocTreeItem {
+    if (this.isFilterMode && (element.description != null)) {
+      return new TocTreeItem(
+        `${element.label} (${element.description})`,
+        element.collapsibleState,
+        element.children,
+        element.command,
+        undefined
+      )
+    }
     return element
   }
 
@@ -42,9 +57,15 @@ export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
     })
     return children
   }
+
+  getParent(element: TocTreeItem): vscode.ProviderResult<TocTreeItem> {
+    return element.parent
+  }
 }
 
 export class TocTreeItem extends vscode.TreeItem {
+  parent: TocTreeItem | undefined = undefined
+
   constructor(
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
@@ -53,6 +74,7 @@ export class TocTreeItem extends vscode.TreeItem {
     public readonly description?: string
   ) {
     super(label, collapsibleState)
+    this.children.forEach(child => { child.parent = this })
   }
 
   static fromCollection(treeCollection: TocTreeCollection, workspaceUri: vscode.Uri): TocTreeItem {
@@ -87,5 +109,20 @@ export class TocTreeItem extends vscode.TreeItem {
       { title: 'open', command: 'vscode.open', arguments: [constructModuleUri(workspaceUri, treeModule.moduleid)] },
       treeModule.moduleid
     )
+  }
+}
+
+export function toggleTocTreesFilteringHandler(view: vscode.TreeView<TocTreeItem>, provider: TocTreesProvider): () => Promise<void> {
+  return async () => {
+    provider.toggleFilterMode()
+    const children = await provider.getChildren()
+    for (const child of children) {
+      await view.reveal(child, { expand: 3 })
+      // TODO: Refreshing here on each iteration is excessive, but this seems
+      // to be the only way that large trees consistently expand all the way.
+      // Need to either correct this or fully understand why the udnerlying
+      // implementation necessitates doing it.
+      provider.refresh()
+    }
   }
 }
