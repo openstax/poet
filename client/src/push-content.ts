@@ -33,6 +33,7 @@ export const getRepo = (): Repository => {
 }
 
 export const validateMessage = (message: string): string | null => {
+  /* istanbul ignore next */
   return message.length > 2 ? null : 'Too short!'
 }
 
@@ -48,7 +49,6 @@ export const getMessage = async (): Promise<string | undefined> => {
 }
 
 export const pushContent = () => async () => {
-  /* istanbul ignore next */
   if (await canPush(getErrorDiagnosticsBySource())) {
     await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
   }
