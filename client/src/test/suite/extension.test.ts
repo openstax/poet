@@ -328,6 +328,15 @@ suite('Extension Test Suite', function (this: Suite) {
     const moduleTitle = select('//md:title', document) as Node[]
     assert.strictEqual(moduleTitle.length, 1)
     assert.strictEqual(moduleTitle[0].textContent, 'New Module')
+    const moduleId = select('//md:content-id', document) as Node[]
+    assert.strictEqual(moduleId.length, 1)
+    assert.strictEqual(moduleId[0].textContent, 'm00004')
+    const moduleUUIDv4 = select('//md:uuid', document) as Node[]
+    const uuidRgx = /^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/
+    let uuidV4: any = null
+    uuidV4 = moduleUUIDv4[0].textContent
+    assert.strictEqual(moduleUUIDv4.length, 1)
+    assert(uuidRgx.test(uuidV4))
   })
   test('toc editor handle module rename best case', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
@@ -749,5 +758,15 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Successful content push.')
     assert(pushStub.calledOnceWith('origin', newBranchName, true))
+  })
+  test('get message returns showInputBox input', async () => {
+    sinon.stub(vscode.window, 'showInputBox').resolves('test')
+    assert.strictEqual(await pushContent.getMessage(), 'test')
+  })
+  test('validateMessage returns "Too short!" for message that is not long enough', async () => {
+    assert.strictEqual(pushContent.validateMessage('a'), 'Too short!')
+  })
+  test('validateMessage returns null for message that is long enough', async () => {
+    assert.strictEqual(pushContent.validateMessage('abc'), null)
   })
 })

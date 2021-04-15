@@ -71,13 +71,11 @@ export const validateMessage = (message: string): string | null => {
 
 
 export const getMessage = async (): Promise<string | undefined> => {
-  /* istanbul ignore next */
   const message = await vscode.window.showInputBox({
     prompt: 'Push Message: ',
     placeHolder: '...',
     validateInput: validateMessage
   })
-  /* istanbul ignore next */
   return message
 }
 
