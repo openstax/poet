@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource } from './utils'
-import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git-api/git'
+import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType } from './git-api/git'
 
 export enum DiagnosticSource {
   xml = 'xml',
@@ -32,6 +32,29 @@ export const getRepo = (): Repository => {
   return result
 }
 
+export const taggingDialog = async (): Promise<string | undefined> => {
+  return await vscode.window.showInformationMessage(
+    'Are you tagging for release?',
+    // { modal: true },
+    ...['No Tag', 'Release Candidate', 'Release']
+  )
+}
+
+export const getTag = (repo: Repository, release: boolean): string | undefined => {
+  const tags: string[] = []
+
+  // could probaly use a filter here
+  repo.state.refs.forEach(ref => {
+    if (ref.type !== RefType.Tag) { return }
+    if (!release && !ref.name?.includes('rc')) { return }
+    if (release && ref.name?.includes('rc')) { return }
+    tags.push(expect(ref.name, '').replace('rc', ''))
+  })
+  const previousVersion = tags.length > 0 ? tags[-1] : 0
+  const tag = `${Number(previousVersion) + 1}${release ? '' : 'rc'}`
+  return tag
+}
+
 export const validateMessage = (message: string): string | null => {
   /* istanbul ignore next */
   return message.length > 2 ? null : 'Too short!'
@@ -50,13 +73,38 @@ export const getMessage = async (): Promise<string | undefined> => {
 
 export const pushContent = () => async () => {
   if (await canPush(getErrorDiagnosticsBySource())) {
-    await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+    await _pushContent(getRepo, taggingDialog, getTag, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
   }
 }
 
-export const _pushContent = (_getRepo: () => Repository, _getMessage: () => Thenable<string | undefined>, infoReporter: (msg: string) => Thenable<string | undefined>, errorReporter: (msg: string) => Thenable<string | undefined>) => async () => {
+export const _pushContent = (
+  _getRepo: () => Repository,
+  _taggingDialog: () => Thenable<string | undefined>,
+  _getTag: (repo: Repository, release: boolean) => string | undefined,
+  _getMessage: () => Thenable<string | undefined>,
+  infoReporter: (msg: string) => Thenable<string | undefined>,
+  errorReporter: (msg: string) => Thenable<string | undefined>
+) => async () => {
   const repo = _getRepo()
   const commitOptions: CommitOptions = { all: true }
+
+  const tagging = await _taggingDialog()
+  let tag: string | undefined
+  if (tagging !== 'No Tag') {
+    const tagMode = tagging === 'Release'
+    tag = _getTag(repo, tagMode)
+  }
+
+  if (tag !== undefined) {
+    try {
+      await (repo as any)._repository.tag(tag)
+      // await repo.tag(tag)
+    } catch (e) {
+      const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
+      void errorReporter(`Tagging failed: ${message} ${e.stderr}`)
+    }
+    return
+  }
 
   let commitSucceeded = false
 
