@@ -37,18 +37,15 @@ export const validateMessage = (message: string): string | null => {
 }
 
 export const getMessage = async (): Promise<string | undefined> => {
-  /* istanbul ignore next */
   const message = await vscode.window.showInputBox({
     prompt: 'Push Message: ',
     placeHolder: '...',
     validateInput: validateMessage
   })
-  /* istanbul ignore next */
   return message
 }
 
 export const pushContent = () => async () => {
-  /* istanbul ignore next */
   if (await canPush(getErrorDiagnosticsBySource())) {
     await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
   }

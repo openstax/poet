@@ -750,4 +750,14 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert.strictEqual(messages[0], 'Successful content push.')
     assert(pushStub.calledOnceWith('origin', newBranchName, true))
   })
+  test('get message returns showInputBox input', async () => {
+    sinon.stub(vscode.window, 'showInputBox').resolves('test')
+    assert.strictEqual(await pushContent.getMessage(), 'test')
+  })
+  test('validateMessage returns "Too short!" for message that is not long enough', async () => {
+    assert.strictEqual(pushContent.validateMessage('a'), 'Too short!')
+  })
+  test('validateMessage returns null for message that is long enough', async () => {
+    assert.strictEqual(pushContent.validateMessage('abc'), null)
+  })
 })
