@@ -67,20 +67,19 @@ const requestBundleModules = async (client: LanguageClient, args: BundleModulesA
   return await client.sendRequest(ExtensionServerRequest.BundleModules, args)
 }
 
-const moduleTemplate = (newModuleId: string) => {
-  const template = `
-  <document xmlns="http://cnx.rice.edu/cnxml">
-    <metadata xmlns:md="http://cnx.rice.edu/mdml">
-      <md:title>New Module</md:title>
-      <md:content-id>${newModuleId}</md:content-id>
-      <md:uuid>${uuidv4()}</md:uuid>
-    </metadata>
-    <content>
-    </content>
-  </document>`.trim()
-  return template
-}
 async function createBlankModule(): Promise<string> {
+  const template = (newModuleId: string): string => {
+    return `
+    <document xmlns="http://cnx.rice.edu/cnxml">
+      <metadata xmlns:md="http://cnx.rice.edu/mdml">
+        <md:title>New Module</md:title>
+        <md:content-id>${newModuleId}</md:content-id>
+        <md:uuid>${uuidv4()}</md:uuid>
+      </metadata>
+      <content>
+      </content>
+    </document>`.trim()
+  }
   const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
   let moduleNumber = 0
   const moduleDirs = new Set(await fsPromises.readdir(path.join(uri.fsPath, 'modules')))
@@ -92,7 +91,7 @@ async function createBlankModule(): Promise<string> {
       continue
     }
     const newModuleUri = uri.with({ path: path.join(uri.path, 'modules', newModuleId, 'index.cnxml') })
-    await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(moduleTemplate(newModuleId)))
+    await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(template(newModuleId)))
     return newModuleId
   }
 }
