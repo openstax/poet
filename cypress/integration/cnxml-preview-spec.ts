@@ -88,23 +88,27 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
     })
 
     describe('Scroll handling', () => {
-      beforeEach(() => {
-        const nLines = (n: number) => `<pre>${'\n'.repeat(n)}</pre>`
-        sendXml(`
-          <document data-line="1">
-          ${nLines(100)}
-          <para data-line="2">Line 2</para>
-          ${nLines(100)}
-          <para data-line="3">Line 3</para>
-          ${nLines(100)}
-          <para data-line="4">Line 4</para>
-          ${nLines(100)}
-          <para data-line="5">Line 5</para>
-          ${nLines(100)}
-          </document>`
-        )
-      })
+      const nLines = (n: number) => `<pre>${'\n'.repeat(n)}</pre>`
+      const fiveLinesSpaced = `
+        <document data-line="1">
+        ${nLines(100)}
+        <para data-line="2">Line 2</para>
+        ${nLines(100)}
+        <para data-line="3">Line 3</para>
+        ${nLines(100)}
+        <para data-line="4">Line 4</para>
+        ${nLines(100)}
+        <para data-line="5">Line 5</para>
+        ${nLines(100)}
+        </document>`
+      const oneLongLine = `
+        <document data-line="1">
+        ${nLines(500)}
+        <para data-line="1">Still line 1</para>
+      `
+      const emptyDoc = '<document line/>'
       it('scrolls to an element based on its line in the source', () => {
+        sendXml(fiveLinesSpaced)
         cy.awaitInternalEvent('scroll', () => {
           sendScrollToLine(2)
         })
@@ -118,6 +122,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         })
       })
       it('scrolls to an element based on its line in the source', () => {
+        sendXml(fiveLinesSpaced)
         cy.awaitInternalEvent('scroll', () => {
           sendScrollToLine(2.5)
         })
@@ -132,6 +137,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         })
       })
       it('scrolls to an element based on its line in the source', () => {
+        sendXml(fiveLinesSpaced)
         cy.awaitInternalEvent('scroll', () => {
           sendScrollToLine(4)
         })
@@ -145,6 +151,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
+        sendXml(fiveLinesSpaced)
         cy.awaitInternalEvent('scroll', () => {
           cy.get('[data-line="2"').scrollIntoView()
         }).then(() => {
@@ -154,6 +161,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
+        sendXml(fiveLinesSpaced)
         cy.awaitInternalEvent('scroll', () => {
           cy.get('[data-line]').then(el => {
             const halfDistanceBetween = Math.floor((el.get(2).offsetTop - el.get(1).offsetTop) / 2)
@@ -168,6 +176,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
+        sendXml(fiveLinesSpaced)
         cy.awaitInternalEvent('scroll', () => {
           cy.get('[data-line="4"').scrollIntoView()
         }).then(() => {
@@ -177,11 +186,33 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         })
       })
       it('sends no scroll event on xml without line tagging', () => {
-        sendXml('<document />')
+        sendXml(emptyDoc)
         cy.awaitInternalEvent('scroll', () => {
           cy.window().trigger('scroll')
         }).then(() => {
           expect(messagesFromWidget).to.be.empty
+        })
+      })
+      it('does not respond to scroll-in-preview on xml without line tagging', () => {
+        sendXml(emptyDoc)
+        sendScrollToLine(1)
+        cy.window().its('scrollY').should('equal', 0)
+        cy.then(() => {
+          expect(messagesFromWidget).to.be.empty
+        })
+      })
+      it('only ever scrolls to a single line if everything is on one line', () => {
+        sendXml(oneLongLine)
+        cy.awaitInternalEvent('scroll', () => {
+          sendScrollToLine(1)
+        })
+        cy.get('[data-line="1"]').then(el => {
+          cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
+        })
+        cy.then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(1, 0.01)
         })
       })
     })
@@ -204,14 +235,22 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
     })
 
     describe('VirtualDOM (vdom)', () => {
+      it('adds multiple elements', () => {
+        sendXml('<root/>')
+        sendXml('<root><child/><child/></root>')
+        cy.get('root > child').should('have.length', 2)
+      })
+
       it('removes an element', () => {
         sendXml('<root><child/></root>')
         sendXml('<root/>')
+        cy.get('root > child').should('not.exist')
       })
 
       it('removes an attribute', () => {
         sendXml('<root id="id123"/>')
         sendXml('<root/>')
+        cy.get('root').should('not.have.attr', 'id')
       })
     })
   })

@@ -256,6 +256,7 @@ function vdom_patch($parent, newTree, oldTree, index = 0) {
     $parent.replaceChild(__vdom__createElement(newTree), $parent.childNodes[index])
   } else if (typeof newTree !== 'string') {
     if (typeof oldTree === 'string') {
+      /* istanbul ignore next */
       throw new Error('BUG: Unreachable! __vdom__changed should detect disparate types')
     }
     __vdom__applyProps($parent.childNodes[index], newTree.props, oldTree.props)
@@ -284,8 +285,8 @@ function __vdom__patchNodes($parent, newTree, oldTree, index) {
   let i = -1
   while (++i < len) {
     if (!$parent.childNodes[index]) {
-      console.log($parent)
-      throw new Error(`BUG: VDom Found null child in $parent ${i}`)
+      /* istanbul ignore next */
+      throw new Error(`BUG: VDom Found null child at index ${i} in '${parent.tagName}'`)
     }
     vdom_patch($parent.childNodes[index], newTree.children[i], oldTree.children[i], i)
   }
@@ -304,35 +305,23 @@ function __vdom__applyProps($el, newProps, oldProps = {}) {
     const newValue = newProps[name]
     const oldValue = oldProps[name]
     if (__vdom__isObject(newValue)) {
+      /* istanbul ignore next */
       throw new Error('Does not support setting multiple attributes on an element')
       // applyProps($el[name], (newValue as any) as ObjectLiteral, (oldValue as any) as ObjectLiteral)
     } else {
       if (!newValue) {
-        __vdom__removeProp($el, name)
+        $el.removeAttribute(name)
       } else if (newValue !== oldValue) {
-        __vdom__setProp($el, name, newValue)
+        $el.setAttribute(name, newValue)
       }
     }
   })
-}
-function __vdom__setProp($el, name, value) {
-  if (name === 'className') {
-    $el.setAttribute('class', value)
-  } else {
-    $el.setAttribute(name, value)
-  }
-}
-function __vdom__removeProp($el, name) {
-  if (name === 'className') {
-    $el.removeAttribute('class')
-  } else {
-    $el.removeAttribute(name)
-  }
 }
 function __vdom__isObject(x) {
   return typeof x === 'object' && x != null
 }
 const __vdom__isArray = Array.isArray || function (obj) {
+  /* istanbul ignore next */
   return Object.prototype.toString.call(obj) === '[object Array]'
 }
 function __vdom__head(x) {
