@@ -3,19 +3,16 @@ import { expect, getErrorDiagnosticsBySource } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType } from './git-api/git'
 import { integer } from 'vscode-languageserver-types'
 
-
 export enum DiagnosticSource {
   xml = 'xml',
   cnxml = 'cnxml'
 }
-
 
 export const PushValidationModal = {
   cnxmlErrorMsg: 'There are outstanding validation errors that must be resolved before pushing is allowed.',
   xmlErrorMsg: 'There are outstanding schema errors. Are you sure you want to push these changes?',
   xmlErrorIgnoreItem: 'Yes, I know more than you'
 }
-
 
 export const canPush = async (errorsBySource: Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>): Promise<boolean> => {
   if (errorsBySource.has(DiagnosticSource.cnxml)) {
@@ -29,14 +26,12 @@ export const canPush = async (errorsBySource: Map<string, Array<[vscode.Uri, vsc
   return true
 }
 
-
 export const getRepo = (): Repository => {
   const gitExtension = expect(vscode.extensions.getExtension<GitExtension>('vscode.git'), 'Expected vscode.git extension to be installed').exports
   const api = gitExtension.getAPI(1)
   const result: Repository = api.repositories[0]
   return result
 }
-
 
 export const taggingDialog = async (): Promise<string | undefined> => {
   return await vscode.window.showInformationMessage(
@@ -46,29 +41,26 @@ export const taggingDialog = async (): Promise<string | undefined> => {
   )
 }
 
-
 export const getNewTag = (repo: Repository, release: boolean): string | undefined => {
   const tags: integer[] = []
 
   // could probaly use a filter-reduce here
   repo.state.refs.forEach(ref => {
     if (ref.type !== RefType.Tag) { return }
-    if (release == ref.name?.includes('rc')) { return }
+    if (release === ref.name?.includes('rc')) { return }
 
     const versionNumberString = expect(ref.name, '').replace('rc', '')
     tags.push(Number(versionNumberString))
   })
 
-  const previousVersion = tags.length > 0 ? tags[-1] : 0
+  const previousVersion = tags.length > 0 ? tags[tags.length - 1] : 0
   return `${previousVersion + 1}${release ? '' : 'rc'}`
 }
-
 
 export const validateMessage = (message: string): string | null => {
   /* istanbul ignore next */
   return message.length > 2 ? null : 'Too short!'
 }
-
 
 export const getMessage = async (): Promise<string | undefined> => {
   const message = await vscode.window.showInputBox({
@@ -79,13 +71,11 @@ export const getMessage = async (): Promise<string | undefined> => {
   return message
 }
 
-
 export const pushContent = () => async () => {
   if (await canPush(getErrorDiagnosticsBySource())) {
     await _pushContent(getRepo, taggingDialog, getNewTag, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
   }
 }
-
 
 export const _pushContent = (
   _getRepo: () => Repository,
@@ -111,7 +101,7 @@ export const _pushContent = (
       // await repo.tag(tag)
     } catch (e) {
       const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
-      void errorReporter(`Tagging failed: ${message} ${e.stderr}`)
+      void errorReporter(`Tagging failed: ${message} ${String(e.stderr)}`)
     }
     return
   }

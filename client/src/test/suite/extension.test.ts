@@ -23,6 +23,7 @@ import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../../../common/src/requests'
+import { stringify } from 'querystring'
 
 // Test runs in out/client/src/test/suite, not src/client/src/test/suite
 const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../../../')
@@ -584,18 +585,25 @@ suite('Extension Test Suite', function (this: Suite) {
 
 // Push Content Tests
 const ignore = async (message: string): Promise<string | undefined> => { return undefined }
+
 const makeCaptureMessage = (messages: string[]): (message: string) => Promise<string | undefined> => {
-  const captureMessage = async (message: string): Promise<string | undefined> => {
+  return async (message: string): Promise<string | undefined> => {
     messages.push(message)
     return undefined
   }
-  return captureMessage
 }
-const makeMockInputMessage = (message: string): () => Promise<string | undefined> => {
-  const mockMessageInput = async (): Promise<string | undefined> => { return message }
-  return mockMessageInput
+
+const makeMockDialog = (message: string): () => Promise<string | undefined> => {
+  return async (): Promise<string | undefined> => { return message }
 }
+
 const commitOptions: CommitOptions = { all: true }
+
+export const makeMockNewTag = (tag: string | undefined): (repo: Repository, release: boolean) => string | undefined => {
+  return (): string | undefined => {
+    return tag
+  }
+}
 
 suite('Push Button Test Suite', function (this: Suite) {
   const sinon = SinonRoot.createSandbox()
@@ -608,7 +616,9 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('push with no conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockInputMessage('poet commit')
+    const mockMessageInput = makeMockDialog('poet commit')
+    const mockTaggingDialog = makeMockDialog('No Tag')
+    const mockNewTag = makeMockNewTag(undefined)
 
     const getRepo = (): Repository => {
       const stubRepo = Substitute.for<Repository>()
@@ -620,14 +630,23 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, captureMessage, ignore)())
+    await assert.doesNotReject(pushContent._pushContent(
+      getRepo,
+      mockTaggingDialog,
+      mockNewTag,
+      mockMessageInput,
+      captureMessage,
+      ignore
+    )())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Successful content push.')
   })
   test('push with merge conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockInputMessage('poet commit')
+    const mockMessageInput = makeMockDialog('poet commit')
+    const mockTaggingDialog = makeMockDialog('No Tag')
+    const mockNewTag = makeMockNewTag(undefined)
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = GitErrorCodes.Conflict
@@ -642,14 +661,23 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
+    await assert.doesNotReject(pushContent._pushContent(
+      getRepo,
+      mockTaggingDialog,
+      mockNewTag,
+      mockMessageInput,
+      ignore,
+      captureMessage
+    )())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Content conflict, please resolve.')
   })
   test('unknown commit error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockInputMessage('poet commit')
+    const mockMessageInput = makeMockDialog('poet commit')
+    const mockTaggingDialog = makeMockDialog('No Tag')
+    const mockNewTag = makeMockNewTag(undefined)
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = ''
@@ -664,14 +692,23 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
+    await assert.doesNotReject(pushContent._pushContent(
+      getRepo,
+      mockTaggingDialog,
+      mockNewTag,
+      mockMessageInput,
+      ignore,
+      captureMessage
+    )())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
   })
   test('push with no changes', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockInputMessage('poet commit')
+    const mockMessageInput = makeMockDialog('poet commit')
+    const mockTaggingDialog = makeMockDialog('No Tag')
+    const mockNewTag = makeMockNewTag(undefined)
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = 'nothing to commit.'
@@ -686,14 +723,23 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
+    await assert.doesNotReject(pushContent._pushContent(
+      getRepo,
+      mockTaggingDialog,
+      mockNewTag,
+      mockMessageInput,
+      ignore,
+      captureMessage
+    )())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'No changes to push.')
   })
   test('unknown push error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockInputMessage('poet commit')
+    const mockMessageInput = makeMockDialog('poet commit')
+    const mockTaggingDialog = makeMockDialog('No Tag')
+    const mockNewTag = makeMockNewTag(undefined)
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = ''
@@ -708,7 +754,14 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
+    await assert.doesNotReject(pushContent._pushContent(
+      getRepo,
+      mockTaggingDialog,
+      mockNewTag,
+      mockMessageInput,
+      ignore,
+      captureMessage
+    )())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
   })
@@ -729,7 +782,9 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('push to new branch', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockInputMessage('poet commit')
+    const mockMessageInput = makeMockDialog('poet commit')
+    const mockTaggingDialog = makeMockDialog('No Tag')
+    const mockNewTag = makeMockNewTag(undefined)
     const pushStub = sinon.stub()
     const newBranchName = 'newbranch'
 
@@ -754,7 +809,14 @@ suite('Push Button Test Suite', function (this: Suite) {
 
       return stubRepo
     }
-    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, captureMessage, ignore)())
+    await assert.doesNotReject(pushContent._pushContent(
+      getRepo,
+      mockTaggingDialog,
+      mockNewTag,
+      mockMessageInput,
+      captureMessage,
+      ignore
+    )())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Successful content push.')
     assert(pushStub.calledOnceWith('origin', newBranchName, true))
