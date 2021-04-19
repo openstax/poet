@@ -88,7 +88,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
     })
 
     describe('Scroll handling', () => {
-      const nLines = (n: number) => `<pre>${'\n'.repeat(n)}</pre>`
+      const nLines = (n: number): string => `<pre>${'\n'.repeat(n)}</pre>`
       const fiveLinesSpaced = `
         <document data-line="1">
         ${nLines(100)}
@@ -190,7 +190,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         cy.awaitInternalEvent('scroll', () => {
           cy.window().trigger('scroll')
         }).then(() => {
-          expect(messagesFromWidget).to.be.empty
+          expect(messagesFromWidget.length).to.equal(0)
         })
       })
       it('does not respond to scroll-in-preview on xml without line tagging', () => {
@@ -198,7 +198,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         sendScrollToLine(1)
         cy.window().its('scrollY').should('equal', 0)
         cy.then(() => {
-          expect(messagesFromWidget).to.be.empty
+          expect(messagesFromWidget.length).to.equal(0)
         })
       })
       it('only ever scrolls to a single line if everything is on one line', () => {

@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
-import { fixResourceReferences, fixCspSourceReferences, addBaseHref, expect, getRootPathUri } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, addBaseHref, expect, getRootPathUri, ensureCatchPromise } from './utils'
 import { PanelType } from './extension-types'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { ExtensionHostContext, Panel } from './panel'
@@ -53,11 +53,7 @@ const initPanel = (context: ExtensionHostContext) => () => {
   const editor = vscode.window.activeTextEditor
   const resourceColumn = editor?.viewColumn ?? vscode.ViewColumn.One
   const previewColumn = resourceColumn + 1
-  const localResourceRoots = [vscode.Uri.file(context.resourceRootDir)]
-  const workspaceRoot = getRootPathUri()
-  if (workspaceRoot != null) {
-    localResourceRoots.push(workspaceRoot)
-  }
+  const localResourceRoots = [vscode.Uri.file(context.resourceRootDir), expect(getRootPathUri(), 'workspace must be open to preview')]
   const panel = vscode.window.createWebviewPanel(
     PanelType.CNXML_PREVIEW,
     'CNXML Preview',
@@ -71,14 +67,14 @@ const initPanel = (context: ExtensionHostContext) => () => {
   return panel
 }
 
-const isCnxmlFile = (document: vscode.TextDocument): boolean => {
+export const isCnxmlFile = (document: vscode.TextDocument): boolean => {
   return document.languageId === 'cnxml'
 }
-const isXmlFile = (document: vscode.TextDocument): boolean => {
+export const isXmlFile = (document: vscode.TextDocument): boolean => {
   return document.languageId === 'xml'
 }
 
-const rawTextHtml = (text: string): string => {
+export const rawTextHtml = (text: string): string => {
   // Just to be safe...
   if (!/^[a-zA-Z0-9 ,.!]*$/.test(text)) {
     throw new Error('Must use simpler text for injection into HTML')
@@ -90,34 +86,24 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
   private resourceBinding: vscode.Uri | null = null
   private webviewIsScrolling: boolean = false
   private resourceIsScrolling: boolean = false
+  private readonly _onDidChangeResourceBinding: vscode.EventEmitter<vscode.Uri | null>
   constructor(private readonly context: ExtensionHostContext) {
     super(initPanel(context))
-    this.tryRebindToActiveResource(true).catch(err => {
-      throw err
-    })
-
+    this._onDidChangeResourceBinding = new vscode.EventEmitter()
+    ensureCatchPromise(this.tryRebindToActiveResource(true))
     this.registerDisposable(vscode.window.onDidChangeActiveTextEditor((editor) => {
-      this.tryRebindToActiveResource(false).catch(err => {
-        throw err
-      })
+      ensureCatchPromise(this.tryRebindToActiveResource(false))
     }))
     this.registerDisposable(this.context.client.onRequest('onDidChangeWatchedFiles', async () => {
       await this.refreshContents()
     }))
     this.registerDisposable(vscode.window.onDidChangeTextEditorVisibleRanges(event => {
-      const editor = event.textEditor
-      if (!this.isPreviewOf(editor.document.uri)) {
-        return
-      }
-      if (this.webviewIsScrolling) {
-        this.webviewIsScrolling = false
-        return
-      }
-      this.resourceIsScrolling = true
-      this.scrollToRangeStartOfEditor(editor).catch(err => {
-        throw err
-      })
+      ensureCatchPromise(this.tryScrollToRangeStartOfEditor(event.textEditor))
     }))
+  }
+
+  readonly onDidChangeResourceBinding: vscode.Event<vscode.Uri | null> = (...args) => {
+    return this._onDidChangeResourceBinding.event(...args)
   }
 
   async handleMessage(message: PanelIncomingMessage): Promise<void> {
@@ -134,6 +120,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
       const edit = new vscode.WorkspaceEdit()
       edit.replace(this.resourceBinding, fullRange, xml)
       await vscode.workspace.applyEdit(edit)
+      await document.save()
     } else if (message.type === 'scroll-in-editor') {
       for (const editor of vscode.window.visibleTextEditors) {
         if (!this.isPreviewOf(editor.document.uri)) {
@@ -141,7 +128,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
         }
         if (this.resourceIsScrolling) {
           this.resourceIsScrolling = false
-          continue
+          return
         }
         this.webviewIsScrolling = true
         const line = message.line
@@ -149,20 +136,28 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
         const fraction = line - sourceLine
         const text = editor.document.lineAt(sourceLine).text
         const start = Math.floor(fraction * text.length)
-        editor.revealRange(
-          new vscode.Range(sourceLine - 1, start, sourceLine, 0),
-          vscode.TextEditorRevealType.AtTop
-        )
+        const range = new vscode.Range(sourceLine - 1, start, sourceLine, 0)
+        const strategy = vscode.TextEditorRevealType.AtTop
+        editor.revealRange(range, strategy)
       }
     } else {
       throw new Error(`Unexpected message: ${JSON.stringify(message)}`)
     }
   }
 
-  private async scrollToRangeStartOfEditor(editor: vscode.TextEditor | undefined | null): Promise<void> {
-    if (editor == null) {
+  private async tryScrollToRangeStartOfEditor(editor: vscode.TextEditor) {
+    if (!this.isPreviewOf(editor.document.uri)) {
       return
     }
+    if (this.webviewIsScrolling) {
+      this.webviewIsScrolling = false
+      return
+    }
+    this.resourceIsScrolling = true
+    await this.scrollToRangeStartOfEditor(editor)
+  }
+
+  private async scrollToRangeStartOfEditor(editor: vscode.TextEditor): Promise<void> {
     const firstVisiblePosition = editor.visibleRanges[0].start
     const lineNumber = firstVisiblePosition.line
     const lineContent = editor.document.lineAt(lineNumber)
@@ -170,13 +165,17 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     await this.postMessage({ type: 'scroll-in-preview', line: lineNumber + progress + 1 })
   }
 
-  private async tryRebindToActiveResource(force: boolean): Promise<void> {
+  async tryRebindToActiveResource(force: boolean): Promise<void> {
     const activeCnxml = this.activeCnxmlUri()
     if (activeCnxml == null && !force) {
       return
     }
     await this.rebindToResource(activeCnxml)
-    await this.scrollToRangeStartOfEditor(vscode.window.activeTextEditor)
+    const activeEditor = vscode.window.activeTextEditor
+    if (activeEditor != null) {
+      await this.scrollToRangeStartOfEditor(activeEditor)
+    }
+    this._onDidChangeResourceBinding.fire(activeCnxml)
   }
 
   private activeCnxmlUri(): vscode.Uri | null {
@@ -207,7 +206,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     await this.postMessage({ type: 'refresh', xml: lineTaggedContents })
   }
 
-  private isPreviewOf(resource: vscode.Uri | null): boolean {
+  isPreviewOf(resource: vscode.Uri | null): boolean {
     return resource?.fsPath === this.resourceBinding?.fsPath
   }
 

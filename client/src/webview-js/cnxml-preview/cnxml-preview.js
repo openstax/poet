@@ -110,7 +110,7 @@ window.addEventListener('load', () => {
 const sourceLineElements = () => {
   const elements = []
   for (const element of document.querySelectorAll('[data-line]')) {
-    const line = parseInt(element.getAttribute('data-line'))
+    const line = parseInt(element.getAttribute('data-line'), 10)
     elements.push({ line, element })
   }
   return elements
@@ -286,7 +286,7 @@ function __vdom__patchNodes($parent, newTree, oldTree, index) {
   while (++i < len) {
     if (!$parent.childNodes[index]) {
       /* istanbul ignore next */
-      throw new Error(`BUG: VDom Found null child at index ${i} in '${parent.tagName}'`)
+      throw new Error(`BUG: VDom Found null child at index ${i} in '${$parent.tagName}'`)
     }
     vdom_patch($parent.childNodes[index], newTree.children[i], oldTree.children[i], i)
   }

@@ -8,15 +8,15 @@ import 'source-map-support/register'
 import {
   expect as expectOrig, ensureCatch, getRootPathUri,
   fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles,
-  getErrorDiagnosticsBySource
+  getErrorDiagnosticsBySource,
+  ensureCatchPromise
 } from './../../utils'
 import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../../extension'
 import {
-  handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA,
-  refreshPanel as refreshTocPanel, PanelIncomingMessage as TocPanelIncomingMessage
+  handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage
 } from './../../panel-toc-editor'
 import { ImageManagerPanel } from './../../panel-image-manager'
-import { CnxmlPreviewPanel, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
+import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
 import { TocTreeCollection } from '../../../../common/src/toc-tree'
 import { OpenstaxCommand } from '../../extension-types'
 import * as pushContent from '../../push-content'
@@ -42,7 +42,7 @@ const resourceRootDir = TEST_OUT_DIR
 const createMockClient = (): LanguageClient => {
   return {
     sendRequest: SinonRoot.stub(),
-    onRequest: SinonRoot.stub()
+    onRequest: SinonRoot.stub(),
   } as unknown as LanguageClient
 }
 
@@ -90,25 +90,27 @@ const resetTestData = async (): Promise<void> => {
   fs.copySync(path.join(ORIGIN_DATA_DIR, 'collections'), path.join(TEST_DATA_DIR, 'collections'))
   fs.copySync(path.join(ORIGIN_DATA_DIR, 'media'), path.join(TEST_DATA_DIR, 'media'))
   fs.copySync(path.join(ORIGIN_DATA_DIR, 'modules'), path.join(TEST_DATA_DIR, 'modules'))
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors')
 }
-
-suite('Unsaved Files', function (this: Suite) {
-  this.beforeEach(resetTestData)
-  test('show cnxml preview with no file open', async () => {
-    const activationExports = await extensionExports
-    assert.strictEqual(vscode.window.activeTextEditor, undefined)
-    await vscode.commands.executeCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW)
-    await sleep(1000) // Wait for panel to load
-    const panel = expect(activationExports[OpenstaxCommand.SHOW_CNXML_PREVIEW].panel())
-    assert((panel as any).panel.webview.html.includes('No resource available to preview'))
-    panel.dispose()
-  })
-})
 
 suite('Extension Test Suite', function (this: Suite) {
   const sinon = SinonRoot.createSandbox()
-  this.beforeEach(resetTestData)
-  this.afterEach(() => sinon.restore())
+
+  this.beforeAll(async () => {
+    await resetTestData()
+  })
+
+  this.beforeEach(() => {
+    sinon.spy(CnxmlPreviewPanel.prototype, 'postMessage')
+  })
+  
+  this.afterEach(async () => {
+    await resetTestData()
+    sinon.restore()
+    sinon.reset()
+    sinon.resetBehavior()
+    sinon.resetHistory()
+  })
 
   test('expect unwraps non-null', () => {
     const maybe: string | null = 'test'
@@ -147,6 +149,21 @@ suite('Extension Test Suite', function (this: Suite) {
 
     try {
       await wrapped()
+      assert.fail('ensureCatch should have thrown an error')
+    } catch (err) {
+      assert.strictEqual(err.message, errMessage)
+    }
+    // Verify that a message was sent to the user
+    assert.strictEqual(s.callCount, 1)
+  })
+  test('ensureCatchPromise throws when its argument rejects', async () => {
+    const errMessage = 'I am an error'
+    async function fn(): Promise<void> { throw new Error(errMessage) }
+    const s = sinon.spy(vscode.window, 'showErrorMessage')
+    const promise = fn()
+    const caughtPromise = ensureCatchPromise(promise)
+    try {
+      await caughtPromise
       assert.fail('ensureCatch should have thrown an error')
     } catch (err) {
       assert.strictEqual(err.message, errMessage)
@@ -220,36 +237,22 @@ suite('Extension Test Suite', function (this: Suite) {
       assert.notStrictEqual(html.indexOf('html'), -1)
     })
   }).timeout(5000)
-  test('toc editor handle refresh', async () => {
-    const requests: any[] = []
-    const mockClient = {
-      sendRequest: (...args: any[]) => { requests.push(args); return [] }
-    }
+  test('toc editor refresh makes proper language server requests', async () => {
+    const mockClient = createMockClient();
+    (mockClient.sendRequest as SinonRoot.SinonStub).returns([])
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, mockClient as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, mockClient)
       await handler({ type: 'refresh' })
     })
-    const expected = [
+    const expectedCalls = [
       [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
       [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
       [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
     ]
-    assert.deepStrictEqual(requests, expected)
-  }).timeout(5000)
-  test('toc editor handle refresh from extension base', async () => {
-    const requests: any[] = []
-    const mockClient = {
-      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    assert.strictEqual((mockClient.sendRequest as SinonRoot.SinonStub).getCalls().length, 3)
+    for (const args of expectedCalls) {
+      assert((mockClient.sendRequest as SinonRoot.SinonStub).calledWith(...args))
     }
-    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      await refreshTocPanel(panel, mockClient as unknown as LanguageClient)
-    })
-    const expected = [
-      [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
-      [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
-      [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
-    ]
-    assert.deepStrictEqual(requests, expected)
   }).timeout(5000)
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
@@ -274,7 +277,7 @@ suite('Extension Test Suite', function (this: Suite) {
       }]
     }
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'write-tree', treeData: mockEditAddModule })
     })
     const after = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
@@ -283,19 +286,19 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('toc editor handle error message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await assert.rejects(async () => await handler({ type: 'error', message: 'test' }))
     })
   }).timeout(5000)
   test('toc editor handle unexpected message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await assert.rejects(async () => await handler({ type: 'foo' } as unknown as TocPanelIncomingMessage))
     })
   }).timeout(5000)
   test('toc editor handle subcollection create', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'subcollection-create', slug: 'test' })
     })
     const uri = expect(getRootPathUri())
@@ -310,7 +313,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toc editor handle module create', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'module-create' })
     })
     const uri = expect(getRootPathUri())
@@ -324,7 +327,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toc editor handle module rename best case', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'module-rename', moduleid: 'm00001', newName: 'rename' })
     })
     const uri = expect(getRootPathUri())
@@ -337,7 +340,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toc editor handle module rename worst case', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'module-rename', moduleid: 'm00002', newName: 'rename' })
     })
     const uri = expect(getRootPathUri())
@@ -370,6 +373,20 @@ suite('Extension Test Suite', function (this: Suite) {
     const newData = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, newData)
   })
+  test('raw text html content for webview use', () => {
+    const content = 'test'
+    assert.strictEqual(rawTextHtml(content), '<html><body>test</body></html>')
+  })
+  test('raw text html content for webview use disallows potential unsafe text', () => {
+    const content = '<injected></injected>'
+    assert.throws(() => { rawTextHtml(content) })
+  })
+  test('show cnxml preview with no file open', async () => {
+    assert.strictEqual(vscode.window.activeTextEditor, undefined)
+    await withPanelFromCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, async (panel) => {
+      assert(panel.webview.html.includes('No resource available to preview'))
+    })
+  }).timeout(5000)
   test('show cnxml preview with a file open', async () => {
     const uri = expect(getRootPathUri())
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
@@ -386,13 +403,214 @@ suite('Extension Test Suite', function (this: Suite) {
     const uri = expect(getRootPathUri())
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
     const document = await vscode.workspace.openTextDocument(resource)
+    await vscode.window.showTextDocument(document)
     const before = document.getText()
     const testData = '<document>Test</document>'
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
-    await panel.handleMessage({type: 'direct-edit', xml: testData })
+    await panel.handleMessage({ type: 'direct-edit', xml: testData })
     const modified = document.getText()
     assert.strictEqual(modified, testData)
     assert.notStrictEqual(modified, before)
+  })
+  test('cnxml preview rebinds to resource in the active editor', async () => {
+    const uri = expect(getRootPathUri())
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
+    assert.strictEqual((panel as any).resourceBinding, null)
+
+    const resourceFirst = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const resourceBindingChangedExpectedFirst: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resourceFirst.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+    const resourceSecond = uri.with({ path: path.join(uri.path, 'modules', 'm00002', 'index.cnxml') })
+    const resourceBindingChangedExpectedSecond: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resourceSecond.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+
+    const documentFirst = await vscode.workspace.openTextDocument(resourceFirst)
+    await vscode.window.showTextDocument(documentFirst, vscode.ViewColumn.Two)
+    const contentFromFsBecauseVscodeLiesAboutDocumentContentFirst = await fs.promises.readFile(resourceFirst.fsPath, { encoding: 'utf-8' })
+    const documentDomFirst = new DOMParser().parseFromString(contentFromFsBecauseVscodeLiesAboutDocumentContentFirst)
+    tagElementsWithLineNumbers(documentDomFirst)
+    const xmlExpectedFirst = new XMLSerializer().serializeToString(documentDomFirst)
+    await resourceBindingChangedExpectedFirst
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedFirst }))
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resourceFirst.fsPath)
+
+    const documentSecond = await vscode.workspace.openTextDocument(resourceSecond)
+    await vscode.window.showTextDocument(documentSecond, vscode.ViewColumn.Two)
+    const contentFromFsBecauseVscodeLiesAboutDocumentContentSecond = await fs.promises.readFile(resourceSecond.fsPath, { encoding: 'utf-8' })
+    const documentDomSecond = new DOMParser().parseFromString(contentFromFsBecauseVscodeLiesAboutDocumentContentSecond)
+    tagElementsWithLineNumbers(documentDomSecond)
+    const xmlExpectedSecond = new XMLSerializer().serializeToString(documentDomSecond)
+    await resourceBindingChangedExpectedSecond
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond }))
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resourceSecond.fsPath)
+  })
+  test('cnxml preview only rebinds to cnxml', async () => {
+    const uri = expect(getRootPathUri())
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
+
+    const resourceFirst = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const resourceBindingChangedExpectedFirst: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resourceFirst.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+
+    const documentFirst = await vscode.workspace.openTextDocument(resourceFirst)
+    await vscode.window.showTextDocument(documentFirst, vscode.ViewColumn.Two)
+    const documentDomFirst = new DOMParser().parseFromString(documentFirst.getText())
+    tagElementsWithLineNumbers(documentDomFirst)
+    const xmlExpectedFirst = new XMLSerializer().serializeToString(documentDomFirst)
+    await resourceBindingChangedExpectedFirst
+
+    const resourceSecond = uri.with({ path: path.join(uri.path, 'collections', 'test.collection.xml') })
+    const documentSecond = await vscode.workspace.openTextDocument(resourceSecond)
+    await vscode.window.showTextDocument(documentSecond, vscode.ViewColumn.Two)
+
+    const resourceThird = uri.with({ path: path.join(uri.path, 'media', 'README.md') })
+    const documentThird = await vscode.workspace.openTextDocument(resourceThird)
+    await vscode.window.showTextDocument(documentThird, vscode.ViewColumn.Two)
+
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedFirst }))
+    const refreshCalls = (panel.postMessage as SinonRoot.SinonSpy)
+      .getCalls()
+      .filter(call => call.args.some(arg => arg.type != null && arg.type === 'refresh'))
+    assert.strictEqual(refreshCalls.length, 1)
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resourceFirst.fsPath)
+  })
+  test('cnxml preview refuses refresh if no resource bound', async () => {
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
+    assert(panel.isPreviewOf(null))
+    await (panel as any).refreshContents()
+    const refreshCalls = (panel.postMessage as SinonRoot.SinonSpy)
+      .getCalls()
+      .filter(call => call.args.some(arg => arg.type != null && arg.type === 'refresh'))
+    assert.strictEqual(refreshCalls.length, 0)
+  })
+  test('cnxml preview refuses edits if no resource bound', async () => {
+    const uri = expect(getRootPathUri())
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const document = await vscode.workspace.openTextDocument(resource)
+    await vscode.window.showTextDocument(document)
+    const before = document.getText()
+    const testData = '<document>Test</document>'
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
+    const resourceBindingChangedExpected: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resource.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+    await resourceBindingChangedExpected;
+    (panel as any).resourceBinding = null
+    await panel.handleMessage({ type: 'direct-edit', xml: testData })
+    const modified = document.getText()
+    assert.strictEqual(modified, before)
+    assert.notStrictEqual(modified, testData)
+  })
+  test('cnxml preview scroll sync in editor updates visible range', async () => {
+    const uri = expect(getRootPathUri())
+
+    // An editor we should not scroll in
+    const resourceIrrelevant = uri.with({ path: path.join(uri.path, 'modules', 'm00002', 'index.cnxml') })
+    const documentIrrelevant = await vscode.workspace.openTextDocument(resourceIrrelevant)
+    const unboundEditor = await vscode.window.showTextDocument(documentIrrelevant, vscode.ViewColumn.One)
+
+    // The actual editor we are scrolling in
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const document = await vscode.workspace.openTextDocument(resource)
+    const boundEditor = await vscode.window.showTextDocument(document, vscode.ViewColumn.Two)
+
+    // We need something long enough to scroll to
+    const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
+
+    // reset revealed range
+    const range = new vscode.Range(0, 0, 1, 0)
+    const strategy = vscode.TextEditorRevealType.AtTop
+    boundEditor.revealRange(range, strategy)
+    unboundEditor.revealRange(range, strategy)
+
+    await panel.handleMessage({ type: 'direct-edit', xml: testData });
+    // ensure scrollable
+    (panel as any).resourceIsScrolling = false
+    const visualRangeChanged = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
+    })
+    await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
+    await visualRangeChanged
+    const firstVisiblePosition = boundEditor.visibleRanges[0].start
+    const lineNumber = firstVisiblePosition.line
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resource.fsPath)
+    assert.strictEqual(lineNumber + 1, 101)
+    const firstVisiblePositionUnbound = unboundEditor.visibleRanges[0].start
+    const lineNumberUnbound = firstVisiblePositionUnbound.line
+    assert.strictEqual(lineNumberUnbound, 0)
+  })
+  test('cnxml preview scroll sync does not update editor visible range if editor is scrolling (anti-jitter)', async () => {
+    const uri = expect(getRootPathUri())
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const document = await vscode.workspace.openTextDocument(resource)
+    await vscode.window.showTextDocument(document)
+    
+    // We need something long enough to scroll to
+    const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
+    const boundEditor = expect(vscode.window.visibleTextEditors.find(editor => panel.isPreviewOf(editor.document.uri)))
+
+    // reset revealed range
+    const range = new vscode.Range(0, 0, 1, 0)
+    const strategy = vscode.TextEditorRevealType.AtTop
+    boundEditor.revealRange(range, strategy)
+
+    await panel.handleMessage({ type: 'direct-edit', xml: testData });
+    // editor is scrolling
+    (panel as any).resourceIsScrolling = true
+    await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
+    
+    const firstVisiblePosition = boundEditor.visibleRanges[0].start
+    const lineNumber = firstVisiblePosition.line
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resource.fsPath)
+    assert.strictEqual(lineNumber, 0)
+  })
+  test('cnxml preview refreshes when server watched file changes', async () => {
+    const uri = expect(getRootPathUri())
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const document = await vscode.workspace.openTextDocument(resource)
+    await vscode.window.showTextDocument(document)
+    const mockClient = createMockClient()
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: mockClient })
+    const resourceBindingChangedExpected: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resource.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+    await resourceBindingChangedExpected
+    const contentFromFsBecauseVscodeLiesAboutDocumentContent = await fs.promises.readFile(resource.fsPath, { encoding: 'utf-8' })
+    const documentDom = new DOMParser().parseFromString(contentFromFsBecauseVscodeLiesAboutDocumentContent)
+    tagElementsWithLineNumbers(documentDom)
+    const xmlExpected = new XMLSerializer().serializeToString(documentDom)
+    assert.strictEqual((mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[0], 'onDidChangeWatchedFiles');
+    await (mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[1]()
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpected }))
+  })
+  test('cnxml preview throws upon unexpected message', async () => {
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
+    await assert.rejects(panel.handleMessage({ type: 'bad-type' } as any))
   })
   test('panel disposed and refocused', async () => {
     await assert.doesNotReject(async () => {
@@ -488,16 +706,11 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
   })
   test('forwardOnDidChangeWorkspaceFolders simply forwards any argument to client', async () => {
-    const requests: any = []
-    const mockClient = {
-      sendRequest: (...args: any[]) => { requests.push(args); return [] }
-    }
-    const forwarder = forwardOnDidChangeWorkspaceFolders(mockClient as unknown as LanguageClient)
+    const mockClient = createMockClient()
+    const forwarder = forwardOnDidChangeWorkspaceFolders(mockClient)
     await forwarder('test_event' as unknown as vscode.WorkspaceFoldersChangeEvent)
-    const expected = [
-      ['onDidChangeWorkspaceFolders', 'test_event']
-    ]
-    assert.deepStrictEqual(requests, expected)
+    const expected = ['onDidChangeWorkspaceFolders', 'test_event']
+    assert((mockClient.sendRequest as SinonRoot.SinonStub).calledOnceWith(...expected))
   })
 
   this.afterAll(async () => {

@@ -31,7 +31,7 @@ class Disposer implements Disposable {
   }
 
   registerDisposable<T extends vscode.Disposable>(value: T): T {
-    if (this._disposed) {
+    if (this.disposed()) {
       value.dispose()
     } else {
       this.registeredDisposables.push(value)
@@ -65,6 +65,9 @@ export abstract class Panel<InMessage, OutMessage> implements Disposable, Messag
 
   abstract handleMessage(message: InMessage): Promise<void>
   async postMessage(message: OutMessage): Promise<void> {
+    if (this.disposed()) {
+      return
+    }
     await this.panel.webview.postMessage(message)
   }
 

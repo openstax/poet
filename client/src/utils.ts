@@ -70,13 +70,24 @@ export function expect<T>(value: T | null | undefined, message: string): T {
  * This comes at the cost of not preserving the original return type as well
  * as the resulting thrown error being uncatchable.
  */
-export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: any[]) => Promise<any> {
-  return async (...args: any[]) => {
+export function ensureCatch<T extends unknown[], U>(func: (...args: T) => Promise<U>): (...args: T) => Promise<U> {
+  return async (...args: T) => {
     return await func(...args).catch((err: Error) => {
       void vscode.window.showErrorMessage(err.message)
       throw err
     })
   }
+}
+
+/*
+ * Provides very simple reject handling for promises (just throws)
+ * This comes at the cost of not preserving the original return type
+ */
+export function ensureCatchPromise<T>(promise: Promise<T>): Promise<T> {
+  return promise.catch(err => {
+    void vscode.window.showErrorMessage(err.message)
+    throw err
+  })
 }
 
 export function populateXsdSchemaFiles(resourceRootDir: string): void {
