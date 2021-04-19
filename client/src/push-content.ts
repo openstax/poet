@@ -34,6 +34,7 @@ export const getRepo = (): Repository => {
 }
 
 export const taggingDialog = async (): Promise<string | undefined> => {
+  /* instanbul ignore next */
   return await vscode.window.showInformationMessage(
     'Are you tagging for release?',
     // { modal: true },
@@ -42,6 +43,7 @@ export const taggingDialog = async (): Promise<string | undefined> => {
 }
 
 export const getNewTag = (repo: Repository, release: boolean): string | undefined => {
+  /* instanbul ignore next */
   const tags: integer[] = []
 
   // could probaly use a filter-reduce here
@@ -91,14 +93,15 @@ export const _pushContent = (
   const tagging = await _taggingDialog()
   let tag: string | undefined
   if (tagging !== 'No Tag') {
+    /* instanbul ignore next */
     const tagMode = tagging === 'Release'
     tag = _getTag(repo, tagMode)
   }
 
   if (tag !== undefined) {
+    /* instanbul ignore next */
     try {
-      await (repo as any)._repository.tag(tag)
-      // await repo.tag(tag)
+      await (repo as any)._repository.tag(tag) // when VSCode API is updated -> await repo.tag(tag)
     } catch (e) {
       const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
       void errorReporter(`Tagging failed: ${message} ${String(e.stderr)}`)
