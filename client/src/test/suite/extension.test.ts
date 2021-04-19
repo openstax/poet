@@ -330,6 +330,15 @@ suite('Extension Test Suite', function (this: Suite) {
     const moduleTitle = select('//md:title', document) as Node[]
     assert.strictEqual(moduleTitle.length, 1)
     assert.strictEqual(moduleTitle[0].textContent, 'New Module')
+    const moduleId = select('//md:content-id', document) as Node[]
+    assert.strictEqual(moduleId.length, 1)
+    assert.strictEqual(moduleId[0].textContent, 'm00004')
+    const moduleUUIDv4 = select('//md:uuid', document) as Node[]
+    const uuidRgx = /^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/
+    let uuidV4: any = null
+    uuidV4 = moduleUUIDv4[0].textContent
+    assert.strictEqual(moduleUUIDv4.length, 1)
+    assert(uuidRgx.test(uuidV4))
   })
   test('toc editor handle module rename best case', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
@@ -423,7 +432,7 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
   })
   test('panel opener opens new panel if it exists, but is disposed', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {})
+    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => { })
     const mockPanelActivationByType = {
       [PanelType.TOC_EDITOR]: sinon.stub(),
       [PanelType.IMAGE_UPLOAD]: sinon.stub(),
@@ -697,13 +706,17 @@ suite('Extension Test Suite', function (this: Suite) {
 })
 
 // Push Content Tests
-const ignore = async (msg: string): Promise<string | undefined> => { return undefined }
-const makeCaptureMessage = (messages: string[]): (msg: string) => Promise<string | undefined> => {
-  const captureMessage = async (msg: string): Promise<string | undefined> => {
-    messages.push(msg)
+const ignore = async (message: string): Promise<string | undefined> => { return undefined }
+const makeCaptureMessage = (messages: string[]): (message: string) => Promise<string | undefined> => {
+  const captureMessage = async (message: string): Promise<string | undefined> => {
+    messages.push(message)
     return undefined
   }
   return captureMessage
+}
+const makeMockInputMessage = (message: string): () => Promise<string | undefined> => {
+  const mockMessageInput = async (): Promise<string | undefined> => { return message }
+  return mockMessageInput
 }
 const commitOptions: CommitOptions = { all: true }
 
@@ -718,6 +731,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('push with no conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
 
     const getRepo = (): Repository => {
       const stubRepo = Substitute.for<Repository>()
@@ -729,13 +743,14 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, captureMessage, ignore)())
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, captureMessage, ignore)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Successful content push.')
   })
   test('push with merge conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = GitErrorCodes.Conflict
@@ -750,13 +765,14 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Content conflict, please resolve.')
   })
   test('unknown commit error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = ''
@@ -771,13 +787,14 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
   })
   test('push with no changes', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = 'nothing to commit.'
@@ -792,13 +809,14 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'No changes to push.')
   })
   test('unknown push error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = ''
@@ -813,7 +831,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
 
-    await assert.doesNotReject(pushContent._pushContent(getRepo, ignore, captureMessage)())
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, ignore, captureMessage)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Push failed: ')
   })
@@ -834,6 +852,7 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('push to new branch', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockInputMessage('poet commit')
     const pushStub = sinon.stub()
     const newBranchName = 'newbranch'
 
@@ -858,10 +877,19 @@ suite('Push Button Test Suite', function (this: Suite) {
 
       return stubRepo
     }
-
-    await assert.doesNotReject(pushContent._pushContent(getRepo, captureMessage, ignore)())
+    await assert.doesNotReject(pushContent._pushContent(getRepo, mockMessageInput, captureMessage, ignore)())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Successful content push.')
     assert(pushStub.calledOnceWith('origin', newBranchName, true))
+  })
+  test('get message returns showInputBox input', async () => {
+    sinon.stub(vscode.window, 'showInputBox').resolves('test')
+    assert.strictEqual(await pushContent.getMessage(), 'test')
+  })
+  test('validateMessage returns "Too short!" for message that is not long enough', async () => {
+    assert.strictEqual(pushContent.validateMessage('a'), 'Too short!')
+  })
+  test('validateMessage returns null for message that is long enough', async () => {
+    assert.strictEqual(pushContent.validateMessage('abc'), null)
   })
 })
