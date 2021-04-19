@@ -1,26 +1,26 @@
+import { expect } from '../webview-utils'
+
 declare let acquireVsCodeApi: any
 let vscode: any
 
 interface PendingEntry {
   mediaName: string
-  data: string | ArrayBuffer | null
+  data: string
 }
 let pending: PendingEntry[] = []
 
 window.addEventListener('load', () => {
   vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 
-  const dropArea = document.getElementById('drop-area') as HTMLElement
-  const preview = document.getElementById('preview') as HTMLElement
-  const uploadButton = document.getElementById('trigger-upload') as HTMLElement
-  const cancelButton = document.getElementById('cancel-upload') as HTMLElement
+  const dropArea = expect(document.getElementById('drop-area'), 'html file must contain #drop-area')
+  const preview = expect(document.getElementById('preview'), 'html file must contain #preview')
+  const uploadButton = expect(document.getElementById('trigger-upload'), 'html file must contain #trigger-upload')
+  const cancelButton = expect(document.getElementById('cancel-upload'), 'html file must contain #cancel-upload')
 
   const clearPending = (): void => {
     pending = []
-    if (preview.firstChild !== null) {
-      while (preview.firstChild) { // eslint-disable-line @typescript-eslint/strict-boolean-expressions
-        preview.firstChild.remove()
-      }
+    while (preview.firstChild != null) {
+      preview.firstChild.remove()
     }
   }
 
@@ -48,7 +48,7 @@ window.addEventListener('load', () => {
 
       pending.push({
         mediaName: file.name,
-        data: reader.result
+        data: reader.result as string
       })
     }
   }
@@ -56,7 +56,7 @@ window.addEventListener('load', () => {
   const handleDrop = (e: DragEvent): void => {
     const files = e.dataTransfer?.files
 
-    if (files) { // eslint-disable-line @typescript-eslint/strict-boolean-expressions
+    if (files != null) {
       ([...files]).forEach(previewFile)
     }
   }
