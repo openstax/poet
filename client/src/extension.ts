@@ -7,6 +7,7 @@ import { showCnxmlPreview } from './panel-cnxml-preview'
 import { pushContent } from './push-content'
 import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
 import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-types'
+import { TocTreesProvider } from './toc-trees'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
 // Only one instance of each type allowed at any given time
@@ -14,6 +15,7 @@ const activePanelsByType: { [key in PanelType]?: vscode.WebviewPanel } = {}
 const extensionExports = {
   activePanelsByType
 }
+let tocTreesProvider: TocTreesProvider
 let client: LanguageClient
 
 const defaultLocationByType: { [key in PanelType]: vscode.ViewColumn } = {
@@ -27,6 +29,12 @@ export const refreshTocPanel = (clientInner: LanguageClient) => async () => {
   if (activeTocEditor != null) {
     await refreshPanel(activeTocEditor, clientInner)
   }
+}
+
+export const invokeRefreshers = (funcs: Array<() => Promise<void>>) => async () => {
+  funcs.forEach((fn) => {
+    fn().catch((err: Error) => { throw err })
+  })
 }
 
 export const createLazyPanelOpener = (activationByType: { [key in PanelType]: any }) => (type: PanelType, hardRefocus: boolean) => {
@@ -67,13 +75,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
   }
 
   const lazilyFocusOrOpenPanelOfType = createLazyPanelOpener(activationByType)
+  tocTreesProvider = new TocTreesProvider(client)
 
   vscode.workspace.onDidChangeWorkspaceFolders(ensureCatch(forwardOnDidChangeWorkspaceFolders(client)))
-  client.onRequest('onDidChangeWatchedFiles', ensureCatch(refreshTocPanel(client)))
+  client.onRequest('onDidChangeWatchedFiles', ensureCatch(invokeRefreshers([refreshTocPanel(client), async () => tocTreesProvider.refresh()])))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR], false))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD], false))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW], true))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))
+  vscode.commands.registerCommand('openstax.refreshTocTrees', ensureCatch(async () => tocTreesProvider.refresh()))
+  vscode.window.registerTreeDataProvider('tocTrees', tocTreesProvider)
 
   return extensionExports
 }

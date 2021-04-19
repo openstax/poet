@@ -65,6 +65,12 @@
         "command": "openstax.pushContent",
         "title": "Push Content",
         "category": "Openstax"
+      },
+      {
+        "command": "openstax.refreshTocTrees",
+        "title": "Refresh ToC Trees",
+        "category": "Openstax",
+        "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {
@@ -83,8 +89,8 @@
           "name": "Controls"
         },
         {
-          "id": "test2",
-          "name": "Test2"
+          "id": "tocTrees",
+          "name": "ToC Trees"
         }
       ]
     },
@@ -120,6 +126,13 @@
         {
           "command": "openstax.showPreviewToSide",
           "when": "editorLangId == xml && !notebookEditorFocused",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "openstax.refreshTocTrees",
+          "when": "view == tocTrees",
           "group": "navigation"
         }
       ]
