@@ -54,13 +54,12 @@ export abstract class Panel<InMessage, OutMessage> implements Disposable, Messag
     this.registerDisposable(this.panel)
     this.panel.onDidDispose(() => this.dispose())
 
-    // FIXME: Dispose this
-    this.panel.webview.onDidReceiveMessage((message) => {
+    this.registerDisposable(this.panel.webview.onDidReceiveMessage((message) => {
       this.handleMessage(message).catch((err: Error) => {
         void vscode.window.showErrorMessage(err.message)
         throw err
       })
-    })
+    }))
   }
 
   abstract handleMessage(message: InMessage): Promise<void>

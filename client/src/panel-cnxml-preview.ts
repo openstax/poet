@@ -109,7 +109,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
   async handleMessage(message: PanelIncomingMessage): Promise<void> {
     if (message.type === 'direct-edit') {
       const xml = message.xml
-      if (xml == null || this.resourceBinding == null) {
+      if (this.resourceBinding == null) {
         return
       }
       const document = await vscode.workspace.openTextDocument(this.resourceBinding)

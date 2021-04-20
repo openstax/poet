@@ -269,9 +269,10 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
     super(initPanel(context))
 
     this.registerDisposable(this.context.client.onRequest('onDidChangeWatchedFiles', async () => {
-      await refreshPanel(this.panel, this.context.client)
+      await this.refreshPanel(this.panel, this.context.client)
     }))
   }
 
+  readonly refreshPanel = refreshPanel
   readonly handleMessage = handleMessageFromWebviewPanel(this.panel, this.context.client)
 }

@@ -1,12 +1,12 @@
 import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
-import { fixResourceReferences, fixCspSourceReferences, getRootPathUri } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect } from './utils'
 import { PanelType } from './extension-types'
 import { ExtensionHostContext, Panel } from './panel'
 
 export interface PanelIncomingMessage {
-  mediaUploads?: Array<{mediaName: string, data: string}>
+  mediaUploads: Array<{mediaName: string, data: string}>
 }
 
 const initPanel = (context: ExtensionHostContext) => () => {
@@ -39,10 +39,7 @@ export class ImageManagerPanel extends Panel<PanelIncomingMessage, void> {
 
   async handleMessage(message: PanelIncomingMessage): Promise<void> {
     const { mediaUploads } = message
-    const uri = getRootPathUri()
-    if (mediaUploads == null || uri == null) {
-      return
-    }
+    const uri = expect(getRootPathUri(), 'panel must act on the root workspace')
     for (const upload of mediaUploads) {
       const { mediaName, data } = upload
       const newFileUri = uri.with({ path: path.join(uri.path, 'media', mediaName) })

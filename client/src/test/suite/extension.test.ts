@@ -13,7 +13,10 @@ import {
 } from './../../utils'
 import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../../extension'
 import {
-  handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage
+  handleMessageFromWebviewPanel as tocEditorHandleMessage,
+  NS_CNXML, NS_COLLECTION, NS_METADATA,
+  refreshPanel,
+  PanelIncomingMessage as TocPanelIncomingMessage, TocEditorPanel
 } from './../../panel-toc-editor'
 import { ImageManagerPanel } from './../../panel-image-manager'
 import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
@@ -26,6 +29,7 @@ import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../../../common/src/requests'
+import { Panel } from '../../panel'
 
 const ROOT_DIR_REL = '../../../../../../'
 const ROOT_DIR_ABS = path.resolve(__dirname, ROOT_DIR_REL)
@@ -41,8 +45,8 @@ const contextStub = {
 const resourceRootDir = TEST_OUT_DIR
 const createMockClient = (): LanguageClient => {
   return {
-    sendRequest: SinonRoot.stub(),
-    onRequest: SinonRoot.stub(),
+    sendRequest: SinonRoot.stub().returns([]),
+    onRequest: SinonRoot.stub().returns({dispose: () => {}}),
   } as unknown as LanguageClient
 }
 
@@ -238,12 +242,9 @@ suite('Extension Test Suite', function (this: Suite) {
     })
   }).timeout(5000)
   test('toc editor refresh makes proper language server requests', async () => {
-    const mockClient = createMockClient();
-    (mockClient.sendRequest as SinonRoot.SinonStub).returns([])
-    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, mockClient)
-      await handler({ type: 'refresh' })
-    })
+    const mockClient = createMockClient()
+    const panel = new TocEditorPanel({ resourceRootDir, client: mockClient})
+    await panel.handleMessage({ type: 'refresh' })
     const expectedCalls = [
       [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
       [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
@@ -254,6 +255,13 @@ suite('Extension Test Suite', function (this: Suite) {
       assert((mockClient.sendRequest as SinonRoot.SinonStub).calledWith(...args))
     }
   }).timeout(5000)
+  test('toc editor refresh makes no request when disposed', async () => {
+    const mockClient = createMockClient()
+    const panel = new TocEditorPanel({ resourceRootDir, client: mockClient})
+    panel.dispose()
+    await panel.handleMessage({ type: 'refresh' })
+    assert((mockClient.sendRequest as SinonRoot.SinonStub).notCalled)
+  })
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
@@ -350,6 +358,15 @@ suite('Extension Test Suite', function (this: Suite) {
     const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
     assert.strictEqual(moduleTitle.length, 1)
     assert.strictEqual(moduleTitle[0].textContent, 'rename')
+  })
+  test('toc editor refreshes when server watched file changes', async () => {
+    const mockClient = createMockClient()
+    const panel = new TocEditorPanel({ resourceRootDir, client: mockClient })
+    const refreshStub = sinon.stub(panel, 'refreshPanel')
+    
+    assert.strictEqual((mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[0], 'onDidChangeWatchedFiles');
+    await (mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[1]()
+    assert((refreshStub as SinonRoot.SinonStub).called)
   })
   test('show image upload', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, async (panel) => {
@@ -520,6 +537,49 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(modified, before)
     assert.notStrictEqual(modified, testData)
   })
+  test('cnxml preview messaged upon visible range change', async () => {
+    const uri = expect(getRootPathUri())
+
+    // An editor not bound to the panel
+    const resourceIrrelevant = uri.with({ path: path.join(uri.path, 'modules', 'm00002', 'index.cnxml') })
+    const documentIrrelevant = await vscode.workspace.openTextDocument(resourceIrrelevant)
+    const unboundEditor = await vscode.window.showTextDocument(documentIrrelevant, vscode.ViewColumn.One)
+
+    // The editor we are bound to
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const document = await vscode.workspace.openTextDocument(resource)
+    const boundEditor = await vscode.window.showTextDocument(document, vscode.ViewColumn.Two)
+
+    // We need something long enough to scroll in
+    const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
+
+    // reset revealed range
+    const resetRange = new vscode.Range(0, 0, 1, 0)
+    const resetStrategy = vscode.TextEditorRevealType.AtTop
+    boundEditor.revealRange(resetRange, resetStrategy)
+    unboundEditor.revealRange(resetRange, resetStrategy)
+
+    await panel.handleMessage({ type: 'direct-edit', xml: testData })
+
+    const range = new vscode.Range(100, 0, 101, 0)
+    const strategy = vscode.TextEditorRevealType.AtTop
+    
+    const visualRangeChangedFirst = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
+    })
+    unboundEditor.revealRange(range, strategy)
+    await visualRangeChangedFirst
+    assert(!(panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 100 }))
+    assert(!(panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 101 }))
+    
+    const visualRangeChangedSecond = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
+    })
+    boundEditor.revealRange(range, strategy)
+    await visualRangeChangedSecond
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 101 }))
+  })
   test('cnxml preview scroll sync in editor updates visible range', async () => {
     const uri = expect(getRootPathUri())
 
@@ -586,27 +646,17 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(lineNumber, 0)
   })
   test('cnxml preview refreshes when server watched file changes', async () => {
-    const uri = expect(getRootPathUri())
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const document = await vscode.workspace.openTextDocument(resource)
-    await vscode.window.showTextDocument(document)
     const mockClient = createMockClient()
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: mockClient })
-    const resourceBindingChangedExpected: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding((event) => {
-        if (event != null && event.fsPath === resource.fsPath) {
-          resolve(event)
-        }
-      })
+    sinon.stub(panel as any, 'refreshContents')
+    const panelBindingChanged = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding(() => resolve(undefined))
     })
-    await resourceBindingChangedExpected
-    const contentFromFsBecauseVscodeLiesAboutDocumentContent = await fs.promises.readFile(resource.fsPath, { encoding: 'utf-8' })
-    const documentDom = new DOMParser().parseFromString(contentFromFsBecauseVscodeLiesAboutDocumentContent)
-    tagElementsWithLineNumbers(documentDom)
-    const xmlExpected = new XMLSerializer().serializeToString(documentDom)
+    await panelBindingChanged
+    const refreshCount = ((panel as any).refreshContents as SinonRoot.SinonStub).callCount
     assert.strictEqual((mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[0], 'onDidChangeWatchedFiles');
     await (mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[1]()
-    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpected }))
+    assert.strictEqual(((panel as any).refreshContents as SinonRoot.SinonStub).callCount, refreshCount + 1)
   })
   test('cnxml preview throws upon unexpected message', async () => {
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
