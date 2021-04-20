@@ -622,10 +622,13 @@ export class BookBundle {
 
 function parseCollection(document: Document, moduleObjectResolver: (id: string) => TocTreeModule): TocTreeCollection {
   const metadata = document.getElementsByTagNameNS(NS_COLLECTION, 'metadata')[0]
-  const collectionTitle = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent
-  const collectionSlug = metadata.getElementsByTagNameNS(NS_METADATA, 'slug')[0].textContent
-
   const treeRoot = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
+
+  const collectionTitleElem = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0]
+  const collectionTitle = collectionTitleElem?.textContent
+
+  const collectionSlugElem = metadata.getElementsByTagNameNS(NS_METADATA, 'slug')[0]
+  const collectionSlug = collectionSlugElem?.textContent
 
   const moduleToObject = (element: Element): TocTreeModule => {
     const moduleid = element.getAttribute('document')
@@ -633,7 +636,8 @@ function parseCollection(document: Document, moduleObjectResolver: (id: string) 
   }
 
   const subcollectionToObject = (element: Element): TocTreeCollection => {
-    const title = element.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent
+    const titleElem = element.getElementsByTagNameNS(NS_METADATA, 'title')[0]
+    const title = titleElem?.textContent
     const content = element.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
     return {
       type: 'subcollection',
