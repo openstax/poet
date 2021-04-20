@@ -25,8 +25,8 @@ export class BundleValidationQueue {
   addRequest(request?: BundleValidationRequest): void {
     this.clearQueue()
     if (request != null) {
-      const priorityItem = expect(this.bundle.bundleItemFromUri(request.causeUri), 'caller must verify uri resides in this bundle')
-      if (priorityItem.type === 'collections' || priorityItem.type === 'modules') {
+      const priorityItem = this.bundle.bundleItemFromUri(request.causeUri)
+      if ((priorityItem !== null) && (priorityItem.type === 'collections' || priorityItem.type === 'modules')) {
         this.queue.push(priorityItem)
       }
     }
