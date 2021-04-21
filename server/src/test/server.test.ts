@@ -453,7 +453,7 @@ describe('ValidationQueue', function () {
   const noConnection: any = {}
   before(function () {
     mockfs({
-      '/bundle/media': {},
+      '/bundle/media/test.jpg': '',
       '/bundle/collections/valid.xml': `
         <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
           <col:metadata>
@@ -506,6 +506,21 @@ describe('ValidationQueue', function () {
     }
     validationQueue.addRequest(validationRequest)
     await assert.rejects((validationQueue as any).processQueue())
+  })
+  it('will error when validation is requested for an uri that cannot be validated', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      console: {
+        error: sinon.stub()
+      }
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const unvalidatable = 'file:///bundle/media/test.jpg'
+    const item = expect(bundle.bundleItemFromUri(unvalidatable));
+    (validationQueue as any).queue.push(item)
+    await (validationQueue as any).processQueue()
+    assert(connection.console.error.calledOnceWith(`Ignoring unexpected item of type '${item.type}' and key ${item.key} in queue`))
   })
   it('will log error when validation is requested for an uri that is not in the bundle', async () => {
     const clock = sinon.useFakeTimers()
