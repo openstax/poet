@@ -15,7 +15,6 @@ import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../.
 import {
   handleMessageFromWebviewPanel as tocEditorHandleMessage,
   NS_CNXML, NS_COLLECTION, NS_METADATA,
-  refreshPanel,
   PanelIncomingMessage as TocPanelIncomingMessage, TocEditorPanel
 } from './../../panel-toc-editor'
 import { ImageManagerPanel } from './../../panel-image-manager'
@@ -29,7 +28,7 @@ import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../../../common/src/requests'
-import { Panel } from '../../panel'
+import { Disposer, ExtensionHostContext, Panel } from '../../panel'
 
 const ROOT_DIR_REL = '../../../../../../'
 const ROOT_DIR_ABS = path.resolve(__dirname, ROOT_DIR_REL)
@@ -46,7 +45,7 @@ const resourceRootDir = TEST_OUT_DIR
 const createMockClient = (): LanguageClient => {
   return {
     sendRequest: SinonRoot.stub().returns([]),
-    onRequest: SinonRoot.stub().returns({dispose: () => {}}),
+    onRequest: SinonRoot.stub().returns({ dispose: () => {} })
   } as unknown as LanguageClient
 }
 
@@ -107,7 +106,7 @@ suite('Extension Test Suite', function (this: Suite) {
   this.beforeEach(() => {
     sinon.spy(CnxmlPreviewPanel.prototype, 'postMessage')
   })
-  
+
   this.afterEach(async () => {
     await resetTestData()
     sinon.restore()
@@ -243,7 +242,7 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('toc editor refresh makes proper language server requests', async () => {
     const mockClient = createMockClient()
-    const panel = new TocEditorPanel({ resourceRootDir, client: mockClient})
+    const panel = new TocEditorPanel({ resourceRootDir, client: mockClient })
     await panel.handleMessage({ type: 'refresh' })
     const expectedCalls = [
       [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
@@ -257,7 +256,7 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('toc editor refresh makes no request when disposed', async () => {
     const mockClient = createMockClient()
-    const panel = new TocEditorPanel({ resourceRootDir, client: mockClient})
+    const panel = new TocEditorPanel({ resourceRootDir, client: mockClient })
     panel.dispose()
     await panel.handleMessage({ type: 'refresh' })
     assert((mockClient.sendRequest as SinonRoot.SinonStub).notCalled)
@@ -363,8 +362,8 @@ suite('Extension Test Suite', function (this: Suite) {
     const mockClient = createMockClient()
     const panel = new TocEditorPanel({ resourceRootDir, client: mockClient })
     const refreshStub = sinon.stub(panel, 'refreshPanel')
-    
-    assert.strictEqual((mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[0], 'onDidChangeWatchedFiles');
+
+    assert.strictEqual((mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[0], 'onDidChangeWatchedFiles')
     await (mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[1]()
     assert((refreshStub as SinonRoot.SinonStub).called)
   })
@@ -564,7 +563,7 @@ suite('Extension Test Suite', function (this: Suite) {
 
     const range = new vscode.Range(100, 0, 101, 0)
     const strategy = vscode.TextEditorRevealType.AtTop
-    
+
     const visualRangeChangedFirst = new Promise((resolve, reject) => {
       vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
     })
@@ -572,7 +571,7 @@ suite('Extension Test Suite', function (this: Suite) {
     await visualRangeChangedFirst
     assert(!(panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 100 }))
     assert(!(panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 101 }))
-    
+
     const visualRangeChangedSecond = new Promise((resolve, reject) => {
       vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
     })
@@ -603,7 +602,17 @@ suite('Extension Test Suite', function (this: Suite) {
     boundEditor.revealRange(range, strategy)
     unboundEditor.revealRange(range, strategy)
 
-    await panel.handleMessage({ type: 'direct-edit', xml: testData });
+    const documentContentChanged = new Promise((resolve, reject) => {
+      vscode.workspace.onDidChangeTextDocument((event) => {
+        for (const change of event.contentChanges) {
+          if (change.text == testData) {
+            resolve(undefined)
+          }
+        }
+      })
+    })
+    await panel.handleMessage({ type: 'direct-edit', xml: testData })
+    await documentContentChanged;
     // ensure scrollable
     (panel as any).resourceIsScrolling = false
     const visualRangeChanged = new Promise((resolve, reject) => {
@@ -624,7 +633,7 @@ suite('Extension Test Suite', function (this: Suite) {
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
     const document = await vscode.workspace.openTextDocument(resource)
     await vscode.window.showTextDocument(document)
-    
+
     // We need something long enough to scroll to
     const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient() })
@@ -639,7 +648,7 @@ suite('Extension Test Suite', function (this: Suite) {
     // editor is scrolling
     (panel as any).resourceIsScrolling = true
     await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
-    
+
     const firstVisiblePosition = boundEditor.visibleRanges[0].start
     const lineNumber = firstVisiblePosition.line
     assert.strictEqual((panel as any).resourceBinding.fsPath, resource.fsPath)
@@ -654,7 +663,7 @@ suite('Extension Test Suite', function (this: Suite) {
     })
     await panelBindingChanged
     const refreshCount = ((panel as any).refreshContents as SinonRoot.SinonStub).callCount
-    assert.strictEqual((mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[0], 'onDidChangeWatchedFiles');
+    assert.strictEqual((mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[0], 'onDidChangeWatchedFiles')
     await (mockClient.onRequest as SinonRoot.SinonStub).getCall(0).args[1]()
     assert.strictEqual(((panel as any).refreshContents as SinonRoot.SinonStub).callCount, refreshCount + 1)
   })
@@ -667,6 +676,24 @@ suite('Extension Test Suite', function (this: Suite) {
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
     })
+  }).timeout(5000)
+  test('panel hidden and refocused', async () => {
+    const command = OpenstaxCommand.SHOW_IMAGE_MANAGER
+    await vscode.commands.executeCommand(command)
+    const panelManager = expect((await extensionExports)[command])
+
+    // Hide panel by opening another tab
+    const uri = expect(getRootPathUri())
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const document = await vscode.workspace.openTextDocument(resource)
+    await vscode.window.showTextDocument(document)
+
+    // Refocus
+    await vscode.commands.executeCommand(command)
+    // Give the panel time to load
+    await sleep(500)
+    assert(panelManager.panel()?.visible())
+
   }).timeout(5000)
   test('schema files are populated when not existing', async () => {
     const uri = expect(getRootPathUri())
@@ -765,6 +792,69 @@ suite('Extension Test Suite', function (this: Suite) {
 
   this.afterAll(async () => {
     await deactivate()
+  })
+})
+
+suite('Disposables', function (this: Suite) {
+  const sinon = SinonRoot.createSandbox()
+  const initTestPanel = (_context: ExtensionHostContext) => () => {
+    const panel = vscode.window.createWebviewPanel(
+      'openstax.testPanel',
+      'Test Panel',
+      vscode.ViewColumn.One
+    )
+    panel.webview.html = rawTextHtml('test')
+    return panel
+  }
+  class TestPanel extends Panel<void, void> {
+    constructor(private readonly context: ExtensionHostContext) {
+      super(initTestPanel(context))
+    }
+
+    async handleMessage(_message: undefined): Promise<void> {
+      throw new Error('Method not implemented.')
+    }
+  }
+  this.afterEach(async () => {
+    sinon.restore()
+    sinon.reset()
+    sinon.resetBehavior()
+    sinon.resetHistory()
+  })
+
+  test('onDidDispose event run upon disposal', async () => {
+    const panel = new TestPanel({ resourceRootDir, client: createMockClient() })
+    const panelDisposed = new Promise((resolve, reject) => {
+      panel.onDidDispose(() => {
+        resolve(true)
+      })
+    })
+    panel.dispose()
+    assert(await panelDisposed)
+  })
+  test('registered disposables disposed upon parent disposal', async () => {
+    const panel = new TestPanel({ resourceRootDir, client: createMockClient() })
+    const testDisposable = new Disposer()
+    panel.registerDisposable(testDisposable)
+    const childDisposed = new Promise((resolve, reject) => {
+      testDisposable.onDidDispose(() => {
+        resolve(true)
+      })
+    })
+    panel.dispose()
+    assert(await childDisposed)
+  })
+  test('registered disposables disposed immediately if parent disposed', async () => {
+    const panel = new TestPanel({ resourceRootDir, client: createMockClient() })
+    panel.dispose()
+    const testDisposable = new Disposer()
+    const childDisposed = new Promise((resolve, reject) => {
+      testDisposable.onDidDispose(() => {
+        resolve(true)
+      })
+    })
+    panel.registerDisposable(testDisposable)
+    assert(await childDisposed)
   })
 })
 

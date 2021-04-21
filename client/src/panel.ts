@@ -1,10 +1,11 @@
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
+import { ensureCatchPromise } from './utils'
 
 // Modified from https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/src/util/dispose.ts
-class Disposer implements Disposable {
+export class Disposer implements DisposableSupplemental {
   private _disposed = false
-  private registeredDisposables: vscode.Disposable[] = [] // TODO: change type to Disposable[]
+  private registeredDisposables: Disposable[] = []
   private onDidDisposeListeners: Array<() => void> = []
 
   onDidDispose(listener: () => void): void {
@@ -30,7 +31,7 @@ class Disposer implements Disposable {
     this.disposeAll()
   }
 
-  registerDisposable<T extends vscode.Disposable>(value: T): T {
+  registerDisposable<T extends Disposable>(value: T): T {
     if (this.disposed()) {
       value.dispose()
     } else {
@@ -44,9 +45,9 @@ class Disposer implements Disposable {
   }
 }
 
-export abstract class Panel<InMessage, OutMessage> implements Disposable, Messageable<InMessage, OutMessage> {
+export abstract class Panel<InMessage, OutMessage> implements DisposableSupplemental, Messageable<InMessage, OutMessage> {
   protected readonly panel: vscode.WebviewPanel
-  private readonly disposer: Disposable
+  private readonly disposer: DisposableSupplemental
 
   constructor(initPanel: () => vscode.WebviewPanel) {
     this.disposer = new Disposer()
@@ -55,11 +56,12 @@ export abstract class Panel<InMessage, OutMessage> implements Disposable, Messag
     this.panel.onDidDispose(() => this.dispose())
 
     this.registerDisposable(this.panel.webview.onDidReceiveMessage((message) => {
-      this.handleMessage(message).catch((err: Error) => {
-        void vscode.window.showErrorMessage(err.message)
-        throw err
-      })
+      void ensureCatchPromise(this.handleMessage(message))
     }))
+  }
+
+  visible(): boolean {
+    return this.panel.visible 
   }
 
   abstract handleMessage(message: InMessage): Promise<void>
@@ -97,8 +99,11 @@ interface Messageable<IncomingMessage, OutgoingMessage> {
 }
 
 interface Disposable {
-  onDidDispose: (listener: () => void) => void
   dispose: () => void
+}
+
+interface DisposableSupplemental extends Disposable {
+  onDidDispose: (listener: () => void) => void
   registerDisposable: <T extends vscode.Disposable>(value: T) => T
   disposed: () => boolean
 }

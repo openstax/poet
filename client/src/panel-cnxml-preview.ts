@@ -90,15 +90,15 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
   constructor(private readonly context: ExtensionHostContext) {
     super(initPanel(context))
     this._onDidChangeResourceBinding = new vscode.EventEmitter()
-    ensureCatchPromise(this.tryRebindToActiveResource(true))
+    void ensureCatchPromise(this.tryRebindToActiveResource(true))
     this.registerDisposable(vscode.window.onDidChangeActiveTextEditor((editor) => {
-      ensureCatchPromise(this.tryRebindToActiveResource(false))
+      void ensureCatchPromise(this.tryRebindToActiveResource(false))
     }))
     this.registerDisposable(this.context.client.onRequest('onDidChangeWatchedFiles', async () => {
       await this.refreshContents()
     }))
     this.registerDisposable(vscode.window.onDidChangeTextEditorVisibleRanges(event => {
-      ensureCatchPromise(this.tryScrollToRangeStartOfEditor(event.textEditor))
+      void ensureCatchPromise(this.tryScrollToRangeStartOfEditor(event.textEditor))
     }))
   }
 
@@ -145,7 +145,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     }
   }
 
-  private async tryScrollToRangeStartOfEditor(editor: vscode.TextEditor) {
+  private async tryScrollToRangeStartOfEditor(editor: vscode.TextEditor): Promise<void> {
     if (!this.isPreviewOf(editor.document.uri)) {
       return
     }

@@ -82,9 +82,10 @@ export function ensureCatch<T extends unknown[], U>(func: (...args: T) => Promis
 /*
  * Provides very simple reject handling for promises (just throws)
  * This comes at the cost of not preserving the original return type
+ * as well as the resulting thrown error being uncatchable.
  */
-export function ensureCatchPromise<T>(promise: Promise<T>): Promise<T> {
-  return promise.catch(err => {
+export async function ensureCatchPromise<T>(promise: Promise<T>): Promise<void> {
+  await promise.catch(err => {
     void vscode.window.showErrorMessage(err.message)
     throw err
   })
