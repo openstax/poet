@@ -625,10 +625,10 @@ function parseCollection(document: Document, moduleObjectResolver: (id: string) 
   const treeRoot = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
 
   const collectionTitleElem = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0]
-  const collectionTitle = collectionTitleElem?.textContent
+  const collectionTitle = collectionTitleElem?.textContent ?? 'Collection Title Missing'
 
   const collectionSlugElem = metadata.getElementsByTagNameNS(NS_METADATA, 'slug')[0]
-  const collectionSlug = collectionSlugElem?.textContent
+  const collectionSlug = collectionSlugElem?.textContent ?? 'Collection Slug Missing'
 
   const moduleToObject = (element: Element): TocTreeModule => {
     const moduleid = element.getAttribute('document')
@@ -636,12 +636,12 @@ function parseCollection(document: Document, moduleObjectResolver: (id: string) 
   }
 
   const subcollectionToObject = (element: Element): TocTreeCollection => {
-    const titleElem = element.getElementsByTagNameNS(NS_METADATA, 'title')[0]
-    const title = titleElem?.textContent
+    const subcollectionTitleElem = element.getElementsByTagNameNS(NS_METADATA, 'title')[0]
+    const subcollectionTitle = subcollectionTitleElem?.textContent ?? 'Subcollection Title Missing'
     const content = element.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
     return {
       type: TocTreeElementType.subcollection,
-      title: expect(title, 'Subcollection title missing'),
+      title: subcollectionTitle,
       children: childObjects(content)
     }
   }
@@ -660,8 +660,8 @@ function parseCollection(document: Document, moduleObjectResolver: (id: string) 
 
   return {
     type: TocTreeElementType.collection,
-    title: expect(collectionTitle, 'Collection title missing'),
-    slug: expect(collectionSlug, 'Collection slug missing'),
+    title: collectionTitle,
+    slug: collectionSlug,
     children: childObjects(treeRoot)
   }
 }
