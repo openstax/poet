@@ -61,7 +61,7 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
   }
 
   visible(): boolean {
-    return this.panel.visible 
+    return this.panel.visible
   }
 
   abstract handleMessage(message: InMessage): Promise<void>
@@ -108,9 +108,14 @@ interface DisposableSupplemental extends Disposable {
   disposed: () => boolean
 }
 
+export interface ExtensionEvents {
+  onDidChangeWatchedFiles: vscode.Event<undefined>
+}
+
 export interface ExtensionHostContext {
   resourceRootDir: string
   client: LanguageClient
+  events: ExtensionEvents
 }
 
 export class PanelManager<T extends Panel<unknown, unknown>> {

@@ -32,20 +32,35 @@ export const getRepo = (): Repository => {
   return result
 }
 
+export const validateMessage = (message: string): string | null => {
+  return message.length > 2 ? null : 'Too short!'
+}
+
+export const getMessage = async (): Promise<string | undefined> => {
+  const message = await vscode.window.showInputBox({
+    prompt: 'Push Message: ',
+    placeHolder: '...',
+    validateInput: validateMessage
+  })
+  return message
+}
+
 export const pushContent = () => async () => {
   if (await canPush(getErrorDiagnosticsBySource())) {
-    await _pushContent(getRepo, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+    await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
   }
 }
 
-export const _pushContent = (_getRepo: () => Repository, infoReporter: (msg: string) => Thenable<string | undefined>, errorReporter: (msg: string) => Thenable<string | undefined>) => async () => {
+export const _pushContent = (_getRepo: () => Repository, _getMessage: () => Thenable<string | undefined>, infoReporter: (msg: string) => Thenable<string | undefined>, errorReporter: (msg: string) => Thenable<string | undefined>) => async () => {
   const repo = _getRepo()
   const commitOptions: CommitOptions = { all: true }
 
   let commitSucceeded = false
 
+  const commitMessage = await _getMessage()
+  if (commitMessage == null) { return }
   try {
-    await repo.commit('poet commit', commitOptions)
+    await repo.commit(commitMessage, commitOptions)
     commitSucceeded = true
   } catch (e) {
     console.log(e)

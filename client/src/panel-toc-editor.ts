@@ -4,12 +4,13 @@ import path from 'path'
 
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect } from './utils'
-import { TocTreeCollection } from '../../common/src/toc-tree'
+import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, constructModuleUri, constructCollectionUri, ensureCatch } from './utils'
+import { TocTreeCollection, TocTreeElementType } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { BundleModulesArgs, BundleModulesResponse, BundleOrphanedModulesArgs, BundleOrphanedModulesResponse, BundleTreesArgs, BundleTreesResponse, ExtensionServerRequest } from '../../common/src/requests'
 import { ExtensionHostContext, Panel } from './panel'
+import { v4 as uuidv4 } from 'uuid'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -68,14 +69,18 @@ const requestBundleModules = async (client: LanguageClient, args: BundleModulesA
 }
 
 async function createBlankModule(): Promise<string> {
-  const template = `
-<document xmlns="http://cnx.rice.edu/cnxml">
-  <metadata xmlns:md="http://cnx.rice.edu/mdml">
-    <md:title>New Module</md:title>
-  </metadata>
-  <content>
-  </content>
-</document>`.trim()
+  const template = (newModuleId: string): string => {
+    return `
+    <document xmlns="http://cnx.rice.edu/cnxml">
+      <metadata xmlns:md="http://cnx.rice.edu/mdml">
+        <md:title>New Module</md:title>
+        <md:content-id>${newModuleId}</md:content-id>
+        <md:uuid>${uuidv4()}</md:uuid>
+      </metadata>
+      <content>
+      </content>
+    </document>`.trim()
+  }
   const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
   let moduleNumber = 0
   const moduleDirs = new Set(await fsPromises.readdir(path.join(uri.fsPath, 'modules')))
@@ -86,24 +91,24 @@ async function createBlankModule(): Promise<string> {
       // File exists already, try again
       continue
     }
-    const newModuleUri = uri.with({ path: path.join(uri.path, 'modules', newModuleId, 'index.cnxml') })
-    await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(template))
+    const newModuleUri = constructModuleUri(uri, newModuleId)
+    await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(template(newModuleId)))
     return newModuleId
   }
 }
 
 async function createSubcollection(slug: string): Promise<void> {
   const uri = expect(getRootPathUri(), 'no root path found in which to write tree')
-  const replacingUri = uri.with({ path: path.join(uri.fsPath, 'collections', `${slug}.collection.xml`) })
+  const replacingUri = constructCollectionUri(uri, slug)
   const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' })
   const document = new DOMParser().parseFromString(collectionData)
   const contentRoot = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
   // make a fake tree data collection to populate the new subcollection to the content root
   populateTreeDataToXML(document, contentRoot, {
-    type: 'collection',
+    type: TocTreeElementType.collection,
     title: 'fake',
     children: [{
-      type: 'subcollection',
+      type: TocTreeElementType.subcollection,
       title: 'New Subcollection',
       children: []
     }]
@@ -118,7 +123,7 @@ async function createSubcollection(slug: string): Promise<void> {
 
 async function renameModule(id: string, newName: string): Promise<void> {
   const uri = expect(getRootPathUri(), 'No root path in which to find renamed module')
-  const moduleUri = uri.with({ path: path.join(uri.path, 'modules', id, 'index.cnxml') })
+  const moduleUri = constructModuleUri(uri, id)
   const xml = Buffer.from(await vscode.workspace.fs.readFile(moduleUri)).toString('utf-8')
   const document = new DOMParser().parseFromString(xml)
   let metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
@@ -158,13 +163,13 @@ export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageC
   const allModulesSorted = allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
   const orphanModulesSorted = orphanModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
   const collectionAllModules: TocTreeCollection = {
-    type: 'collection',
+    type: TocTreeElementType.collection,
     title: 'All Modules',
     slug: 'mock-slug__source-only',
     children: allModulesSorted
   }
   const collectionOrphanModules: TocTreeCollection = {
-    type: 'collection',
+    type: TocTreeElementType.collection,
     title: 'Orphan Modules',
     slug: 'mock-slug__source-only',
     children: orphanModulesSorted
@@ -223,11 +228,11 @@ function populateTreeDataToXML(document: XMLDocument, root: any, treeData: TocTr
     title.appendChild(titleContent)
     element.appendChild(title)
     root.appendChild(element)
-    if (child.type === 'subcollection') {
+    if (child.type === TocTreeElementType.subcollection) {
       const contentWrapper = document.createElementNS(NS_COLLECTION, 'content')
       element.appendChild(contentWrapper)
       populateTreeDataToXML(document, contentWrapper, child)
-    } else if (child.type === 'module') {
+    } else if (child.type === TocTreeElementType.module) {
       element.setAttribute('document', child.moduleid)
     }
   }
@@ -268,9 +273,9 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
   constructor(private readonly context: ExtensionHostContext) {
     super(initPanel(context))
 
-    this.registerDisposable(this.context.client.onRequest('onDidChangeWatchedFiles', async () => {
+    this.registerDisposable(this.context.events.onDidChangeWatchedFiles(ensureCatch(async () => {
       await this.refreshPanel(this.panel, this.context.client)
-    }))
+    })))
   }
 
   readonly refreshPanel = refreshPanel

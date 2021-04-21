@@ -44,7 +44,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
           class API {
             postMessage(msg: PanelIncomingMessage): void { messagesFromWidget.push(msg) }
             getState(): any { return undefined }
-            setState(_state: any): void { return }
+            setState(_state: any): void { }
           }
           (contentWindow as any).acquireVsCodeApi = () => { return new API() }
         }
@@ -566,11 +566,11 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.get('.panel-editable .search-info').should('contain.text', '0 / 0')
         cy.get('.panel-editable .rst__rowSearchFocus').should('not.exist')
         cy.get('.panel-editable .search-next').should('be.disabled')
-        cy.get('.panel-editable .search-next').click({force: true})
+        cy.get('.panel-editable .search-next').click({ force: true })
         cy.get('.panel-editable .search-info').should('contain.text', '0 / 0')
         cy.get('.panel-editable .rst__rowSearchFocus').should('not.exist')
         cy.get('.panel-editable .search-prev').should('be.disabled')
-        cy.get('.panel-editable .search-prev').click({force: true})
+        cy.get('.panel-editable .search-prev').click({ force: true })
         cy.get('.panel-editable .search-info').should('contain.text', '0 / 0')
         cy.get('.panel-editable .rst__rowSearchFocus').should('not.exist')
       })

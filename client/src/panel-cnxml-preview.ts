@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
-import { fixResourceReferences, fixCspSourceReferences, addBaseHref, expect, getRootPathUri, ensureCatchPromise } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, addBaseHref, expect, getRootPathUri, ensureCatchPromise, ensureCatch } from './utils'
 import { PanelType } from './extension-types'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { ExtensionHostContext, Panel } from './panel'
@@ -94,9 +94,9 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     this.registerDisposable(vscode.window.onDidChangeActiveTextEditor((editor) => {
       void ensureCatchPromise(this.tryRebindToActiveResource(false))
     }))
-    this.registerDisposable(this.context.client.onRequest('onDidChangeWatchedFiles', async () => {
+    this.registerDisposable(this.context.events.onDidChangeWatchedFiles(ensureCatch(async () => {
       await this.refreshContents()
-    }))
+    })))
     this.registerDisposable(vscode.window.onDidChangeTextEditorVisibleRanges(event => {
       void ensureCatchPromise(this.tryScrollToRangeStartOfEditor(event.textEditor))
     }))

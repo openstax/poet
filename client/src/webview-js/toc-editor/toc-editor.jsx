@@ -53,8 +53,8 @@ const getSavedState = () => {
 }
 
 // Use this function to send messages to the extension debug console
-// eslint-disable-next-line no-unused-vars
 /* istanbul ignore next */
+// eslint-disable-next-line no-unused-vars
 const debug = (item) => {
   vscode.postMessage({ type: 'debug', item })
 }

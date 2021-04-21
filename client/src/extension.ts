@@ -6,11 +6,15 @@ import { CnxmlPreviewPanel } from './panel-cnxml-preview'
 import { pushContent } from './push-content'
 import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
 import { OpenstaxCommand } from './extension-types'
-import { Panel, PanelManager } from './panel'
+import { ExtensionHostContext, Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
+import { TocTreesProvider } from './toc-trees'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
+let tocTreesProvider: TocTreesProvider
 let client: LanguageClient
+const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<undefined> = new vscode.EventEmitter()
+const onDidChangeWatchedFiles = onDidChangeWatchedFilesEmitter.event
 
 export const forwardOnDidChangeWorkspaceFolders = (clientInner: LanguageClient) => async (event: vscode.WorkspaceFoldersChangeEvent) => {
   await clientInner.sendRequest('onDidChangeWorkspaceFolders', event)
@@ -25,19 +29,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   populateXsdSchemaFiles(resourceRootDir)
   await client.onReady()
 
-  const hostContext = {
+  // It is a logic error for anything else to listen to this event from the client.
+  // It is only allowed a single handler, from what we can tell
+  client.onRequest('onDidChangeWatchedFiles', () => { onDidChangeWatchedFilesEmitter.fire(undefined) })
+
+  const hostContext: ExtensionHostContext = {
     resourceRootDir,
-    client
+    client, // FIXME: only pass in client.sendRequest, so as to disallow anything from calling onRequest
+    events: {
+      onDidChangeWatchedFiles
+    }
   }
   const tocPanelManager = new PanelManager(hostContext, TocEditorPanel)
   const cnxmlPreviewPanelManager = new PanelManager(hostContext, CnxmlPreviewPanel)
   const imageManagerPanelManager = new PanelManager(hostContext, ImageManagerPanel)
+
+  tocTreesProvider = new TocTreesProvider(hostContext)
 
   vscode.workspace.onDidChangeWorkspaceFolders(ensureCatch(forwardOnDidChangeWorkspaceFolders(client)))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, tocPanelManager.revealOrNew.bind(tocPanelManager))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, imageManagerPanelManager.revealOrNew.bind(imageManagerPanelManager))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))
+  vscode.commands.registerCommand('openstax.refreshTocTrees', tocTreesProvider.refresh.bind(tocTreesProvider))
+  vscode.window.registerTreeDataProvider('tocTrees', tocTreesProvider)
 
   const extExports: ExtensionExports = {
     [OpenstaxCommand.SHOW_TOC_EDITOR]: tocPanelManager,
