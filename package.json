@@ -41,7 +41,8 @@
     "onCommand:openstax.showPreviewToSide",
     "onCommand:openstax.showTocEditor",
     "onCommand:openstax.showImageUpload",
-    "onCommand:openstax.pushContent"
+    "onCommand:openstax.pushContent",
+    "onView:tocTrees"
   ],
   "contributes": {
     "commands": [
