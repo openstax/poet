@@ -15,7 +15,7 @@ import {
 } from 'vscode-languageserver'
 import { BookBundle, BundleItem, ModuleTitle } from '../book-bundle'
 import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, recachify } from '../cachify'
-import { TocTreeCollection } from '../../../common/src/toc-tree'
+import { TocTreeCollection, TocTreeElementType } from '../../../common/src/toc-tree'
 import { BundleValidationQueue, BundleValidationRequest, DiagnosticCode, validateCollection, validateCollectionModules, validateModule, validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
 import { DOMParser } from 'xmldom'
 
@@ -507,6 +507,15 @@ describe('ValidationQueue', function () {
     validationQueue.addRequest(validationRequest)
     await assert.rejects((validationQueue as any).processQueue())
   })
+  it('will queue items when bundleItemFromUri returns null', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    sinon.stub(bundle, 'bundleItemFromUri').returns(null)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = { causeUri: '' }
+    validationQueue.addRequest(validationRequest)
+    assert.strictEqual((validationQueue as any).queue.length, 4)
+  })
   it('will log error when validation is requested for an uri that is not in the bundle', async () => {
     const clock = sinon.useFakeTimers()
     const bundle = await BookBundle.from('/bundle')
@@ -983,12 +992,12 @@ describe('BookBundle', () => {
     const bundle = await BookBundle.from('/bundle')
     const tree = expect(await bundle.collectionTree('normal.collection.xml'))
     const expected: TocTreeCollection = {
-      type: 'collection',
+      type: TocTreeElementType.collection,
       title: 'normal',
       slug: 'normal',
       children: [
         {
-          type: 'module',
+          type: TocTreeElementType.module,
           title: 'Introduction',
           moduleid: 'm00001',
           subtitle: 'm00001'
@@ -1003,19 +1012,19 @@ describe('BookBundle', () => {
     const bundle = await BookBundle.from('/bundle')
     const tree = expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
     const expected: TocTreeCollection = {
-      type: 'collection',
+      type: TocTreeElementType.collection,
       title: 'normal-with-subcollection',
       slug: 'normal-with-subcollection',
       children: [{
-        type: 'module',
+        type: TocTreeElementType.module,
         title: 'Introduction',
         moduleid: 'm00001',
         subtitle: 'm00001'
       }, {
-        type: 'subcollection',
+        type: TocTreeElementType.subcollection,
         title: 'subcollection',
         children: [{
-          type: 'module',
+          type: TocTreeElementType.module,
           title: 'Another',
           moduleid: 'm00003',
           subtitle: 'm00003'
@@ -1030,7 +1039,7 @@ describe('BookBundle', () => {
     const bundle = await BookBundle.from('/bundle')
     const module = await bundle.moduleAsTreeObject('m00001')
     const expected = {
-      type: 'module',
+      type: TocTreeElementType.module,
       title: 'Introduction',
       moduleid: 'm00001',
       subtitle: 'm00001'

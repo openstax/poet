@@ -4,7 +4,7 @@ import fs from 'fs'
 import { FileChangeType, FileEvent } from 'vscode-languageserver/node'
 import * as xpath from 'xpath-ts'
 import { expect, fileExistsAt } from './utils'
-import { TocTreeModule, TocTreeCollection, TocTreeElement } from '../../common/src/toc-tree'
+import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
 import {
   URI
 } from 'vscode-uri'
@@ -282,7 +282,7 @@ class CollectionInfo {
       }
       const moduleToObjectResolver = (moduleid: string): TocTreeModule => {
         return {
-          type: 'module',
+          type: TocTreeElementType.module,
           moduleid: moduleid,
           title: moduleTitleMap.get(moduleid) ?? '**DOES NOT EXIST**',
           subtitle: moduleid
@@ -548,7 +548,7 @@ export class BookBundle {
   async moduleAsTreeObject(moduleid: string): Promise<TocTreeModule> {
     const title = await this.moduleTitle(moduleid)
     return {
-      type: 'module',
+      type: TocTreeElementType.module,
       moduleid: moduleid,
       title: title?.inner.title ?? 'Unnamed Module',
       subtitle: moduleid
@@ -640,7 +640,7 @@ function parseCollection(document: Document, moduleObjectResolver: (id: string) 
     const title = titleElem?.textContent
     const content = element.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
     return {
-      type: 'subcollection',
+      type: TocTreeElementType.subcollection,
       title: expect(title, 'Subcollection title missing'),
       children: childObjects(content)
     }
@@ -659,7 +659,7 @@ function parseCollection(document: Document, moduleObjectResolver: (id: string) 
   }
 
   return {
-    type: 'collection',
+    type: TocTreeElementType.collection,
     title: expect(collectionTitle, 'Collection title missing'),
     slug: expect(collectionSlug, 'Collection slug missing'),
     children: childObjects(treeRoot)
