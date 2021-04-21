@@ -578,10 +578,17 @@ suite('Extension Test Suite', function (this: Suite) {
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
 
     // reset revealed range
+    const visualRangeResetBound = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === boundEditor) { resolve(undefined) } })
+    })
+    const visualRangeResetUnbound = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === unboundEditor) { resolve(undefined) } })
+    })
     const resetRange = new vscode.Range(0, 0, 1, 0)
     const resetStrategy = vscode.TextEditorRevealType.AtTop
     boundEditor.revealRange(resetRange, resetStrategy)
     unboundEditor.revealRange(resetRange, resetStrategy)
+    await Promise.race([Promise.all([visualRangeResetBound, visualRangeResetUnbound]), sleep(500)])
 
     await panel.handleMessage({ type: 'direct-edit', xml: testData })
 

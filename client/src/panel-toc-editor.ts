@@ -156,8 +156,8 @@ export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageC
   const trees = await requestBundleTrees(client, { workspaceUri: uri.toString() })
   const allModules = await requestBundleModules(client, { workspaceUri: uri.toString() })
   const orphanModules = await requestBundleOrphanedModules(client, { workspaceUri: uri.toString() })
+  /* istanbul ignore if */
   if (trees == null || allModules == null || orphanModules == null) {
-    /* istanbul ignore next */
     throw new Error('Server cannot properly find workspace')
   }
   const allModulesSorted = allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
