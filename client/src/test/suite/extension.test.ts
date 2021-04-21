@@ -448,9 +448,9 @@ suite('Extension Test Suite', function (this: Suite) {
     const testData = '<document>Test</document>'
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     await panel.handleMessage({ type: 'direct-edit', xml: testData })
-    const modified = document.getText()
-    assert.strictEqual(modified, testData)
-    assert.notStrictEqual(modified, before)
+    const contentFromFsBecauseVscodeLiesAboutDocumentContent = await fs.promises.readFile(resource.fsPath, { encoding: 'utf-8' })
+    assert.strictEqual(contentFromFsBecauseVscodeLiesAboutDocumentContent, testData)
+    assert.notStrictEqual(contentFromFsBecauseVscodeLiesAboutDocumentContent, before)
   })
   test('cnxml preview rebinds to resource in the active editor', async () => {
     const uri = expect(getRootPathUri())
@@ -576,6 +576,14 @@ suite('Extension Test Suite', function (this: Suite) {
     // We need something long enough to scroll in
     const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resource.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+    await resourceBindingChanged
 
     // reset revealed range
     const visualRangeResetBound = new Promise((resolve, reject) => {
