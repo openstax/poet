@@ -634,6 +634,14 @@ suite('Extension Test Suite', function (this: Suite) {
     // We need something long enough to scroll to
     const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resource.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+    await resourceBindingChanged
 
     // reset revealed range
     const visualRangeResetBound = new Promise((resolve, reject) => {
