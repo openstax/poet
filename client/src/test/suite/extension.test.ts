@@ -739,8 +739,6 @@ suite('Push Button Test Suite', function (this: Suite) {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
-    const mockTaggingDialog = makeMockDialog('No Tag')
-    const mockNewTag = makeMockNewTag(undefined)
 
     const getRepo = (): Repository => {
       const stubRepo = Substitute.for<Repository>()
@@ -765,8 +763,6 @@ suite('Push Button Test Suite', function (this: Suite) {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
-    const mockTaggingDialog = makeMockDialog('No Tag')
-    const mockNewTag = makeMockNewTag(undefined)
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = GitErrorCodes.Conflict
@@ -794,8 +790,6 @@ suite('Push Button Test Suite', function (this: Suite) {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
-    const mockTaggingDialog = makeMockDialog('No Tag')
-    const mockNewTag = makeMockNewTag(undefined)
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = ''
@@ -823,8 +817,6 @@ suite('Push Button Test Suite', function (this: Suite) {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
-    const mockTaggingDialog = makeMockDialog('No Tag')
-    const mockNewTag = makeMockNewTag(undefined)
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = 'nothing to commit.'
@@ -852,8 +844,6 @@ suite('Push Button Test Suite', function (this: Suite) {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
-    const mockTaggingDialog = makeMockDialog('No Tag')
-    const mockNewTag = makeMockNewTag(undefined)
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = ''
@@ -895,8 +885,6 @@ suite('Push Button Test Suite', function (this: Suite) {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
-    const mockTaggingDialog = makeMockDialog('No Tag')
-    const mockNewTag = makeMockNewTag(undefined)
     const pushStub = sinon.stub()
     const newBranchName = 'newbranch'
 

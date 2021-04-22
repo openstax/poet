@@ -106,8 +106,13 @@ export const _pushContent = (
     commitSucceeded = true
   } catch (e) {
     if (e.stdout == null) { throw e }
-    const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
-    void errorReporter(`Push failed: ${message}`)
+    if ((e.stdout as string).includes('nothing to commit')) {
+      void errorReporter('No changes to push.')
+    } else {
+      const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
+      void errorReporter(`Push failed: ${message}`)
+    }
+
   }
 
   if (commitSucceeded) {
