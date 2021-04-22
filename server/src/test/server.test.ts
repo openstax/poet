@@ -507,6 +507,15 @@ describe('ValidationQueue', function () {
     validationQueue.addRequest(validationRequest)
     await assert.rejects((validationQueue as any).processQueue())
   })
+  it('will queue items when bundleItemFromUri returns null', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    sinon.stub(bundle, 'bundleItemFromUri').returns(null)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = { causeUri: '' }
+    validationQueue.addRequest(validationRequest)
+    assert.strictEqual((validationQueue as any).queue.length, 4)
+  })
   it('will log error when validation is requested for an uri that is not in the bundle', async () => {
     const clock = sinon.useFakeTimers()
     const bundle = await BookBundle.from('/bundle')

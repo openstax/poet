@@ -832,8 +832,7 @@ suite('Push Button Test Suite', function (this: Suite) {
     const getRepo = (): Repository => {
       const stubRepo = Substitute.for<Repository>()
       stubRepo.diffWithHEAD().resolves([])
-      // stubRepo.commit('poet commit', commitOptions).rejects(error)
-      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.commit('poet commit', commitOptions).rejects(error)
       stubRepo.pull().resolves()
       stubRepo.push().resolves()
 

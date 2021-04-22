@@ -42,7 +42,8 @@
     "onCommand:openstax.showTocEditor",
     "onCommand:openstax.showImageUpload",
     "onCommand:openstax.pushContent",
-    "onCommand:openstax.tagContent"
+    "onCommand:openstax.tagContent",
+    "onView:tocTrees"
   ],
   "contributes": {
     "commands": [
@@ -170,6 +171,7 @@
     }
   },
   "extensionDependencies": [
+    "redhat.vscode-xml",
     "vscode.git"
   ],
   "devDependencies": {
