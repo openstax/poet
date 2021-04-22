@@ -3,7 +3,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
 import SinonRoot from 'sinon'
-import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch } from '../../git-api/git.d'
+import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch, RefType } from '../../git-api/git.d'
 import 'source-map-support/register'
 import {
   expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots,
@@ -938,6 +938,129 @@ suite('Push Button Test Suite', function (this: Suite) {
     mockDialog.resolves(pushContent.Tag.candidate as any as vscode.MessageItem)
     assert.strictEqual(await pushContent.taggingDialog(), pushContent.Tag.candidate)
   })
-  test('getNewTag')
-  test('tagContent')
+  test('getNewTag', async () => {
+    const repoState = {
+      refs: [{
+        name: 'main',
+        type: RefType.Head,
+        commit: 'a'
+      }]
+    } as any as RepositoryState
+    const mockRepo = {
+      state: repoState,
+    } as any as Repository
+
+    const mockHead = {
+      commit: 'a'
+    } as any as Branch
+
+    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
+
+    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), '1rc')
+    mockRepo.state.refs.push({
+      name: '1rc',
+      type: RefType.Tag,
+      commit: 'b'
+    })
+    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), '2rc')
+    mockRepo.state.refs.push({
+      name: '2rc',
+      type: RefType.Tag,
+      commit: 'a'
+    })
+    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), undefined)
+    assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', {}))
+
+    mockRepo.state.refs.length = 0
+    mockRepo.state.refs.push({
+      name: 'main',
+      type: RefType.Head,
+      commit: 'a'
+    })
+
+    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), '1')
+    mockRepo.state.refs.push({
+      name: '1',
+      type: RefType.Tag,
+      commit: 'b'
+    })
+    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), '2')
+    mockRepo.state.refs.push({
+      name: '2',
+      type: RefType.Tag,
+      commit: 'a'
+    })
+    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), undefined)
+    assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', {}))
+  })
+  test('tagContent', async () => {
+    const showInfoMsgStub = sinon.stub(vscode.window, 'showInformationMessage')
+    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
+    const taggingDialogStub = sinon.stub(pushContent, 'taggingDialog')
+    const getNewTagStub = sinon.stub(pushContent, 'getNewTag')
+    const diffWithHEADStub = sinon.stub()
+    const tagStub = sinon.stub()
+    const pushStub = sinon.stub()
+    const fetchStub = sinon.stub()
+
+    const getRepo = (): Repository => {
+      const repoBranch = {
+        name: 'main'
+      } as any as Branch
+      const repoState = {
+        HEAD: repoBranch
+      } as any as RepositoryState
+      const stubRepo = {
+        state: repoState,
+        fetch: fetchStub,
+        diffWithHEAD: diffWithHEADStub,
+        push: pushStub,
+        _repository: {
+          tag: tagStub
+        }
+      } as any as Repository
+
+      return stubRepo
+    }
+    // test for dirty workspace
+    await pushContent.tagContent()
+    assert(fetchStub.calledOnce)
+    diffWithHEADStub.resolves([{}])
+    assert(showErrorMsgStub.calledOnceWith('Can\'t tag. Local unpushed changes exist', {}))
+    fetchStub.reset()
+    showErrorMsgStub.reset()
+
+    // test for canceled tagging
+    taggingDialogStub.resolves(undefined)
+    await pushContent.tagContent()
+    assert(fetchStub.calledOnce)
+    assert(getNewTagStub.notCalled)
+    assert(tagStub.notCalled)
+    fetchStub.reset()
+
+    // test for existing tag
+    taggingDialogStub.resolves(pushContent.Tag.candidate)
+    getNewTagStub.resolves(undefined)
+    await pushContent.tagContent()
+    assert(fetchStub.calledOnce)
+    assert(getNewTagStub.calledOnce)
+    assert(tagStub.notCalled)
+    fetchStub.reset()
+    getNewTagStub.reset()
+
+    // test for valid tag
+    taggingDialogStub.resolves(pushContent.Tag.candidate)
+    getNewTagStub.resolves('1rc')
+    await pushContent.tagContent()
+    assert(fetchStub.calledOnce)
+    assert(getNewTagStub.calledOnce)
+    assert(tagStub.calledOnce)
+    assert(pushStub.calledOnce)
+    assert(showInfoMsgStub.calledOnceWith('Successful tag for Release Candidate.', {}))
+    fetchStub.reset()
+    getNewTagStub.reset()
+    tagStub.reset()
+    pushStub.reset()
+    showInfoMsgStub.reset()
+  })
 })
