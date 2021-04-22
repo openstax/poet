@@ -4,7 +4,7 @@ import { LanguageClient } from 'vscode-languageclient/node'
 import { refreshPanel, showTocEditor } from './panel-toc-editor'
 import { showImageUpload } from './panel-image-upload'
 import { showCnxmlPreview } from './panel-cnxml-preview'
-import { pushContent } from './push-content'
+import { pushContent, tagContent } from './push-content'
 import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
 import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-types'
 import { TocTreesProvider } from './toc-trees'
@@ -83,6 +83,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD], false))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW], true))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))
+  vscode.commands.registerCommand('openstax.tagContent', ensureCatch(tagContent()))
   vscode.commands.registerCommand('openstax.refreshTocTrees', ensureCatch(async () => tocTreesProvider.refresh()))
   vscode.window.registerTreeDataProvider('tocTrees', tocTreesProvider)
 

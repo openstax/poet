@@ -41,7 +41,8 @@
     "onCommand:openstax.showPreviewToSide",
     "onCommand:openstax.showTocEditor",
     "onCommand:openstax.showImageUpload",
-    "onCommand:openstax.pushContent"
+    "onCommand:openstax.pushContent",
+    "onCommand:openstax.tagContent"
   ],
   "contributes": {
     "commands": [
@@ -64,6 +65,11 @@
       {
         "command": "openstax.pushContent",
         "title": "Push Content",
+        "category": "Openstax"
+      },
+      {
+        "command": "openstax.tagContent",
+        "title": "Tag Content",
         "category": "Openstax"
       },
       {
@@ -97,7 +103,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageUpload)\n[Push Content](command:openstax.pushContent)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageUpload)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)"
       }
     ],
     "menus": {
