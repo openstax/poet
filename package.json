@@ -165,6 +165,7 @@
     }
   },
   "extensionDependencies": [
+    "redhat.vscode-xml",
     "vscode.git"
   ],
   "devDependencies": {
