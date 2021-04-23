@@ -8,6 +8,13 @@ const MATH_WRAPPER_TAGNAME = 'mathwrapper'
 
 // YANK THESE TYPES https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/preview-src/scroll-sync.ts
 
+/**
+ * For a given element, provide the bounds in the document where the element
+ * is the most recent element that has had its start tag appear.
+ * The correctness of this function relies on all parent elements being
+ * larger in bounds than their children. Even if this isn't the case, the minimum
+ * bounds height value will still be 1.
+ */
 const getElementBoundsOfInfluence = ({ element }) => {
   const myBounds = element.getBoundingClientRect()
 
@@ -28,6 +35,11 @@ const getElementBoundsOfInfluence = ({ element }) => {
   }
 }
 
+/**
+ * Given an offset, binary search for the two elements whose bounds begin
+ * immediately previously and immediately next after the y-position represented by
+ * the offset from the top of the page
+ */
 const getLineElementsAtPageOffset = (offset) => {
   const lines = sourceLineElements()
   const position = offset - window.scrollY
@@ -57,6 +69,13 @@ const getLineElementsAtPageOffset = (offset) => {
   return { previous: hiElement }
 }
 
+/**
+ * Given an offset from the top of the page, find the two elements whose
+ * bounds begin immediately previously and immediately next after the y-position
+ * represented by the offset. Then based on the line numbers of the two
+ * elements and where offset y-position lies between the two bounds, interpolate
+ * a line number (which is not necessarily an integer) for the offset.
+ */
 const getEditorLineNumberForPageOffset = (offset) => {
   const { previous, next } = getLineElementsAtPageOffset(offset)
   if (previous != null) {
@@ -107,6 +126,9 @@ window.addEventListener('load', () => {
   })
 })
 
+/**
+ * Create pairings of elements and the line numbers of those elements in the editor
+ */
 const sourceLineElements = () => {
   const elements = []
   for (const element of document.querySelectorAll('[data-line]')) {
@@ -116,6 +138,20 @@ const sourceLineElements = () => {
   return elements
 }
 
+/**
+ * For a given source line (which is not necessarily an integer), determine
+ * the pair of preview elements which satisfy the following:
+ *   previous:
+ *     the element which has the largest line number which is less
+ *     than the given line, ties going to the first appearing element
+ *   next:
+ *     the element which has the smallest line number which is greater
+ *     than the given line, ties going to the first appearing element
+ * The region between the top of previous and the top of next represents the
+ * space in the preview in which at all y positions some element with the same
+ * line as previous (although we have no idea which element) is the most
+ * recently appearing element
+ */
 const elementsOfSourceLine = (line) => {
   const lineOfInterest = Math.floor(line)
   const elements = sourceLineElements()
@@ -133,6 +169,16 @@ const elementsOfSourceLine = (line) => {
   return { previous, next }
 }
 
+/**
+ * Given a source line as a float, with the integer portion representing a
+ * line (L), and the decimal portion representing the progress through that
+ * line (P), scroll to the y-position of the preview in which we are (P*100)%
+ * of the way through the region between the top of first appearing element
+ * with the highest line number less than L and the top of the first appearing
+ * element with the lowest line number greater than L.
+ * If there is no element with a line number less than or greater than L,
+ * scroll (P*100)% of the way through the content of the first appearing element
+ */
 const scrollToElementOfSourceLine = (line) => {
   const { previous, next } = elementsOfSourceLine(line)
   if (previous == null) {
@@ -145,7 +191,7 @@ const scrollToElementOfSourceLine = (line) => {
     const elementOffset = next.element.getBoundingClientRect().top - previousBounds.top
     scrollOffset = previousBounds.top + (betweenProgress * elementOffset)
   } else {
-    // This should only happen when everything is on one line, I think?
+    // This should only happen when everything is on one line
     const progressInElement = line - Math.floor(line)
     scrollOffset = previousBounds.top + (previousBounds.height * progressInElement)
   }

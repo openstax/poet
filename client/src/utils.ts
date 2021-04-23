@@ -77,7 +77,7 @@ export function expect<T>(value: T | null | undefined, message: string): T {
   return value
 }
 
-/*
+/**
  * Provides very simple reject handling for async functions (just throws)
  * to avoid silent failures when passing a fallible async callback function
  * to something that expects a sync callback function.
@@ -93,8 +93,10 @@ export function ensureCatch<T extends unknown[], U>(func: (...args: T) => Promis
   }
 }
 
-/*
+/**
  * Provides very simple reject handling for promises (just throws)
+ * to avoid silent failures when calling a fallible async function from
+ * a synchronous function.
  * This comes at the cost of not preserving the original return type
  * as well as the resulting thrown error being uncatchable.
  */

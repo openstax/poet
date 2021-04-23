@@ -108,6 +108,7 @@ const resetTestData = async (): Promise<void> => {
   fs.copySync(path.join(ORIGIN_DATA_DIR, 'collections'), path.join(TEST_DATA_DIR, 'collections'))
   fs.copySync(path.join(ORIGIN_DATA_DIR, 'media'), path.join(TEST_DATA_DIR, 'media'))
   fs.copySync(path.join(ORIGIN_DATA_DIR, 'modules'), path.join(TEST_DATA_DIR, 'modules'))
+  fs.copySync(path.join(ORIGIN_DATA_DIR, '.vscode'), path.join(TEST_DATA_DIR, '.vscode'))
   await vscode.commands.executeCommand('workbench.action.closeAllEditors')
 }
 
@@ -442,15 +443,30 @@ suite('Extension Test Suite', function (this: Suite) {
   test('cnxml preview handle message', async () => {
     const uri = expect(getRootPathUri())
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const textEditorChanged = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeActiveTextEditor(editor => {
+        resolve(editor)
+      })
+    })
     const document = await vscode.workspace.openTextDocument(resource)
-    await vscode.window.showTextDocument(document)
+    const editor = await vscode.window.showTextDocument(document)
     const before = document.getText()
     const testData = '<document>Test</document>'
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resource.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+    const openedEditor = await textEditorChanged
+    assert.strictEqual(openedEditor, editor)
+    await resourceBindingChanged
     await panel.handleMessage({ type: 'direct-edit', xml: testData })
-    const contentFromFsBecauseVscodeLiesAboutDocumentContent = await fs.promises.readFile(resource.fsPath, { encoding: 'utf-8' })
-    assert.strictEqual(contentFromFsBecauseVscodeLiesAboutDocumentContent, testData)
-    assert.notStrictEqual(contentFromFsBecauseVscodeLiesAboutDocumentContent, before)
+    const modified = document.getText()
+    assert.strictEqual(modified, testData)
+    assert.notStrictEqual(modified, before)
   })
   test('cnxml preview rebinds to resource in the active editor', async () => {
     const uri = expect(getRootPathUri())
@@ -493,7 +509,7 @@ suite('Extension Test Suite', function (this: Suite) {
     await resourceBindingChangedExpectedSecond
     assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond }))
     assert.strictEqual((panel as any).resourceBinding.fsPath, resourceSecond.fsPath)
-  })
+  }).timeout(5000)
   test('cnxml preview only rebinds to cnxml', async () => {
     const uri = expect(getRootPathUri())
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })

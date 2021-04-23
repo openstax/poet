@@ -13,7 +13,7 @@ import { TocTreesProvider } from './toc-trees'
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
 let tocTreesProvider: TocTreesProvider
 let client: LanguageClient
-const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<undefined> = new vscode.EventEmitter()
+const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter()
 const onDidChangeWatchedFiles = onDidChangeWatchedFilesEmitter.event
 
 export const forwardOnDidChangeWorkspaceFolders = (clientInner: LanguageClient) => async (event: vscode.WorkspaceFoldersChangeEvent) => {
@@ -31,7 +31,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
 
   // It is a logic error for anything else to listen to this event from the client.
   // It is only allowed a single handler, from what we can tell
-  client.onRequest('onDidChangeWatchedFiles', () => { onDidChangeWatchedFilesEmitter.fire(undefined) })
+  client.onRequest('onDidChangeWatchedFiles', () => { onDidChangeWatchedFilesEmitter.fire() })
 
   const hostContext: ExtensionHostContext = {
     resourceRootDir,
