@@ -956,19 +956,20 @@ suite('Push Button Test Suite', function (this: Suite) {
 
     const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
 
-    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), '1rc')
+    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), '1rc')
     mockRepo.state.refs.push({
       name: '1rc',
       type: RefType.Tag,
       commit: 'b'
     })
-    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), '2rc')
+    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), '2rc')
     mockRepo.state.refs.push({
       name: '2rc',
       type: RefType.Tag,
       commit: 'a'
     })
-    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), undefined)
+    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), undefined)
+    assert(showErrorMsgStub.calledOnce)
     assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', {}))
 
     mockRepo.state.refs.length = 0
@@ -978,19 +979,19 @@ suite('Push Button Test Suite', function (this: Suite) {
       commit: 'a'
     })
 
-    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), '1')
+    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), '1')
     mockRepo.state.refs.push({
       name: '1',
       type: RefType.Tag,
       commit: 'b'
     })
-    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), '2')
+    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), '2')
     mockRepo.state.refs.push({
       name: '2',
       type: RefType.Tag,
       commit: 'a'
     })
-    assert.strictEqual(pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), undefined)
+    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), undefined)
     assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', {}))
   })
   test('tagContent', async () => {

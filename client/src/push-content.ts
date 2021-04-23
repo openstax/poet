@@ -56,11 +56,11 @@ export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Prom
     if (ref.type !== RefType.Tag) { continue }
     if (release === ref.name?.includes('rc')) { continue }
     if (ref.commit === head.commit) {
-      void vscode.window.showErrorMessage("Tag of this type already exists for this content version.")
+      void vscode.window.showErrorMessage('Tag of this type already exists for this content version.')
       return undefined
     }
 
-    const versionNumberString = expect(ref.name, '').replace('rc', '')
+    const versionNumberString = expect(ref.name, '').replace('rc', '').split('.')[0]
     tags.push(Number(versionNumberString))
   }
 
@@ -167,11 +167,7 @@ export const tagContent = () => async () => {
 
   // push
   try {
-    if (head.upstream != null) {
-      await repo.push()
-    } else {
-      await repo.push('origin', branchName, true)
-    }
+    await repo.push('origin', tag)
     void vscode.window.showInformationMessage(`Successful tag for ${tagging}.`)
   } catch (e) {
     if (e.gitErrorCode == null) { throw e }
