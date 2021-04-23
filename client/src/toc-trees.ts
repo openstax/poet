@@ -113,16 +113,25 @@ export class TocTreeItem extends vscode.TreeItem {
 }
 
 export function toggleTocTreesFilteringHandler(view: vscode.TreeView<TocTreeItem>, provider: TocTreesProvider): () => Promise<void> {
+  // We call the view.reveal API for all nodes with children to ensure the tree
+  // is fully expanded. This approach is used since attempting to simply call
+  // reveal on root notes with the max expand value of 3 doesn't seem to always
+  // fully expose leaf nodes for large trees.
+
+  async function revealer(elements: TocTreeItem[]): Promise<void> {
+    for (const el of elements) {
+      if (el.children.length !== 0) {
+        await view.reveal(el, { expand: true })
+        await revealer(el.children)
+      }
+    }
+  }
+
   return async () => {
+    // Set toggle data provider filter mode and reveal all children so the
+    // tree expands if it hasn't already
     provider.toggleFilterMode()
     const children = await provider.getChildren()
-    for (const child of children) {
-      await view.reveal(child, { expand: 3 })
-      // TODO: Refreshing here on each iteration is excessive, but this seems
-      // to be the only way that large trees consistently expand all the way.
-      // Need to either correct this or fully understand why the udnerlying
-      // implementation necessitates doing it.
-      provider.refresh()
-    }
+    await revealer(children)
   }
 }

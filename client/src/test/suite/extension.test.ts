@@ -715,16 +715,21 @@ suite('Extension Test Suite', function (this: Suite) {
       getChildren: getChildrenStub,
       refresh: refreshStub
     } as unknown as TocTreesProvider
-    getChildrenStub.resolves([{ label: 'col1' }, { label: 'col2' }])
+    const fakeChildren = [
+      { label: 'col1', children: [{ label: 'subcol', children: [{ label: 'm2', children: [] }] }] },
+      { label: 'col2', children: [{ label: 'm1', children: [] }] }
+    ]
+    getChildrenStub.resolves(fakeChildren)
 
     const handler = toggleTocTreesFilteringHandler(view, provider)
     await handler()
     assert(toggleFilterStub.calledOnce)
     assert(getChildrenStub.calledOnce)
-    assert(revealStub.calledTwice)
-    assert(revealStub.calledWith({ label: 'col1' }, { expand: 3 }))
-    assert(revealStub.calledWith({ label: 'col2' }, { expand: 3 }))
-    assert(refreshStub.calledTwice)
+    assert(revealStub.calledThrice)
+    assert(revealStub.calledWith(fakeChildren[0], { expand: true }))
+    assert(revealStub.calledWith(fakeChildren[0].children[0], { expand: true }))
+    assert(revealStub.calledWith(fakeChildren[1], { expand: true }))
+    assert(refreshStub.notCalled)
   })
   test('TocTreesProvider fires event on refresh', async () => {
     const mockClient: LanguageClient = {} as any as LanguageClient
