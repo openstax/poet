@@ -103,12 +103,11 @@ const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscod
 
 const resetTestData = async (): Promise<void> => {
   await vscode.workspace.saveAll(true)
-  fs.rmdirSync(TEST_DATA_DIR, { recursive: true })
-  fs.mkdirpSync(TEST_DATA_DIR)
-  fs.copySync(path.join(ORIGIN_DATA_DIR, 'collections'), path.join(TEST_DATA_DIR, 'collections'))
-  fs.copySync(path.join(ORIGIN_DATA_DIR, 'media'), path.join(TEST_DATA_DIR, 'media'))
-  fs.copySync(path.join(ORIGIN_DATA_DIR, 'modules'), path.join(TEST_DATA_DIR, 'modules'))
-  fs.copySync(path.join(ORIGIN_DATA_DIR, '.vscode'), path.join(TEST_DATA_DIR, '.vscode'))
+  for (const subdir of ['collections', 'media', 'modules']) {
+    fs.rmdirSync(path.join(TEST_DATA_DIR, subdir), { recursive: true })
+    fs.copySync(path.join(ORIGIN_DATA_DIR, subdir), path.join(TEST_DATA_DIR, subdir))
+  }
+  fs.rmdirSync(path.join(TEST_DATA_DIR, '.xsd'), { recursive: true })
   await vscode.commands.executeCommand('workbench.action.closeAllEditors')
 }
 
