@@ -51,16 +51,19 @@ export const taggingDialog = async (): Promise<Tag | undefined> => {
 export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Promise<string | undefined> => {
   const tags: integer[] = []
   const release = tagMode === Tag.release
+  const regex = release ? /^\d+$/ : /^\d+rc$/
 
-  for (let ref of repo.state.refs) {
-    if (ref.type !== RefType.Tag) { continue }
-    if (release === ref.name?.includes('rc')) { continue }
+  const validTags = repo.state.refs.filter((ref, i) => {
+    return (ref.type === RefType.Tag && regex.test(ref.name as string))
+  })
+
+  for (let ref of validTags) {
     if (ref.commit === head.commit) {
-      void vscode.window.showErrorMessage('Tag of this type already exists for this content version.')
+      void vscode.window.showErrorMessage('Tag of this type already exists for this content version.', { modal: false })
       return undefined
     }
 
-    const versionNumberString = expect(ref.name, '').replace('rc', '').split('.')[0]
+    const versionNumberString = expect(ref.name, '').replace('rc', '')
     tags.push(Number(versionNumberString))
   }
 

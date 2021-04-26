@@ -962,6 +962,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       type: RefType.Tag,
       commit: 'b'
     })
+
     assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), '2rc')
     mockRepo.state.refs.push({
       name: '2rc',
@@ -969,8 +970,8 @@ suite('Push Button Test Suite', function (this: Suite) {
       commit: 'a'
     })
     assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), undefined)
-    assert(showErrorMsgStub.calledOnce)
-    assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', {}))
+    assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', { modal: false }))
+    showErrorMsgStub.reset()
 
     mockRepo.state.refs.length = 0
     mockRepo.state.refs.push({
@@ -985,6 +986,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       type: RefType.Tag,
       commit: 'b'
     })
+
     assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), '2')
     mockRepo.state.refs.push({
       name: '2',
@@ -992,7 +994,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       commit: 'a'
     })
     assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), undefined)
-    assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', {}))
+    assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', { modal: false }))
   })
   test('tagContent', async () => {
     const showInfoMsgStub = sinon.stub(vscode.window, 'showInformationMessage')
@@ -1024,10 +1026,11 @@ suite('Push Button Test Suite', function (this: Suite) {
       return stubRepo
     }
     // test for dirty workspace
+    fetchStub.reset()
     await pushContent.tagContent()
     assert(fetchStub.calledOnce)
     diffWithHEADStub.resolves([{}])
-    assert(showErrorMsgStub.calledOnceWith('Can\'t tag. Local unpushed changes exist', {}))
+    assert(showErrorMsgStub.calledOnceWith('Can\'t tag. Local unpushed changes exist', { modal: false }))
     fetchStub.reset()
     showErrorMsgStub.reset()
 
@@ -1057,7 +1060,7 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert(getNewTagStub.calledOnce)
     assert(tagStub.calledOnce)
     assert(pushStub.calledOnce)
-    assert(showInfoMsgStub.calledOnceWith('Successful tag for Release Candidate.', {}))
+    assert(showInfoMsgStub.calledOnceWith('Successful tag for Release Candidate.', { modal: false }))
     fetchStub.reset()
     getNewTagStub.reset()
     tagStub.reset()
