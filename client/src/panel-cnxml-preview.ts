@@ -118,19 +118,9 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
         document.positionAt(document.getText().length)
       )
       const edit = new vscode.WorkspaceEdit()
-      const documentContentChanged = new Promise((resolve, reject) => {
-        vscode.workspace.onDidChangeTextDocument((event) => {
-          for (const change of event.contentChanges) {
-            if (change.text === xml) {
-              resolve(undefined)
-            }
-          }
-        })
-      })
       edit.replace(this.resourceBinding, fullRange, xml)
       await vscode.workspace.applyEdit(edit)
       await document.save()
-      await documentContentChanged
     } else if (message.type === 'scroll-in-editor') {
       for (const editor of vscode.window.visibleTextEditors) {
         if (!this.isPreviewOf(editor.document.uri)) {
@@ -148,15 +138,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
         const start = Math.floor(fraction * text.length)
         const range = new vscode.Range(sourceLine - 1, start, sourceLine, 0)
         const strategy = vscode.TextEditorRevealType.AtTop
-        const visualRangeChanged = new Promise((resolve, reject) => {
-          vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
-            if (event.textEditor === editor) {
-              resolve(undefined)
-            }
-          })
-        })
         editor.revealRange(range, strategy)
-        await visualRangeChanged
       }
     } else {
       throw new Error(`Unexpected message: ${JSON.stringify(message)}`)

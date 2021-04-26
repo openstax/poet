@@ -611,6 +611,7 @@ suite('Extension Test Suite', function (this: Suite) {
     const resetStrategy = vscode.TextEditorRevealType.AtTop
     boundEditor.revealRange(resetRange, resetStrategy)
     unboundEditor.revealRange(resetRange, resetStrategy)
+    // Promise.race in case the visual range was already correct
     await Promise.race([Promise.all([visualRangeResetBound, visualRangeResetUnbound]), sleep(500)])
 
     await panel.handleMessage({ type: 'direct-edit', xml: testData })
@@ -669,19 +670,10 @@ suite('Extension Test Suite', function (this: Suite) {
     const strategy = vscode.TextEditorRevealType.AtTop
     boundEditor.revealRange(range, strategy)
     unboundEditor.revealRange(range, strategy)
+    // Promise.race in case the visual range was already correct
     await Promise.race([Promise.all([visualRangeResetBound, visualRangeResetUnbound]), sleep(500)])
 
-    const documentContentChanged = new Promise((resolve, reject) => {
-      vscode.workspace.onDidChangeTextDocument((event) => {
-        for (const change of event.contentChanges) {
-          if (change.text === testData) {
-            resolve(undefined)
-          }
-        }
-      })
-    })
-    await panel.handleMessage({ type: 'direct-edit', xml: testData })
-    await Promise.race([documentContentChanged, sleep(500)]);
+    await panel.handleMessage({ type: 'direct-edit', xml: testData });
 
     // ensure scrollable
     (panel as any).resourceIsScrolling = false
@@ -717,19 +709,10 @@ suite('Extension Test Suite', function (this: Suite) {
     const range = new vscode.Range(0, 0, 1, 0)
     const strategy = vscode.TextEditorRevealType.AtTop
     boundEditor.revealRange(range, strategy)
+    // Promise.race in case the visual range was already correct
     await Promise.race([visualRangeReset, sleep(500)])
 
-    const documentContentChanged = new Promise((resolve, reject) => {
-      vscode.workspace.onDidChangeTextDocument((event) => {
-        for (const change of event.contentChanges) {
-          if (change.text === testData) {
-            resolve(undefined)
-          }
-        }
-      })
-    })
-    await panel.handleMessage({ type: 'direct-edit', xml: testData })
-    await Promise.race([documentContentChanged, sleep(500)]);
+    await panel.handleMessage({ type: 'direct-edit', xml: testData });
 
     // editor is scrolling
     (panel as any).resourceIsScrolling = true
