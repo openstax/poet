@@ -7,7 +7,7 @@ import { showCnxmlPreview } from './panel-cnxml-preview'
 import { pushContent } from './push-content'
 import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
 import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-types'
-import { TocTreesProvider } from './toc-trees'
+import { TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from './toc-trees'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
 // Only one instance of each type allowed at any given time
@@ -15,6 +15,7 @@ const activePanelsByType: { [key in PanelType]?: vscode.WebviewPanel } = {}
 const extensionExports = {
   activePanelsByType
 }
+let tocTreesView: vscode.TreeView<TocTreeItem>
 let tocTreesProvider: TocTreesProvider
 let client: LanguageClient
 
@@ -84,7 +85,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW], true))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))
   vscode.commands.registerCommand('openstax.refreshTocTrees', ensureCatch(async () => tocTreesProvider.refresh()))
-  vscode.window.registerTreeDataProvider('tocTrees', tocTreesProvider)
+  tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
+  vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
 
   return extensionExports
 }
