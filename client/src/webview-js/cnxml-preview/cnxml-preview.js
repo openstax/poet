@@ -158,8 +158,15 @@ const elementsOfSourceLine = (line) => {
   const nextIndex = elements.findIndex(entry => {
     return entry.line > lineOfInterest
   })
-  if (nextIndex <= 0) {
+  if (nextIndex === 0) {
     return { previous: elements[0] ?? null, next: elements[0] ?? null }
+  }
+  if (nextIndex === -1) {
+    const lastIndex = elements.length - 1
+    // Essentially: Are all the elements on one line?
+    return (!elements.some(entry => entry.line < lineOfInterest))
+      ? { previous: elements[0] ?? null, next: elements[lastIndex] ?? null } // If so, our region is the full page
+      : { previous: elements[lastIndex] ?? null, next: elements[lastIndex] ?? null } // If not, we are beyond all the content
   }
   const next = elements[nextIndex]
   const previousLine = elements[nextIndex - 1].line
@@ -190,8 +197,9 @@ const scrollToElementOfSourceLine = (line) => {
     const betweenProgress = (line - previous.line) / (next.line - previous.line)
     const elementOffset = next.element.getBoundingClientRect().top - previousBounds.top
     scrollOffset = previousBounds.top + (betweenProgress * elementOffset)
-  } else {
-    // This should only happen when everything is on one line
+  } else { // This should only happen when everything is on one line
+    // We may be past all the content, bound the line to the greatest line nubmer with 100% progress,
+    line = Math.min(line, previous.line + 1)
     const progressInElement = line - Math.floor(line)
     scrollOffset = previousBounds.top + (previousBounds.height * progressInElement)
   }

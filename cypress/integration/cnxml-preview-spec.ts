@@ -105,7 +105,12 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         <document data-line="1">
         ${nLines(500)}
         <para data-line="1">Still line 1</para>
-      `
+        </document>`
+      const oneLongLineNotFirstLine = `
+        <document data-line="3">
+        ${nLines(500)}
+        <para data-line="3">Still line 3</para>
+        </document>`
       const emptyDoc = '<document line/>'
       it('scrolls to an element based on its line in the source', () => {
         sendXml(fiveLinesSpaced)
@@ -148,6 +153,20 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
           expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.01)
+        })
+      })
+      it('scrolls to last element if line number is greater than all', () => {
+        sendXml(fiveLinesSpaced)
+        cy.awaitInternalEvent('scroll', () => {
+          sendScrollToLine(6)
+        })
+        cy.get('[data-line="5"]').then(el => {
+          cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
+        })
+        cy.then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(5, 0.01)
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
@@ -213,6 +232,34 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
           expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(1, 0.01)
+        })
+      })
+      it('only ever scrolls to a single line if everything is on one line', () => {
+        sendXml(oneLongLineNotFirstLine)
+        cy.awaitInternalEvent('scroll', () => {
+          sendScrollToLine(1)
+        })
+        cy.get('[data-line="3"]').then(el => {
+          cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
+        })
+        cy.then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(3, 0.01)
+        })
+      })
+      it('only ever scrolls to a single line if everything is on one line', () => {
+        sendXml(oneLongLineNotFirstLine)
+        cy.awaitInternalEvent('scroll', () => {
+          sendScrollToLine(5)
+        })
+        cy.window().then(win => {
+          expect(win.scrollY + win.innerHeight).to.equal(win.document.documentElement.getBoundingClientRect().height)
+        })
+        cy.then(() => {
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.1)
         })
       })
     })
