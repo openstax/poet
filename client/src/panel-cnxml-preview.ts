@@ -67,9 +67,6 @@ const initPanel = (context: ExtensionHostContext) => () => {
   return panel
 }
 
-export const isCnxmlFile = (document: vscode.TextDocument): boolean => {
-  return document.languageId === 'cnxml'
-}
 export const isXmlFile = (document: vscode.TextDocument): boolean => {
   return document.languageId === 'xml'
 }
@@ -184,7 +181,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
       return null
     }
     const activeDocument = activeEditor.document
-    if (!isCnxmlFile(activeDocument) && !isXmlFile(activeDocument)) {
+    if (!isXmlFile(activeDocument)) {
       return null
     }
     const activeUri = activeDocument.uri
