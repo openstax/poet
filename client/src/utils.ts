@@ -43,22 +43,6 @@ export function addBaseHref(webview: vscode.Webview, resource: vscode.Uri, html:
   return html.replace(re, baseUri)
 }
 
-export function getLocalResourceRoots(roots: vscode.Uri[], resource: vscode.Uri): readonly vscode.Uri[] {
-  const baseRoots = roots
-
-  const folder = vscode.workspace.getWorkspaceFolder(resource)
-  if (folder != null) {
-    const workspaceRoots = vscode.workspace.workspaceFolders?.map(folder => folder.uri)
-    if (workspaceRoots != null) {
-      baseRoots.push(...workspaceRoots)
-    }
-  } else if (resource.scheme === '' || resource.scheme === 'file') {
-    baseRoots.push(vscode.Uri.file(path.dirname(resource.fsPath)))
-  }
-
-  return baseRoots
-}
-
 /**
  * Return the root path of the workspace, or null if it does not exist
  */
@@ -93,20 +77,34 @@ export function expect<T>(value: T | null | undefined, message: string): T {
   return value
 }
 
-/*
+/**
  * Provides very simple reject handling for async functions (just throws)
  * to avoid silent failures when passing a fallible async callback function
  * to something that expects a sync callback function.
  * This comes at the cost of not preserving the original return type as well
  * as the resulting thrown error being uncatchable.
  */
-export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: any[]) => Promise<any> {
-  return async (...args: any[]) => {
+export function ensureCatch<T extends unknown[], U>(func: (...args: T) => Promise<U>): (...args: T) => Promise<U> {
+  return async (...args: T) => {
     return await func(...args).catch((err: Error) => {
       void vscode.window.showErrorMessage(err.message)
       throw err
     })
   }
+}
+
+/**
+ * Provides very simple reject handling for promises (just throws)
+ * to avoid silent failures when calling a fallible async function from
+ * a synchronous function.
+ * This comes at the cost of not preserving the original return type
+ * as well as the resulting thrown error being uncatchable.
+ */
+export async function ensureCatchPromise<T>(promise: Promise<T>): Promise<void> {
+  await promise.catch(err => {
+    void vscode.window.showErrorMessage(err.message)
+    throw err
+  })
 }
 
 export function populateXsdSchemaFiles(resourceRootDir: string): void {

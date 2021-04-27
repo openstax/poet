@@ -53,6 +53,7 @@ const getSavedState = () => {
 }
 
 // Use this function to send messages to the extension debug console
+/* istanbul ignore next */
 // eslint-disable-next-line no-unused-vars
 const debug = (item) => {
   vscode.postMessage({ type: 'debug', item })
@@ -119,6 +120,7 @@ const ContentTree = (props) => {
       // Returning prevents infinite render loop
       return
     }
+    /* istanbul ignore if */
     if (isNaN(searchFocusIndex) || isNaN(searchFoundCount)) {
       // This is a bug, but let's at least error gracefully
       // instead of freezing with infinite render loop
@@ -146,6 +148,7 @@ const ContentTree = (props) => {
     const oldStructure = stringify(data.children, { replacer: removeExpanded })
     const newStructure = stringify(newChildren, { replacer: removeExpanded })
 
+    /* istanbul ignore if */
     if (data.children.length - newChildren.length > 3) {
       // There's a bug that deletes the whole tree except for one element.
       // Prevent this by not allowing high magnitude deletions
@@ -228,12 +231,22 @@ const EditorPanel = (props) => {
   const [searchFoundCount, setSearchFoundCount] = useState(0)
 
   const selectPrevMatch = () => {
-    if (searchFoundCount === 0) { return }
+    /* istanbul ignore if */
+    if (searchFoundCount === 0) {
+      // This should not be possible due to element disabling
+      // But if it happens, do nothing
+      return
+    }
     setSearchFocusIndex((searchFocusIndex + searchFoundCount - 1) % searchFoundCount)
   }
 
   const selectNextMatch = () => {
-    if (searchFoundCount === 0) { return }
+    /* istanbul ignore if */
+    if (searchFoundCount === 0) {
+      // This should not be possible due to element disabling
+      // But if it happens, do nothing
+      return
+    }
     setSearchFocusIndex((searchFocusIndex + searchFoundCount + 1) % searchFoundCount)
   }
 

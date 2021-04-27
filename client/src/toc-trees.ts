@@ -1,15 +1,16 @@
 import vscode from 'vscode'
-import { LanguageClient } from 'vscode-languageclient/node'
 import { getRootPathUri, expect, constructCollectionUri, constructModuleUri } from './utils'
 import { ExtensionServerRequest, BundleTreesResponse, BundleTreesArgs } from '../../common/src/requests'
 import { TocTreeCollection, TocTreeElementType, TocTreeModule } from '../../common/src/toc-tree'
+import { ExtensionHostContext } from './panel'
 
 export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
-  private readonly _onDidChangeTreeData: vscode.EventEmitter<TocTreeItem | undefined > = new vscode.EventEmitter<TocTreeItem | undefined >()
-  readonly onDidChangeTreeData: vscode.Event<TocTreeItem | undefined > = this._onDidChangeTreeData.event
+  private readonly _onDidChangeTreeData: vscode.EventEmitter<TocTreeItem | undefined> = new vscode.EventEmitter<TocTreeItem | undefined>()
+  readonly onDidChangeTreeData: vscode.Event<TocTreeItem | undefined> = this._onDidChangeTreeData.event
   private isFilterMode = false
 
-  constructor(private readonly client: LanguageClient) {
+  constructor(private readonly context: ExtensionHostContext) {
+    this.context.events.onDidChangeWatchedFiles(this.refresh.bind(this))
   }
 
   toggleFilterMode(): void {
@@ -35,7 +36,7 @@ export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
   }
 
   private async queryBundleTrees(args: BundleTreesArgs): Promise<BundleTreesResponse> {
-    return await this.client.sendRequest(ExtensionServerRequest.BundleTrees, args)
+    return await this.context.client.sendRequest(ExtensionServerRequest.BundleTrees, args)
   }
 
   async getChildren(element?: TocTreeItem): Promise<TocTreeItem[]> {
