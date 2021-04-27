@@ -83,7 +83,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD], false))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW], true))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))
-  vscode.commands.registerCommand('openstax.tagContent', ensureCatch(tagContent()))
+  vscode.commands.registerCommand('openstax.tagContent', ensureCatch(tagContent))
   vscode.commands.registerCommand('openstax.refreshTocTrees', ensureCatch(async () => tocTreesProvider.refresh()))
   vscode.window.registerTreeDataProvider('tocTrees', tocTreesProvider)
 

@@ -140,22 +140,22 @@ export const _pushContent = (
   }
 }
 
-export const tagContent = () => async () => {
+export const tagContent = async () => {
   const repo = getRepo()
   const head = expect(repo.state.HEAD, 'This does not appear to be a git repository. Create one first')
   const branchName = expect(head.name, 'You do not appear to have a branch checked out. Maybe you checked out a commit or are in the middle of rebasing?')
   await repo.fetch()
 
   if ((await repo.diffWithHEAD()).length > 0) {
-    void vscode.window.showErrorMessage('Can\'t tag. Local unpushed changes exist')
+    void vscode.window.showErrorMessage('Can\'t tag. Local unpushed changes exist', { modal: false })
     return
   }
 
   const tagging = await taggingDialog()
-  let tag: string | undefined
 
   if (tagging === undefined) { return }
 
+  let tag: string | undefined
   tag = await getNewTag(repo, tagging, head)
 
   if (tag === undefined) { return }
@@ -171,7 +171,7 @@ export const tagContent = () => async () => {
   // push
   try {
     await repo.push('origin', tag)
-    void vscode.window.showInformationMessage(`Successful tag for ${tagging}.`)
+    void vscode.window.showInformationMessage(`Successful tag for ${tagging}.`, { modal: false })
   } catch (e) {
     if (e.gitErrorCode == null) { throw e }
     void vscode.window.showErrorMessage(`Push failed: ${e.message as string}`)

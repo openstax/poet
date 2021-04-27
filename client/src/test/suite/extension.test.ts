@@ -949,7 +949,6 @@ suite('Push Button Test Suite', function (this: Suite) {
     const mockRepo = {
       state: repoState,
     } as any as Repository
-
     const mockHead = {
       commit: 'a'
     } as any as Branch
@@ -1006,30 +1005,28 @@ suite('Push Button Test Suite', function (this: Suite) {
     const pushStub = sinon.stub()
     const fetchStub = sinon.stub()
 
-    const getRepo = (): Repository => {
-      const repoBranch = {
-        name: 'main'
-      } as any as Branch
-      const repoState = {
-        HEAD: repoBranch
-      } as any as RepositoryState
-      const stubRepo = {
-        state: repoState,
-        fetch: fetchStub,
-        diffWithHEAD: diffWithHEADStub,
-        push: pushStub,
-        _repository: {
-          tag: tagStub
-        }
-      } as any as Repository
+    const repoBranch = {
+      name: 'main'
+    } as any as Branch
+    const repoState = {
+      HEAD: repoBranch
+    } as any as RepositoryState
+    const stubRepo = {
+      state: repoState,
+      fetch: fetchStub,
+      diffWithHEAD: diffWithHEADStub,
+      push: pushStub,
+      _repository: {
+        tag: tagStub
+      }
+    } as any as Repository
 
-      return stubRepo
-    }
+    sinon.stub(pushContent, 'getRepo').returns(stubRepo)
+
     // test for dirty workspace
-    fetchStub.reset()
+    diffWithHEADStub.resolves([{}])
     await pushContent.tagContent()
     assert(fetchStub.calledOnce)
-    diffWithHEADStub.resolves([{}])
     assert(showErrorMsgStub.calledOnceWith('Can\'t tag. Local unpushed changes exist', { modal: false }))
     fetchStub.reset()
     showErrorMsgStub.reset()
@@ -1043,6 +1040,7 @@ suite('Push Button Test Suite', function (this: Suite) {
     fetchStub.reset()
 
     // test for existing tag
+    diffWithHEADStub.resolves([])
     taggingDialogStub.resolves(pushContent.Tag.candidate)
     getNewTagStub.resolves(undefined)
     await pushContent.tagContent()
