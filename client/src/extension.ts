@@ -8,9 +8,10 @@ import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } fro
 import { OpenstaxCommand } from './extension-types'
 import { ExtensionHostContext, Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
-import { TocTreesProvider } from './toc-trees'
+import { TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from './toc-trees'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
+let tocTreesView: vscode.TreeView<TocTreeItem>
 let tocTreesProvider: TocTreesProvider
 let client: LanguageClient
 const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter()
@@ -52,7 +53,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))
   vscode.commands.registerCommand('openstax.refreshTocTrees', tocTreesProvider.refresh.bind(tocTreesProvider))
-  vscode.window.registerTreeDataProvider('tocTrees', tocTreesProvider)
+  tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
+  vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
 
   const extExports: ExtensionExports = {
     [OpenstaxCommand.SHOW_TOC_EDITOR]: tocPanelManager,

@@ -29,7 +29,7 @@ import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../../../common/src/requests'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
-import { TocTreesProvider, TocTreeItem } from './../../toc-trees'
+import { TocTreesProvider, TocTreeItem, toggleTocTreesFilteringHandler } from './../../toc-trees'
 import * as utils from './../../utils' // Used for dependency mocking in tests
 
 const ROOT_DIR_REL = '../../../../../../'
@@ -929,6 +929,17 @@ suite('Extension Test Suite', function (this: Suite) {
       },
       'm00003'
     )
+    const module3ItemToggled = new TocTreeItem(
+      'Module3 (m00003)',
+      vscode.TreeItemCollapsibleState.None,
+      [],
+      {
+        title: 'open',
+        command: 'vscode.open',
+        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/modules/m00003/index.cnxml`)]
+      },
+      undefined
+    )
     const subcollectionItem = new TocTreeItem(
       'subcollection',
       vscode.TreeItemCollapsibleState.Collapsed,
@@ -967,12 +978,53 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.deepStrictEqual(await tocTreesProvider.getChildren(undefined), [collection1Item, collection2Item])
     assert.deepStrictEqual(await tocTreesProvider.getChildren(collection2Item), [module3Item])
     assert.deepStrictEqual(tocTreesProvider.getTreeItem(collection2Item), collection2Item)
+    assert.deepStrictEqual(tocTreesProvider.getParent(collection2Item), undefined)
+    assert.deepStrictEqual(tocTreesProvider.getParent(module3Item), collection2Item)
+    assert.deepStrictEqual(tocTreesProvider.getParent(module1Item), subcollectionItem)
+    tocTreesProvider.toggleFilterMode()
+    assert.deepStrictEqual(tocTreesProvider.getTreeItem(module3Item), module3ItemToggled)
+  })
+  test('toggleTocTreesFilteringHandler', async () => {
+    const revealStub = sinon.stub()
+    const toggleFilterStub = sinon.stub()
+    const getChildrenStub = sinon.stub()
+    const refreshStub = sinon.stub()
+
+    const view: vscode.TreeView<TocTreeItem> = {
+      reveal: revealStub
+    } as unknown as vscode.TreeView<TocTreeItem>
+    const provider: TocTreesProvider = {
+      toggleFilterMode: toggleFilterStub,
+      getChildren: getChildrenStub,
+      refresh: refreshStub
+    } as unknown as TocTreesProvider
+    const fakeChildren = [
+      { label: 'col1', children: [{ label: 'subcol', children: [{ label: 'm2', children: [] }] }] },
+      { label: 'col2', children: [{ label: 'm1', children: [] }] }
+    ]
+    getChildrenStub.resolves(fakeChildren)
+
+    const handler = toggleTocTreesFilteringHandler(view, provider)
+    await handler()
+    assert(toggleFilterStub.calledOnce)
+    assert(getChildrenStub.calledOnce)
+    assert(revealStub.calledThrice)
+    assert(revealStub.calledWith(fakeChildren[0], { expand: true }))
+    assert(revealStub.calledWith(fakeChildren[0].children[0], { expand: true }))
+    assert(revealStub.calledWith(fakeChildren[1], { expand: true }))
+    assert(refreshStub.notCalled)
   })
   test('TocTreesProvider fires event on refresh', async () => {
     const tocTreesProvider = new TocTreesProvider({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const eventFire = sinon.stub((tocTreesProvider as any)._onDidChangeTreeData, 'fire')
     tocTreesProvider.refresh()
     assert(eventFire.calledOnce)
+  })
+  test('TocTreesProvider calls refresh when toggling filter mode', async () => {
+    const tocTreesProvider = new TocTreesProvider({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const refresh = sinon.stub(tocTreesProvider, 'refresh')
+    tocTreesProvider.toggleFilterMode()
+    assert(refresh.calledOnce)
   })
 
   this.afterAll(async () => {

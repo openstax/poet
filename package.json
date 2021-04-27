@@ -72,6 +72,12 @@
         "title": "Refresh ToC Trees",
         "category": "Openstax",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "openstax.toggleTocTreesFiltering",
+        "title": "Toggle ToC Filtering",
+        "category": "Openstax",
+        "icon": "$(filter)"
       }
     ],
     "viewsContainers": {
@@ -135,6 +141,11 @@
           "command": "openstax.refreshTocTrees",
           "when": "view == tocTrees",
           "group": "navigation"
+        },
+        {
+          "command": "openstax.toggleTocTreesFiltering",
+          "when": "view == tocTrees",
+          "group": "navigation"
         }
       ]
     },
@@ -165,6 +176,7 @@
     }
   },
   "extensionDependencies": [
+    "redhat.vscode-xml",
     "vscode.git"
   ],
   "devDependencies": {
