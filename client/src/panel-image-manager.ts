@@ -9,7 +9,7 @@ export interface PanelIncomingMessage {
   mediaUploads: Array<{mediaName: string, data: string}>
 }
 
-const initPanel = (context: ExtensionHostContext) => () => {
+const initPanel = (context: ExtensionHostContext) => {
   const localResourceRoots = [vscode.Uri.file(context.resourceRootDir)]
   const workspaceRoot = getRootPathUri()
   if (workspaceRoot != null) {

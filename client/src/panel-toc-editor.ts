@@ -246,7 +246,7 @@ function replaceCollectionContent(document: XMLDocument, treeData: TocTreeCollec
   populateTreeDataToXML(document, newContent, treeData)
 }
 
-const initPanel = (context: ExtensionHostContext) => () => {
+const initPanel = (context: ExtensionHostContext) => {
   const localResourceRoots = [vscode.Uri.file(context.resourceRootDir)]
   const workspaceRoot = getRootPathUri()
   if (workspaceRoot != null) {

@@ -69,9 +69,9 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
   protected readonly panel: vscode.WebviewPanel
   private readonly disposer: DisposableSupplemental
 
-  constructor(initPanel: () => vscode.WebviewPanel) {
+  constructor(innerPanel: vscode.WebviewPanel) {
     this.disposer = new Disposer()
-    this.panel = initPanel()
+    this.panel = innerPanel
     this.registerDisposable(this.panel)
     this.panel.onDidDispose(() => this.dispose())
 

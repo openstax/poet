@@ -49,7 +49,7 @@ export const tagElementsWithLineNumbers = (doc: Document): void => {
   }
 }
 
-const initPanel = (context: ExtensionHostContext) => () => {
+const initPanel = (context: ExtensionHostContext) => {
   const editor = vscode.window.activeTextEditor
   const resourceColumn = editor?.viewColumn ?? vscode.ViewColumn.One
   const previewColumn = resourceColumn + 1
