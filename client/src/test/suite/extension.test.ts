@@ -1034,7 +1034,7 @@ suite('Extension Test Suite', function (this: Suite) {
 
 suite('Disposables', function (this: Suite) {
   const sinon = SinonRoot.createSandbox()
-  const initTestPanel = (_context: ExtensionHostContext) => {
+  const initTestPanel = (_context: ExtensionHostContext): vscode.WebviewPanel => {
     const panel = vscode.window.createWebviewPanel(
       'openstax.testPanel',
       'Test Panel',
