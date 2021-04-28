@@ -114,6 +114,8 @@ export class TocTreeItem extends vscode.TreeItem {
 }
 
 export function toggleTocTreesFilteringHandler(view: vscode.TreeView<TocTreeItem>, provider: TocTreesProvider): () => Promise<void> {
+  let revealing: boolean = false
+
   // We call the view.reveal API for all nodes with children to ensure the tree
   // is fully expanded. This approach is used since attempting to simply call
   // reveal on root notes with the max expand value of 3 doesn't seem to always
@@ -129,10 +131,19 @@ export function toggleTocTreesFilteringHandler(view: vscode.TreeView<TocTreeItem
   }
 
   return async () => {
-    // Set toggle data provider filter mode and reveal all children so the
-    // tree expands if it hasn't already
-    provider.toggleFilterMode()
-    const children = await provider.getChildren()
-    await revealer(children)
+    // Avoid parallel processing of requests by ignoring if we're actively
+    // revealing
+    if (revealing) { return }
+    revealing = true
+
+    try {
+      // Toggle data provider filter mode and reveal all children so the
+      // tree expands if it hasn't already
+      provider.toggleFilterMode()
+      const children = await provider.getChildren()
+      await revealer(children)
+    } finally {
+      revealing = false
+    }
   }
 }

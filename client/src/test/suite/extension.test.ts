@@ -1014,6 +1014,44 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(revealStub.calledWith(fakeChildren[1], { expand: true }))
     assert(refreshStub.notCalled)
   })
+  test('toggleTocTreesFilteringHandler disables itself while revealing', async () => {
+    const revealStub = sinon.stub()
+    const toggleFilterStub = sinon.stub()
+    const getChildrenStub = sinon.stub()
+    const fakeChildren = [
+      { label: 'col1', children: [{ label: 'm1', children: [] }] }
+    ]
+    getChildrenStub.resolves(fakeChildren)
+
+    const view: vscode.TreeView<TocTreeItem> = {
+      reveal: revealStub
+    } as unknown as vscode.TreeView<TocTreeItem>
+    const provider: TocTreesProvider = {
+      toggleFilterMode: toggleFilterStub,
+      getChildren: getChildrenStub
+    } as unknown as TocTreesProvider
+
+    const handler = toggleTocTreesFilteringHandler(view, provider)
+    // Invoke the handler the first time reveal is called to simulate a parallel
+    // user request without resorting to synthetic delay injection
+    revealStub.onCall(0).callsFake(handler)
+    await handler()
+    assert(toggleFilterStub.calledOnce)
+    assert(revealStub.calledOnce)
+    assert(getChildrenStub.calledOnce)
+  })
+  test('toggleTocTreesFilteringHandler doesn\'t lock itself on errors', async () => {
+    const toggleFilterStub = sinon.stub().throws()
+    const view: vscode.TreeView<TocTreeItem> = {} as unknown as vscode.TreeView<TocTreeItem>
+    const provider: TocTreesProvider = {
+      toggleFilterMode: toggleFilterStub
+    } as unknown as TocTreesProvider
+
+    const handler = toggleTocTreesFilteringHandler(view, provider)
+    try { await handler() } catch {}
+    try { await handler() } catch {}
+    assert(toggleFilterStub.calledTwice)
+  })
   test('TocTreesProvider fires event on refresh', async () => {
     const tocTreesProvider = new TocTreesProvider({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const eventFire = sinon.stub((tocTreesProvider as any)._onDidChangeTreeData, 'fire')
