@@ -365,7 +365,10 @@ suite('Extension Test Suite', function (this: Suite) {
     const modulePath = path.join(uri.fsPath, 'modules', 'm00001', 'index.cnxml')
     const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
     const document = new DOMParser().parseFromString(moduleData)
-    const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
+    const moduleMetaTitle = select('//cnxml:metadata/md:title', document) as Element[]
+    const moduleTitle = select('//cnxml:title', document) as Element[]
+    assert.strictEqual(moduleMetaTitle.length, 1)
+    assert.strictEqual(moduleMetaTitle[0].textContent, 'rename')
     assert.strictEqual(moduleTitle.length, 1)
     assert.strictEqual(moduleTitle[0].textContent, 'rename')
   })
@@ -378,7 +381,10 @@ suite('Extension Test Suite', function (this: Suite) {
     const modulePath = path.join(uri.fsPath, 'modules', 'm00002', 'index.cnxml')
     const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
     const document = new DOMParser().parseFromString(moduleData)
-    const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
+    const moduleMetaTitle = select('//cnxml:metadata/md:title', document) as Element[]
+    const moduleTitle = select('//cnxml:title', document) as Element[]
+    assert.strictEqual(moduleMetaTitle.length, 1)
+    assert.strictEqual(moduleMetaTitle[0].textContent, 'rename')
     assert.strictEqual(moduleTitle.length, 1)
     assert.strictEqual(moduleTitle[0].textContent, 'rename')
   })
