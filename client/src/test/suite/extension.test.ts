@@ -74,6 +74,18 @@ function expect<T>(value: T | null | undefined): T {
   return expectOrig(value, 'test_assertion')
 }
 
+async function replaceUriDocumentContent(uri: vscode.Uri, content: string): Promise<void> {
+  const document = await vscode.workspace.openTextDocument(uri)
+  const fullRange = new vscode.Range(
+    document.positionAt(0),
+    document.positionAt(document.getText().length)
+  )
+  const edit = new vscode.WorkspaceEdit()
+  edit.replace(uri, fullRange, content)
+  await vscode.workspace.applyEdit(edit)
+  await document.save()
+}
+
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
 const withTestPanel = (html: string, func: (arg0: vscode.WebviewPanel) => void): void => {
@@ -445,34 +457,6 @@ suite('Extension Test Suite', function (this: Suite) {
       assert.notStrictEqual(html.indexOf('html'), -1)
     })
   }).timeout(5000)
-  test('cnxml preview handle message', async () => {
-    const uri = expect(getRootPathUri())
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const textEditorChanged = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeActiveTextEditor(editor => {
-        resolve(editor)
-      })
-    })
-    const document = await vscode.workspace.openTextDocument(resource)
-    const editor = await vscode.window.showTextDocument(document)
-    const before = document.getText()
-    const testData = '<document>Test</document>'
-    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding((event) => {
-        if (event != null && event.fsPath === resource.fsPath) {
-          resolve(event)
-        }
-      })
-    })
-    const openedEditor = await textEditorChanged
-    assert.strictEqual(openedEditor, editor)
-    await resourceBindingChanged
-    await panel.handleMessage({ type: 'direct-edit', xml: testData })
-    const modified = document.getText()
-    assert.strictEqual(modified, testData)
-    assert.notStrictEqual(modified, before)
-  })
   test('cnxml preview rebinds to resource in the active editor', async () => {
     const uri = expect(getRootPathUri())
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
@@ -559,28 +543,6 @@ suite('Extension Test Suite', function (this: Suite) {
       .filter(call => call.args.some(arg => arg.type != null && arg.type === 'refresh'))
     assert.strictEqual(refreshCalls.length, 0)
   })
-  test('cnxml preview refuses edits if no resource bound', async () => {
-    const uri = expect(getRootPathUri())
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const document = await vscode.workspace.openTextDocument(resource)
-    await vscode.window.showTextDocument(document)
-    const before = document.getText()
-    const testData = '<document>Test</document>'
-    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    const resourceBindingChangedExpected: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding((event) => {
-        if (event != null && event.fsPath === resource.fsPath) {
-          resolve(event)
-        }
-      })
-    })
-    await resourceBindingChangedExpected;
-    (panel as any).resourceBinding = null
-    await panel.handleMessage({ type: 'direct-edit', xml: testData })
-    const modified = document.getText()
-    assert.strictEqual(modified, before)
-    assert.notStrictEqual(modified, testData)
-  })
   test('cnxml preview messaged upon visible range change', async () => {
     const uri = expect(getRootPathUri())
 
@@ -620,7 +582,8 @@ suite('Extension Test Suite', function (this: Suite) {
     // Promise.race in case the visual range was already correct
     await Promise.race([Promise.all([visualRangeResetBound, visualRangeResetUnbound]), sleep(500)])
 
-    await panel.handleMessage({ type: 'direct-edit', xml: testData })
+    await replaceUriDocumentContent(resource, testData)
+    await replaceUriDocumentContent(resourceIrrelevant, testData)
 
     const range = new vscode.Range(100, 0, 101, 0)
     const strategy = vscode.TextEditorRevealType.AtTop
@@ -679,7 +642,8 @@ suite('Extension Test Suite', function (this: Suite) {
     // Promise.race in case the visual range was already correct
     await Promise.race([Promise.all([visualRangeResetBound, visualRangeResetUnbound]), sleep(500)])
 
-    await panel.handleMessage({ type: 'direct-edit', xml: testData });
+    await replaceUriDocumentContent(resource, testData)
+    await replaceUriDocumentContent(resourceIrrelevant, testData);
 
     // ensure scrollable
     (panel as any).resourceIsScrolling = false
@@ -718,7 +682,7 @@ suite('Extension Test Suite', function (this: Suite) {
     // Promise.race in case the visual range was already correct
     await Promise.race([visualRangeReset, sleep(500)])
 
-    await panel.handleMessage({ type: 'direct-edit', xml: testData });
+    await replaceUriDocumentContent(resource, testData);
 
     // editor is scrolling
     (panel as any).resourceIsScrolling = true
