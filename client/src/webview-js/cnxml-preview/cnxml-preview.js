@@ -1,8 +1,6 @@
 let vscode
 
 let preview
-let sendButton
-let textarea
 
 const MATH_WRAPPER_TAGNAME = 'mathwrapper'
 
@@ -106,9 +104,6 @@ window.addEventListener('load', () => {
   vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 
   preview = document.querySelector('#preview')
-  textarea = document.querySelector('#textarea')
-  sendButton = document.querySelector('#sendButton')
-  sendButton.addEventListener('click', sendUpdatedXML)
 
   preview.innerHTML = '' // remove the "JS did not run" message
 
@@ -224,8 +219,6 @@ elementMap.set('metadata', null) // Removes the element entirely
 let currentVDom
 
 const handleRefresh = (xml) => {
-  textarea.value = xml
-
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(xml, 'text/xml')
 
@@ -268,11 +261,6 @@ const handleRefresh = (xml) => {
   currentVDom = newVDom
 
   window.MathJax ? window.MathJax.Hub.Typeset(preview) : document.body.append('[MathJax is not loaded]')
-}
-
-function sendUpdatedXML() {
-  const xml = textarea.value
-  vscode.postMessage({ type: 'direct-edit', xml })
 }
 
 /* VirtualDOM */

@@ -1,5 +1,5 @@
 // Shares a namespace with the other specfiles if not scoped
-import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } from '../../client/src/panel-cnxml-preview'
+import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/panel-cnxml-preview'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/cnxml-preview.html'
@@ -60,15 +60,6 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
       cy.get('#preview ul').should('exist')
     })
 
-    it('Sends XML back when clicked (remove this. it should send a command instead of the whole CNXML)', () => {
-      sendXml('<howdy/>')
-      cy.get('#advancedDetails').click() // expand
-      cy.get('#sendButton').click().then(() => {
-        expect(messagesFromWidget.length).equal(1)
-        expect(messagesFromWidget[0]).to.deep.equal({ type: 'direct-edit', xml: '<howdy/>' })
-      })
-    })
-
     describe('cnxml->html conversion', () => {
       it('Translates CNXML tags to HTML', () => {
         sendXml('<para>I am a paragraph</para>')
@@ -123,7 +114,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         cy.then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(2, 0.01)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(2, 0.01)
         })
       })
       it('scrolls to an element based on its line in the source', () => {
@@ -138,7 +129,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         cy.then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(2.5, 0.01)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(2.5, 0.01)
         })
       })
       it('scrolls to an element based on its line in the source', () => {
@@ -152,7 +143,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         cy.then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.01)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(4, 0.01)
         })
       })
       it('scrolls to last element if line number is greater than all', () => {
@@ -166,7 +157,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         cy.then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(5, 0.01)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(5, 0.01)
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
@@ -176,7 +167,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         }).then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(2, 0.01)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(2, 0.01)
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
@@ -191,7 +182,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         }).then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(2.5, 0.01)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(2.5, 0.01)
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
@@ -201,7 +192,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         }).then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.01)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(4, 0.01)
         })
       })
       it('sends no scroll event on xml without line tagging', () => {
@@ -231,7 +222,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         cy.then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(1, 0.01)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(1, 0.01)
         })
       })
       it('only ever scrolls to a single line if everything is on one line', () => {
@@ -245,7 +236,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         cy.then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(3, 0.01)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(3, 0.01)
         })
       })
       it('only ever scrolls to a single line if everything is on one line', () => {
@@ -259,7 +250,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         cy.then(() => {
           expect(messagesFromWidget.length).to.equal(1)
           expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.1)
+          expect((messagesFromWidget[0]).line).to.be.closeTo(4, 0.1)
         })
       })
     })

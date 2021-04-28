@@ -6,21 +6,13 @@ import { PanelType } from './extension-types'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { ExtensionHostContext, Panel } from './panel'
 
-export interface DirectEditIncoming {
-  type: 'direct-edit'
-  xml: string
-}
-
 // Line is one-indexed
 export interface ScrollInEditorIncoming {
   type: 'scroll-in-editor'
   line: number
 }
 
-export type PanelIncomingMessage = (
-  DirectEditIncoming
-  | ScrollInEditorIncoming
-)
+export type PanelIncomingMessage = ScrollInEditorIncoming
 
 export interface RefreshOutgoing {
   type: 'refresh'
@@ -104,21 +96,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
   }
 
   async handleMessage(message: PanelIncomingMessage): Promise<void> {
-    if (message.type === 'direct-edit') {
-      const xml = message.xml
-      if (this.resourceBinding == null) {
-        return
-      }
-      const document = await vscode.workspace.openTextDocument(this.resourceBinding)
-      const fullRange = new vscode.Range(
-        document.positionAt(0),
-        document.positionAt(document.getText().length)
-      )
-      const edit = new vscode.WorkspaceEdit()
-      edit.replace(this.resourceBinding, fullRange, xml)
-      await vscode.workspace.applyEdit(edit)
-      await document.save()
-    } else if (message.type === 'scroll-in-editor') {
+    if (message.type === 'scroll-in-editor') {
       for (const editor of vscode.window.visibleTextEditors) {
         if (!this.isPreviewOf(editor.document.uri)) {
           continue
