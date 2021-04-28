@@ -71,15 +71,16 @@ const requestBundleModules = async (client: LanguageClient, args: BundleModulesA
 async function createBlankModule(): Promise<string> {
   const template = (newModuleId: string): string => {
     return `
-    <document xmlns="http://cnx.rice.edu/cnxml">
-      <metadata xmlns:md="http://cnx.rice.edu/mdml">
-        <md:title>New Module</md:title>
-        <md:content-id>${newModuleId}</md:content-id>
-        <md:uuid>${uuidv4()}</md:uuid>
-      </metadata>
-      <content>
-      </content>
-    </document>`.trim()
+<document xmlns="http://cnx.rice.edu/cnxml">
+  <title>${newModuleId}</title>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:title>New Module</md:title>
+    <md:content-id>${newModuleId}</md:content-id>
+    <md:uuid>${uuidv4()}</md:uuid>
+  </metadata>
+  <content>
+  </content>
+</document>`.trim()
   }
   const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
   let moduleNumber = 0
