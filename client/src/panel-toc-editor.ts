@@ -71,15 +71,16 @@ const requestBundleModules = async (client: LanguageClient, args: BundleModulesA
 async function createBlankModule(): Promise<string> {
   const template = (newModuleId: string): string => {
     return `
-    <document xmlns="http://cnx.rice.edu/cnxml">
-      <metadata xmlns:md="http://cnx.rice.edu/mdml">
-        <md:title>New Module</md:title>
-        <md:content-id>${newModuleId}</md:content-id>
-        <md:uuid>${uuidv4()}</md:uuid>
-      </metadata>
-      <content>
-      </content>
-    </document>`.trim()
+<document xmlns="http://cnx.rice.edu/cnxml">
+  <title>New Module</title>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:title>New Module</md:title>
+    <md:content-id>${newModuleId}</md:content-id>
+    <md:uuid>${uuidv4()}</md:uuid>
+  </metadata>
+  <content>
+  </content>
+</document>`.trim()
   }
   const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
   let moduleNumber = 0
@@ -126,18 +127,29 @@ async function renameModule(id: string, newName: string): Promise<void> {
   const moduleUri = constructModuleUri(uri, id)
   const xml = Buffer.from(await vscode.workspace.fs.readFile(moduleUri)).toString('utf-8')
   const document = new DOMParser().parseFromString(xml)
+
+  // Change title in metadata
   let metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
   if (metadata == null) {
     const root = document.getElementsByTagNameNS(NS_CNXML, 'document')[0]
     metadata = document.createElementNS(NS_CNXML, 'metadata')
     root.appendChild(metadata)
   }
-  let titleElement = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0]
+  let metaTitleElement = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0]
+  if (metaTitleElement == null) {
+    metaTitleElement = document.createElementNS(NS_METADATA, 'md:title')
+    metadata.appendChild(metaTitleElement)
+  }
+  metaTitleElement.textContent = newName
+
+  // Change title in document
+  let titleElement = document.getElementsByTagNameNS(NS_CNXML, 'title')[0]
   if (titleElement == null) {
-    titleElement = document.createElementNS(NS_METADATA, 'md:title')
-    metadata.appendChild(titleElement)
+    titleElement = document.createElementNS(NS_CNXML, 'title')
+    document.insertBefore(titleElement, metadata)
   }
   titleElement.textContent = newName
+
   const newData = new XMLSerializer().serializeToString(document)
   await vscode.workspace.fs.writeFile(moduleUri, Buffer.from(newData))
 }
