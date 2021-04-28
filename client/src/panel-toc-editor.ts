@@ -72,7 +72,7 @@ async function createBlankModule(): Promise<string> {
   const template = (newModuleId: string): string => {
     return `
 <document xmlns="http://cnx.rice.edu/cnxml">
-  <title>${newModuleId}</title>
+  <title>New Module</title>
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
     <md:title>New Module</md:title>
     <md:content-id>${newModuleId}</md:content-id>
