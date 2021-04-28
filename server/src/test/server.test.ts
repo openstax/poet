@@ -1061,6 +1061,12 @@ describe('BookBundle', () => {
     }
     assert.deepStrictEqual(module, expected)
   })
+  it('calls noop when image is modified', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const onImageChangedSpy = sinon.spy(bundle as any, 'onImageChanged')
+    bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/media/empty.jpg' })
+    assert(onImageChangedSpy.called)
+  })
   it('does not bust caches when non-relevant uris are processed as a change', async () => {
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = await bundle.orphanedModules()
