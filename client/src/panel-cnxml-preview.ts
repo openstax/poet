@@ -12,7 +12,11 @@ export interface ScrollInEditorIncoming {
   line: number
 }
 
-export type PanelIncomingMessage = ScrollInEditorIncoming
+export interface DidReloadIncoming {
+  type: 'did-reload'
+}
+
+export type PanelIncomingMessage = ScrollInEditorIncoming | DidReloadIncoming
 
 export interface RefreshOutgoing {
   type: 'refresh'
@@ -76,9 +80,11 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
   private webviewIsScrolling: boolean = false
   private resourceIsScrolling: boolean = false
   private readonly _onDidChangeResourceBinding: vscode.EventEmitter<vscode.Uri | null>
+  private readonly _onDidInnerPanelReload: vscode.EventEmitter<void>
   constructor(private readonly context: ExtensionHostContext) {
     super(initPanel(context))
     this._onDidChangeResourceBinding = new vscode.EventEmitter()
+    this._onDidInnerPanelReload = new vscode.EventEmitter()
     void ensureCatchPromise(this.tryRebindToActiveResource(true))
     this.registerDisposable(vscode.window.onDidChangeActiveTextEditor((editor) => {
       void ensureCatchPromise(this.tryRebindToActiveResource(false))
@@ -115,6 +121,8 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
         const strategy = vscode.TextEditorRevealType.AtTop
         editor.revealRange(range, strategy)
       }
+    } else if (message.type === 'did-reload') {
+      this._onDidInnerPanelReload.fire()
     } else {
       throw new Error(`Unexpected message: ${JSON.stringify(message)}`)
     }
@@ -178,7 +186,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     const doc = new DOMParser().parseFromString(contents)
     tagElementsWithLineNumbers(doc)
     const lineTaggedContents = new XMLSerializer().serializeToString(doc)
-    await this.postMessage({ type: 'refresh', xml: lineTaggedContents })
+    void this.postMessage({ type: 'refresh', xml: lineTaggedContents })
   }
 
   isPreviewOf(resource: vscode.Uri | null): boolean {
@@ -191,15 +199,20 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
       this.panel.webview.html = rawTextHtml('No resource available to preview')
       return
     }
-    this.rebindWebviewHtmlForResource(resource)
+    await this.rebindWebviewHtmlForResource(resource)
     await this.refreshContents()
   }
 
-  private rebindWebviewHtmlForResource(resource: vscode.Uri): void {
+  private async rebindWebviewHtmlForResource(resource: vscode.Uri): Promise<void> {
     let html = fs.readFileSync(path.join(this.context.resourceRootDir, 'cnxml-preview.html'), 'utf-8')
     html = addBaseHref(this.panel.webview, resource, html)
     html = fixResourceReferences(this.panel.webview, html, this.context.resourceRootDir)
     html = fixCspSourceReferences(this.panel.webview, html)
+    const reloadComplete = new Promise((resolve, reject) => {
+      this._onDidInnerPanelReload.event(() => { resolve(undefined) })
+    })
+    // This will cause a panel reload, which we must await
     this.panel.webview.html = html
+    await reloadComplete
   }
 }
