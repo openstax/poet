@@ -35,8 +35,78 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
       messagesFromWidget = []
       pageState = undefined
     })
-
+    it('will load when a message is sent (unreliable state store)', () => {
+      cy.then(() => {
+        messagesFromWidget = []
+      })
+      cy.visit(htmlPath, {
+        onBeforeLoad: (contentWindow) => {
+          class API {
+            postMessage(msg: PanelIncomingMessage): void { messagesFromWidget.push(msg) }
+            getState(): any { return undefined }
+            setState(_state: any): void { }
+          }
+          (contentWindow as any).acquireVsCodeApi = () => { return new API() }
+        }
+      })
+      sendMessage({
+        editable: [],
+        uneditable: []
+      })
+      cy.get('[data-app-init]').should('exist')
+      cy.get('.panel-editable .rst__node').should('not.exist')
+      cy.get('.panel-uneditable .rst__node').should('not.exist')
+      cy.then(() => {
+        expect(messagesFromWidget).to.have.length(1)
+        expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+      })
+    })
+    it('will load when a message is sent (empty)', () => {
+      sendMessage({
+        editable: [],
+        uneditable: []
+      })
+      cy.get('[data-app-init]').should('exist')
+      cy.get('.panel-editable .rst__node').should('not.exist')
+      cy.get('.panel-uneditable .rst__node').should('not.exist')
+      cy.then(() => {
+        expect(messagesFromWidget).to.have.length(1)
+        expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+      })
+    })
     it('will load when a message is sent', () => {
+      sendMessage({
+        editable: [{
+          type: 'collection',
+          title: 'test collection',
+          slug: 'test',
+          children: [{
+            type: 'subcollection',
+            title: 'subcollection',
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }, {
+            type: 'module',
+            moduleid: 'm00002',
+            subtitle: 'm00002',
+            title: 'Appendix'
+          }]
+        }],
+        uneditable: []
+      })
+      cy.get('[data-app-init]').should('exist')
+      cy.get('.panel-editable .rst__node').should('have.length', 2)
+      cy.get('.panel-uneditable .rst__node').should('not.exist')
+      cy.then(() => {
+        expect(messagesFromWidget).to.have.length(1)
+        expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+      })
+    })
+    it('will load when a message is sent (expanded)', () => {
       sendMessage({
         editable: [{
           type: 'collection',
@@ -69,7 +139,55 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
       })
     })
-    it('will not re-render on same data', () => {
+    it('will not re-render on same data (expanded)', () => {
+      const message: PanelOutgoingMessage = {
+        editable: [{
+          type: 'collection',
+          title: 'test collection',
+          slug: 'test',
+          children: [{
+            type: 'subcollection',
+            title: 'subcollection',
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }]
+        }],
+        uneditable: []
+      }
+      sendMessage(message)
+      cy.get('[data-render-cached]').should('not.exist')
+      sendMessage(message)
+      cy.get('[data-render-cached]').should('exist')
+      sendMessage({
+        editable: [{
+          type: 'collection',
+          title: 'test collection',
+          slug: 'test',
+          children: [{
+            type: 'subcollection',
+            title: 'subcollection',
+            children: [{
+              type: 'module',
+              moduleid: 'm00001',
+              subtitle: 'm00001',
+              title: 'Introduction'
+            }]
+          }, {
+            type: 'module',
+            moduleid: 'm00002',
+            subtitle: 'm00002',
+            title: 'Appendix'
+          }]
+        }],
+        uneditable: []
+      })
+      cy.get('[data-render-cached]').should('not.exist')
+    })
+    it('will not re-render on same data (expanded)', () => {
       const message: PanelOutgoingMessage = {
         editable: [{
           type: 'collection',
@@ -442,6 +560,20 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.get('.panel-editable .search-info').should('contain.text', '1 / 2')
         cy.get('.panel-editable .rst__rowSearchFocus').should('contain.text', 'Appending')
       })
+      it('does nothing when navigating an empty search', () => {
+        cy.get('.panel-editable .search')
+          .type('no_match')
+        cy.get('.panel-editable .search-info').should('contain.text', '0 / 0')
+        cy.get('.panel-editable .rst__rowSearchFocus').should('not.exist')
+        cy.get('.panel-editable .search-next').should('be.disabled')
+        cy.get('.panel-editable .search-next').click({ force: true })
+        cy.get('.panel-editable .search-info').should('contain.text', '0 / 0')
+        cy.get('.panel-editable .rst__rowSearchFocus').should('not.exist')
+        cy.get('.panel-editable .search-prev').should('be.disabled')
+        cy.get('.panel-editable .search-prev').click({ force: true })
+        cy.get('.panel-editable .search-info').should('contain.text', '0 / 0')
+        cy.get('.panel-editable .rst__rowSearchFocus').should('not.exist')
+      })
       it('switches between trees', () => {
         cy.get('.panel-editable .search')
           .type('deleting')
@@ -473,7 +605,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
           expect(messagesFromWidget[2]).to.deep.equal({ type: 'subcollection-create', slug: 'test-2' })
         })
       })
-      it('provides an input box when title is clicked', () => {
+      it('provides an input box when title is clicked, removes when blurred', () => {
         cy.get('.panel-editable .node-title')
           .eq(1)
           .click()
@@ -481,6 +613,16 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.get('.panel-editable .node-title-rename')
           .eq(0)
           .blur()
+          .should('not.exist')
+      })
+      it('provides an input box when title is clicked, removes on Enter', () => {
+        cy.get('.panel-editable .node-title')
+          .eq(1)
+          .click()
+          .should('not.exist')
+        cy.get('.panel-editable .node-title-rename')
+          .eq(0)
+          .type('{enter}')
           .should('not.exist')
       })
       it('can tell the extension to rename module', () => {

@@ -453,7 +453,7 @@ describe('ValidationQueue', function () {
   const noConnection: any = {}
   before(function () {
     mockfs({
-      '/bundle/media': {},
+      '/bundle/media/test.jpg': '',
       '/bundle/collections/valid.xml': `
         <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
           <col:metadata>
@@ -506,6 +506,21 @@ describe('ValidationQueue', function () {
     }
     validationQueue.addRequest(validationRequest)
     await assert.rejects((validationQueue as any).processQueue())
+  })
+  it('will error when validation is requested for an uri that cannot be validated', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      console: {
+        error: sinon.stub()
+      }
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const unvalidatable = 'file:///bundle/media/test.jpg'
+    const item = expect(bundle.bundleItemFromUri(unvalidatable));
+    (validationQueue as any).queue.push(item)
+    await (validationQueue as any).processQueue()
+    assert(connection.console.error.calledOnceWith(`Ignoring unexpected item of type '${item.type}' and key ${item.key} in queue`))
   })
   it('will queue items when bundleItemFromUri returns null', async () => {
     const bundle = await BookBundle.from('/bundle')
@@ -1045,6 +1060,12 @@ describe('BookBundle', () => {
       subtitle: 'm00001'
     }
     assert.deepStrictEqual(module, expected)
+  })
+  it('calls noop when image is modified', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const onImageChangedSpy = sinon.spy(bundle as any, 'onImageChanged')
+    bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/media/empty.jpg' })
+    assert(onImageChangedSpy.called)
   })
   it('does not bust caches when non-relevant uris are processed as a change', async () => {
     const bundle = await BookBundle.from('/bundle')

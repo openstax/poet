@@ -6,34 +6,64 @@ import SinonRoot from 'sinon'
 import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch, RefType } from '../../git-api/git.d'
 import 'source-map-support/register'
 import {
-  expect as expectOrig, ensureCatch, getRootPathUri, getLocalResourceRoots,
+  expect as expectOrig, ensureCatch, getRootPathUri,
   fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles,
-  getErrorDiagnosticsBySource
+  getErrorDiagnosticsBySource,
+  ensureCatchPromise
 } from './../../utils'
-import { activate, createLazyPanelOpener, deactivate, forwardOnDidChangeWorkspaceFolders, refreshTocPanel, invokeRefreshers } from './../../extension'
-import { handleMessageFromWebviewPanel as tocEditorHandleMessage, NS_CNXML, NS_COLLECTION, NS_METADATA, PanelIncomingMessage as TocPanelIncomingMessage } from './../../panel-toc-editor'
-import { handleMessage as imageUploadHandleMessage } from './../../panel-image-upload'
-import { handleMessage as cnxmlPreviewHandleMessage } from './../../panel-cnxml-preview'
+import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../../extension'
+import {
+  handleMessageFromWebviewPanel as tocEditorHandleMessage,
+  NS_CNXML, NS_COLLECTION, NS_METADATA,
+  PanelIncomingMessage as TocPanelIncomingMessage, TocEditorPanel
+} from './../../panel-toc-editor'
+import { ImageManagerPanel } from './../../panel-image-manager'
+import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
 import { TocTreeCollection, TocTreeElementType } from '../../../../common/src/toc-tree'
-import { commandToPanelType, OpenstaxCommand, PanelType } from '../../extension-types'
+import { OpenstaxCommand } from '../../extension-types'
 import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
-import { DOMParser } from 'xmldom'
+import { DOMParser, XMLSerializer } from 'xmldom'
 import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../../../common/src/requests'
-import { TocTreesProvider, TocTreeItem } from './../../toc-trees'
+import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
+import { TocTreesProvider, TocTreeItem, toggleTocTreesFilteringHandler } from './../../toc-trees'
 import * as utils from './../../utils' // Used for dependency mocking in tests
 
+const ROOT_DIR_REL = '../../../../../../'
+const ROOT_DIR_ABS = path.resolve(__dirname, ROOT_DIR_REL)
+
 // Test runs in out/client/src/test/suite, not src/client/src/test/suite
-const ORIGIN_DATA_DIR = path.join(__dirname, '../../../../../../')
+const ORIGIN_DATA_DIR = ROOT_DIR_ABS
 const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
 const TEST_OUT_DIR = path.join(__dirname, '../../')
 
 const contextStub = {
-  asAbsolutePath: (relPath: string) => path.resolve(__dirname, '../../../../../../', relPath)
+  asAbsolutePath: (relPath: string) => path.resolve(ROOT_DIR_ABS, relPath)
 }
+const resourceRootDir = TEST_OUT_DIR
+const createMockClient = (): LanguageClient => {
+  return {
+    sendRequest: SinonRoot.stub().returns([]),
+    onRequest: SinonRoot.stub().returns({ dispose: () => { } })
+  } as unknown as LanguageClient
+}
+
+type ExtractEventGeneric<GenericEvent> = GenericEvent extends vscode.Event<infer X> ? X : never
+type ExtensionEventEmitters = { [key in keyof ExtensionEvents]: vscode.EventEmitter<ExtractEventGeneric<ExtensionEvents[key]>> }
+const createMockEvents = (): { emitters: ExtensionEventEmitters, events: ExtensionEvents } => {
+  const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<undefined> = new vscode.EventEmitter()
+  const emitters = {
+    onDidChangeWatchedFiles: onDidChangeWatchedFilesEmitter
+  }
+  const events = {
+    onDidChangeWatchedFiles: onDidChangeWatchedFilesEmitter.event
+  }
+  return { emitters, events }
+}
+
 const extensionExports = activate(contextStub as any)
 
 async function sleep(ms: number): Promise<void> {
@@ -42,6 +72,18 @@ async function sleep(ms: number): Promise<void> {
 
 function expect<T>(value: T | null | undefined): T {
   return expectOrig(value, 'test_assertion')
+}
+
+async function replaceUriDocumentContent(uri: vscode.Uri, content: string): Promise<void> {
+  const document = await vscode.workspace.openTextDocument(uri)
+  const fullRange = new vscode.Range(
+    document.positionAt(0),
+    document.positionAt(document.getText().length)
+  )
+  const edit = new vscode.WorkspaceEdit()
+  edit.replace(uri, fullRange, content)
+  await vscode.workspace.applyEdit(edit)
+  await document.save()
 }
 
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
@@ -65,36 +107,40 @@ const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscod
   await vscode.commands.executeCommand(command)
   // Wait for panel to load
   await sleep(1000)
-  const panel = expect((await extensionExports).activePanelsByType[commandToPanelType[command]])
-  await func(panel)
+  const panelManager = expect((await extensionExports)[command])
+  const panel = expect(panelManager.panel())
+  await func((panel as any).panel)
   panel.dispose()
 }
 
 const resetTestData = async (): Promise<void> => {
   await vscode.workspace.saveAll(true)
-  fs.rmdirSync(TEST_DATA_DIR, { recursive: true })
-  fs.mkdirpSync(TEST_DATA_DIR)
-  fs.copySync(path.join(ORIGIN_DATA_DIR, 'collections'), path.join(TEST_DATA_DIR, 'collections'))
-  fs.copySync(path.join(ORIGIN_DATA_DIR, 'media'), path.join(TEST_DATA_DIR, 'media'))
-  fs.copySync(path.join(ORIGIN_DATA_DIR, 'modules'), path.join(TEST_DATA_DIR, 'modules'))
+  for (const subdir of ['collections', 'media', 'modules']) {
+    fs.rmdirSync(path.join(TEST_DATA_DIR, subdir), { recursive: true })
+    fs.copySync(path.join(ORIGIN_DATA_DIR, subdir), path.join(TEST_DATA_DIR, subdir))
+  }
+  fs.rmdirSync(path.join(TEST_DATA_DIR, '.xsd'), { recursive: true })
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors')
 }
-
-suite('Unsaved Files', function (this: Suite) {
-  this.beforeEach(resetTestData)
-  test('show cnxml preview with no file open', async () => {
-    const activationExports = await extensionExports
-    assert.strictEqual(vscode.window.activeTextEditor, undefined)
-    await vscode.commands.executeCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW)
-    await sleep(1000) // Wait for panel to load
-    const panel = activationExports.activePanelsByType[commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW]]
-    assert.strictEqual(panel, undefined)
-  })
-})
 
 suite('Extension Test Suite', function (this: Suite) {
   const sinon = SinonRoot.createSandbox()
-  this.beforeEach(resetTestData)
-  this.afterEach(() => sinon.restore())
+
+  this.beforeAll(async () => {
+    await resetTestData()
+  })
+
+  this.beforeEach(() => {
+    sinon.spy(CnxmlPreviewPanel.prototype, 'postMessage')
+  })
+
+  this.afterEach(async () => {
+    await resetTestData()
+    sinon.restore()
+    sinon.reset()
+    sinon.resetBehavior()
+    sinon.resetHistory()
+  })
 
   test('expect unwraps non-null', () => {
     const maybe: string | null = 'test'
@@ -133,6 +179,21 @@ suite('Extension Test Suite', function (this: Suite) {
 
     try {
       await wrapped()
+      assert.fail('ensureCatch should have thrown an error')
+    } catch (err) {
+      assert.strictEqual(err.message, errMessage)
+    }
+    // Verify that a message was sent to the user
+    assert.strictEqual(s.callCount, 1)
+  })
+  test('ensureCatchPromise throws when its argument rejects', async () => {
+    const errMessage = 'I am an error'
+    async function fn(): Promise<void> { throw new Error(errMessage) }
+    const s = sinon.spy(vscode.window, 'showErrorMessage')
+    const promise = fn()
+    const caughtPromise = ensureCatchPromise(promise)
+    try {
+      await caughtPromise
       assert.fail('ensureCatch should have thrown an error')
     } catch (err) {
       assert.strictEqual(err.message, errMessage)
@@ -184,32 +245,19 @@ suite('Extension Test Suite', function (this: Suite) {
       }
     )
   })
-  test('getLocalResourceRoots', () => {
-    const uri = expect(getRootPathUri())
-    const roots = getLocalResourceRoots([], uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') }))
-    assert.strictEqual(roots.length, 1)
-    assert.strictEqual(roots[0].fsPath, TEST_DATA_DIR)
-  })
-  test('getLocalResourceRoots works when there is no folder for a resource', () => {
-    function getBaseRoots(scheme: any): readonly vscode.Uri[] {
-      const resource = {
-        scheme: scheme,
-        fsPath: '/some/path/to/file'
-      } as any as vscode.Uri
-      return getLocalResourceRoots([], resource)
-    }
-    const folder = {} as any as vscode.WorkspaceFolder // the content does not matter
-    const s = sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(folder)
-    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => [{ uri: '/some/path/does/not/matter' }])
-    assert.strictEqual(getBaseRoots('CASE-T-T-?').length, 1)
-    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
-    assert.strictEqual(getBaseRoots('CASE-T-F-?').length, 0)
-    s.restore()
-    sinon.stub(vscode.workspace, 'getWorkspaceFolder').returns(undefined)
-    assert.strictEqual(getBaseRoots('CASE-F-?-F').length, 0)
-    // CASE-F-?-T
-    assert.strictEqual(getBaseRoots('file').length, 1)
-    assert.strictEqual(getBaseRoots('').length, 1)
+  test('tagElementsWithLineNumbers', async () => {
+    const xml = `
+      <document>
+        <div><span>Test</span><div/></div>
+      </document>`
+    const doc = new DOMParser().parseFromString(xml)
+    tagElementsWithLineNumbers(doc)
+    const out = new XMLSerializer().serializeToString(doc)
+    const expected = `
+      <document data-line="2">
+        <div data-line="3"><span data-line="3">Test</span><div data-line="3"/></div>
+      </document>`
+    assert.strictEqual(out, expected)
   })
   test('show toc editor', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
@@ -219,46 +267,26 @@ suite('Extension Test Suite', function (this: Suite) {
       assert.notStrictEqual(html.indexOf('html'), -1)
     })
   }).timeout(5000)
-  test('toc editor handle refresh', async () => {
-    const requests: any[] = []
-    const mockClient = {
-      sendRequest: (...args: any[]) => { requests.push(args); return [] }
-    }
-    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, mockClient as unknown as LanguageClient)
-      await handler({ type: 'refresh' })
-    })
-    const expected = [
+  test('toc editor refresh makes proper language server requests', async () => {
+    const mockClient = createMockClient()
+    const panel = new TocEditorPanel({ resourceRootDir, client: mockClient, events: createMockEvents().events })
+    await panel.handleMessage({ type: 'refresh' })
+    const expectedCalls = [
       [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
       [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
       [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
     ]
-    assert.deepStrictEqual(requests, expected)
-  }).timeout(5000)
-  test('toc editor handle refresh from extension base', async () => {
-    const requests: any[] = []
-    const mockClient = {
-      sendRequest: (...args: any[]) => { requests.push(args); return [] }
+    assert.strictEqual((mockClient.sendRequest as SinonRoot.SinonStub).getCalls().length, 3)
+    for (const args of expectedCalls) {
+      assert((mockClient.sendRequest as SinonRoot.SinonStub).calledWith(...args))
     }
-    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const refresher = refreshTocPanel(mockClient as unknown as LanguageClient)
-      await refresher()
-    })
-    const expected = [
-      [ExtensionServerRequest.BundleTrees, { workspaceUri: `file://${TEST_DATA_DIR}` }],
-      [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
-      [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
-    ]
-    assert.deepStrictEqual(requests, expected)
   }).timeout(5000)
-  test('toc editor handle refresh from extension base without existing panel', async () => {
-    const requests: any[] = []
-    const mockClient = {
-      sendRequest: (...args: any[]) => { requests.push(args); return [] }
-    }
-    const refresher = refreshTocPanel(mockClient as unknown as LanguageClient)
-    await refresher()
-    assert.deepStrictEqual(requests, [])
+  test('toc editor refresh makes no request when disposed', async () => {
+    const mockClient = createMockClient()
+    const panel = new TocEditorPanel({ resourceRootDir, client: mockClient, events: createMockEvents().events })
+    panel.dispose()
+    await panel.handleMessage({ type: 'refresh' })
+    assert((mockClient.sendRequest as SinonRoot.SinonStub).notCalled)
   })
   test('toc editor handle data message', async () => {
     const uri = expect(getRootPathUri())
@@ -283,7 +311,7 @@ suite('Extension Test Suite', function (this: Suite) {
       }]
     }
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'write-tree', treeData: mockEditAddModule })
     })
     const after = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
@@ -292,19 +320,19 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('toc editor handle error message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await assert.rejects(async () => await handler({ type: 'error', message: 'test' }))
     })
   }).timeout(5000)
   test('toc editor handle unexpected message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await assert.rejects(async () => await handler({ type: 'foo' } as unknown as TocPanelIncomingMessage))
     })
   }).timeout(5000)
   test('toc editor handle subcollection create', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'subcollection-create', slug: 'test' })
     })
     const uri = expect(getRootPathUri())
@@ -319,7 +347,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toc editor handle module create', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'module-create' })
     })
     const uri = expect(getRootPathUri())
@@ -342,32 +370,47 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toc editor handle module rename best case', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'module-rename', moduleid: 'm00001', newName: 'rename' })
     })
     const uri = expect(getRootPathUri())
     const modulePath = path.join(uri.fsPath, 'modules', 'm00001', 'index.cnxml')
     const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
     const document = new DOMParser().parseFromString(moduleData)
-    const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
+    const moduleMetaTitle = select('//cnxml:metadata/md:title', document) as Element[]
+    const moduleTitle = select('//cnxml:title', document) as Element[]
+    assert.strictEqual(moduleMetaTitle.length, 1)
+    assert.strictEqual(moduleMetaTitle[0].textContent, 'rename')
     assert.strictEqual(moduleTitle.length, 1)
     assert.strictEqual(moduleTitle[0].textContent, 'rename')
   })
   test('toc editor handle module rename worst case', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const handler = tocEditorHandleMessage(panel, null as unknown as LanguageClient)
+      const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'module-rename', moduleid: 'm00002', newName: 'rename' })
     })
     const uri = expect(getRootPathUri())
     const modulePath = path.join(uri.fsPath, 'modules', 'm00002', 'index.cnxml')
     const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
     const document = new DOMParser().parseFromString(moduleData)
-    const moduleTitle = select('//cnxml:metadata/md:title', document) as Node[]
+    const moduleMetaTitle = select('//cnxml:metadata/md:title', document) as Element[]
+    const moduleTitle = select('//cnxml:title', document) as Element[]
+    assert.strictEqual(moduleMetaTitle.length, 1)
+    assert.strictEqual(moduleMetaTitle[0].textContent, 'rename')
     assert.strictEqual(moduleTitle.length, 1)
     assert.strictEqual(moduleTitle[0].textContent, 'rename')
   })
+  test('toc editor refreshes when server watched file changes', async () => {
+    const mockEvents = createMockEvents()
+    const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
+    const panel = new TocEditorPanel({ resourceRootDir, client: createMockClient(), events: mockEvents.events })
+    const refreshStub = sinon.stub(panel, 'refreshPanel')
+
+    await watchedFilesSpy.getCall(0).args[0](undefined)
+    assert(refreshStub.called)
+  })
   test('show image upload', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
+    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, async (panel) => {
       const html = panel.webview.html
       assert.notStrictEqual(html, null)
       assert.notStrictEqual(html, undefined)
@@ -376,18 +419,32 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('image upload handle message', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
-    const handler = imageUploadHandleMessage()
-    await handler({ mediaUploads: [{ mediaName: 'urgent2.jpg', data: 'data:image/jpeg;base64,' + data }] })
+    const panel = new ImageManagerPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    await panel.handleMessage({ mediaUploads: [{ mediaName: 'urgent2.jpg', data: 'data:image/jpeg;base64,' + data }] })
     const uploaded = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent2.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, uploaded)
   })
   test('image upload handle message ignore duplicate image', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
-    const handler = imageUploadHandleMessage()
-    await handler({ mediaUploads: [{ mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0' }] })
+    const panel = new ImageManagerPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    await panel.handleMessage({ mediaUploads: [{ mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0' }] })
     const newData = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, newData)
   })
+  test('raw text html content for webview use', () => {
+    const content = 'test'
+    assert.strictEqual(rawTextHtml(content), '<html><body>test</body></html>')
+  })
+  test('raw text html content for webview use disallows potential unsafe text', () => {
+    const content = '<injected></injected>'
+    assert.throws(() => { rawTextHtml(content) })
+  })
+  test('show cnxml preview with no file open', async () => {
+    assert.strictEqual(vscode.window.activeTextEditor, undefined)
+    await withPanelFromCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, async (panel) => {
+      assert(panel.webview.html.includes('No resource available to preview'))
+    })
+  }).timeout(5000)
   test('show cnxml preview with a file open', async () => {
     const uri = expect(getRootPathUri())
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
@@ -400,17 +457,262 @@ suite('Extension Test Suite', function (this: Suite) {
       assert.notStrictEqual(html.indexOf('html'), -1)
     })
   }).timeout(5000)
-  test('cnxml preview handle message', async () => {
+  test('cnxml preview rebinds to resource in the active editor', async () => {
+    const uri = expect(getRootPathUri())
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    assert.strictEqual((panel as any).resourceBinding, null)
+
+    const resourceFirst = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const resourceBindingChangedExpectedFirst: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resourceFirst.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+    const resourceSecond = uri.with({ path: path.join(uri.path, 'modules', 'm00002', 'index.cnxml') })
+    const resourceBindingChangedExpectedSecond: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resourceSecond.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+
+    const documentFirst = await vscode.workspace.openTextDocument(resourceFirst)
+    await vscode.window.showTextDocument(documentFirst, vscode.ViewColumn.Two)
+    const contentFromFsBecauseVscodeLiesAboutDocumentContentFirst = await fs.promises.readFile(resourceFirst.fsPath, { encoding: 'utf-8' })
+    const documentDomFirst = new DOMParser().parseFromString(contentFromFsBecauseVscodeLiesAboutDocumentContentFirst)
+    tagElementsWithLineNumbers(documentDomFirst)
+    const xmlExpectedFirst = new XMLSerializer().serializeToString(documentDomFirst)
+    await resourceBindingChangedExpectedFirst
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedFirst }))
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resourceFirst.fsPath)
+
+    const documentSecond = await vscode.workspace.openTextDocument(resourceSecond)
+    await vscode.window.showTextDocument(documentSecond, vscode.ViewColumn.Two)
+    const contentFromFsBecauseVscodeLiesAboutDocumentContentSecond = await fs.promises.readFile(resourceSecond.fsPath, { encoding: 'utf-8' })
+    const documentDomSecond = new DOMParser().parseFromString(contentFromFsBecauseVscodeLiesAboutDocumentContentSecond)
+    tagElementsWithLineNumbers(documentDomSecond)
+    const xmlExpectedSecond = new XMLSerializer().serializeToString(documentDomSecond)
+    await resourceBindingChangedExpectedSecond
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond }))
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resourceSecond.fsPath)
+  }).timeout(5000)
+  test('cnxml preview only rebinds to cnxml', async () => {
+    const uri = expect(getRootPathUri())
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+
+    const resourceFirst = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const resourceBindingChangedExpectedFirst: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resourceFirst.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+
+    const documentFirst = await vscode.workspace.openTextDocument(resourceFirst)
+    await vscode.window.showTextDocument(documentFirst, vscode.ViewColumn.Two)
+    const documentDomFirst = new DOMParser().parseFromString(documentFirst.getText())
+    tagElementsWithLineNumbers(documentDomFirst)
+    const xmlExpectedFirst = new XMLSerializer().serializeToString(documentDomFirst)
+    await resourceBindingChangedExpectedFirst
+
+    const resourceSecond = uri.with({ path: path.join(uri.path, 'collections', 'test.collection.xml') })
+    const documentSecond = await vscode.workspace.openTextDocument(resourceSecond)
+    await vscode.window.showTextDocument(documentSecond, vscode.ViewColumn.Two)
+
+    const resourceThird = uri.with({ path: path.join(uri.path, 'media', 'README.md') })
+    const documentThird = await vscode.workspace.openTextDocument(resourceThird)
+    await vscode.window.showTextDocument(documentThird, vscode.ViewColumn.Two)
+
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedFirst }))
+    const refreshCalls = (panel.postMessage as SinonRoot.SinonSpy)
+      .getCalls()
+      .filter(call => call.args.some(arg => arg.type != null && arg.type === 'refresh'))
+    assert.strictEqual(refreshCalls.length, 1)
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resourceFirst.fsPath)
+  })
+  test('cnxml preview refuses refresh if no resource bound', async () => {
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    assert(panel.isPreviewOf(null))
+    await (panel as any).refreshContents()
+    const refreshCalls = (panel.postMessage as SinonRoot.SinonSpy)
+      .getCalls()
+      .filter(call => call.args.some(arg => arg.type != null && arg.type === 'refresh'))
+    assert.strictEqual(refreshCalls.length, 0)
+  })
+  test('cnxml preview messaged upon visible range change', async () => {
+    const uri = expect(getRootPathUri())
+
+    // An editor not bound to the panel
+    const resourceIrrelevant = uri.with({ path: path.join(uri.path, 'modules', 'm00002', 'index.cnxml') })
+    const documentIrrelevant = await vscode.workspace.openTextDocument(resourceIrrelevant)
+    const unboundEditor = await vscode.window.showTextDocument(documentIrrelevant, vscode.ViewColumn.One)
+
+    // The editor we are bound to
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const document = await vscode.workspace.openTextDocument(resource)
+    const boundEditor = await vscode.window.showTextDocument(document, vscode.ViewColumn.Two)
+
+    // We need something long enough to scroll in
+    const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resource.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+    await resourceBindingChanged
+
+    // reset revealed range
+    const visualRangeResetBound = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === boundEditor) { resolve(undefined) } })
+    })
+    const visualRangeResetUnbound = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === unboundEditor) { resolve(undefined) } })
+    })
+    const resetRange = new vscode.Range(0, 0, 1, 0)
+    const resetStrategy = vscode.TextEditorRevealType.AtTop
+    boundEditor.revealRange(resetRange, resetStrategy)
+    unboundEditor.revealRange(resetRange, resetStrategy)
+    // Promise.race in case the visual range was already correct
+    await Promise.race([Promise.all([visualRangeResetBound, visualRangeResetUnbound]), sleep(500)])
+
+    await replaceUriDocumentContent(resource, testData)
+    await replaceUriDocumentContent(resourceIrrelevant, testData)
+
+    const range = new vscode.Range(100, 0, 101, 0)
+    const strategy = vscode.TextEditorRevealType.AtTop
+
+    const visualRangeChangedFirst = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
+    })
+    unboundEditor.revealRange(range, strategy)
+    await visualRangeChangedFirst
+    assert(!(panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 100 }))
+    assert(!(panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 101 }))
+
+    const visualRangeChangedSecond = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
+    })
+    boundEditor.revealRange(range, strategy)
+    await visualRangeChangedSecond
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 101 }))
+  })
+  test('cnxml preview scroll sync in editor updates visible range', async () => {
+    const uri = expect(getRootPathUri())
+
+    // An editor we should not scroll in
+    const resourceIrrelevant = uri.with({ path: path.join(uri.path, 'modules', 'm00002', 'index.cnxml') })
+    const documentIrrelevant = await vscode.workspace.openTextDocument(resourceIrrelevant)
+    const unboundEditor = await vscode.window.showTextDocument(documentIrrelevant, vscode.ViewColumn.One)
+
+    // The actual editor we are scrolling in
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const document = await vscode.workspace.openTextDocument(resource)
+    const boundEditor = await vscode.window.showTextDocument(document, vscode.ViewColumn.Two)
+
+    // We need something long enough to scroll to
+    const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resource.fsPath) {
+          resolve(event)
+        }
+      })
+    })
+    await resourceBindingChanged
+
+    // reset revealed range
+    const visualRangeResetBound = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === boundEditor) { resolve(undefined) } })
+    })
+    const visualRangeResetUnbound = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === unboundEditor) { resolve(undefined) } })
+    })
+    const range = new vscode.Range(0, 0, 1, 0)
+    const strategy = vscode.TextEditorRevealType.AtTop
+    boundEditor.revealRange(range, strategy)
+    unboundEditor.revealRange(range, strategy)
+    // Promise.race in case the visual range was already correct
+    await Promise.race([Promise.all([visualRangeResetBound, visualRangeResetUnbound]), sleep(500)])
+
+    await replaceUriDocumentContent(resource, testData)
+    await replaceUriDocumentContent(resourceIrrelevant, testData);
+
+    // ensure scrollable
+    (panel as any).resourceIsScrolling = false
+    const visualRangeChanged = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
+    })
+    await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
+    await Promise.race([visualRangeChanged, sleep(500)])
+
+    const firstVisiblePosition = boundEditor.visibleRanges[0].start
+    const lineNumber = firstVisiblePosition.line
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resource.fsPath)
+    assert.strictEqual(lineNumber + 1, 101)
+    const firstVisiblePositionUnbound = unboundEditor.visibleRanges[0].start
+    const lineNumberUnbound = firstVisiblePositionUnbound.line
+    assert.strictEqual(lineNumberUnbound, 0)
+  })
+  test('cnxml preview scroll sync does not update editor visible range if editor is scrolling (anti-jitter)', async () => {
     const uri = expect(getRootPathUri())
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
     const document = await vscode.workspace.openTextDocument(resource)
-    const before = document.getText()
-    const testData = '<document>Test</document>'
-    const handler = cnxmlPreviewHandleMessage(resource)
-    await handler({ xml: testData })
-    const modified = document.getText()
-    assert.strictEqual(modified, testData)
-    assert.notStrictEqual(modified, before)
+    await vscode.window.showTextDocument(document)
+
+    // We need something long enough to scroll to
+    const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const boundEditor = expect(vscode.window.visibleTextEditors.find(editor => panel.isPreviewOf(editor.document.uri)))
+
+    // reset revealed range
+    const visualRangeReset = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
+    })
+    const range = new vscode.Range(0, 0, 1, 0)
+    const strategy = vscode.TextEditorRevealType.AtTop
+    boundEditor.revealRange(range, strategy)
+    // Promise.race in case the visual range was already correct
+    await Promise.race([visualRangeReset, sleep(500)])
+
+    await replaceUriDocumentContent(resource, testData);
+
+    // editor is scrolling
+    (panel as any).resourceIsScrolling = true
+    const visualRangeChanged = new Promise((resolve, reject) => {
+      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
+    })
+    await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
+    await Promise.race([visualRangeChanged, sleep(500)])
+
+    const firstVisiblePosition = boundEditor.visibleRanges[0].start
+    const lineNumber = firstVisiblePosition.line
+    assert.strictEqual((panel as any).resourceBinding.fsPath, resource.fsPath)
+    assert.strictEqual(lineNumber, 0)
+  })
+  test('cnxml preview refreshes when server watched file changes', async () => {
+    const mockEvents = createMockEvents()
+    const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: mockEvents.events })
+    const refreshContentsStub = sinon.stub(panel as any, 'refreshContents')
+    const panelBindingChanged = new Promise((resolve, reject) => {
+      panel.onDidChangeResourceBinding(() => resolve(undefined))
+    })
+    await panelBindingChanged
+    const refreshCount = refreshContentsStub.callCount
+    await watchedFilesSpy.getCall(0).args[0](undefined)
+    assert.strictEqual(refreshContentsStub.callCount, refreshCount + 1)
+  })
+  test('cnxml preview throws upon unexpected message', async () => {
+    const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    await assert.rejects(panel.handleMessage({ type: 'bad-type' } as any))
   })
   test('panel disposed and refocused', async () => {
     await assert.doesNotReject(async () => {
@@ -418,67 +720,23 @@ suite('Extension Test Suite', function (this: Suite) {
       await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
     })
   }).timeout(5000)
-  test('panel opener opens new panel if it does not exist', async () => {
-    const mockPanelActivationByType = {
-      [PanelType.TOC_EDITOR]: sinon.stub(),
-      [PanelType.IMAGE_UPLOAD]: sinon.stub(),
-      [PanelType.CNXML_PREVIEW]: sinon.stub()
-    }
-    const opener = createLazyPanelOpener(mockPanelActivationByType)
-    const result = opener(PanelType.IMAGE_UPLOAD, false)
-    result('test')
-    assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].calledOnceWith('test'))
-    assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
-    assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
-  })
-  test('panel opener opens new panel if it exists, but is disposed', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => { })
-    const mockPanelActivationByType = {
-      [PanelType.TOC_EDITOR]: sinon.stub(),
-      [PanelType.IMAGE_UPLOAD]: sinon.stub(),
-      [PanelType.CNXML_PREVIEW]: sinon.stub()
-    }
-    const opener = createLazyPanelOpener(mockPanelActivationByType)
-    const result = opener(PanelType.IMAGE_UPLOAD, false)
-    result('test')
-    assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].calledOnceWith('test'))
-    assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
-    assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
-  })
-  test('panel opener focuses new panel on soft refocus if it exists', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
-      const revealStub = sinon.stub(panel, 'reveal')
-      const mockPanelActivationByType = {
-        [PanelType.TOC_EDITOR]: sinon.stub(),
-        [PanelType.IMAGE_UPLOAD]: sinon.stub(),
-        [PanelType.CNXML_PREVIEW]: sinon.stub()
-      }
-      const opener = createLazyPanelOpener(mockPanelActivationByType)
-      const result = opener(PanelType.IMAGE_UPLOAD, false)
-      result('test')
-      assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].notCalled)
-      assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
-      assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
-      assert(revealStub.calledOnce)
-    })
-  })
-  test('panel opener opens new panel on hard refocus even if it exists', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, async (panel) => {
-      const revealStub = sinon.stub(panel, 'reveal')
-      const mockPanelActivationByType = {
-        [PanelType.TOC_EDITOR]: sinon.stub(),
-        [PanelType.IMAGE_UPLOAD]: sinon.stub(),
-        [PanelType.CNXML_PREVIEW]: sinon.stub()
-      }
-      const opener = createLazyPanelOpener(mockPanelActivationByType)
-      const result = opener(PanelType.IMAGE_UPLOAD, true)
-      result('test')
-      assert(mockPanelActivationByType[PanelType.IMAGE_UPLOAD].calledOnceWith('test'))
-      assert(mockPanelActivationByType[PanelType.CNXML_PREVIEW].notCalled)
-      assert(mockPanelActivationByType[PanelType.TOC_EDITOR].notCalled)
-      assert(revealStub.notCalled)
-    })
-  })
+  test('panel hidden and refocused', async () => {
+    const command = OpenstaxCommand.SHOW_IMAGE_MANAGER
+    await vscode.commands.executeCommand(command)
+    const panelManager = expect((await extensionExports)[command])
+
+    // Hide panel by opening another tab
+    const uri = expect(getRootPathUri())
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    const document = await vscode.workspace.openTextDocument(resource)
+    await vscode.window.showTextDocument(document)
+
+    // Refocus
+    await vscode.commands.executeCommand(command)
+    // Give the panel time to load
+    await sleep(500)
+    assert(panelManager.panel()?.visible())
+  }).timeout(5000)
   test('schema files are populated when not existing', async () => {
     const uri = expect(getRootPathUri())
     const schemaPath = path.join(uri.path, '.xsd')
@@ -567,22 +825,13 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
   })
   test('forwardOnDidChangeWorkspaceFolders simply forwards any argument to client', async () => {
-    const requests: any = []
-    const mockClient = {
-      sendRequest: (...args: any[]) => { requests.push(args); return [] }
-    }
-    const forwarder = forwardOnDidChangeWorkspaceFolders(mockClient as unknown as LanguageClient)
+    const mockClient = createMockClient()
+    const forwarder = forwardOnDidChangeWorkspaceFolders(mockClient)
     await forwarder('test_event' as unknown as vscode.WorkspaceFoldersChangeEvent)
-    const expected = [
-      ['onDidChangeWorkspaceFolders', 'test_event']
-    ]
-    assert.deepStrictEqual(requests, expected)
+    const expected = ['onDidChangeWorkspaceFolders', 'test_event']
+    assert((mockClient.sendRequest as SinonRoot.SinonStub).calledOnceWith(...expected))
   })
   test('TocTreesProvider returns expected TocTreeItems', async () => {
-    const sendRequestMock = sinon.stub()
-    const mockClient: LanguageClient = {
-      sendRequest: sendRequestMock
-    } as any as LanguageClient
     const fakeTreeCollection: TocTreeCollection[] = []
     fakeTreeCollection.push(
       {
@@ -650,6 +899,17 @@ suite('Extension Test Suite', function (this: Suite) {
       },
       'm00003'
     )
+    const module3ItemToggled = new TocTreeItem(
+      'Module3 (m00003)',
+      vscode.TreeItemCollapsibleState.None,
+      [],
+      {
+        title: 'open',
+        command: 'vscode.open',
+        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/modules/m00003/index.cnxml`)]
+      },
+      undefined
+    )
     const subcollectionItem = new TocTreeItem(
       'subcollection',
       vscode.TreeItemCollapsibleState.Collapsed,
@@ -676,7 +936,11 @@ suite('Extension Test Suite', function (this: Suite) {
       }
     )
 
-    const tocTreesProvider = new TocTreesProvider(mockClient)
+    const mockClient = createMockClient()
+    // We don't want to just return []
+    const sendRequestMock = sinon.stub()
+    mockClient.sendRequest = sendRequestMock
+    const tocTreesProvider = new TocTreesProvider({ resourceRootDir, client: mockClient, events: createMockEvents().events })
     sendRequestMock.onCall(0).resolves(null)
     sendRequestMock.onCall(1).resolves(fakeTreeCollection)
 
@@ -684,24 +948,158 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.deepStrictEqual(await tocTreesProvider.getChildren(undefined), [collection1Item, collection2Item])
     assert.deepStrictEqual(await tocTreesProvider.getChildren(collection2Item), [module3Item])
     assert.deepStrictEqual(tocTreesProvider.getTreeItem(collection2Item), collection2Item)
+    assert.deepStrictEqual(tocTreesProvider.getParent(collection2Item), undefined)
+    assert.deepStrictEqual(tocTreesProvider.getParent(module3Item), collection2Item)
+    assert.deepStrictEqual(tocTreesProvider.getParent(module1Item), subcollectionItem)
+    tocTreesProvider.toggleFilterMode()
+    assert.deepStrictEqual(tocTreesProvider.getTreeItem(module3Item), module3ItemToggled)
+  })
+  test('toggleTocTreesFilteringHandler', async () => {
+    const revealStub = sinon.stub()
+    const toggleFilterStub = sinon.stub()
+    const getChildrenStub = sinon.stub()
+    const refreshStub = sinon.stub()
+
+    const view: vscode.TreeView<TocTreeItem> = {
+      reveal: revealStub
+    } as unknown as vscode.TreeView<TocTreeItem>
+    const provider: TocTreesProvider = {
+      toggleFilterMode: toggleFilterStub,
+      getChildren: getChildrenStub,
+      refresh: refreshStub
+    } as unknown as TocTreesProvider
+    const fakeChildren = [
+      { label: 'col1', children: [{ label: 'subcol', children: [{ label: 'm2', children: [] }] }] },
+      { label: 'col2', children: [{ label: 'm1', children: [] }] }
+    ]
+    getChildrenStub.resolves(fakeChildren)
+
+    const handler = toggleTocTreesFilteringHandler(view, provider)
+    await handler()
+    assert(toggleFilterStub.calledOnce)
+    assert(getChildrenStub.calledOnce)
+    assert(revealStub.calledThrice)
+    assert(revealStub.calledWith(fakeChildren[0], { expand: true }))
+    assert(revealStub.calledWith(fakeChildren[0].children[0], { expand: true }))
+    assert(revealStub.calledWith(fakeChildren[1], { expand: true }))
+    assert(refreshStub.notCalled)
+  })
+  test('toggleTocTreesFilteringHandler disables itself while revealing', async () => {
+    const revealStub = sinon.stub()
+    const toggleFilterStub = sinon.stub()
+    const getChildrenStub = sinon.stub()
+    const fakeChildren = [
+      { label: 'col1', children: [{ label: 'm1', children: [] }] }
+    ]
+    getChildrenStub.resolves(fakeChildren)
+
+    const view: vscode.TreeView<TocTreeItem> = {
+      reveal: revealStub
+    } as unknown as vscode.TreeView<TocTreeItem>
+    const provider: TocTreesProvider = {
+      toggleFilterMode: toggleFilterStub,
+      getChildren: getChildrenStub
+    } as unknown as TocTreesProvider
+
+    const handler = toggleTocTreesFilteringHandler(view, provider)
+    // Invoke the handler the first time reveal is called to simulate a parallel
+    // user request without resorting to synthetic delay injection
+    revealStub.onCall(0).callsFake(handler)
+    await handler()
+    assert(toggleFilterStub.calledOnce)
+    assert(revealStub.calledOnce)
+    assert(getChildrenStub.calledOnce)
+  })
+  test('toggleTocTreesFilteringHandler doesn\'t lock itself on errors', async () => {
+    const toggleFilterStub = sinon.stub().throws()
+    const view: vscode.TreeView<TocTreeItem> = {} as unknown as vscode.TreeView<TocTreeItem>
+    const provider: TocTreesProvider = {
+      toggleFilterMode: toggleFilterStub
+    } as unknown as TocTreesProvider
+
+    const handler = toggleTocTreesFilteringHandler(view, provider)
+    try { await handler() } catch { }
+    try { await handler() } catch { }
+    assert(toggleFilterStub.calledTwice)
   })
   test('TocTreesProvider fires event on refresh', async () => {
-    const mockClient: LanguageClient = {} as any as LanguageClient
-    const tocTreesProvider = new TocTreesProvider(mockClient)
+    const tocTreesProvider = new TocTreesProvider({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const eventFire = sinon.stub((tocTreesProvider as any)._onDidChangeTreeData, 'fire')
     tocTreesProvider.refresh()
     assert(eventFire.calledOnce)
   })
-  test('invokeRefreshers calls functions', async () => {
-    const func1 = sinon.stub().resolves()
-    const func2 = sinon.stub().resolves()
-    await invokeRefreshers([func1, func2])()
-    assert(func1.calledOnce)
-    assert(func2.calledOnce)
+  test('TocTreesProvider calls refresh when toggling filter mode', async () => {
+    const tocTreesProvider = new TocTreesProvider({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const refresh = sinon.stub(tocTreesProvider, 'refresh')
+    tocTreesProvider.toggleFilterMode()
+    assert(refresh.calledOnce)
   })
 
   this.afterAll(async () => {
     await deactivate()
+  })
+})
+
+suite('Disposables', function (this: Suite) {
+  const sinon = SinonRoot.createSandbox()
+  const initTestPanel = (_context: ExtensionHostContext): vscode.WebviewPanel => {
+    const panel = vscode.window.createWebviewPanel(
+      'openstax.testPanel',
+      'Test Panel',
+      vscode.ViewColumn.One
+    )
+    panel.webview.html = rawTextHtml('test')
+    return panel
+  }
+  class TestPanel extends Panel<void, void> {
+    constructor(private readonly context: ExtensionHostContext) {
+      super(initTestPanel(context))
+    }
+
+    async handleMessage(_message: undefined): Promise<void> {
+      throw new Error('Method not implemented.')
+    }
+  }
+  this.afterEach(async () => {
+    sinon.restore()
+    sinon.reset()
+    sinon.resetBehavior()
+    sinon.resetHistory()
+  })
+
+  test('onDidDispose event run upon disposal', async () => {
+    const panel = new TestPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panelDisposed = new Promise((resolve, reject) => {
+      panel.onDidDispose(() => {
+        resolve(true)
+      })
+    })
+    panel.dispose()
+    assert(await panelDisposed)
+  })
+  test('registered disposables disposed upon parent disposal', async () => {
+    const panel = new TestPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const testDisposable = new Disposer()
+    panel.registerDisposable(testDisposable)
+    const childDisposed = new Promise((resolve, reject) => {
+      testDisposable.onDidDispose(() => {
+        resolve(true)
+      })
+    })
+    panel.dispose()
+    assert(await childDisposed)
+  })
+  test('registered disposables disposed immediately if parent disposed', async () => {
+    const panel = new TestPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    panel.dispose()
+    const testDisposable = new Disposer()
+    const childDisposed = new Promise((resolve, reject) => {
+      testDisposable.onDidDispose(() => {
+        resolve(true)
+      })
+    })
+    panel.registerDisposable(testDisposable)
+    assert(await childDisposed)
   })
 })
 
@@ -947,7 +1345,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       }]
     } as any as RepositoryState
     const mockRepo = {
-      state: repoState,
+      state: repoState
     } as any as Repository
     const mockHead = {
       commit: 'a'

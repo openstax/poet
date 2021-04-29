@@ -1,66 +1,28 @@
 import vscode from 'vscode'
 import path from 'path'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { refreshPanel, showTocEditor } from './panel-toc-editor'
-import { showImageUpload } from './panel-image-upload'
-import { showCnxmlPreview } from './panel-cnxml-preview'
 import { pushContent, tagContent } from './push-content'
+import { TocEditorPanel } from './panel-toc-editor'
+import { CnxmlPreviewPanel } from './panel-cnxml-preview'
 import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
-import { commandToPanelType, OpenstaxCommand, PanelType } from './extension-types'
-import { TocTreesProvider } from './toc-trees'
+import { OpenstaxCommand } from './extension-types'
+import { ExtensionHostContext, Panel, PanelManager } from './panel'
+import { ImageManagerPanel } from './panel-image-manager'
+import { TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from './toc-trees'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
-// Only one instance of each type allowed at any given time
-const activePanelsByType: { [key in PanelType]?: vscode.WebviewPanel } = {}
-const extensionExports = {
-  activePanelsByType
-}
+let tocTreesView: vscode.TreeView<TocTreeItem>
 let tocTreesProvider: TocTreesProvider
 let client: LanguageClient
-
-const defaultLocationByType: { [key in PanelType]: vscode.ViewColumn } = {
-  [PanelType.TOC_EDITOR]: vscode.ViewColumn.One,
-  [PanelType.IMAGE_UPLOAD]: vscode.ViewColumn.One,
-  [PanelType.CNXML_PREVIEW]: vscode.ViewColumn.Two
-}
-
-export const refreshTocPanel = (clientInner: LanguageClient) => async () => {
-  const activeTocEditor = activePanelsByType[PanelType.TOC_EDITOR]
-  if (activeTocEditor != null) {
-    await refreshPanel(activeTocEditor, clientInner)
-  }
-}
-
-export const invokeRefreshers = (funcs: Array<() => Promise<void>>) => async () => {
-  funcs.forEach((fn) => {
-    fn().catch((err: Error) => { throw err })
-  })
-}
-
-export const createLazyPanelOpener = (activationByType: { [key in PanelType]: any }) => (type: PanelType, hardRefocus: boolean) => {
-  return (...args: any[]) => {
-    if (activePanelsByType[type] != null) {
-      const activePanel = expect(activePanelsByType[type], `Could not find panel type '${type}'`)
-      try {
-        if (!hardRefocus) {
-          activePanel.reveal(defaultLocationByType[type])
-          return
-        }
-        activePanel.dispose()
-      } catch (err) {
-        // Panel was probably disposed already
-        return activationByType[type](...args)
-      }
-    }
-    return activationByType[type](...args)
-  }
-}
+const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter()
+const onDidChangeWatchedFiles = onDidChangeWatchedFilesEmitter.event
 
 export const forwardOnDidChangeWorkspaceFolders = (clientInner: LanguageClient) => async (event: vscode.WorkspaceFoldersChangeEvent) => {
   await clientInner.sendRequest('onDidChangeWorkspaceFolders', event)
 }
 
-export async function activate(context: vscode.ExtensionContext): Promise<(typeof extensionExports)> {
+type ExtensionExports = { [key in OpenstaxCommand]: PanelManager<Panel<unknown, unknown>> }
+export async function activate(context: vscode.ExtensionContext): Promise<ExtensionExports> {
   // detect Theia. Alert the user if they are running Theia
   expect(process.env.GITPOD_HOST != null && process.env.EDITOR?.includes('code') === false ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
 
@@ -68,26 +30,39 @@ export async function activate(context: vscode.ExtensionContext): Promise<(typeo
   populateXsdSchemaFiles(resourceRootDir)
   await client.onReady()
 
-  const activationByType: { [key in PanelType]: any } = {
-    [PanelType.TOC_EDITOR]: ensureCatch(showTocEditor(PanelType.TOC_EDITOR, resourceRootDir, activePanelsByType, client)),
-    [PanelType.IMAGE_UPLOAD]: ensureCatch(showImageUpload(PanelType.IMAGE_UPLOAD, resourceRootDir, activePanelsByType)),
-    [PanelType.CNXML_PREVIEW]: ensureCatch(showCnxmlPreview(PanelType.CNXML_PREVIEW, resourceRootDir, activePanelsByType))
-  }
+  // It is a logic error for anything else to listen to this event from the client.
+  // It is only allowed a single handler, from what we can tell
+  client.onRequest('onDidChangeWatchedFiles', () => { onDidChangeWatchedFilesEmitter.fire() })
 
-  const lazilyFocusOrOpenPanelOfType = createLazyPanelOpener(activationByType)
-  tocTreesProvider = new TocTreesProvider(client)
+  const hostContext: ExtensionHostContext = {
+    resourceRootDir,
+    client, // FIXME: only pass in client.sendRequest, so as to disallow anything from calling onRequest
+    events: {
+      onDidChangeWatchedFiles
+    }
+  }
+  const tocPanelManager = new PanelManager(hostContext, TocEditorPanel)
+  const cnxmlPreviewPanelManager = new PanelManager(hostContext, CnxmlPreviewPanel)
+  const imageManagerPanelManager = new PanelManager(hostContext, ImageManagerPanel)
+
+  tocTreesProvider = new TocTreesProvider(hostContext)
 
   vscode.workspace.onDidChangeWorkspaceFolders(ensureCatch(forwardOnDidChangeWorkspaceFolders(client)))
-  client.onRequest('onDidChangeWatchedFiles', ensureCatch(invokeRefreshers([refreshTocPanel(client), async () => tocTreesProvider.refresh()])))
-  vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_TOC_EDITOR], false))
-  vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_UPLOAD, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_IMAGE_UPLOAD], false))
-  vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, lazilyFocusOrOpenPanelOfType(commandToPanelType[OpenstaxCommand.SHOW_CNXML_PREVIEW], true))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, tocPanelManager.revealOrNew.bind(tocPanelManager))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, imageManagerPanelManager.revealOrNew.bind(imageManagerPanelManager))
+  vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent()))
   vscode.commands.registerCommand('openstax.tagContent', ensureCatch(tagContent))
-  vscode.commands.registerCommand('openstax.refreshTocTrees', ensureCatch(async () => tocTreesProvider.refresh()))
-  vscode.window.registerTreeDataProvider('tocTrees', tocTreesProvider)
+  vscode.commands.registerCommand('openstax.refreshTocTrees', tocTreesProvider.refresh.bind(tocTreesProvider))
+  tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
+  vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
 
-  return extensionExports
+  const extExports: ExtensionExports = {
+    [OpenstaxCommand.SHOW_TOC_EDITOR]: tocPanelManager,
+    [OpenstaxCommand.SHOW_CNXML_PREVIEW]: cnxmlPreviewPanelManager,
+    [OpenstaxCommand.SHOW_IMAGE_MANAGER]: imageManagerPanelManager
+  }
+  return extExports
 }
 
 export async function deactivate(): Promise<void> {

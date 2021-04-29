@@ -40,7 +40,7 @@
     "onLanguage:xml",
     "onCommand:openstax.showPreviewToSide",
     "onCommand:openstax.showTocEditor",
-    "onCommand:openstax.showImageUpload",
+    "onCommand:openstax.showImageManager",
     "onCommand:openstax.pushContent",
     "onCommand:openstax.tagContent",
     "onView:tocTrees"
@@ -59,7 +59,7 @@
         "category": "Openstax"
       },
       {
-        "command": "openstax.showImageUpload",
+        "command": "openstax.showImageManager",
         "title": "Show Image Upload",
         "category": "Openstax"
       },
@@ -78,6 +78,12 @@
         "title": "Refresh ToC Trees",
         "category": "Openstax",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "openstax.toggleTocTreesFiltering",
+        "title": "Toggle ToC Filtering",
+        "category": "Openstax",
+        "icon": "$(filter)"
       }
     ],
     "viewsContainers": {
@@ -141,12 +147,17 @@
           "command": "openstax.refreshTocTrees",
           "when": "view == tocTrees",
           "group": "navigation"
+        },
+        {
+          "command": "openstax.toggleTocTreesFiltering",
+          "when": "view == tocTrees",
+          "group": "navigation"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "markdown.showPreviewToSide",
+        "command": "openstax.showPreviewToSide",
         "key": "shift+ctrl+v",
         "mac": "shift+cmd+v",
         "when": "editorLangId == xml && !notebookEditorFocused"

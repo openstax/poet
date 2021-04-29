@@ -4,11 +4,12 @@ import path from 'path'
 
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch, constructModuleUri, constructCollectionUri } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, constructModuleUri, constructCollectionUri, ensureCatch } from './utils'
 import { TocTreeCollection, TocTreeElementType } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { BundleModulesArgs, BundleModulesResponse, BundleOrphanedModulesArgs, BundleOrphanedModulesResponse, BundleTreesArgs, BundleTreesResponse, ExtensionServerRequest } from '../../common/src/requests'
+import { ExtensionHostContext, Panel } from './panel'
 import { v4 as uuidv4 } from 'uuid'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
@@ -70,15 +71,16 @@ const requestBundleModules = async (client: LanguageClient, args: BundleModulesA
 async function createBlankModule(): Promise<string> {
   const template = (newModuleId: string): string => {
     return `
-    <document xmlns="http://cnx.rice.edu/cnxml">
-      <metadata xmlns:md="http://cnx.rice.edu/mdml">
-        <md:title>New Module</md:title>
-        <md:content-id>${newModuleId}</md:content-id>
-        <md:uuid>${uuidv4()}</md:uuid>
-      </metadata>
-      <content>
-      </content>
-    </document>`.trim()
+<document xmlns="http://cnx.rice.edu/cnxml">
+  <title>New Module</title>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:title>New Module</md:title>
+    <md:content-id>${newModuleId}</md:content-id>
+    <md:uuid>${uuidv4()}</md:uuid>
+  </metadata>
+  <content>
+  </content>
+</document>`.trim()
   }
   const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
   let moduleNumber = 0
@@ -125,41 +127,31 @@ async function renameModule(id: string, newName: string): Promise<void> {
   const moduleUri = constructModuleUri(uri, id)
   const xml = Buffer.from(await vscode.workspace.fs.readFile(moduleUri)).toString('utf-8')
   const document = new DOMParser().parseFromString(xml)
+
+  // Change title in metadata
   let metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
   if (metadata == null) {
     const root = document.getElementsByTagNameNS(NS_CNXML, 'document')[0]
     metadata = document.createElementNS(NS_CNXML, 'metadata')
     root.appendChild(metadata)
   }
-  let titleElement = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0]
+  let metaTitleElement = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0]
+  if (metaTitleElement == null) {
+    metaTitleElement = document.createElementNS(NS_METADATA, 'md:title')
+    metadata.appendChild(metaTitleElement)
+  }
+  metaTitleElement.textContent = newName
+
+  // Change title in document
+  let titleElement = document.getElementsByTagNameNS(NS_CNXML, 'title')[0]
   if (titleElement == null) {
-    titleElement = document.createElementNS(NS_METADATA, 'md:title')
-    metadata.appendChild(titleElement)
+    titleElement = document.createElementNS(NS_CNXML, 'title')
+    document.insertBefore(titleElement, metadata)
   }
   titleElement.textContent = newName
+
   const newData = new XMLSerializer().serializeToString(document)
   await vscode.workspace.fs.writeFile(moduleUri, Buffer.from(newData))
-}
-
-export const showTocEditor = (panelType: PanelType, resourceRootDir: string, activePanelsByType: { [key in PanelType]?: vscode.WebviewPanel }, client: LanguageClient) => async () => {
-  const panel = vscode.window.createWebviewPanel(
-    panelType,
-    'Table of Contents Editor',
-    vscode.ViewColumn.One,
-    {
-      enableScripts: true
-    }
-  )
-
-  let html = fs.readFileSync(path.join(resourceRootDir, 'toc-editor.html'), 'utf-8')
-  html = fixResourceReferences(panel.webview, html, resourceRootDir)
-  html = fixCspSourceReferences(panel.webview, html)
-  panel.webview.html = html
-
-  panel.reveal(vscode.ViewColumn.One)
-  activePanelsByType[panelType] = panel
-
-  panel.webview.onDidReceiveMessage(ensureCatch(handleMessageFromWebviewPanel(panel, client)))
 }
 
 export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageClient): Promise<void> => {
@@ -173,13 +165,12 @@ export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageC
   }
 
   const uri = expect(getRootPathUri(), 'no workspace root from which to generate trees')
-  const trees = await requestBundleTrees(client, { workspaceUri: uri.toString() })
-  const allModules = await requestBundleModules(client, { workspaceUri: uri.toString() })
-  const orphanModules = await requestBundleOrphanedModules(client, { workspaceUri: uri.toString() })
-  if (trees == null || allModules == null || orphanModules == null) {
-    /* istanbul ignore next */
-    throw new Error('Server cannot properly find workspace')
-  }
+
+  const serverErrorMessage = 'Server cannot properly find workspace'
+  const trees = expect(await requestBundleTrees(client, { workspaceUri: uri.toString() }), serverErrorMessage)
+  const allModules = expect(await requestBundleModules(client, { workspaceUri: uri.toString() }), serverErrorMessage)
+  const orphanModules = expect(await requestBundleOrphanedModules(client, { workspaceUri: uri.toString() }), serverErrorMessage)
+
   const allModulesSorted = allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
   const orphanModulesSorted = orphanModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
   const collectionAllModules: TocTreeCollection = {
@@ -264,4 +255,40 @@ function replaceCollectionContent(document: XMLDocument, treeData: TocTreeCollec
   const newContent = document.createElementNS(NS_COLLECTION, 'content')
   expect(content.parentNode, 'expected a parent element').replaceChild(newContent, content)
   populateTreeDataToXML(document, newContent, treeData)
+}
+
+const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {
+  const localResourceRoots = [vscode.Uri.file(context.resourceRootDir)]
+  const workspaceRoot = getRootPathUri()
+  if (workspaceRoot != null) {
+    localResourceRoots.push(workspaceRoot)
+  }
+  const panel = vscode.window.createWebviewPanel(
+    PanelType.TOC_EDITOR,
+    'Table of Contents Editor',
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true,
+      localResourceRoots
+    }
+  )
+
+  let html = fs.readFileSync(path.join(context.resourceRootDir, 'toc-editor.html'), 'utf-8')
+  html = fixResourceReferences(panel.webview, html, context.resourceRootDir)
+  html = fixCspSourceReferences(panel.webview, html)
+  panel.webview.html = html
+  return panel
+}
+
+export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMessage> {
+  constructor(private readonly context: ExtensionHostContext) {
+    super(initPanel(context))
+
+    this.registerDisposable(this.context.events.onDidChangeWatchedFiles(ensureCatch(async () => {
+      await this.refreshPanel(this.panel, this.context.client)
+    })))
+  }
+
+  readonly refreshPanel = refreshPanel
+  readonly handleMessage = handleMessageFromWebviewPanel(this.panel, this.context.client)
 }

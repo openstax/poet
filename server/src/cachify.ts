@@ -15,12 +15,6 @@ export const cachify = <T>(inner: T): Cachified<T> => {
     inner
   }
 }
-export const staticCachify = <T>(key: string, inner: T): Cachified<T> => {
-  return {
-    cacheKey: key,
-    inner
-  }
-}
 export const recachify = <T>(cachified: Cachified<T>): Cachified<T> => {
   return {
     cacheKey: uuidv4(),

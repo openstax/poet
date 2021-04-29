@@ -57,7 +57,7 @@ export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Prom
     return (ref.type === RefType.Tag && regex.test(ref.name as string))
   })
 
-  for (let ref of validTags) {
+  for (const ref of validTags) {
     if (ref.commit === head.commit) {
       void vscode.window.showErrorMessage('Tag of this type already exists for this content version.', { modal: false })
       return undefined
@@ -96,7 +96,6 @@ export const _pushContent = (
   infoReporter: (msg: string) => Thenable<string | undefined>,
   errorReporter: (msg: string) => Thenable<string | undefined>
 ) => async () => {
-
   const repo = _getRepo()
   const commitOptions: CommitOptions = { all: true }
 
@@ -115,7 +114,6 @@ export const _pushContent = (
       const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
       void errorReporter(`Push failed: ${message}`)
     }
-
   }
 
   if (commitSucceeded) {
@@ -140,10 +138,10 @@ export const _pushContent = (
   }
 }
 
-export const tagContent = async () => {
+export const tagContent = async (): Promise<void> => {
   const repo = getRepo()
   const head = expect(repo.state.HEAD, 'This does not appear to be a git repository. Create one first')
-  const branchName = expect(head.name, 'You do not appear to have a branch checked out. Maybe you checked out a commit or are in the middle of rebasing?')
+  expect(head.name, 'You do not appear to have a branch checked out. Maybe you checked out a commit or are in the middle of rebasing?')
   await repo.fetch()
 
   if ((await repo.diffWithHEAD()).length > 0) {
@@ -155,8 +153,7 @@ export const tagContent = async () => {
 
   if (tagging === undefined) { return }
 
-  let tag: string | undefined
-  tag = await getNewTag(repo, tagging, head)
+  const tag = await getNewTag(repo, tagging, head)
 
   if (tag === undefined) { return }
 
