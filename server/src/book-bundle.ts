@@ -618,6 +618,45 @@ export class BookBundle {
     }[item.type][change.type].bind(this)
     func(item.key)
   }
+
+  isDirectoryDeletion(change: FileEvent): boolean {
+    if (change.type !== FileChangeType.Deleted) {
+      return false
+    }
+    const deletedPath = URI.parse(change.uri).fsPath
+
+    // This assumes both collections and media dirs are flat
+    if ((deletedPath === this.collectionDirectory()) || (deletedPath === this.mediaDirectory())) {
+      return true
+    }
+
+    return (deletedPath.includes(this.moduleDirectory()) && !deletedPath.endsWith('index.cnxml'))
+  }
+
+  processDirectoryDeletion(change: FileEvent): void {
+    const deletedPath = URI.parse(change.uri).fsPath
+
+    if (deletedPath === this.collectionDirectory()) {
+      this.collections().forEach((col) => { this.onCollectionDeleted(col) })
+      return
+    }
+
+    if (deletedPath === this.mediaDirectory()) {
+      this.images().forEach((img) => { this.onImageDeleted(img) })
+      return
+    }
+
+    // Process a module directory deletion which could be either the parent or
+    // a specific module
+    if (deletedPath === this.moduleDirectory()) {
+      this.modules().forEach((module) => { this.onModuleDeleted(module) })
+      return
+    }
+
+    const indexOfLastSep = deletedPath.lastIndexOf(FS_SEP)
+    const moduleId = deletedPath.substring(indexOfLastSep + 1)
+    this.onModuleDeleted(moduleId)
+  }
 }
 
 function parseCollection(document: Document, moduleObjectResolver: (id: string) => TocTreeModule): TocTreeCollection {
