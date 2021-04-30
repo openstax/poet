@@ -126,16 +126,7 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
         return
       }
       const [bundleChanged, bundleValidator] = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')
-      if (bundleChanged.isDirectoryDeletion(change)) {
-        // Special casing directory deletion processing since while these might
-        // be rare / unexpected, the file watcher events don't necessarily notify
-        // us of every impacted file. Hopefully this gets addressed by the underlying
-        // file watcher implementation in the future and we can remove this
-        // codepath altogether.
-        bundleChanged.processDirectoryDeletion(change)
-      } else {
-        bundleChanged.processChange(change)
-      }
+      bundleChanged.processChange(change)
       bundleValidator.addRequest({ causeUri: change.uri })
     }
     await connection.sendRequest('onDidChangeWatchedFiles')

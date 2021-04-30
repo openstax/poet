@@ -1158,7 +1158,7 @@ describe('BookBundle', () => {
     const initialModuleCount = bundle.modules().length
     const initialCollectionsCount = bundle.collections().length
 
-    bundle.processDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/media' })
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media' })
     assert(bundle.images().length === 0)
     assert(bundle.modules().length === initialModuleCount)
     assert(bundle.collections().length === initialCollectionsCount)
@@ -1168,7 +1168,7 @@ describe('BookBundle', () => {
     const initialModuleCount = bundle.modules().length
     const initialImagesCount = bundle.images().length
 
-    bundle.processDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/collections' })
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/collections' })
     assert(bundle.collections().length === 0)
     assert(bundle.modules().length === initialModuleCount)
     assert(bundle.images().length === initialImagesCount)
@@ -1179,14 +1179,14 @@ describe('BookBundle', () => {
     const initialCollectionsCount = bundle.collections().length
     const initialImagesCount = bundle.images().length
 
-    bundle.processDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001' })
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001' })
     assert(bundle.collections().length === initialCollectionsCount)
     assert(bundle.images().length === initialImagesCount)
     assert(initialModuleCount === (bundle.modules().length + 1))
     assert(!bundle.moduleExists('m00001'))
     assert(bundle.moduleExists('m00002'))
 
-    bundle.processDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules' })
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/modules' })
     assert(bundle.collections().length === initialCollectionsCount)
     assert(bundle.images().length === initialImagesCount)
     assert(bundle.modules().length === 0)

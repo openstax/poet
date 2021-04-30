@@ -595,6 +595,15 @@ export class BookBundle {
   }
 
   processChange(change: FileEvent): void {
+    if (this.isDirectoryDeletion(change)) {
+      // Special casing directory deletion processing since while these might
+      // be rare / unexpected, the file watcher events don't necessarily notify
+      // us of every impacted file. Hopefully this gets addressed by the underlying
+      // file watcher implementation in the future and we can remove this
+      // codepath altogether.
+      this.processDirectoryDeletion(change)
+      return
+    }
     const item = this.bundleItemFromUri(change.uri)
     if (item == null) {
       return
