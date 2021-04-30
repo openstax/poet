@@ -14,7 +14,7 @@ export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 export const NS_METADATA = 'http://cnx.rice.edu/mdml'
 
-const FS_SEP = path.join('/')
+const FS_SEP = path.sep
 
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
