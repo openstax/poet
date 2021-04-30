@@ -630,7 +630,10 @@ export class BookBundle {
       return true
     }
 
-    return (deletedPath.includes(this.moduleDirectory()) && !deletedPath.endsWith('index.cnxml'))
+    const indexOfLastSep = deletedPath.lastIndexOf(FS_SEP)
+    const maybeModuleId = deletedPath.substring(indexOfLastSep + 1)
+    return ((deletedPath === this.moduleDirectory()) ||
+            (deletedPath.includes(this.moduleDirectory()) && this.moduleExists(maybeModuleId)))
   }
 
   processDirectoryDeletion(change: FileEvent): void {

@@ -1151,6 +1151,7 @@ describe('BookBundle', () => {
     assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/other' }))
     assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Changed, uri: '/bundle/modules/m00001/index.cnxml' }))
     assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001/index.cnxml' }))
+    assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001/random.txt' }))
   })
   it('processes media directory deletions appropriately', async () => {
     const bundle = await BookBundle.from('/bundle')
