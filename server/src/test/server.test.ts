@@ -798,6 +798,7 @@ describe('BookBundle', () => {
           <content>No title</content>
         </document>
       `,
+      '/bundle/modules/m99999': '',
       '/bundle/collections/normal.collection.xml': `
         <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
           <col:metadata>
