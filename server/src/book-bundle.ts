@@ -595,6 +595,15 @@ export class BookBundle {
   }
 
   processChange(change: FileEvent): void {
+    if (this.isDirectoryDeletion(change)) {
+      // Special casing directory deletion processing since while these might
+      // be rare / unexpected, the file watcher events don't necessarily notify
+      // us of every impacted file. Hopefully this gets addressed by the underlying
+      // file watcher implementation in the future and we can remove this
+      // codepath altogether.
+      this.processDirectoryDeletion(change)
+      return
+    }
     const item = this.bundleItemFromUri(change.uri)
     if (item == null) {
       return
@@ -617,6 +626,48 @@ export class BookBundle {
       }
     }[item.type][change.type].bind(this)
     func(item.key)
+  }
+
+  isDirectoryDeletion(change: FileEvent): boolean {
+    if (change.type !== FileChangeType.Deleted) {
+      return false
+    }
+    const deletedPath = URI.parse(change.uri).fsPath
+
+    // This assumes both collections and media dirs are flat
+    if ((deletedPath === this.collectionDirectory()) || (deletedPath === this.mediaDirectory())) {
+      return true
+    }
+
+    const indexOfLastSep = deletedPath.lastIndexOf(FS_SEP)
+    const maybeModuleId = deletedPath.substring(indexOfLastSep + 1)
+    return ((deletedPath === this.moduleDirectory()) ||
+            (deletedPath.includes(this.moduleDirectory()) && this.moduleExists(maybeModuleId)))
+  }
+
+  processDirectoryDeletion(change: FileEvent): void {
+    const deletedPath = URI.parse(change.uri).fsPath
+
+    if (deletedPath === this.collectionDirectory()) {
+      this.collections().forEach((col) => { this.onCollectionDeleted(col) })
+      return
+    }
+
+    if (deletedPath === this.mediaDirectory()) {
+      this.images().forEach((img) => { this.onImageDeleted(img) })
+      return
+    }
+
+    // Process a module directory deletion which could be either the parent or
+    // a specific module
+    if (deletedPath === this.moduleDirectory()) {
+      this.modules().forEach((module) => { this.onModuleDeleted(module) })
+      return
+    }
+
+    const indexOfLastSep = deletedPath.lastIndexOf(FS_SEP)
+    const moduleId = deletedPath.substring(indexOfLastSep + 1)
+    this.onModuleDeleted(moduleId)
   }
 }
 
