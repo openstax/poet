@@ -1,7 +1,6 @@
 import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref } from './git-api/git'
-import { integer } from 'vscode-languageserver-types'
 
 export enum Tag {
   release = 'Release',
@@ -49,7 +48,7 @@ export const taggingDialog = async (): Promise<Tag | undefined> => {
 }
 
 export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Promise<string | undefined> => {
-  const tags: integer[] = []
+  const tags: number[] = []
   const release = tagMode === Tag.release
   const regex = release ? /^\d+$/ : /^\d+rc$/
 
@@ -161,7 +160,7 @@ export const tagContent = async (): Promise<void> => {
     await (repo as any)._repository.tag(tag) // when VSCode API is updated -> await repo.tag(tag)
   } catch (e) {
     const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
-    void vscode.window.showErrorMessage(`Tagging failed: ${message} ${String(e.stderr)}`)
+    void vscode.window.showErrorMessage(`Tagging failed: ${message}`, { modal: false }) // ${String(e.stderr)}
     return
   }
 
@@ -170,7 +169,7 @@ export const tagContent = async (): Promise<void> => {
     await repo.push('origin', tag)
     void vscode.window.showInformationMessage(`Successful tag for ${tagging}.`, { modal: false })
   } catch (e) {
-    if (e.gitErrorCode == null) { throw e }
-    void vscode.window.showErrorMessage(`Push failed: ${e.message as string}`)
+    const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
+    void vscode.window.showErrorMessage(`Push failed: ${message}`, { modal: false })
   }
 }
