@@ -30,8 +30,9 @@ import {
   ExtensionServerRequest
 } from '../../common/src/requests'
 
-import { BookBundle } from './book-bundle'
-import { BundleValidationQueue } from './bundle-validation'
+import { BookBundle, BundleItem } from './book-bundle'
+import { BundleValidationQueue, collectionDiagnostic } from './bundle-validation'
+import { TocTreeCollection } from '../../common/src/toc-tree'
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -159,7 +160,21 @@ connection.onRequest(ExtensionServerRequest.BundleTrees, async ({ workspaceUri }
   const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
   if (bundleAndValidator == null) { return null }
   const bundle = bundleAndValidator[0]
-  const trees = await Promise.all(bundle.collections().map(async collection => expect(await bundle.collectionTree(collection), 'collection must exist').inner))
+  const promises = bundle.collectionItems().map(async (collection: BundleItem): Promise<TocTreeCollection[]> => {
+    try {
+      const tree = expect(await bundle.collectionTree(collection.key), 'collection must exist').inner
+      return [tree]
+    } catch {
+      const uri = expect(bundle.bundleItemToUri(collection), 'No root path to generate diagnostic')
+      const diagnostics = expect(await collectionDiagnostic(), 'No diagnostic to generate')
+      connection.sendDiagnostics({
+        uri,
+        diagnostics
+      })
+      return []
+    }
+  })
+  const trees = (await Promise.all(promises)).flat()
   return trees
 })
 
