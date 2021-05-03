@@ -314,7 +314,11 @@ export class BookBundle {
       }
     }
     const loadModules = async (bundle: BookBundle, map: Map<string, ModuleInfo>): Promise<void> => {
-      const foundModules = await fs.promises.readdir(bundle.moduleDirectory())
+      const foundPossibleModules = await fs.promises.readdir(bundle.moduleDirectory())
+      const moduleCnxmlExists = await Promise.all(foundPossibleModules.map(
+        (moduleId) => (path.join(bundle.moduleDirectory(), moduleId, 'index.cnxml'))
+      ).map(fileExistsAt))
+      const foundModules = foundPossibleModules.filter((_, indx) => moduleCnxmlExists[indx])
       for (const module of foundModules) {
         map.set(module, new ModuleInfo(bundle, module))
       }
