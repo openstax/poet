@@ -1,5 +1,5 @@
 // Shares a namespace with the other specfiles if not scoped
-import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/panel-cnxml-preview'
+import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } from '../../client/src/panel-cnxml-preview'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/cnxml-preview.html'
@@ -112,9 +112,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
           cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
         })
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(2, 0.01)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(2, 0.01)
         })
       })
       it('scrolls to an element based on its line in the source', () => {
@@ -127,9 +128,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
           cy.window().its('scrollY').should('equal', el.get(1).offsetTop + halfDistanceBetween)
         })
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(2.5, 0.01)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(2.5, 0.01)
         })
       })
       it('scrolls to an element based on its line in the source', () => {
@@ -141,9 +143,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
           cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
         })
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(4, 0.01)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.01)
         })
       })
       it('scrolls to last element if line number is greater than all', () => {
@@ -155,9 +158,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
           cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
         })
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(5, 0.01)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(5, 0.01)
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
@@ -165,9 +169,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
         cy.awaitInternalEvent('scroll', () => {
           cy.get('[data-line="2"').scrollIntoView()
         }).then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(2, 0.01)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(2, 0.01)
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
@@ -180,9 +185,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
             })
           })
         }).then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(2.5, 0.01)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(2.5, 0.01)
         })
       })
       it('provides a scroll location to the editor upon scroll', () => {
@@ -190,9 +196,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
         cy.awaitInternalEvent('scroll', () => {
           cy.get('[data-line="4"').scrollIntoView()
         }).then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(4, 0.01)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.01)
         })
       })
       it('sends no scroll event on xml without line tagging', () => {
@@ -200,7 +207,8 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
         cy.awaitInternalEvent('scroll', () => {
           cy.window().trigger('scroll')
         }).then(() => {
-          expect(messagesFromWidget.length).to.equal(0)
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
         })
       })
       it('does not respond to scroll-in-preview on xml without line tagging', () => {
@@ -208,7 +216,8 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
         sendScrollToLine(1)
         cy.window().its('scrollY').should('equal', 0)
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(0)
+          expect(messagesFromWidget.length).to.equal(1)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
         })
       })
       it('only ever scrolls to a single line if everything is on one line', () => {
@@ -220,9 +229,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
           cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
         })
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(1, 0.01)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(1, 0.01)
         })
       })
       it('only ever scrolls to a single line if everything is on one line', () => {
@@ -234,9 +244,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
           cy.window().its('scrollY').should('equal', el.get(0).offsetTop)
         })
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(3, 0.01)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(3, 0.01)
         })
       })
       it('only ever scrolls to a single line if everything is on one line', () => {
@@ -248,9 +259,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
           expect(win.scrollY + win.innerHeight).to.equal(win.document.documentElement.getBoundingClientRect().height)
         })
         cy.then(() => {
-          expect(messagesFromWidget.length).to.equal(1)
-          expect(messagesFromWidget[0].type).to.equal('scroll-in-editor')
-          expect((messagesFromWidget[0]).line).to.be.closeTo(4, 0.1)
+          expect(messagesFromWidget.length).to.equal(2)
+          expect(messagesFromWidget[0]).to.deep.equal({ type: 'did-reload' })
+          expect(messagesFromWidget[1].type).to.equal('scroll-in-editor')
+          expect((messagesFromWidget[1] as ScrollInEditorIncoming).line).to.be.closeTo(4, 0.1)
         })
       })
     })

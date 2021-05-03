@@ -1077,6 +1077,13 @@ suite('Disposables', function (this: Suite) {
     panel.dispose()
     assert(await panelDisposed)
   })
+  test('disposed panels may not post messages', async () => {
+    const panel = new TestPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const postStub = sinon.stub((panel as any).panel.webview, 'postMessage').rejects()
+    panel.dispose()
+    await panel.postMessage(undefined)
+    assert(postStub.notCalled)
+  })
   test('registered disposables disposed upon parent disposal', async () => {
     const panel = new TestPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const testDisposable = new Disposer()
