@@ -43,15 +43,15 @@ export interface ModuleRenameSignal {
   moduleid: string
   newName: string
 }
-export type PanelIncomingMessage =
-  (DebugSignal
+export type PanelIncomingMessage = (
+  DebugSignal
   | RefreshSignal
   | ErrorSignal
   | WriteTreeSignal
   | SubcollectionCreateSignal
   | ModuleCreateSignal
   | ModuleRenameSignal
-  )
+)
 
 export interface PanelOutgoingMessage {
   uneditable: TocTreeCollection[]

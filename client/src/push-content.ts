@@ -1,6 +1,11 @@
 import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource } from './utils'
-import { GitExtension, GitErrorCodes, CommitOptions, Repository } from './git-api/git'
+import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref } from './git-api/git'
+
+export enum Tag {
+  release = 'Release',
+  candidate = 'Release Candidate'
+}
 
 export enum DiagnosticSource {
   xml = 'xml',
@@ -32,6 +37,39 @@ export const getRepo = (): Repository => {
   return result
 }
 
+export const taggingDialog = async (): Promise<Tag | undefined> => {
+  const tagMode = await vscode.window.showInformationMessage(
+    'Tag for release candidate or release?',
+    ...[Tag.release, Tag.candidate]
+  )
+
+  if (tagMode === undefined) { return undefined }
+  return tagMode as Tag
+}
+
+export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Promise<string | undefined> => {
+  const tags: number[] = []
+  const release = tagMode === Tag.release
+  const regex = release ? /^\d+$/ : /^\d+rc$/
+
+  const validTags = repo.state.refs.filter((ref, i) => {
+    return (ref.type === RefType.Tag && regex.test(ref.name as string))
+  })
+
+  for (const ref of validTags) {
+    if (ref.commit === head.commit) {
+      void vscode.window.showErrorMessage('Tag of this type already exists for this content version.', { modal: false })
+      return undefined
+    }
+
+    const versionNumberString = expect(ref.name, '').replace('rc', '')
+    tags.push(Number(versionNumberString))
+  }
+
+  const previousVersion = tags.length > 0 ? Math.max(...tags) : 0
+  return `${previousVersion + 1}${release ? '' : 'rc'}`
+}
+
 export const validateMessage = (message: string): string | null => {
   return message.length > 2 ? null : 'Too short!'
 }
@@ -51,7 +89,12 @@ export const pushContent = () => async () => {
   }
 }
 
-export const _pushContent = (_getRepo: () => Repository, _getMessage: () => Thenable<string | undefined>, infoReporter: (msg: string) => Thenable<string | undefined>, errorReporter: (msg: string) => Thenable<string | undefined>) => async () => {
+export const _pushContent = (
+  _getRepo: () => Repository,
+  _getMessage: () => Thenable<string | undefined>,
+  infoReporter: (msg: string) => Thenable<string | undefined>,
+  errorReporter: (msg: string) => Thenable<string | undefined>
+) => async () => {
   const repo = _getRepo()
   const commitOptions: CommitOptions = { all: true }
 
@@ -63,7 +106,6 @@ export const _pushContent = (_getRepo: () => Repository, _getMessage: () => Then
     await repo.commit(commitMessage, commitOptions)
     commitSucceeded = true
   } catch (e) {
-    console.log(e)
     if (e.stdout == null) { throw e }
     if ((e.stdout as string).includes('nothing to commit')) {
       void errorReporter('No changes to push.')
@@ -85,7 +127,6 @@ export const _pushContent = (_getRepo: () => Repository, _getMessage: () => Then
       }
       void infoReporter('Successful content push.')
     } catch (e) {
-      console.log(e)
       if (e.gitErrorCode == null) { throw e }
       if (e.gitErrorCode === GitErrorCodes.Conflict) {
         void errorReporter('Content conflict, please resolve.')
@@ -93,5 +134,42 @@ export const _pushContent = (_getRepo: () => Repository, _getMessage: () => Then
         void errorReporter(`Push failed: ${e.message as string}`)
       }
     }
+  }
+}
+
+export const tagContent = async (): Promise<void> => {
+  const repo = getRepo()
+  const head = expect(repo.state.HEAD, 'This does not appear to be a git repository. Create one first')
+  expect(head.name, 'You do not appear to have a branch checked out. Maybe you checked out a commit or are in the middle of rebasing?')
+  await repo.fetch()
+
+  if ((await repo.diffWithHEAD()).length > 0) {
+    void vscode.window.showErrorMessage('Can\'t tag. Local unpushed changes exist', { modal: false })
+    return
+  }
+
+  const tagging = await taggingDialog()
+
+  if (tagging === undefined) { return }
+
+  const tag = await getNewTag(repo, tagging, head)
+
+  if (tag === undefined) { return }
+
+  try {
+    await (repo as any)._repository.tag(tag) // when VSCode API is updated -> await repo.tag(tag)
+  } catch (e) {
+    const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
+    void vscode.window.showErrorMessage(`Tagging failed: ${message}`, { modal: false }) // ${String(e.stderr)}
+    return
+  }
+
+  // push
+  try {
+    await repo.push('origin', tag)
+    void vscode.window.showInformationMessage(`Successful tag for ${tagging}.`, { modal: false })
+  } catch (e) {
+    const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
+    void vscode.window.showErrorMessage(`Push failed: ${message}`, { modal: false })
   }
 }
