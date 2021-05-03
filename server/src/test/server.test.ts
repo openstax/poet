@@ -1,16 +1,4 @@
 import {
-  TextDocument
-} from 'vscode-languageserver-textdocument'
-import {
-  parseXMLString,
-  validateImagePaths,
-  validateLinks,
-  IMAGEPATH_DIAGNOSTIC_SOURCE,
-  LINK_DIAGNOSTIC_SOURCE,
-  getCurrentModules,
-  ValidationQueue,
-  ValidationRequest,
-  ModuleInformation,
   calculateElementPositions,
   expect as expectOrig
 } from './../utils'
@@ -25,585 +13,671 @@ import {
   FileChangeType,
   Position
 } from 'vscode-languageserver'
-import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, BookBundle, ModuleTitle, recachify } from '../book-bundle'
-import { TocTreeCollection } from '../../../common/src/toc-tree'
+import { BookBundle, BundleItem, ModuleTitle } from '../book-bundle'
+import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, recachify } from '../cachify'
+import { TocTreeCollection, TocTreeElementType } from '../../../common/src/toc-tree'
+import { BundleValidationQueue, BundleValidationRequest, DiagnosticCode, validateCollection, validateCollectionModules, validateModule, validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
+import { DOMParser } from 'xmldom'
+
+const DIAGNOSTIC_SOURCE = 'cnxml'
 
 function expect<T>(value: T | null | undefined): T {
   return expectOrig(value, 'test_assertion')
 }
 
-describe('parseXMLString', function () {
-  it('should return null on a new / empty XML', async function () {
-    const inputContent = ''
-    const inputDocument = TextDocument.create('', '', 0, inputContent)
-    const result = parseXMLString(inputDocument)
-    assert.strictEqual(result, null)
+describe('general bundle validation', function () {
+  before(function () {
+    mockfs({
+      '/bundle/collections': {},
+      '/bundle/modules': {},
+      '/bundle/media': {}
+    })
   })
-  it('should return an object on valid XML', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content></content>
-      </document>
-    `
-    const inputDocument = TextDocument.create('', '', 0, inputContent)
-    const result = parseXMLString(inputDocument)
-    assert(result instanceof Object)
+  after(function () {
+    mockfs.restore()
+  })
+  it('returns null when a bundle item does not exist', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    assert.strictEqual(await validateCollection(bundle, 'no-exist'), null)
+    assert.strictEqual(await validateCollectionModules(bundle, 'no-exist'), null)
+    assert.strictEqual(await validateModule(bundle, 'no-exist'), null)
+    assert.strictEqual(await validateModuleLinks(bundle, 'no-exist'), null)
+    assert.strictEqual(await validateModuleImagePaths(bundle, 'no-exist'), null)
+  })
+})
+
+describe('validateCollectionModules', function () {
+  before(function () {
+    mockfs({
+      '/bundle/collections/valid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>valid</md:title>
+            <md:slug>valid</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="module" />
+          </col:content>
+        </col:collection>
+      `,
+      '/bundle/collections/invalid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>invalid</md:title>
+            <md:slug>invalid</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="no-exist" />
+          </col:content>
+        </col:collection>
+      `,
+      '/bundle/modules/module/index.cnxml': '',
+      '/bundle/media': {}
+    })
+  })
+  after(function () {
+    mockfs.restore()
+  })
+  it('should return no diagnostics when collection is valid', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const diagnostics = expect(await validateCollectionModules(bundle, 'valid.xml'))
+    assert.strictEqual(diagnostics.length, 0)
+  })
+  it('should return diagnostics when collection is invalid', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const diagnostics = expect(await validateCollectionModules(bundle, 'invalid.xml'))
+    assert.strictEqual(diagnostics.length, 1)
   })
 })
 
 describe('validateImagePaths', function () {
   before(function () {
     mockfs({
-      '/media/image1.jpg': ''
+      '/bundle/collections': {},
+      '/bundle/media/empty.jpg': '',
+      '/bundle/stray.jpg': '',
+      '/bundle/modules/no-content/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content />
+        </document>
+      `,
+      '/bundle/modules/single-valid-image/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <image src="../../media/empty.jpg" />
+          </content>
+        </document>
+      `,
+      '/bundle/modules/invalid-image-no-exist/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <image src="../../media/no-exist.jpg" />
+          </content>
+        </document>
+      `,
+      '/bundle/modules/invalid-image-dupe/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <image src="../../media/dupe.jpg" />
+            <image src="../../media/dupe.jpg" />
+          </content>
+        </document>
+      `,
+      '/bundle/modules/invalid-image-incomplete/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <image />
+            <image src="" />
+          </content>
+        </document>
+      `,
+      '/bundle/modules/invalid-image-stray/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <image src="../../stray.jpg" />
+          </content>
+        </document>
+      `
     })
   })
   after(function () {
     mockfs.restore()
   })
-  it('should return empty diagnostics when no images', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content></content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateImagePaths(inputDocument, xmlData)
+  it('should return empty diagnostics when no images', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleImagePaths(bundle, 'no-content')
     assert.deepStrictEqual(result, [])
   })
-  it('should return empty diagnostics when all images are valid', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <image src="../../media/image1.jpg" />
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateImagePaths(inputDocument, xmlData)
+  it('should return empty diagnostics when all images are valid', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleImagePaths(bundle, 'single-valid-image')
     assert.deepStrictEqual(result, [])
   })
-  it('should return diagnostics when images are invalid', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <image src="../../media/image1.jpg" />
-          <image src="../../media/image2.jpg" />
-          <image src="../../media/image3.jpg" />
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateImagePaths(inputDocument, xmlData)
-    const image2Location = inputContent.indexOf('<image src="../../media/image2.jpg"')
-    const image3Location = inputContent.indexOf('<image src="../../media/image3.jpg"')
+  it('should return diagnostics when images are invalid', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleImagePaths(bundle, 'invalid-image-no-exist')
+    const expectedDiagnostic: Diagnostic = {
+      severity: DiagnosticSeverity.Error,
+      range: {
+        start: Position.create(6, 12),
+        end: Position.create(6, 52)
+      },
+      message: 'Image file \'../../media/no-exist.jpg\' does not exist',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
+    }
+    assert.deepStrictEqual(result, [expectedDiagnostic])
+  })
+  it('should return diagnostics when images paths point outside the bundle', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleImagePaths(bundle, 'invalid-image-stray')
+    const expectedDiagnostic: Diagnostic = {
+      severity: DiagnosticSeverity.Error,
+      range: {
+        start: Position.create(6, 12),
+        end: Position.create(6, 43)
+      },
+      message: 'Image file \'../../stray.jpg\' exists, but not in the bundle media directory',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
+    }
+    assert.deepStrictEqual(result, [expectedDiagnostic])
+  })
+  it('should return correct diagnostics with duplicate invalid images', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleImagePaths(bundle, 'invalid-image-dupe')
     const expectedDiagnostic1: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: inputDocument.positionAt(image2Location),
-        end: inputDocument.positionAt(image2Location + '<image src="../../media/image2.jpg" />'.length)
+        start: Position.create(6, 12),
+        end: Position.create(6, 48)
       },
-      message: 'Image file ../../media/image2.jpg doesn\'t exist!',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      message: 'Image file \'../../media/dupe.jpg\' does not exist',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
     }
     const expectedDiagnostic2: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: inputDocument.positionAt(image3Location),
-        end: inputDocument.positionAt(image3Location + '<image src="../../media/image3.jpg" />'.length)
+        start: Position.create(7, 12),
+        end: Position.create(7, 48)
       },
-      message: 'Image file ../../media/image3.jpg doesn\'t exist!',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      message: 'Image file \'../../media/dupe.jpg\' does not exist',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
     }
     assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
   })
-  it('should return correct diagnostics with duplicate invalid images', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <image src="../../media/image2.jpg" />
-          <image src="../../media/image2.jpg" />
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateImagePaths(inputDocument, xmlData)
-    const image2Location = inputContent.indexOf('<image src="../../media/image2.jpg"')
-    const image2DupLocation = inputContent.lastIndexOf('<image src="../../media/image2.jpg"')
-    const expectedDiagnostic1: Diagnostic = {
+  it('should ignore incomplete image elements excluding empty src', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleImagePaths(bundle, 'invalid-image-incomplete')
+    const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: inputDocument.positionAt(image2Location),
-        end: inputDocument.positionAt(image2Location + '<image src="../../media/image2.jpg" />'.length)
+        start: Position.create(7, 12),
+        end: Position.create(7, 28)
       },
-      message: 'Image file ../../media/image2.jpg doesn\'t exist!',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
+      message: 'Image file \'\' does not exist',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.ImagePath
     }
-    const expectedDiagnostic2: Diagnostic = {
-      severity: DiagnosticSeverity.Error,
-      range: {
-        start: inputDocument.positionAt(image2DupLocation),
-        end: inputDocument.positionAt(image2DupLocation + '<image src="../../media/image2.jpg" />'.length)
-      },
-      message: 'Image file ../../media/image2.jpg doesn\'t exist!',
-      source: IMAGEPATH_DIAGNOSTIC_SOURCE
-    }
-    assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
-  })
-  it('should ignore incomplete image elements', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <image src="../../media/image1.jpg" />
-          <image />
-          <image src="" />
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateImagePaths(inputDocument, xmlData)
-    assert.deepStrictEqual(result, [])
-  })
-})
-
-describe('getCurrentModules', function () {
-  before(function () {
-    mockfs({
-      '/workspace/modules/m00001/index.cnxml': '',
-      '/workspace/modules/m00002/index.cnxml': '',
-      '/emptyworkspace': ''
-    })
-  })
-  after(function () {
-    mockfs.restore()
-  })
-  it('should return module paths found in workspace', async function () {
-    const workspaceFolder = {
-      index: 0,
-      name: '',
-      uri: 'file:///workspace'
-    }
-    const result = await getCurrentModules([workspaceFolder])
-    const expected = new Map<string, ModuleInformation>()
-    expected.set('m00001', { path: '/workspace/modules/m00001/index.cnxml' })
-    expected.set('m00002', { path: '/workspace/modules/m00002/index.cnxml' })
-    assert.deepStrictEqual(result, expected)
-  })
-  it('should return empty data if modules directory doesn\'t exist', async function () {
-    const workspaceFolder = {
-      index: 0,
-      name: '',
-      uri: 'file:///emptyworkspace'
-    }
-    const result = await getCurrentModules([workspaceFolder])
-    assert.deepStrictEqual(result, new Map<string, ModuleInformation>())
+    assert.deepStrictEqual(result, [expectedDiagnostic])
   })
 })
 
 describe('validateLinks', function () {
   before(function () {
     mockfs({
-      '/modules/m00001/index.cnxml': `
+      '/bundle/media': {},
+      '/bundle/collections': {},
+      '/bundle/modules/no-content/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content />
+        </document>
+      `,
+      '/bundle/modules/link-empty-target/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
           <content>
-            <para id="para1"></para>
-            <para id="dup"></para>
-            <para id="dup"></para>
+            <link target-id="" />
           </content>
         </document>
       `,
-      '/modules/empty/index.cnxml': ''
+      '/bundle/modules/link-no-target/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <link document="link-no-target" />
+          </content>
+        </document>
+      `,
+      '/bundle/modules/link-empty-doc/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <link document="" />
+          </content>
+        </document>
+      `,
+      '/bundle/modules/link-invalid-doc/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <link document="no-exist" />
+          </content>
+        </document>
+      `,
+      '/bundle/modules/links-valid/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <link target-id="para1" />
+            <link document="links-valid" target-id="para1" />
+            <para id="para1"></para>
+          </content>
+        </document>
+      `,
+      '/bundle/modules/links-invalid-target/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <link target-id="no-exist" />
+            <link document="links-invalid-target" target-id="no-exist" />
+          </content>
+        </document>
+      `,
+      '/bundle/modules/links-duplicate-target/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <link target-id="para" />
+            <link document="links-duplicate-target" target-id="para" />
+            <para id="para" />
+            <para id="para" />
+          </content>
+        </document>
+      `
     })
   })
   after(function () {
     mockfs.restore()
   })
-  it('should return empty diagnostics when no links', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content></content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = await parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
+  it('should return empty diagnostics when no links', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleLinks(bundle, 'no-content')
     assert.deepStrictEqual(result, [])
   })
-  it('should return empty diagnostics links are incomplete', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <link target-id="" />
-          <link document="" />
-          <link document="" target-id="" />
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = await parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
+  it('should return diagnostics when target-id is empty', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleLinks(bundle, 'link-empty-target')
+    const expectedDiagnostic: Diagnostic = {
+      severity: DiagnosticSeverity.Error,
+      range: {
+        start: Position.create(6, 12),
+        end: Position.create(6, 33)
+      },
+      message: 'Target ID \'\' in document \'link-empty-target\' does not exist',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
+    }
+    assert.deepStrictEqual(result, [expectedDiagnostic])
+  })
+  it('should return diagnostics when document is empty', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleLinks(bundle, 'link-empty-doc')
+    const expectedDiagnostic: Diagnostic = {
+      severity: DiagnosticSeverity.Error,
+      range: {
+        start: Position.create(6, 12),
+        end: Position.create(6, 32)
+      },
+      message: 'Target document \'\' for link cannot be found in the bundle',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
+    }
+    assert.deepStrictEqual(result, [expectedDiagnostic])
+  })
+  it('should allow links pointing directly to existing documents', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleLinks(bundle, 'link-no-target')
     assert.deepStrictEqual(result, [])
   })
-  it('should return empty diagnostics when all links are valid', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <link target-id="para1" />
-          <link document="m00001" />
-          <para id="para1"></para>
-          <para id=""></para>
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = await parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const moduleInformation: ModuleInformation = {
-      path: '/modules/m00001/index.cnxml'
-    }
-    const knownModules = new Map<string, ModuleInformation>()
-    knownModules.set('m00001', moduleInformation)
-    const result = await validateLinks(xmlData, knownModules)
+  it('should return empty diagnostics when all links are valid', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleLinks(bundle, 'links-valid')
     assert.deepStrictEqual(result, [])
   })
-  it('should return diagnostic when same-page target-id doesn\'t exist', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <link target-id="para1" />
-          <link target-id="para2" />
-          <para id="para1"></para>
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = await parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
-    const linkLocation = inputContent.indexOf('<link target-id="para2"')
-    const expectedDiagnostic: Diagnostic = {
+  it('should return diagnostics when target-id does not exist', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleLinks(bundle, 'links-invalid-target')
+    const expectedDiagnostic1: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: inputDocument.positionAt(linkLocation),
-        end: inputDocument.positionAt(linkLocation + '<link target-id="para2" />'.length)
+        start: Position.create(6, 12),
+        end: Position.create(6, 41)
       },
-      message: 'Target for link doesn\'t exist!: para2',
-      source: LINK_DIAGNOSTIC_SOURCE
+      message: 'Target ID \'no-exist\' in document \'links-invalid-target\' does not exist',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
-    assert.deepStrictEqual(result, [expectedDiagnostic])
+    const expectedDiagnostic2: Diagnostic = {
+      severity: DiagnosticSeverity.Error,
+      range: {
+        start: Position.create(7, 12),
+        end: Position.create(7, 73)
+      },
+      message: 'Target ID \'no-exist\' in document \'links-invalid-target\' does not exist',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
+    }
+    assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
   })
-  it('should return diagnostic when same-page target-id is duplicated', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <link target-id="para1" />
-          <para id="para1"></para>
-          <para id="para1"></para>
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = await parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
-    const linkLocation = inputContent.indexOf('<link target-id="para1"')
-    const expectedDiagnostic: Diagnostic = {
+  it('should return diagnostics target-id is a duplicate', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleLinks(bundle, 'links-duplicate-target')
+    const expectedDiagnostic1: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: inputDocument.positionAt(linkLocation),
-        end: inputDocument.positionAt(linkLocation + '<link target-id="para1" />'.length)
+        start: Position.create(6, 12),
+        end: Position.create(6, 37)
       },
-      message: 'Target for link is not unique!: para1',
-      source: LINK_DIAGNOSTIC_SOURCE
+      message: 'Target ID \'para\' in document \'links-duplicate-target\' is not unique',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
-    assert.deepStrictEqual(result, [expectedDiagnostic])
+    const expectedDiagnostic2: Diagnostic = {
+      severity: DiagnosticSeverity.Error,
+      range: {
+        start: Position.create(7, 12),
+        end: Position.create(7, 71)
+      },
+      message: 'Target ID \'para\' in document \'links-duplicate-target\' is not unique',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
+    }
+    assert.deepStrictEqual(result, [expectedDiagnostic1, expectedDiagnostic2])
   })
-  it('should return diagnostic when target document does not exist', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <link document="m00002" />
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = await parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const result = await validateLinks(xmlData, new Map<string, ModuleInformation>())
-    const linkLocation = inputContent.indexOf('<link document="m00002"')
+  it('should return diagnostic when target document does not exist', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const result = await validateModuleLinks(bundle, 'link-invalid-doc')
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: inputDocument.positionAt(linkLocation),
-        end: inputDocument.positionAt(linkLocation + '<link document="m00002" />'.length)
+        start: Position.create(6, 12),
+        end: Position.create(6, 40)
       },
-      message: 'Target document for link doesn\'t exist!: m00002',
-      source: LINK_DIAGNOSTIC_SOURCE
-    }
-    assert.deepStrictEqual(result, [expectedDiagnostic])
-  })
-  it('should return diagnostic when target document exists but ID does not', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <link document="m00001" target-id="para1"/>
-          <link document="m00001" target-id="para2"/>
-          <link target-id="para1" />
-          <para id="para1"></para>
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = await parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const moduleInformation: ModuleInformation = {
-      path: '/modules/m00001/index.cnxml'
-    }
-    const knownModules = new Map<string, ModuleInformation>()
-    knownModules.set('m00001', moduleInformation)
-    const result = await validateLinks(xmlData, knownModules)
-    const linkLocation = inputContent.indexOf('<link document="m00001" target-id="para2"/>')
-    const expectedDiagnostic: Diagnostic = {
-      severity: DiagnosticSeverity.Error,
-      range: {
-        start: inputDocument.positionAt(linkLocation),
-        end: inputDocument.positionAt(linkLocation + '<link document="m00001" target-id="para2"/>'.length)
-      },
-      message: 'Target ID in document doesn\'t exist!: para2',
-      source: LINK_DIAGNOSTIC_SOURCE
-    }
-    assert.deepStrictEqual(result, [expectedDiagnostic])
-  })
-  it('should return diagnostic when target document uses duplicated ID', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <link document="m00001" target-id="dup"/>
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = await parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const moduleInformation: ModuleInformation = {
-      path: '/modules/m00001/index.cnxml'
-    }
-    const knownModules = new Map<string, ModuleInformation>()
-    knownModules.set('m00001', moduleInformation)
-    const result = await validateLinks(xmlData, knownModules)
-    const linkLocation = inputContent.indexOf('<link document="m00001" target-id="dup"/>')
-    const expectedDiagnostic: Diagnostic = {
-      severity: DiagnosticSeverity.Error,
-      range: {
-        start: inputDocument.positionAt(linkLocation),
-        end: inputDocument.positionAt(linkLocation + '<link document="m00001" target-id="dup"/>'.length)
-      },
-      message: 'Target ID in document is not unique!: dup',
-      source: LINK_DIAGNOSTIC_SOURCE
-    }
-    assert.deepStrictEqual(result, [expectedDiagnostic])
-  })
-  it('should return diagnostic when target document exists but is empty and link uses ID', async function () {
-    const inputContent = `
-      <document xmlns="http://cnx.rice.edu/cnxml">
-        <content>
-          <link document="empty" target-id="para1"/>
-        </content>
-      </document>
-    `
-    const inputDocument = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, inputContent
-    )
-    const xmlData = await parseXMLString(inputDocument)
-    assert(xmlData != null)
-    const moduleInformation: ModuleInformation = {
-      path: '/modules/empty/index.cnxml'
-    }
-    const knownModules = new Map<string, ModuleInformation>()
-    knownModules.set('empty', moduleInformation)
-    const result = await validateLinks(xmlData, knownModules)
-    const linkLocation = inputContent.indexOf('<link document="empty" target-id="para1"/>')
-    const expectedDiagnostic: Diagnostic = {
-      severity: DiagnosticSeverity.Error,
-      range: {
-        start: inputDocument.positionAt(linkLocation),
-        end: inputDocument.positionAt(linkLocation + '<link document="empty" target-id="para1"/>'.length)
-      },
-      message: 'Could not parse target document!: empty',
-      source: LINK_DIAGNOSTIC_SOURCE
+      message: 'Target document \'no-exist\' for link cannot be found in the bundle',
+      source: DIAGNOSTIC_SOURCE,
+      code: DiagnosticCode.Link
     }
     assert.deepStrictEqual(result, [expectedDiagnostic])
   })
 })
 
 describe('ValidationQueue', function () {
-  const connection: any = {}
-
-  it('should queue requests when added', async function () {
-    const validationQueue: ValidationQueue = new ValidationQueue(connection)
-    const inputDocument = TextDocument.create('', '', 0, '')
-    sinon.stub(validationQueue, 'processQueue' as any)
-    sinon.stub(validationQueue, 'trigger' as any)
-    const validationRequest: ValidationRequest = {
-      textDocument: inputDocument,
-      version: inputDocument.version
-    }
-
-    validationQueue.addRequest(validationRequest)
-    assert.strictEqual((validationQueue as any).queue.length, 1)
-
-    sinon.restore()
-  })
-  it('should drop old version when adding requests', async function () {
-    const validationQueue: ValidationQueue = new ValidationQueue(connection)
-    const inputDocument1v0 = TextDocument.create('file:///test1.cnxml', '', 0, '')
-    const inputDocument1v1 = TextDocument.create('file:///test1.cnxml', '', 1, '')
-    const inputDocument2v0 = TextDocument.create('file:///test2.cnxml', '', 0, '')
-    const documents: TextDocument[] = [inputDocument1v0, inputDocument1v1, inputDocument2v0]
-    sinon.stub(validationQueue, 'processQueue' as any)
-    sinon.stub(validationQueue, 'trigger' as any)
-
-    documents.forEach(element => {
-      const validationRequest: ValidationRequest = {
-        textDocument: element,
-        version: element.version
-      }
-      validationQueue.addRequest(validationRequest)
+  const noConnection: any = {}
+  before(function () {
+    mockfs({
+      '/bundle/media/test.jpg': '',
+      '/bundle/collections/valid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>valid</md:title>
+            <md:slug>valid</md:slug>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/collections/invalid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>invalid</md:title>
+            <md:slug>invalid</md:slug>
+          </col:metadata>
+          <col:content>
+            <col:module document="no-exist" />
+          </col:content>
+        </col:collection>
+      `,
+      '/bundle/modules/valid/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content />
+        </document>
+      `,
+      '/bundle/modules/invalid/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content>
+            <link document="no-exist" />
+          </content>
+        </document>
+      `
     })
-
-    assert.strictEqual((validationQueue as any).queue.length, 2)
-    const entry0 = (validationQueue as any).queue[0]
-    const entry1 = (validationQueue as any).queue[1]
-    assert.strictEqual(entry0.textDocument.uri, inputDocument1v1.uri)
-    assert.strictEqual(entry0.version, inputDocument1v1.version)
-    assert.strictEqual(entry1.textDocument.uri, inputDocument2v0.uri)
-    assert.strictEqual(entry1.version, inputDocument2v0.version)
-
-    sinon.restore()
   })
-  it('should self-invoke trigger() when adding requests', async function () {
-    const validationQueue: ValidationQueue = new ValidationQueue(connection)
-    const inputDocument = TextDocument.create('', '', 0, '')
-    sinon.stub(validationQueue, 'processQueue' as any)
-    const triggerStub = sinon.stub(validationQueue, 'trigger' as any)
-    const validationRequest: ValidationRequest = {
-      textDocument: inputDocument,
-      version: inputDocument.version
+  after(function () {
+    mockfs.restore()
+  })
+  it('will error when validation is requested for an uri that is not in the bundle', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/no-exist/index.cnxml'
     }
-
+    validationQueue.addRequest(validationRequest)
+    await assert.rejects((validationQueue as any).processQueue())
+  })
+  it('will error when validation is requested for an uri that cannot be validated', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      console: {
+        error: sinon.stub()
+      }
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const unvalidatable = 'file:///bundle/media/test.jpg'
+    const item = expect(bundle.bundleItemFromUri(unvalidatable));
+    (validationQueue as any).queue.push(item)
+    await (validationQueue as any).processQueue()
+    assert(connection.console.error.calledOnceWith(`Ignoring unexpected item of type '${item.type}' and key ${item.key} in queue`))
+  })
+  it('will queue items when bundleItemFromUri returns null', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    sinon.stub(bundle, 'bundleItemFromUri').returns(null)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = { causeUri: '' }
+    validationQueue.addRequest(validationRequest)
+    assert.strictEqual((validationQueue as any).queue.length, 4)
+  })
+  it('will log error when validation is requested for an uri that is not in the bundle', async () => {
+    const clock = sinon.useFakeTimers()
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      console: {
+        error: sinon.stub()
+      }
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/no-exist/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    clock.next()
+    await (validationQueue as any).timer
+    assert.notStrictEqual(validationQueue.errorEncountered, undefined)
+    assert(connection.console.error.calledOnce)
+    clock.restore()
+  }).timeout(5000)
+  it('should queue all bundle items when a request is made', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    // The triggering uri is added twice (once in normal position, once prioritized before the rest of the bundle items)
+    assert.strictEqual((validationQueue as any).queue.length, 5)
+  })
+  it('should drop old items when a request is made', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest1: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+    }
+    const validationRequest2: BundleValidationRequest = {
+      causeUri: 'file:///bundle/collections/valid.xml'
+    }
+    validationQueue.addRequest(validationRequest1)
+    validationQueue.addRequest(validationRequest2)
+    // The triggering uri is added twice (once in normal position, once prioritized before the rest of the bundle items)
+    assert.strictEqual((validationQueue as any).queue.length, 5)
+  })
+  it('should self-trigger when adding requests', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    const triggerStub = sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+    }
     validationQueue.addRequest(validationRequest)
     assert(triggerStub.calledOnce)
-
-    sinon.restore()
   })
-  it('should queue requests when triggering processing', async function () {
+  it('should process items upon triggering', async () => {
     const clock = sinon.useFakeTimers()
-    const validationQueue: ValidationQueue = new ValidationQueue(connection)
-    const inputDocument1 = TextDocument.create('file:///test1.cnxml', '', 0, '')
-    const inputDocument2 = TextDocument.create('file:///test2.cnxml', '', 0, '')
-    const inputDocument3 = TextDocument.create('file:///test3.cnxml', '', 0, '')
-    const inputDocument4 = TextDocument.create('file:///test4.cnxml', '', 0, '')
-    const documents: TextDocument[] = [
-      inputDocument1, inputDocument2, inputDocument3, inputDocument4
-    ]
-
-    documents.forEach(element => {
-      const validationRequest: ValidationRequest = {
-        textDocument: element,
-        version: element.version
-      }
-      validationQueue.addRequest(validationRequest)
-    })
-
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    const processQueueSpy = sinon.spy(validationQueue as any, 'processQueue')
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/valid/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
     // All of the requests should still be in the queue
-    assert.strictEqual((validationQueue as any).queue.length, 4)
+    assert.strictEqual((validationQueue as any).queue.length, 5)
     // Advance the event loop and ensure the queue is consumed
     clock.next()
-    assert.strictEqual((validationQueue as any).queue.length, 3)
-    sinon.restore()
+    await (validationQueue as any).timer
+    assert.strictEqual((validationQueue as any).queue.length, 4)
+    assert(processQueueSpy.calledOnce)
+    clock.restore()
   })
-  it('should remove queue entries when processing', async function () {
-    const validationQueue: ValidationQueue = new ValidationQueue(connection)
-    const inputDocument = TextDocument.create('', '', 0, '')
-    const workspaceFoldersStub = sinon.stub().resolves(null)
-    sinon.stub(validationQueue, 'trigger' as any).callsFake(
-      function () {
-        (validationQueue as any).processQueue()
-      }
-    )
-    connection.workspace = {
-      getWorkspaceFolders: workspaceFoldersStub
-    } as any
-
-    const validationRequest: ValidationRequest = {
-      textDocument: inputDocument,
-      version: inputDocument.version
+  it('should send empty diagnostics when processing valid document', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      sendDiagnostics: sinon.stub()
     }
-
-    validationQueue.addRequest(validationRequest)
-    assert.strictEqual((validationQueue as any).queue.length, 0)
-
-    sinon.restore()
-  })
-  it('should send diagnostics when processing document', async function () {
-    const validationQueue: ValidationQueue = new ValidationQueue(connection)
-    const inputDocument = TextDocument.create('', '', 0, '<document></document>')
-    const sendDiagnosticsStub = sinon.stub()
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
     sinon.stub(validationQueue, 'trigger' as any)
-
-    connection.sendDiagnostics = sendDiagnosticsStub
-
-    const validationRequest: ValidationRequest = {
-      textDocument: inputDocument,
-      version: inputDocument.version
+    const causeUri = 'file:///bundle/collections/valid.xml'
+    const validationRequest: BundleValidationRequest = {
+      causeUri
     }
-
     validationQueue.addRequest(validationRequest)
     await (validationQueue as any).processQueue()
-    assert.strictEqual(sendDiagnosticsStub.callCount, 1)
-    sinon.restore()
+    assert(connection.sendDiagnostics.calledOnceWith({
+      uri: causeUri,
+      diagnostics: []
+    }))
+  })
+  it('should send empty diagnostics when processing valid document', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const causeUri = 'file:///bundle/modules/valid/index.cnxml'
+    const validationRequest: BundleValidationRequest = {
+      causeUri
+    }
+    validationQueue.addRequest(validationRequest)
+    await (validationQueue as any).processQueue()
+    assert(connection.sendDiagnostics.calledOnceWith({
+      uri: causeUri,
+      diagnostics: []
+    }))
+  })
+  it('should send diagnostics when processing invalid document', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/collections/invalid.xml'
+    }
+    validationQueue.addRequest(validationRequest)
+    await (validationQueue as any).processQueue()
+    assert(connection.sendDiagnostics.calledOnce)
+  })
+  it('should send diagnostics when processing invalid document', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    sinon.stub(validationQueue, 'trigger' as any)
+    const validationRequest: BundleValidationRequest = {
+      causeUri: 'file:///bundle/modules/invalid/index.cnxml'
+    }
+    validationQueue.addRequest(validationRequest)
+    await (validationQueue as any).processQueue()
+    assert(connection.sendDiagnostics.calledOnce)
+  })
+  it('should do nothing when processing empty queue', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, noConnection)
+    const promise = (validationQueue as any).processQueue()
+    await assert.doesNotReject(promise)
   })
 })
 
 describe('calculateElementPositions', function () {
-  it('should return start and end positions using siblings when available', async function () {
+  it('should return start and end positions using siblings when available', async () => {
     const xmlContent = `
       <document>
         <content>
@@ -611,14 +685,9 @@ describe('calculateElementPositions', function () {
         </content>
       </document>
     `
-    const document = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, xmlContent
-    )
-    const xmlData = parseXMLString(document)
-    assert(xmlData != null)
-    const elements = xpath.select('//image', xmlData) as Node[]
-    const imageElement = elements[0] as Element
-
+    const xmlData = new DOMParser().parseFromString(xmlContent)
+    const elements = xpath.select('//image', xmlData) as Element[]
+    const imageElement = elements[0]
     assert(imageElement.nextSibling != null)
     const expectedStart: Position = {
       line: 3,
@@ -631,17 +700,13 @@ describe('calculateElementPositions', function () {
     const result: Position[] = calculateElementPositions(imageElement)
     assert.deepStrictEqual(result, [expectedStart, expectedEnd])
   })
-  it('should return start and end positions based on attributes when no siblings', async function () {
+  it('should return start and end positions based on attributes when no siblings', async () => {
     const xmlContent = `
       <document>
         <content><image src="value" /></content>
       </document>
     `
-    const document = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, xmlContent
-    )
-    const xmlData = parseXMLString(document)
-    assert(xmlData != null)
+    const xmlData = new DOMParser().parseFromString(xmlContent)
     const elements = xpath.select('//image', xmlData) as Node[]
     const imageElement = elements[0] as Element
 
@@ -657,17 +722,13 @@ describe('calculateElementPositions', function () {
     const result: Position[] = calculateElementPositions(imageElement)
     assert.deepStrictEqual(result, [expectedStart, expectedEnd])
   })
-  it('should return start and end positions based on tag when no siblings or attributes', async function () {
+  it('should return start and end positions based on tag when no siblings or attributes', async () => {
     const xmlContent = `
       <document>
         <content><image /></content>
       </document>
     `
-    const document = TextDocument.create(
-      'file:///modules/m12345/index.cnxml', '', 0, xmlContent
-    )
-    const xmlData = parseXMLString(document)
-    assert(xmlData != null)
+    const xmlData = new DOMParser().parseFromString(xmlContent)
     const elements = xpath.select('//image', xmlData) as Node[]
     const imageElement = elements[0] as Element
 
@@ -737,6 +798,7 @@ describe('BookBundle', () => {
           <content>No title</content>
         </document>
       `,
+      '/bundle/modules/m99999': '',
       '/bundle/collections/normal.collection.xml': `
         <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
           <col:metadata>
@@ -759,7 +821,7 @@ describe('BookBundle', () => {
             <col:subcollection>
               <md:title>subcollection</md:title>
               <col:content>
-                <col:module document="m00001" />
+                <col:module document="m00003" />
               </col:content>
             </col:subcollection>
           </col:content>
@@ -793,6 +855,47 @@ describe('BookBundle', () => {
   })
   after(function () {
     mockfs.restore()
+  })
+  describe('BundleItem interface', function () {
+    it('can convert workspace uris to BundleItem', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      const uri = 'file:///bundle/collections/normal.collection.xml'
+      const expected = {
+        type: 'collections',
+        key: 'normal.collection.xml'
+      }
+      assert.deepStrictEqual(bundle.bundleItemFromUri(uri), expected)
+    })
+    it('can convert BundleItem to a workspace uri', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      const item: BundleItem = {
+        type: 'collections',
+        key: 'normal.collection.xml'
+      }
+      const expected = 'file:///bundle/collections/normal.collection.xml'
+      assert.deepStrictEqual(bundle.bundleItemToUri(item), expected)
+    })
+    it('returns a null value when converting an incorrect workspace uri', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      const uri = 'file:///bundle2/collections/normal.collection.xml'
+      assert.strictEqual(bundle.bundleItemFromUri(uri), null)
+    })
+    it('returns a null value when uri points to a directory, not a potential file', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      assert.strictEqual(bundle.bundleItemFromUri('file:///bundle/collections'), null)
+      assert.strictEqual(bundle.bundleItemFromUri('file:///bundle/modules'), null)
+      assert.strictEqual(bundle.bundleItemFromUri('file:///bundle/media'), null)
+      assert.strictEqual(bundle.bundleItemFromUri('file:///bundle/modules/moduleid'), null)
+    })
+    it('can convert workspace uris to BundleItem, even for non-existent items', async () => {
+      const bundle = await BookBundle.from('/bundle')
+      const uri = 'file:///bundle/collections/does-not-exist.collection.xml'
+      const expected = {
+        type: 'collections',
+        key: 'does-not-exist.collection.xml'
+      }
+      assert.deepStrictEqual(bundle.bundleItemFromUri(uri), expected)
+    })
   })
   it('can be created from a bundle directory', async () => {
     const bundle = await BookBundle.from('/bundle')
@@ -855,7 +958,11 @@ describe('BookBundle', () => {
         targetid: 'other'
       }
     ]
-    assert.deepStrictEqual(links.inner.sort((a, b) => a.moduleid.localeCompare(b.moduleid)), expected)
+    const actual = links.inner.sort((a, b) => a.moduleid.localeCompare(b.moduleid))
+    expected.forEach((value, i) => {
+      assert.strictEqual(actual[i].moduleid, value.moduleid)
+      assert.strictEqual(actual[i].targetid, value.targetid)
+    })
     const cached = expect(await bundle.moduleLinks('m00001'))
     assert(cacheEquals(links, cached))
     assert.strictEqual(await bundle.moduleLinks('does-not-exist'), null)
@@ -888,7 +995,7 @@ describe('BookBundle', () => {
   it('tracks and caches orphaned modules', async () => {
     const bundle = await BookBundle.from('/bundle')
     const orphaned = await bundle.orphanedModules()
-    assert.deepStrictEqual(Array.from(orphaned.inner).sort(), ['m00002', 'm00003', 'm00004', 'm00005'])
+    assert.deepStrictEqual(Array.from(orphaned.inner).sort(), ['m00002', 'm00004', 'm00005'])
     assert(cacheEquals(orphaned, await bundle.orphanedModules()))
   })
   it('tracks and caches orphaned images', async () => {
@@ -901,12 +1008,12 @@ describe('BookBundle', () => {
     const bundle = await BookBundle.from('/bundle')
     const tree = expect(await bundle.collectionTree('normal.collection.xml'))
     const expected: TocTreeCollection = {
-      type: 'collection',
+      type: TocTreeElementType.collection,
       title: 'normal',
       slug: 'normal',
       children: [
         {
-          type: 'module',
+          type: TocTreeElementType.module,
           title: 'Introduction',
           moduleid: 'm00001',
           subtitle: 'm00001'
@@ -921,38 +1028,53 @@ describe('BookBundle', () => {
     const bundle = await BookBundle.from('/bundle')
     const tree = expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
     const expected: TocTreeCollection = {
-      type: 'collection',
+      type: TocTreeElementType.collection,
       title: 'normal-with-subcollection',
       slug: 'normal-with-subcollection',
       children: [{
-        type: 'module',
+        type: TocTreeElementType.module,
         title: 'Introduction',
         moduleid: 'm00001',
         subtitle: 'm00001'
       }, {
-        type: 'subcollection',
+        type: TocTreeElementType.subcollection,
         title: 'subcollection',
         children: [{
-          type: 'module',
-          title: 'Introduction',
-          moduleid: 'm00001',
-          subtitle: 'm00001'
+          type: TocTreeElementType.module,
+          title: 'Another',
+          moduleid: 'm00003',
+          subtitle: 'm00003'
         }]
       }]
     }
     assert.deepStrictEqual(tree.inner, expected)
-    assert(cacheEquals(tree, expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))))
+    const cacheExpected = expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
+    assert(cacheEquals(tree, cacheExpected))
   })
   it('can provide modules directly as toc tree objects', async () => {
     const bundle = await BookBundle.from('/bundle')
     const module = await bundle.moduleAsTreeObject('m00001')
     const expected = {
-      type: 'module',
+      type: TocTreeElementType.module,
       title: 'Introduction',
       moduleid: 'm00001',
       subtitle: 'm00001'
     }
     assert.deepStrictEqual(module, expected)
+  })
+  it('calls noop when image is modified', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const onImageChangedSpy = sinon.spy(bundle as any, 'onImageChanged')
+    bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/media/empty.jpg' })
+    assert(onImageChangedSpy.called)
+  })
+  it('does not bust caches when non-relevant uris are processed as a change', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const orphanedModules = await bundle.orphanedModules()
+    bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/modules/m00000' })
+    bundle.processChange({ type: FileChangeType.Created, uri: '/bundle2/modules/m00000/index.cnxml' })
+    const orphanedModulesAgain = await bundle.orphanedModules()
+    assert(cacheEquals(orphanedModules, orphanedModulesAgain))
   })
   it('busts caches when a module is created', async () => {
     const bundle = await BookBundle.from('/bundle')
@@ -1020,6 +1142,55 @@ describe('BookBundle', () => {
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/collections/normal.collection.xml' })
     const orphanedModulesAgain = await bundle.orphanedModules()
     assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+  })
+  it('detects directory deletions correctly', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    assert(bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/media' }))
+    assert(bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/collections' }))
+    assert(bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules' }))
+    assert(bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001' }))
+    assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/other' }))
+    assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Changed, uri: '/bundle/modules/m00001/index.cnxml' }))
+    assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001/index.cnxml' }))
+    assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001/random.txt' }))
+  })
+  it('processes media directory deletions appropriately', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const initialModuleCount = bundle.modules().length
+    const initialCollectionsCount = bundle.collections().length
+
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media' })
+    assert(bundle.images().length === 0)
+    assert(bundle.modules().length === initialModuleCount)
+    assert(bundle.collections().length === initialCollectionsCount)
+  })
+  it('processes collections directory deletions appropriately', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const initialModuleCount = bundle.modules().length
+    const initialImagesCount = bundle.images().length
+
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/collections' })
+    assert(bundle.collections().length === 0)
+    assert(bundle.modules().length === initialModuleCount)
+    assert(bundle.images().length === initialImagesCount)
+  })
+  it('processes modules directory deletions appropriately', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const initialModuleCount = bundle.modules().length
+    const initialCollectionsCount = bundle.collections().length
+    const initialImagesCount = bundle.images().length
+
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001' })
+    assert(bundle.collections().length === initialCollectionsCount)
+    assert(bundle.images().length === initialImagesCount)
+    assert(initialModuleCount === (bundle.modules().length + 1))
+    assert(!bundle.moduleExists('m00001'))
+    assert(bundle.moduleExists('m00002'))
+
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/modules' })
+    assert(bundle.collections().length === initialCollectionsCount)
+    assert(bundle.images().length === initialImagesCount)
+    assert(bundle.modules().length === 0)
   })
 })
 describe('BookBundle caching', () => {

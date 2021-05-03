@@ -28,9 +28,6 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           gcov_path_exclude: client/src/test/**/*
-      - name: Lint
-        run: |
-          npm run lint
       - name: Build Extension
         run: |
           case "$GITHUB_EVENT_NAME" in
@@ -43,9 +40,12 @@ jobs:
           esac
           echo $VERSION_VALUE
           sed -Ei 's/("version": ")(.+)(",)$/\1\2-'$VERSION_VALUE'\3/' package.json
-          npm run package
+          npm run build:production
       - name: Upload Extention
         uses: actions/upload-artifact@v2
         with:
           name: editor-extension
           path: editor-*.vsix
+      - name: Lint
+        run: |
+          npm run lint

@@ -43,22 +43,6 @@ export function addBaseHref(webview: vscode.Webview, resource: vscode.Uri, html:
   return html.replace(re, baseUri)
 }
 
-export function getLocalResourceRoots(roots: vscode.Uri[], resource: vscode.Uri): readonly vscode.Uri[] {
-  const baseRoots = roots
-
-  const folder = vscode.workspace.getWorkspaceFolder(resource)
-  if (folder != null) {
-    const workspaceRoots = vscode.workspace.workspaceFolders?.map(folder => folder.uri)
-    if (workspaceRoots != null) {
-      baseRoots.push(...workspaceRoots)
-    }
-  } else if (resource.scheme === '' || resource.scheme === 'file') {
-    baseRoots.push(vscode.Uri.file(path.dirname(resource.fsPath)))
-  }
-
-  return baseRoots
-}
-
 /**
  * Return the root path of the workspace, or null if it does not exist
  */
@@ -66,6 +50,20 @@ export function getRootPathUri(): vscode.Uri | null {
   const maybeWorkspace = vscode.workspace.workspaceFolders
   const rootPath = maybeWorkspace != null ? maybeWorkspace[0] : null
   return rootPath != null ? rootPath.uri : null
+}
+
+/**
+ * Return the URI of a module based upon the expected convention
+ */
+export function constructModuleUri(workspaceUri: vscode.Uri, moduleid: string): vscode.Uri {
+  return workspaceUri.with({ path: path.join(workspaceUri.path, 'modules', moduleid, 'index.cnxml') })
+}
+
+/**
+ * Return the URI of a collection based upon the expected convention
+ */
+export function constructCollectionUri(workspaceUri: vscode.Uri, slug: string): vscode.Uri {
+  return workspaceUri.with({ path: path.join(workspaceUri.fsPath, 'collections', `${slug}.collection.xml`) })
 }
 
 /**
@@ -79,20 +77,34 @@ export function expect<T>(value: T | null | undefined, message: string): T {
   return value
 }
 
-/*
+/**
  * Provides very simple reject handling for async functions (just throws)
  * to avoid silent failures when passing a fallible async callback function
  * to something that expects a sync callback function.
  * This comes at the cost of not preserving the original return type as well
  * as the resulting thrown error being uncatchable.
  */
-export function ensureCatch(func: (...args: any[]) => Promise<any>): (...args: any[]) => Promise<any> {
-  return async (...args: any[]) => {
+export function ensureCatch<T extends unknown[], U>(func: (...args: T) => Promise<U>): (...args: T) => Promise<U> {
+  return async (...args: T) => {
     return await func(...args).catch((err: Error) => {
       void vscode.window.showErrorMessage(err.message)
       throw err
     })
   }
+}
+
+/**
+ * Provides very simple reject handling for promises (just throws)
+ * to avoid silent failures when calling a fallible async function from
+ * a synchronous function.
+ * This comes at the cost of not preserving the original return type
+ * as well as the resulting thrown error being uncatchable.
+ */
+export async function ensureCatchPromise<T>(promise: Promise<T>): Promise<void> {
+  await promise.catch(err => {
+    void vscode.window.showErrorMessage(err.message)
+    throw err
+  })
 }
 
 export function populateXsdSchemaFiles(resourceRootDir: string): void {
@@ -165,4 +177,27 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
   client.start()
 
   return client
+}
+
+export function getErrorDiagnosticsBySource(): Map<string, Array<[vscode.Uri, vscode.Diagnostic]>> {
+  const errorsBySource = new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>()
+  const diagnostics = vscode.languages.getDiagnostics()
+
+  for (const [uri, fileDiagnostics] of diagnostics) {
+    for (const diag of fileDiagnostics.filter(d => d.severity === vscode.DiagnosticSeverity.Error)) {
+      const source = diag.source
+      if (source === undefined) {
+        continue
+      }
+
+      const existingErrors = errorsBySource.get(source)
+      if (existingErrors === undefined) {
+        errorsBySource.set(source, [[uri, diag]])
+      } else {
+        existingErrors.push([uri, diag])
+      }
+    }
+  }
+
+  return errorsBySource
 }

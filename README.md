@@ -7,7 +7,7 @@
 ## Dev instructions
 1. open this directory in VSCode.
 1. Run `npm install`
-1. Run `npm run webpack:watch` (this will continue running / recompiling as you make changes)
+1. Run `npm run watch:webpack` (this will continue running / recompiling as you make changes)
 1. Launch the "Run Extension" task
 1. Open an XML file
 1. Click the Show Preview button on the top-right of the editor
@@ -15,15 +15,16 @@
 
 For debugging, open the webview developer tools by opening the command pallete and selecting `Developer: Open Webview Developer Tools`. This will allow you to inspect the webview contents. **Note:** It can only be opened when the webview is open.
 
-The tests for client and server require running the `test-compile` script beforehand. For example, the server tests can be run via command line as follows:
+The tests for client and server require running the `npm run build` script beforehand. For example, the server tests can be run via command line as follows:
 
 ```bash
 $ npm install
-$ npm run test-compile
-$ npm run test-server
+$ npm run build
+$ npm run test:server
+$ npm run test:client
 ```
 
-If you use the launch configuration to invoke the client tests from VS Code, the `test-compile` will be run automatically.
+If you use the launch configuration to invoke the client tests from VS Code, the `build` will be run automatically.
 
 ## Enabling the Code editor for Gitpod
 
@@ -32,19 +33,7 @@ Go to your [settings](https://gitpod.io/settings/) view and select "Enable Featu
 ## How to create the .vsix extension for Theia or gitpod
 
 1. Update the version in `package.json` if desired (e.g. to associate with an issue, `0.0.0-dev-cnx1234`)
-1. `npm run package`
-
-## How to upload the .vsix extension to gitpod (Theia editor)
-
-An extension package file can be tested by manually uploading to a gitpod workspace running the Theia editor using the following steps:
-
-1. In the terminal on the workspace, run `rm -f .gitpod.yml`
-1. Reload the browser window
-1. Click on the [Extensions panel](https://www.gitpod.io/docs/vscode-extensions/) and drag your `.vsix` file into the "Installed for this project" section
-1. Run `cat .gitpod.yml` to confirm the version in the file looks correct
-1. Reload the browser window
-
-Note: Sometimes the package will end up appearing under "Installed for User" after these steps. It's not clear why.
+1. `npm run build:production`
 
 ## How to upload the .vsix extension to gitpod (Code editor)
 

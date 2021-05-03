@@ -86,6 +86,15 @@ const dndCommand = (subject: JQuery<HTMLElement>, targetSelector: string, option
   })
 }
 
+Cypress.Commands.add('awaitInternalEvent', <T extends keyof GlobalEventHandlersEventMap>(event: T, func: () => void) => {
+  return cy.wrap(new Promise(resolve => {
+    cy.window().then(win => {
+      win.addEventListener(event, resolve)
+      func()
+    })
+  }))
+})
+
 Cypress.Commands.add('dnd', { prevSubject: 'element' }, dndCommand)
 
 Cypress.Commands.add('dropFile', { prevSubject: 'element' }, (subject: Cypress.Chainable, fileName: string) => {

@@ -1,26 +1,24 @@
 #!/usr/bin/env bash
 
 set -xeo pipefail
-rm -rf ./.nyc_output/
-rm -rf ./client/dist/
-rm -rf ./client/out/
-rm -rf ./server/dist/
-rm -rf ./server/out/
 
-$(npm bin)/tsc --build
-npm run webpack
+
+test_repo_dest=./client/out/client/src/test/data/test-repo
 
 cp -r ./client/dist/* ./client/out/
-test_repo_dest=./client/out/client/src/test/data/test-repo
-mkdir -p "${test_repo_dest}"
+[[ -d "${test_repo_dest}" ]] || mkdir -p "${test_repo_dest}"
 cp -r ./collections/ "${test_repo_dest}"
 cp -r ./media/ "${test_repo_dest}"
 cp -r ./modules/ "${test_repo_dest}"
+cp -r ./.vscode/ "${test_repo_dest}"
 
 macos_arg=''
 if [[ "$(uname)" == 'Darwin' ]]; then
     macos_arg='-e'
 fi
 
-find ./client/out -name *.html -exec sed -i ${macos_arg} -E "s/(script-src.+)[;]/\1 'unsafe-eval';/g" {} \;
-nyc instrument --exclude 'client/out/client/src/test/**/*' --compact=false --source-map --in-place ./client/out/ ./client/out/
+echo '==> Instrument the client source files'
+$(npm bin)/nyc instrument --exclude 'client/out/client/src/test/**/*' --compact=false --source-map --in-place ./client/out/ ./client/out/
+
+echo '==> Edit the Cypress HTML files to load javascript'
+find ./client/out/ -name *.html -exec sed -i ${macos_arg} -E "s/(script-src.+)[;]/\1 'unsafe-eval';/g" {} \;
