@@ -1,4 +1,12 @@
-import { expect } from '../webview-utils'
+/**
+ * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
+ */
+function expect<T>(value: T | null | undefined, message: string): T {
+  if (value == null) {
+    throw new Error(message)
+  }
+  return value
+}
 
 declare let acquireVsCodeApi: any
 let vscode: any

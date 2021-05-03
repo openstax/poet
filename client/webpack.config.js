@@ -55,6 +55,7 @@ const viewConfig = {
       react: 'preact/compat',
       'react-dom/test-utils': 'preact/test-utils',
       'react-dom': 'preact/compat'
+      // webutils: path.resolve(__dirname, 'src/webview-js')
     }
   },
   module: {
