@@ -36,6 +36,20 @@ export function fixCspSourceReferences(webview: vscode.Webview, html: string): s
   return html.replace(re, webview.cspSource)
 }
 
+export function injectCspNonce(html: string, nonce: string): string {
+  const re = /\${NONCE}/g
+  return html.replace(re, nonce)
+}
+
+export function genNonce(): string {
+  let nonce = '';
+	const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	for (let i = 0; i < 32; i++) {
+		nonce += possible.charAt(Math.floor(Math.random() * possible.length));
+	}
+	return nonce;
+}
+
 // So that relative <img src="./..."> work
 export function addBaseHref(webview: vscode.Webview, resource: vscode.Uri, html: string): string {
   const re = /\${BASE_URI}/g

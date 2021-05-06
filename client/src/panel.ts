@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { ensureCatchPromise } from './utils'
+import { ensureCatchPromise, genNonce } from './utils'
 
 // Modified from https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/src/util/dispose.ts
 /**
@@ -67,11 +67,13 @@ export class Disposer implements DisposableSupplemental {
  */
 export abstract class Panel<InMessage, OutMessage> implements DisposableSupplemental, Messageable<InMessage, OutMessage> {
   protected readonly panel: vscode.WebviewPanel
+  protected nonce: string
   private readonly disposer: DisposableSupplemental
 
   constructor(innerPanel: vscode.WebviewPanel) {
     this.disposer = new Disposer()
     this.panel = innerPanel
+    this.nonce = genNonce()
     this.registerDisposable(this.panel)
     this.panel.onDidDispose(() => this.dispose())
 
@@ -99,6 +101,16 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
       return
     }
     await this.panel.webview.postMessage(message)
+  }
+
+  injectEnsuredMessages(html: string, messages: OutMessage[]): string {
+    let injection = `<script nonce=${this.nonce}>var fireInjectedEvents = () => { let event;`
+    for (const message of messages) {
+      const jsForEvent = ` event = new CustomEvent('message'); event.data = ${JSON.stringify(message)}; window.dispatchEvent(event);`
+      injection += jsForEvent
+    }
+    injection += ` window.removeEventListener('DOMContentLoaded', fireInjectedEvents); }; window.addEventListener('DOMContentLoaded', fireInjectedEvents);</script>`
+    return html.replace('</body>', `</body>${injection}`)
   }
 
   readonly reveal: Panel<InMessage, OutMessage>['panel']['reveal'] = (...args) => {
