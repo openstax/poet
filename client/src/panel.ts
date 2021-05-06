@@ -109,7 +109,7 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
       const jsForEvent = ` event = new CustomEvent('message'); event.data = ${JSON.stringify(message)}; window.dispatchEvent(event);`
       injection += jsForEvent
     }
-    injection += ` window.removeEventListener('DOMContentLoaded', fireInjectedEvents); }; window.addEventListener('DOMContentLoaded', fireInjectedEvents);</script>`
+    injection += ' window.removeEventListener(\'DOMContentLoaded\', fireInjectedEvents); }; window.addEventListener(\'DOMContentLoaded\', fireInjectedEvents);</script>'
     return html.replace('</body>', `</body>${injection}`)
   }
 

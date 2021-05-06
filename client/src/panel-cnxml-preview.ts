@@ -151,7 +151,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     await this.tryRebindToResource(activeCnxml, force)
   }
 
-  async tryRebindToResource(resource: vscode.Uri | null, force: boolean) {
+  async tryRebindToResource(resource: vscode.Uri | null, force: boolean): Promise<void> {
     if (resource == null && !force) {
       return
     }

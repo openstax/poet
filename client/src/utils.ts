@@ -42,12 +42,12 @@ export function injectCspNonce(html: string, nonce: string): string {
 }
 
 export function genNonce(): string {
-  let nonce = '';
-	const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	for (let i = 0; i < 32; i++) {
-		nonce += possible.charAt(Math.floor(Math.random() * possible.length));
-	}
-	return nonce;
+  let nonce = ''
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  for (let i = 0; i < 32; i++) {
+    nonce += possible.charAt(Math.floor(Math.random() * possible.length))
+  }
+  return nonce
 }
 
 // So that relative <img src="./..."> work
