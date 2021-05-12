@@ -53,6 +53,20 @@ export function getRootPathUri(): vscode.Uri | null {
 }
 
 /**
+ * Helper function to check if a directory exists
+ */
+export const directoryExistsAt = async (path: string): Promise<boolean> => {
+  let exists = true
+  try {
+    const stat = await fs.promises.stat(path)
+    exists = stat.isDirectory()
+  } catch (err) {
+    exists = false
+  }
+  return exists
+}
+
+/**
  * Return the URI of a module based upon the expected convention
  */
 export function constructModuleUri(workspaceUri: vscode.Uri, moduleid: string): vscode.Uri {

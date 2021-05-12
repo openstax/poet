@@ -1,6 +1,13 @@
 import vscode from 'vscode'
-import { expect, getErrorDiagnosticsBySource } from './utils'
-import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref } from './git-api/git'
+import path from 'path'
+import { expect, directoryExistsAt, getErrorDiagnosticsBySource } from './utils'
+import { GitExtension, GitErrorCodes, Repository, RefType, Ref } from './git-api/git'
+
+const AllowedContentDirs = [
+  'modules',
+  'collections',
+  'media'
+]
 
 export enum Tag {
   release = 'Release',
@@ -96,14 +103,37 @@ export const _pushContent = (
   errorReporter: (msg: string) => Thenable<string | undefined>
 ) => async () => {
   const repo = _getRepo()
-  const commitOptions: CommitOptions = { all: true }
+  const rootUri = repo.rootUri
+  const repoInternal = (repo as any)._repository
+  // TODO: Use an exposed API interface instead of reaching under the hood. For
+  // now copying the type definition manually.
+  const gitAddCmd = repoInternal.add.bind(repoInternal) as (resources: vscode.Uri[], opts?: { update?: boolean }) => Promise<void>
+
+  // Not all allowed content directories may exist, so filter the subset that
+  // do when creating an array of URIs for gitAddCmd
+  const maybeContentDirs = AllowedContentDirs.map(
+    (dir) => path.join(rootUri.fsPath, dir)
+  )
+  const validContentDirs = await Promise.all(maybeContentDirs.map(directoryExistsAt))
+  const validContentUris = maybeContentDirs.filter(
+    (_, indx) => validContentDirs[indx]
+  ).map(
+    (path) => vscode.Uri.file(path)
+  )
+
+  if (validContentUris.length === 0) {
+    void errorReporter('No expected content directories exist!')
+    return
+  }
+
+  await gitAddCmd(validContentUris)
 
   let commitSucceeded = false
 
   const commitMessage = await _getMessage()
   if (commitMessage == null) { return }
   try {
-    await repo.commit(commitMessage, commitOptions)
+    await repo.commit(commitMessage)
     commitSucceeded = true
   } catch (e) {
     if (e.stdout == null) { throw e }

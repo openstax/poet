@@ -3,7 +3,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import vscode from 'vscode'
 import SinonRoot from 'sinon'
-import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch, RefType } from '../../git-api/git.d'
+import { GitErrorCodes, Repository, RepositoryState, Branch, RefType } from '../../git-api/git.d'
 import 'source-map-support/register'
 import {
   expect as expectOrig, ensureCatch, getRootPathUri,
@@ -25,7 +25,6 @@ import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import * as xpath from 'xpath-ts'
-import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../../../common/src/requests'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
@@ -1124,8 +1123,6 @@ const makeMockDialog = (message: string): () => Promise<string | undefined> => {
   return async (): Promise<string | undefined> => { return message }
 }
 
-const commitOptions: CommitOptions = { all: true }
-
 export const makeMockNewTag = (tag: string | undefined): (repo: Repository, release: boolean) => string | undefined => {
   return (): string | undefined => {
     return tag
@@ -1135,6 +1132,29 @@ export const makeMockNewTag = (tag: string | undefined): (repo: Repository, rele
 suite('Push Button Test Suite', function (this: Suite) {
   const sinon = SinonRoot.createSandbox()
   this.afterEach(() => sinon.restore())
+  const makeBaseMockRepo = (): Repository => {
+    const repoBranch = {
+      upstream: {},
+      name: 'main'
+    } as any as Branch
+    const repoState = {
+      HEAD: repoBranch
+    } as any as RepositoryState
+    const stubRepo = {
+      commit: sinon.stub(),
+      pull: sinon.stub(),
+      push: sinon.stub(),
+      state: repoState,
+      rootUri: {
+        fsPath: TEST_DATA_DIR
+      },
+      _repository: {
+        add: sinon.stub()
+      }
+    } as any as Repository
+
+    return stubRepo
+  }
 
   test('getRepo returns repository', async () => {
     const repo = pushContent.getRepo()
@@ -1142,16 +1162,13 @@ suite('Push Button Test Suite', function (this: Suite) {
   })
   test('push with no conflict', async () => {
     const messages: string[] = []
+    const stubRepo = makeBaseMockRepo()
+    const commitStub = stubRepo.commit as SinonRoot.SinonStub
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
+    const addStub = (stubRepo as any)._repository.add as SinonRoot.SinonStub
 
     const getRepo = (): Repository => {
-      const stubRepo = Substitute.for<Repository>()
-
-      stubRepo.commit('poet commit', commitOptions).resolves()
-      stubRepo.pull().resolves()
-      stubRepo.push().resolves()
-
       return stubRepo
     }
 
@@ -1163,22 +1180,22 @@ suite('Push Button Test Suite', function (this: Suite) {
     )())
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Successful content push.')
+    assert(commitStub.calledOnceWithExactly('poet commit'))
+    assert(addStub.calledOnce)
+    assert(addStub.getCall(0).args[0].length === 3)
   })
   test('push with merge conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
+    const stubRepo = makeBaseMockRepo()
+    const pullStub = stubRepo.pull as SinonRoot.SinonStub
 
     error.gitErrorCode = GitErrorCodes.Conflict
+    pullStub.rejects(error)
 
     const getRepo = (): Repository => {
-      const stubRepo = Substitute.for<Repository>()
-
-      stubRepo.commit('poet commit', commitOptions).resolves()
-      stubRepo.pull().rejects(error)
-      stubRepo.push().resolves()
-
       return stubRepo
     }
 
@@ -1191,21 +1208,42 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert.strictEqual(messages.length, 1)
     assert.strictEqual(messages[0], 'Content conflict, please resolve.')
   })
+  test('push fails with message if no content directories exist', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockDialog('poet commit')
+    const stubRepo = makeBaseMockRepo()
+    const addStub = (stubRepo as any)._repository.add as SinonRoot.SinonStub
+    const rootUri = stubRepo.rootUri as any
+
+    rootUri.fsPath = fs.mkdtempSync('tests')
+
+    const getRepo = (): Repository => {
+      return stubRepo
+    }
+
+    await assert.doesNotReject(pushContent._pushContent(
+      getRepo,
+      mockMessageInput,
+      ignore,
+      captureMessage
+    )())
+    assert.strictEqual(messages.length, 1)
+    assert.strictEqual(messages[0], 'No expected content directories exist!')
+    assert(addStub.notCalled)
+  })
   test('unknown commit error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
+    const stubRepo = makeBaseMockRepo()
+    const pullStub = stubRepo.pull as SinonRoot.SinonStub
 
     error.gitErrorCode = ''
+    pullStub.rejects(error)
 
     const getRepo = (): Repository => {
-      const stubRepo = Substitute.for<Repository>()
-
-      stubRepo.commit('poet commit', commitOptions).resolves()
-      stubRepo.pull().rejects(error)
-      stubRepo.push().resolves()
-
       return stubRepo
     }
 
@@ -1223,16 +1261,13 @@ suite('Push Button Test Suite', function (this: Suite) {
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
+    const stubRepo = makeBaseMockRepo()
+    const commitStub = stubRepo.commit as SinonRoot.SinonStub
 
     error.stdout = 'nothing to commit.'
+    commitStub.rejects(error)
 
     const getRepo = (): Repository => {
-      const stubRepo = Substitute.for<Repository>()
-      stubRepo.diffWithHEAD().resolves([])
-      stubRepo.commit('poet commit', commitOptions).rejects(error)
-      stubRepo.pull().resolves()
-      stubRepo.push().resolves()
-
       return stubRepo
     }
 
@@ -1250,16 +1285,13 @@ suite('Push Button Test Suite', function (this: Suite) {
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
+    const stubRepo = makeBaseMockRepo()
+    const commitStub = stubRepo.commit as SinonRoot.SinonStub
 
     error.stdout = ''
+    commitStub.rejects(error)
 
     const getRepo = (): Repository => {
-      const stubRepo = Substitute.for<Repository>()
-
-      stubRepo.commit('poet commit', commitOptions).rejects(error)
-      stubRepo.pull().resolves()
-      stubRepo.push().resolves()
-
       return stubRepo
     }
 
@@ -1290,28 +1322,15 @@ suite('Push Button Test Suite', function (this: Suite) {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
-    const pushStub = sinon.stub()
     const newBranchName = 'newbranch'
+    const stubRepo = makeBaseMockRepo()
+    const pushStub = stubRepo.push as SinonRoot.SinonStub
+    const repoHEAD = stubRepo.state.HEAD as any
 
-    // This is inconsistent with the rest of this test suite, but it seems we can't use
-    // a Substitute mock for this test case because setting return values on properties
-    // requires disabling strict checking.
-    // (https://github.com/ffMathy/FluffySpoon.JavaScript.Testing.Faking#strict-mode)
+    repoHEAD.upstream = undefined
+    repoHEAD.name = newBranchName
+
     const getRepo = (): Repository => {
-      const repoBranch = {
-        upstream: undefined,
-        name: newBranchName
-      } as any as Branch
-      const repoState = {
-        HEAD: repoBranch
-      } as any as RepositoryState
-      const stubRepo = {
-        state: repoState,
-        pull: sinon.stub(),
-        push: pushStub,
-        commit: sinon.stub()
-      } as any as Repository
-
       return stubRepo
     }
     await assert.doesNotReject(pushContent._pushContent(
