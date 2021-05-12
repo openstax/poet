@@ -2,6 +2,7 @@
  * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
  */
 function expect<T>(value: T | null | undefined, message: string): T {
+  /* istanbul ignore if */
   if (value == null) {
     throw new Error(message)
   }
