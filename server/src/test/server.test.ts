@@ -94,10 +94,10 @@ describe('bundleTrees server request', function () {
     const diagnostic = await collectionDiagnostic()
     assert(bundleTreesResponse)
     assert(connection.sendDiagnostics.calledTwice)
-    assert(connection.sendDiagnostics.withArgs({
+    assert(connection.sendDiagnostics.getCall(1).calledWithExactly({
       diagnostics: diagnostic,
       uri: invalidTitleUri
-    }).onFirstCall())
+    }))
   })
   it('should handle collection parsing error for xml slug', async () => {
     const connection = {
@@ -114,10 +114,10 @@ describe('bundleTrees server request', function () {
     const diagnostic = await collectionDiagnostic()
     assert(bundleTreesResponse)
     assert(connection.sendDiagnostics.calledTwice)
-    assert(connection.sendDiagnostics.withArgs({
+    assert(connection.sendDiagnostics.getCall(0).calledWithExactly({
       diagnostics: diagnostic,
       uri: invalidSlugUri
-    }).onFirstCall())
+    }))
   })
   it('should return all trees where no error occurs', async () => {
     const connection = {
