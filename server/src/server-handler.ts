@@ -22,7 +22,7 @@ export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle
         return [tree]
       } catch {
         const uri = expect(bundle.bundleItemToUri(collection), 'No root path to generate diagnostic')
-        const diagnostics = expect(await collectionDiagnostic(), 'No diagnostic to generate')
+        const diagnostics = await collectionDiagnostic()
         connection.sendDiagnostics({
           uri,
           diagnostics

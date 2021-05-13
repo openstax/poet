@@ -82,7 +82,7 @@ export class BundleValidationQueue {
   }
 }
 
-export const collectionDiagnostic = async (): Promise<Diagnostic[] | null> => {
+export const collectionDiagnostic = async (): Promise<Diagnostic[]> => {
   return [generateDiagnostic(
     DiagnosticSeverity.Error,
     { line: 0, character: 0 },
