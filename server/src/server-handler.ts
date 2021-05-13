@@ -8,11 +8,7 @@ import {
 } from './utils'
 import {
   BundleTreesArgs,
-  BundleModulesArgs,
-  BundleTreesResponse,
-  BundleOrphanedModulesArgs,
-  BundleModulesResponse,
-  BundleOrphanedModulesResponse
+  BundleTreesResponse
 } from '../../common/src/requests'
 
 export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]>, connection: Connection): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
@@ -36,27 +32,5 @@ export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle
     })
     const trees = (await Promise.all(promises)).flat()
     return trees
-  }
-}
-
-export function bundleOrphanedModulesHandler(workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]>): (request: BundleOrphanedModulesArgs) => Promise<BundleOrphanedModulesResponse> {
-  return async (request: BundleOrphanedModulesArgs) => {
-    const bundleAndValidator = workspaceBookBundles.get(request.workspaceUri)
-    if (bundleAndValidator == null) { return null }
-    const bundle = bundleAndValidator[0]
-    const orphanModules = Array.from((await bundle.orphanedModules()).inner)
-    const result = await Promise.all(orphanModules.map(async m => await bundle.moduleAsTreeObject(m)))
-    return result
-  }
-}
-
-export function bundleModulesHandler(workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]>): (request: BundleModulesArgs) => Promise<BundleModulesResponse> {
-  return async (request: BundleModulesArgs) => {
-    const bundleAndValidator = workspaceBookBundles.get(request.workspaceUri)
-    if (bundleAndValidator == null) { return null }
-    const bundle = bundleAndValidator[0]
-    const modules = bundle.modules()
-    const result = await Promise.all(modules.map(async m => await bundle.moduleAsTreeObject(m)))
-    return result
   }
 }

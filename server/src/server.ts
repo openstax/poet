@@ -21,14 +21,16 @@ import {
 } from './utils'
 
 import {
-  bundleTreesHandler,
-  bundleModulesHandler,
-  bundleOrphanedModulesHandler
-} from './server-handler'
-
-import {
+  BundleModulesArgs,
+  BundleOrphanedModulesArgs,
+  BundleModulesResponse,
+  BundleOrphanedModulesResponse,
   ExtensionServerRequest
 } from '../../common/src/requests'
+
+import {
+  bundleTreesHandler
+} from './server-handler'
 
 import { BookBundle } from './book-bundle'
 import { BundleValidationQueue } from './bundle-validation'
@@ -156,8 +158,24 @@ connection.onRequest('onDidChangeWorkspaceFolders', async (event) => {
 })
 
 connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler(workspaceBookBundles, connection))
-connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, bundleOrphanedModulesHandler(workspaceBookBundles))
-connection.onRequest(ExtensionServerRequest.BundleModules, bundleModulesHandler(workspaceBookBundles))
+
+connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
+  const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
+  if (bundleAndValidator == null) { return null }
+  const bundle = bundleAndValidator[0]
+  const orphanModules = Array.from((await bundle.orphanedModules()).inner)
+  const result = await Promise.all(orphanModules.map(async m => await bundle.moduleAsTreeObject(m)))
+  return result
+})
+
+connection.onRequest(ExtensionServerRequest.BundleModules, async ({ workspaceUri }: BundleModulesArgs): Promise<BundleModulesResponse> => {
+  const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
+  if (bundleAndValidator == null) { return null }
+  const bundle = bundleAndValidator[0]
+  const modules = bundle.modules()
+  const result = await Promise.all(modules.map(async m => await bundle.moduleAsTreeObject(m)))
+  return result
+})
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
