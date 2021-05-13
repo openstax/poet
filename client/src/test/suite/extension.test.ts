@@ -1144,6 +1144,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       commit: sinon.stub(),
       pull: sinon.stub(),
       push: sinon.stub(),
+      diff: sinon.stub().resolves(['changes']),
       state: repoState,
       rootUri: {
         fsPath: TEST_DATA_DIR
@@ -1167,6 +1168,7 @@ suite('Push Button Test Suite', function (this: Suite) {
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
     const addStub = (stubRepo as any)._repository.add as SinonRoot.SinonStub
+    const diffStub = (stubRepo as any).diff as SinonRoot.SinonStub
 
     const getRepo = (): Repository => {
       return stubRepo
@@ -1183,6 +1185,7 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert(commitStub.calledOnceWithExactly('poet commit'))
     assert(addStub.calledOnce)
     assert(addStub.getCall(0).args[0].length === 3)
+    assert(diffStub.calledOnceWithExactly(true))
   })
   test('push with merge conflict', async () => {
     const messages: string[] = []
@@ -1260,12 +1263,10 @@ suite('Push Button Test Suite', function (this: Suite) {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
     const mockMessageInput = makeMockDialog('poet commit')
-    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
     const stubRepo = makeBaseMockRepo()
-    const commitStub = stubRepo.commit as SinonRoot.SinonStub
+    const diffStub = (stubRepo as any).diff as SinonRoot.SinonStub
 
-    error.stdout = 'nothing to commit.'
-    commitStub.rejects(error)
+    diffStub.resolves([])
 
     const getRepo = (): Repository => {
       return stubRepo
