@@ -20,7 +20,7 @@
         <xs:element minOccurs="0" ref="cnxml:glossary"/>
         <xs:element minOccurs="0" ref="ns2:file"/>
       </xs:sequence>
-      <xs:attribute name="id" use="required" type="xs:ID"/>
+      <xs:attribute name="id" type="xs:ID"/>
       <xs:attribute ref="cmlnle:case"/>
       <xs:attribute ref="cmlnle:reference"/>
       <xs:attribute ref="cxlxt:born"/>
@@ -32,14 +32,14 @@
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:attribute name="cnxml-version" use="required">
+      <xs:attribute name="cnxml-version">
         <xs:simpleType>
           <xs:restriction base="xs:token">
             <xs:enumeration value="0.7"/>
           </xs:restriction>
         </xs:simpleType>
       </xs:attribute>
-      <xs:attribute name="module-id" use="required"/>
+      <xs:attribute name="module-id"/>
     </xs:complexType>
   </xs:element>
   <xs:group name="title">
@@ -104,7 +104,7 @@
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
-      <xs:attribute name="mdml-version" use="required">
+      <xs:attribute name="mdml-version">
         <xs:simpleType>
           <xs:restriction base="xs:token">
             <xs:enumeration value="0.5"/>
