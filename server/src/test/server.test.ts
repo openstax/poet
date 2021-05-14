@@ -909,6 +909,7 @@ describe('BookBundle', () => {
           <content>No title</content>
         </document>
       `,
+      '/bundle/modules/m99999': '',
       '/bundle/collections/normal.collection.xml': `
         <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
           <col:metadata>
@@ -1252,6 +1253,55 @@ describe('BookBundle', () => {
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/collections/normal.collection.xml' })
     const orphanedModulesAgain = await bundle.orphanedModules()
     assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+  })
+  it('detects directory deletions correctly', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    assert(bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/media' }))
+    assert(bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/collections' }))
+    assert(bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules' }))
+    assert(bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001' }))
+    assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/other' }))
+    assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Changed, uri: '/bundle/modules/m00001/index.cnxml' }))
+    assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001/index.cnxml' }))
+    assert(!bundle.isDirectoryDeletion({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001/random.txt' }))
+  })
+  it('processes media directory deletions appropriately', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const initialModuleCount = bundle.modules().length
+    const initialCollectionsCount = bundle.collections().length
+
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media' })
+    assert(bundle.images().length === 0)
+    assert(bundle.modules().length === initialModuleCount)
+    assert(bundle.collections().length === initialCollectionsCount)
+  })
+  it('processes collections directory deletions appropriately', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const initialModuleCount = bundle.modules().length
+    const initialImagesCount = bundle.images().length
+
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/collections' })
+    assert(bundle.collections().length === 0)
+    assert(bundle.modules().length === initialModuleCount)
+    assert(bundle.images().length === initialImagesCount)
+  })
+  it('processes modules directory deletions appropriately', async () => {
+    const bundle = await BookBundle.from('/bundle')
+    const initialModuleCount = bundle.modules().length
+    const initialCollectionsCount = bundle.collections().length
+    const initialImagesCount = bundle.images().length
+
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00001' })
+    assert(bundle.collections().length === initialCollectionsCount)
+    assert(bundle.images().length === initialImagesCount)
+    assert(initialModuleCount === (bundle.modules().length + 1))
+    assert(!bundle.moduleExists('m00001'))
+    assert(bundle.moduleExists('m00002'))
+
+    bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/modules' })
+    assert(bundle.collections().length === initialCollectionsCount)
+    assert(bundle.images().length === initialImagesCount)
+    assert(bundle.modules().length === 0)
   })
 })
 describe('BookBundle caching', () => {

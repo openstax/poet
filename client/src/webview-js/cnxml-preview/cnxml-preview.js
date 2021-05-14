@@ -104,21 +104,22 @@ window.addEventListener('load', () => {
   vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 
   preview = document.querySelector('#preview')
-
   preview.innerHTML = '' // remove the "JS did not run" message
 
-  // Handle the message inside the webview
-  window.addEventListener('message', event => {
-    const request = event.data
-    const type = request.type
-    if (type === 'refresh') {
-      handleRefresh(request.xml)
-    } else if (type === 'scroll-in-preview') {
-      scrollToElementOfSourceLine(parseFloat(request.line))
-    } else {
-      throw new Error(`Unexpected request type ${type}`)
-    }
-  })
+  vscode.postMessage({ type: 'did-reload' })
+})
+
+// Handle the message inside the webview
+window.addEventListener('message', event => {
+  const request = event.data
+  const type = request.type
+  if (type === 'refresh') {
+    handleRefresh(request.xml)
+  } else if (type === 'scroll-in-preview') {
+    scrollToElementOfSourceLine(parseFloat(request.line))
+  } else {
+    throw new Error(`Unexpected request type ${type}`)
+  }
 })
 
 /**

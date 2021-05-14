@@ -42,6 +42,7 @@
     "onCommand:openstax.showTocEditor",
     "onCommand:openstax.showImageManager",
     "onCommand:openstax.pushContent",
+    "onCommand:openstax.tagContent",
     "onView:tocTrees"
   ],
   "contributes": {
@@ -65,6 +66,11 @@
       {
         "command": "openstax.pushContent",
         "title": "Push Content",
+        "category": "Openstax"
+      },
+      {
+        "command": "openstax.tagContent",
+        "title": "Tag Content",
         "category": "Openstax"
       },
       {
@@ -104,7 +110,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageManager)\n[Push Content](command:openstax.pushContent)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageManager)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)"
       }
     ],
     "menus": {
