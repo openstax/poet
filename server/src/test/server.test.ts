@@ -2,7 +2,6 @@ import {
   calculateElementPositions,
   expect as expectOrig
 } from './../utils'
-
 import assert from 'assert'
 import mockfs from 'mock-fs'
 import sinon from 'sinon'
@@ -16,14 +15,126 @@ import {
 import { BookBundle, BundleItem, ModuleTitle } from '../book-bundle'
 import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, recachify } from '../cachify'
 import { TocTreeCollection, TocTreeElementType } from '../../../common/src/toc-tree'
-import { BundleValidationQueue, BundleValidationRequest, DiagnosticCode, validateCollection, validateCollectionModules, validateModule, validateModuleImagePaths, validateModuleLinks } from '../bundle-validation'
+import {
+  collectionDiagnostic,
+  BundleValidationQueue,
+  BundleValidationRequest,
+  DiagnosticCode,
+  validateCollection,
+  validateCollectionModules,
+  validateModule,
+  validateModuleImagePaths,
+  validateModuleLinks
+} from '../bundle-validation'
 import { DOMParser } from 'xmldom'
+import {
+  bundleTreesHandler
+} from '../server-handler'
 
 const DIAGNOSTIC_SOURCE = 'cnxml'
 
 function expect<T>(value: T | null | undefined): T {
   return expectOrig(value, 'test_assertion')
 }
+
+describe('bundleTrees server request', function () {
+  before(function () {
+    mockfs({
+      '/bundle/media/test.jpg': '',
+      '/bundle/collections/invalidslug.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>valid</md:title>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/collections/valid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:slug>valid xml slug</md:slug>
+            <md:title>valid xml title</md:title>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/collections/invalidtitle.xml': `
+      <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+        <col:metadata>
+          <md:slug>valid</md:slug>
+        </col:metadata>
+        <col:content />
+      </col:collection>
+    `,
+      '/bundle/modules/valid/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <metadata xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Module</md:title>
+          </metadata>
+          <content />
+        </document>
+      `
+    })
+  })
+  after(function () {
+    mockfs.restore()
+  })
+  it('should handle collection parsing error for xml title', async () => {
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    const invalidTitleUri = 'file:///bundle/collections/invalidtitle.xml'
+    const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
+    workspaceBookBundles.set('file:///bundle', [bundle, validationQueue])
+    const handler = bundleTreesHandler(workspaceBookBundles, connection as any)
+    const request = { workspaceUri: 'file:///bundle' }
+    const bundleTreesResponse = await handler(request)
+    const diagnostic = await collectionDiagnostic()
+    assert(bundleTreesResponse)
+    assert(connection.sendDiagnostics.calledTwice)
+    assert(connection.sendDiagnostics.getCall(1).calledWithExactly({
+      diagnostics: diagnostic,
+      uri: invalidTitleUri
+    }))
+  })
+  it('should handle collection parsing error for xml slug', async () => {
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    const invalidSlugUri = 'file:///bundle/collections/invalidslug.xml'
+    const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
+    workspaceBookBundles.set('file:///bundle', [bundle, validationQueue])
+    const handler = bundleTreesHandler(workspaceBookBundles, connection as any)
+    const request = { workspaceUri: 'file:///bundle' }
+    const bundleTreesResponse = await handler(request)
+    const diagnostic = await collectionDiagnostic()
+    assert(bundleTreesResponse)
+    assert(connection.sendDiagnostics.calledTwice)
+    assert(connection.sendDiagnostics.getCall(0).calledWithExactly({
+      diagnostics: diagnostic,
+      uri: invalidSlugUri
+    }))
+  })
+  it('should return all trees where no error occurs', async () => {
+    const connection = {
+      sendDiagnostics: sinon.stub()
+    }
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
+    workspaceBookBundles.set('file:///bundle', [bundle, validationQueue])
+    const handler = bundleTreesHandler(workspaceBookBundles, connection as any)
+    const request = { workspaceUri: 'file:///bundle' }
+    const bundleTreesResponse = await handler(request)
+    assert(bundleTreesResponse)
+    assert.strictEqual(bundleTreesResponse.length, 1)
+    assert(connection.sendDiagnostics.calledTwice)
+  })
+})
 
 describe('general bundle validation', function () {
   before(function () {

@@ -3,6 +3,7 @@ import { BookBundle, BundleItem } from './book-bundle'
 import { calculateElementPositions, expect, generateDiagnostic } from './utils'
 
 export enum DiagnosticCode {
+  Collection = 'Collection validation',
   ImagePath = 'Image validation',
   Link = 'Link validation'
 }
@@ -79,6 +80,16 @@ export class BundleValidationQueue {
 
     this.timer = setImmediate(processNext)
   }
+}
+
+export const collectionDiagnostic = async (): Promise<Diagnostic[]> => {
+  return [generateDiagnostic(
+    DiagnosticSeverity.Error,
+    { line: 0, character: 0 },
+    { line: 0, character: 0 },
+    'Unable to parse collection, possibly missing "md:slug" or "md:title" tags',
+    DiagnosticCode.Collection
+  )]
 }
 
 export const validateCollection = async (bundle: BookBundle, filename: string): Promise<Diagnostic[] | null> => {

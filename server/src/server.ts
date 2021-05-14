@@ -21,14 +21,16 @@ import {
 } from './utils'
 
 import {
-  BundleTreesArgs,
   BundleModulesArgs,
-  BundleTreesResponse,
   BundleOrphanedModulesArgs,
   BundleModulesResponse,
   BundleOrphanedModulesResponse,
   ExtensionServerRequest
 } from '../../common/src/requests'
+
+import {
+  bundleTreesHandler
+} from './server-handler'
 
 import { BookBundle } from './book-bundle'
 import { BundleValidationQueue } from './bundle-validation'
@@ -155,13 +157,7 @@ connection.onRequest('onDidChangeWorkspaceFolders', async (event) => {
   }
 })
 
-connection.onRequest(ExtensionServerRequest.BundleTrees, async ({ workspaceUri }: BundleTreesArgs): Promise<BundleTreesResponse> => {
-  const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
-  if (bundleAndValidator == null) { return null }
-  const bundle = bundleAndValidator[0]
-  const trees = await Promise.all(bundle.collections().map(async collection => expect(await bundle.collectionTree(collection), 'collection must exist').inner))
-  return trees
-})
+connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler(workspaceBookBundles, connection))
 
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
   const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
