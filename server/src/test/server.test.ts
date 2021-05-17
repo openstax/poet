@@ -68,9 +68,7 @@ describe('bundleTrees server request', function () {
     `,
       '/bundle/modules/valid/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content />
         </document>
       `
@@ -209,17 +207,13 @@ describe('validateImagePaths', function () {
       '/bundle/stray.jpg': '',
       '/bundle/modules/no-content/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content />
         </document>
       `,
       '/bundle/modules/single-valid-image/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <image src="../../media/empty.jpg" />
           </content>
@@ -227,9 +221,7 @@ describe('validateImagePaths', function () {
       `,
       '/bundle/modules/invalid-image-no-exist/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <image src="../../media/no-exist.jpg" />
           </content>
@@ -237,9 +229,7 @@ describe('validateImagePaths', function () {
       `,
       '/bundle/modules/invalid-image-dupe/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <image src="../../media/dupe.jpg" />
             <image src="../../media/dupe.jpg" />
@@ -248,9 +238,7 @@ describe('validateImagePaths', function () {
       `,
       '/bundle/modules/invalid-image-incomplete/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <image />
             <image src="" />
@@ -259,9 +247,7 @@ describe('validateImagePaths', function () {
       `,
       '/bundle/modules/invalid-image-stray/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <image src="../../stray.jpg" />
           </content>
@@ -288,8 +274,8 @@ describe('validateImagePaths', function () {
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(6, 12),
-        end: Position.create(6, 52)
+        start: Position.create(4, 12),
+        end: Position.create(4, 52)
       },
       message: 'Image file \'../../media/no-exist.jpg\' does not exist',
       source: DIAGNOSTIC_SOURCE,
@@ -303,8 +289,8 @@ describe('validateImagePaths', function () {
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(6, 12),
-        end: Position.create(6, 43)
+        start: Position.create(4, 12),
+        end: Position.create(4, 43)
       },
       message: 'Image file \'../../stray.jpg\' exists, but not in the bundle media directory',
       source: DIAGNOSTIC_SOURCE,
@@ -318,8 +304,8 @@ describe('validateImagePaths', function () {
     const expectedDiagnostic1: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(6, 12),
-        end: Position.create(6, 48)
+        start: Position.create(4, 12),
+        end: Position.create(4, 48)
       },
       message: 'Image file \'../../media/dupe.jpg\' does not exist',
       source: DIAGNOSTIC_SOURCE,
@@ -328,8 +314,8 @@ describe('validateImagePaths', function () {
     const expectedDiagnostic2: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(7, 12),
-        end: Position.create(7, 48)
+        start: Position.create(5, 12),
+        end: Position.create(5, 48)
       },
       message: 'Image file \'../../media/dupe.jpg\' does not exist',
       source: DIAGNOSTIC_SOURCE,
@@ -343,8 +329,8 @@ describe('validateImagePaths', function () {
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(7, 12),
-        end: Position.create(7, 28)
+        start: Position.create(5, 12),
+        end: Position.create(5, 28)
       },
       message: 'Image file \'\' does not exist',
       source: DIAGNOSTIC_SOURCE,
@@ -361,17 +347,13 @@ describe('validateLinks', function () {
       '/bundle/collections': {},
       '/bundle/modules/no-content/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content />
         </document>
       `,
       '/bundle/modules/link-empty-target/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <link target-id="" />
           </content>
@@ -379,9 +361,7 @@ describe('validateLinks', function () {
       `,
       '/bundle/modules/link-no-target/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <link document="link-no-target" />
           </content>
@@ -389,9 +369,7 @@ describe('validateLinks', function () {
       `,
       '/bundle/modules/link-empty-doc/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <link document="" />
           </content>
@@ -399,9 +377,7 @@ describe('validateLinks', function () {
       `,
       '/bundle/modules/link-invalid-doc/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <link document="no-exist" />
           </content>
@@ -409,9 +385,7 @@ describe('validateLinks', function () {
       `,
       '/bundle/modules/links-valid/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <link target-id="para1" />
             <link document="links-valid" target-id="para1" />
@@ -421,9 +395,7 @@ describe('validateLinks', function () {
       `,
       '/bundle/modules/links-invalid-target/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <link target-id="no-exist" />
             <link document="links-invalid-target" target-id="no-exist" />
@@ -432,9 +404,7 @@ describe('validateLinks', function () {
       `,
       '/bundle/modules/links-duplicate-target/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <link target-id="para" />
             <link document="links-duplicate-target" target-id="para" />
@@ -459,8 +429,8 @@ describe('validateLinks', function () {
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(6, 12),
-        end: Position.create(6, 33)
+        start: Position.create(4, 12),
+        end: Position.create(4, 33)
       },
       message: 'Target ID \'\' in document \'link-empty-target\' does not exist',
       source: DIAGNOSTIC_SOURCE,
@@ -474,8 +444,8 @@ describe('validateLinks', function () {
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(6, 12),
-        end: Position.create(6, 32)
+        start: Position.create(4, 12),
+        end: Position.create(4, 32)
       },
       message: 'Target document \'\' for link cannot be found in the bundle',
       source: DIAGNOSTIC_SOURCE,
@@ -499,8 +469,8 @@ describe('validateLinks', function () {
     const expectedDiagnostic1: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(6, 12),
-        end: Position.create(6, 41)
+        start: Position.create(4, 12),
+        end: Position.create(4, 41)
       },
       message: 'Target ID \'no-exist\' in document \'links-invalid-target\' does not exist',
       source: DIAGNOSTIC_SOURCE,
@@ -509,8 +479,8 @@ describe('validateLinks', function () {
     const expectedDiagnostic2: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(7, 12),
-        end: Position.create(7, 73)
+        start: Position.create(5, 12),
+        end: Position.create(5, 73)
       },
       message: 'Target ID \'no-exist\' in document \'links-invalid-target\' does not exist',
       source: DIAGNOSTIC_SOURCE,
@@ -524,8 +494,8 @@ describe('validateLinks', function () {
     const expectedDiagnostic1: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(6, 12),
-        end: Position.create(6, 37)
+        start: Position.create(4, 12),
+        end: Position.create(4, 37)
       },
       message: 'Target ID \'para\' in document \'links-duplicate-target\' is not unique',
       source: DIAGNOSTIC_SOURCE,
@@ -534,8 +504,8 @@ describe('validateLinks', function () {
     const expectedDiagnostic2: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(7, 12),
-        end: Position.create(7, 71)
+        start: Position.create(5, 12),
+        end: Position.create(5, 71)
       },
       message: 'Target ID \'para\' in document \'links-duplicate-target\' is not unique',
       source: DIAGNOSTIC_SOURCE,
@@ -549,8 +519,8 @@ describe('validateLinks', function () {
     const expectedDiagnostic: Diagnostic = {
       severity: DiagnosticSeverity.Error,
       range: {
-        start: Position.create(6, 12),
-        end: Position.create(6, 40)
+        start: Position.create(4, 12),
+        end: Position.create(4, 40)
       },
       message: 'Target document \'no-exist\' for link cannot be found in the bundle',
       source: DIAGNOSTIC_SOURCE,
@@ -587,17 +557,13 @@ describe('ValidationQueue', function () {
       `,
       '/bundle/modules/valid/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content />
         </document>
       `,
       '/bundle/modules/invalid/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <link document="no-exist" />
           </content>
@@ -863,9 +829,7 @@ describe('BookBundle', () => {
       '/bundle/media/orphan.jpg': '',
       '/bundle/modules/m00001/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml" class="introduction">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Introduction</md:title>
-          </metadata>
+          <title>Introduction</title>
           <content>
             <para id="para" />
             <para id="para2" />
@@ -877,9 +841,7 @@ describe('BookBundle', () => {
       `,
       '/bundle/modules/m00002/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Module</md:title>
-          </metadata>
+          <title>Module</title>
           <content>
             <para id="duplicate" />
             <para id="duplicate" />
@@ -888,17 +850,13 @@ describe('BookBundle', () => {
       `,
       '/bundle/modules/m00003/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title>Another</md:title>
-          </metadata>
+          <title>Another</title>
           <content/>
         </document>
       `,
       '/bundle/modules/m00004/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
-          <metadata xmlns:md="http://cnx.rice.edu/mdml">
-            <md:title />
-          </metadata>
+          <title />
           <content>Empty title</content>
         </document>
       `,
