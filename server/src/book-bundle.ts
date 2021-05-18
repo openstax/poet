@@ -193,8 +193,7 @@ class ModuleInfo {
   private readonly _titleFromDocument = memoizeOneCache(
     ({ inner: doc }: Cachified<Document>): Cachified<ModuleTitle> => {
       try {
-        const metadata = doc.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
-        const moduleTitle = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0].textContent
+        const moduleTitle = doc.getElementsByTagNameNS(NS_CNXML, 'title')[0].textContent
         return cachify(this._moduleTitleFromString(moduleTitle ?? 'Unnamed Module'))
       } catch {
         return cachify(this._moduleTitleFromString('Unnamed Module'))
@@ -205,12 +204,12 @@ class ModuleInfo {
   private readonly _guessFromFileData = memoizeOneCache(
     ({ inner }: Cachified<FileData>): Cachified<ModuleTitle> | null => {
       const { data } = inner
-      const titleTagStart = data.indexOf('<md:title>')
-      const titleTagEnd = data.indexOf('</md:title>')
+      const titleTagStart = data.indexOf('<title>')
+      const titleTagEnd = data.indexOf('</title>')
       if (titleTagStart === -1 || titleTagEnd === -1) {
         return null
       }
-      const actualTitleStart = titleTagStart + 10 // Add length of '<md:title>'
+      const actualTitleStart = titleTagStart + 7 // Add length of '<title>'
       if (titleTagEnd - actualTitleStart > 280) {
         // If the title is so long you can't tweet it,
         // then something probably went wrong.
