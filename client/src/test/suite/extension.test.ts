@@ -245,6 +245,21 @@ suite('Extension Test Suite', function (this: Suite) {
       }
     )
   })
+  test('injectEnsuredMessages no body is noop', () => {
+    const html = '<html></html>'
+    assert.strictEqual(Panel.prototype.injectEnsuredMessages(html, [{test: 'abc'}]), html)
+  })
+  test('injectEnsuredMessages injects messages', () => {
+    const html = '<html><body></body></html>'
+    const result = Panel.prototype.injectEnsuredMessages(html, [{test: 'abc'}])
+    console.log(result)
+    assert(result.includes('script'))
+    assert(result.includes('[{"test":"abc"}]'))
+  })
+  test('injectEnsuredMessages zero length messages is noop', () => {
+    const html = '<html><body></body></html>'
+    assert.strictEqual(Panel.prototype.injectEnsuredMessages(html, []), html)
+  })
   test('tagElementsWithLineNumbers', async () => {
     const xml = `
       <document>

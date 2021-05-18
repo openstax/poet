@@ -204,16 +204,16 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     }
     const message = await this.refreshContentsMessage(this.resourceBinding)
     if (oldBinding == null) {
-      const html = await this.reboundWebviewHtmlForResource(this.resourceBinding)
-      const htmlWithMessageInjected = this.injectEnsuredMessages(html, [message])
-      this.panel.webview.html = htmlWithMessageInjected
+      const html = await this.reboundWebviewHtmlForResource(this.resourceBinding, [message])
+      this.panel.webview.html = html
     } else {
       void this.postMessage(message)
     }
   }
 
-  private async reboundWebviewHtmlForResource(resource: vscode.Uri): Promise<string> {
+  private async reboundWebviewHtmlForResource(resource: vscode.Uri, messages: PanelOutgoingMessage[] = []): Promise<string> {
     let html = await fs.promises.readFile(path.join(this.context.resourceRootDir, 'cnxml-preview.html'), 'utf-8')
+    html = this.injectEnsuredMessages(html, messages)
     html = addBaseHref(this.panel.webview, resource, html)
     html = fixResourceReferences(this.panel.webview, html, this.context.resourceRootDir)
     html = fixCspSourceReferences(this.panel.webview, html)

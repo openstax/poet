@@ -103,13 +103,31 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
     await this.panel.webview.postMessage(message)
   }
 
+  /**
+   * Inject messages into an html string to ensure that the document load does not race with message receival
+   * @param html an html string which must: a) contain a single body element, and b) load js that listens for and handles a 'message' event by the time the document is loaded
+   * @param messages the messages to replay to the document upon loading
+   * @returns the same html but with messages inlined that will automatially replay on load
+   */
   injectEnsuredMessages(html: string, messages: OutMessage[]): string {
-    let injection = `<script nonce=${this.nonce}>var fireInjectedEvents = () => { let event;`
-    for (const message of messages) {
-      const jsForEvent = ` event = new CustomEvent('message'); event.data = ${JSON.stringify(message)}; window.dispatchEvent(event);`
-      injection += jsForEvent
+    if (messages.length === 0) {
+      return html
     }
-    injection += ' window.removeEventListener(\'DOMContentLoaded\', fireInjectedEvents); }; window.addEventListener(\'DOMContentLoaded\', fireInjectedEvents);</script>'
+    let injection = `
+    <script nonce="${this.nonce}">
+      (() => {
+        let fireInjectedEvents = () => {
+          let messages=${JSON.stringify(messages)};
+          messages.forEach(message => {
+            let event = new CustomEvent('message');
+            event.data = message;
+            window.dispatchEvent(event);
+          });
+          window.removeEventListener('DOMContentLoaded', fireInjectedEvents);
+        };
+        window.addEventListener('DOMContentLoaded', fireInjectedEvents);
+      })()
+    </script>`
     return html.replace('</body>', `</body>${injection}`)
   }
 
