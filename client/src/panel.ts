@@ -113,7 +113,7 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
     if (messages.length === 0) {
       return html
     }
-    let injection = `
+    const injection = `
     <script nonce="${this.nonce}">
       (() => {
         let fireInjectedEvents = () => {
