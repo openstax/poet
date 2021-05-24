@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { ensureCatchPromise } from './utils'
+import { ensureCatchPromise, genNonce } from './utils'
 
 // Modified from https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/src/util/dispose.ts
 /**
@@ -67,11 +67,13 @@ export class Disposer implements DisposableSupplemental {
  */
 export abstract class Panel<InMessage, OutMessage> implements DisposableSupplemental, Messageable<InMessage, OutMessage> {
   protected readonly panel: vscode.WebviewPanel
+  protected nonce: string
   private readonly disposer: DisposableSupplemental
 
   constructor(innerPanel: vscode.WebviewPanel) {
     this.disposer = new Disposer()
     this.panel = innerPanel
+    this.nonce = genNonce()
     this.registerDisposable(this.panel)
     this.panel.onDidDispose(() => this.dispose())
 
@@ -99,6 +101,34 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
       return
     }
     await this.panel.webview.postMessage(message)
+  }
+
+  /**
+   * Inject messages into an html string to ensure that the document load does not race with message receival
+   * @param html an html string which must: a) contain a single body element, and b) load js that listens for and handles a 'message' event by the time the document is loaded
+   * @param messages the messages to replay to the document upon loading
+   * @returns the same html but with messages inlined that will automatially replay on load
+   */
+  injectEnsuredMessages(html: string, messages: OutMessage[]): string {
+    if (messages.length === 0) {
+      return html
+    }
+    const injection = `
+    <script nonce="${this.nonce}">
+      (() => {
+        let fireInjectedEvents = () => {
+          let messages=${JSON.stringify(messages)};
+          messages.forEach(message => {
+            let event = new CustomEvent('message');
+            event.data = message;
+            window.dispatchEvent(event);
+          });
+          window.removeEventListener('DOMContentLoaded', fireInjectedEvents);
+        };
+        window.addEventListener('DOMContentLoaded', fireInjectedEvents);
+      })()
+    </script>`
+    return html.replace('</body>', `</body>${injection}`)
   }
 
   readonly reveal: Panel<InMessage, OutMessage>['panel']['reveal'] = (...args) => {

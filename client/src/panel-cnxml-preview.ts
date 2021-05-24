@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
-import { fixResourceReferences, fixCspSourceReferences, addBaseHref, expect, getRootPathUri, ensureCatchPromise, ensureCatch } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, addBaseHref, expect, getRootPathUri, ensureCatchPromise, ensureCatch, injectCspNonce } from './utils'
 import { PanelType } from './extension-types'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { ExtensionHostContext, Panel } from './panel'
@@ -90,7 +90,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
       void ensureCatchPromise(this.tryRebindToActiveResource(false))
     }))
     this.registerDisposable(this.context.events.onDidChangeWatchedFiles(ensureCatch(async () => {
-      await this.refreshContents()
+      await this.tryRebindToActiveResource(false)
     })))
     this.registerDisposable(vscode.window.onDidChangeTextEditorVisibleRanges(event => {
       void ensureCatchPromise(this.tryScrollToRangeStartOfEditor(event.textEditor))
@@ -121,8 +121,6 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
         const strategy = vscode.TextEditorRevealType.AtTop
         editor.revealRange(range, strategy)
       }
-    } else if (message.type === 'did-reload') {
-      this._onDidInnerPanelReload.fire()
     } else {
       throw new Error(`Unexpected message: ${JSON.stringify(message)}`)
     }
@@ -150,15 +148,22 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
 
   async tryRebindToActiveResource(force: boolean): Promise<void> {
     const activeCnxml = this.activeCnxmlUri()
-    if (activeCnxml == null && !force) {
+    await this.tryRebindToResource(activeCnxml, force)
+  }
+
+  async tryRebindToResource(resource: vscode.Uri | null, force: boolean): Promise<void> {
+    if (resource == null && !force) {
       return
     }
-    await this.rebindToResource(activeCnxml)
+    const bindingChanged = resource?.fsPath !== this.resourceBinding?.fsPath
+    await this.rebindToResource(resource)
     const activeEditor = vscode.window.activeTextEditor
     if (activeEditor != null) {
       await this.scrollToRangeStartOfEditor(activeEditor)
     }
-    this._onDidChangeResourceBinding.fire(activeCnxml)
+    if (bindingChanged || force) {
+      this._onDidChangeResourceBinding.fire(resource)
+    }
   }
 
   private activeCnxmlUri(): vscode.Uri | null {
@@ -177,16 +182,13 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     return activeUri
   }
 
-  private async refreshContents(): Promise<void> {
-    if (this.resourceBinding == null) {
-      return
-    }
+  private async refreshContentsMessage(resource: vscode.Uri): Promise<PanelOutgoingMessage> {
     // TODO: Get resource contents from the language server?
-    const contents = await fs.promises.readFile(this.resourceBinding.fsPath, { encoding: 'utf-8' })
+    const contents = await fs.promises.readFile(resource.fsPath, { encoding: 'utf-8' })
     const doc = new DOMParser().parseFromString(contents)
     tagElementsWithLineNumbers(doc)
     const lineTaggedContents = new XMLSerializer().serializeToString(doc)
-    void this.postMessage({ type: 'refresh', xml: lineTaggedContents })
+    return { type: 'refresh', xml: lineTaggedContents }
   }
 
   isPreviewOf(resource: vscode.Uri | null): boolean {
@@ -194,25 +196,28 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
   }
 
   private async rebindToResource(resource: vscode.Uri | null): Promise<void> {
+    const oldBinding = this.resourceBinding
     this.resourceBinding = resource
-    if (resource == null) {
+    if (this.resourceBinding == null) {
       this.panel.webview.html = rawTextHtml('No resource available to preview')
       return
     }
-    await this.rebindWebviewHtmlForResource(resource)
-    await this.refreshContents()
+    const message = await this.refreshContentsMessage(this.resourceBinding)
+    if (oldBinding == null) {
+      const html = await this.reboundWebviewHtmlForResource(this.resourceBinding, [message])
+      this.panel.webview.html = html
+    } else {
+      void this.postMessage(message)
+    }
   }
 
-  private async rebindWebviewHtmlForResource(resource: vscode.Uri): Promise<void> {
-    let html = fs.readFileSync(path.join(this.context.resourceRootDir, 'cnxml-preview.html'), 'utf-8')
+  private async reboundWebviewHtmlForResource(resource: vscode.Uri, messages: PanelOutgoingMessage[] = []): Promise<string> {
+    let html = await fs.promises.readFile(path.join(this.context.resourceRootDir, 'cnxml-preview.html'), 'utf-8')
+    html = this.injectEnsuredMessages(html, messages)
     html = addBaseHref(this.panel.webview, resource, html)
     html = fixResourceReferences(this.panel.webview, html, this.context.resourceRootDir)
     html = fixCspSourceReferences(this.panel.webview, html)
-    const reloadComplete = new Promise((resolve, reject) => {
-      this._onDidInnerPanelReload.event(() => { resolve(undefined) })
-    })
-    // This will cause a panel reload, which we must await
-    this.panel.webview.html = html
-    await reloadComplete
+    html = injectCspNonce(html, this.nonce)
+    return html
   }
 }

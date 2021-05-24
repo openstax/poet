@@ -99,14 +99,12 @@ window.addEventListener('scroll', () => {
   }
 })
 
-window.addEventListener('load', () => {
+window.addEventListener('DOMContentLoaded', () => {
   // https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
   vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 
   preview = document.querySelector('#preview')
   preview.innerHTML = '' // remove the "JS did not run" message
-
-  vscode.postMessage({ type: 'did-reload' })
 })
 
 // Handle the message inside the webview

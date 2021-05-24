@@ -245,6 +245,21 @@ suite('Extension Test Suite', function (this: Suite) {
       }
     )
   })
+  test('injectEnsuredMessages no body is noop', () => {
+    const html = '<html></html>'
+    assert.strictEqual(Panel.prototype.injectEnsuredMessages(html, [{ test: 'abc' }]), html)
+  })
+  test('injectEnsuredMessages injects messages', () => {
+    const html = '<html><body></body></html>'
+    const result = Panel.prototype.injectEnsuredMessages(html, [{ test: 'abc' }])
+    console.log(result)
+    assert(result.includes('script'))
+    assert(result.includes('[{"test":"abc"}]'))
+  })
+  test('injectEnsuredMessages zero length messages is noop', () => {
+    const html = '<html><body></body></html>'
+    assert.strictEqual(Panel.prototype.injectEnsuredMessages(html, []), html)
+  })
   test('tagElementsWithLineNumbers', async () => {
     const xml = `
       <document>
@@ -486,7 +501,7 @@ suite('Extension Test Suite', function (this: Suite) {
     tagElementsWithLineNumbers(documentDomFirst)
     const xmlExpectedFirst = new XMLSerializer().serializeToString(documentDomFirst)
     await resourceBindingChangedExpectedFirst
-    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedFirst }))
+    assert((panel as any).panel.webview.html.includes(JSON.stringify(xmlExpectedFirst)))
     assert.strictEqual((panel as any).resourceBinding.fsPath, resourceFirst.fsPath)
 
     const documentSecond = await vscode.workspace.openTextDocument(resourceSecond)
@@ -527,17 +542,18 @@ suite('Extension Test Suite', function (this: Suite) {
     const documentThird = await vscode.workspace.openTextDocument(resourceThird)
     await vscode.window.showTextDocument(documentThird, vscode.ViewColumn.Two)
 
-    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedFirst }))
+    assert((panel as any).panel.webview.html.includes(JSON.stringify(xmlExpectedFirst)))
     const refreshCalls = (panel.postMessage as SinonRoot.SinonSpy)
       .getCalls()
       .filter(call => call.args.some(arg => arg.type != null && arg.type === 'refresh'))
-    assert.strictEqual(refreshCalls.length, 1)
+    assert.strictEqual(refreshCalls.length, 0)
     assert.strictEqual((panel as any).resourceBinding.fsPath, resourceFirst.fsPath)
   })
   test('cnxml preview refuses refresh if no resource bound', async () => {
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     assert(panel.isPreviewOf(null))
-    await (panel as any).refreshContents()
+    await (panel as any).tryRebindToResource(null)
+    await (panel as any).rebindToResource(null)
     const refreshCalls = (panel.postMessage as SinonRoot.SinonSpy)
       .getCalls()
       .filter(call => call.args.some(arg => arg.type != null && arg.type === 'refresh'))
@@ -698,17 +714,25 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(lineNumber, 0)
   })
   test('cnxml preview refreshes when server watched file changes', async () => {
+    const uri = expect(getRootPathUri())
     const mockEvents = createMockEvents()
     const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
+    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: mockEvents.events })
-    const refreshContentsStub = sinon.stub(panel as any, 'refreshContents')
+    const rebindingStub = sinon.spy(panel as any, 'rebindToResource')
     const panelBindingChanged = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding(() => resolve(undefined))
+      panel.onDidChangeResourceBinding((event) => {
+        if (event != null && event.fsPath === resource.fsPath) {
+          resolve(event)
+        }
+      })
     })
+    const document = await vscode.workspace.openTextDocument(resource)
+    await vscode.window.showTextDocument(document, vscode.ViewColumn.Two)
     await panelBindingChanged
-    const refreshCount = refreshContentsStub.callCount
-    await watchedFilesSpy.getCall(0).args[0](undefined)
-    assert.strictEqual(refreshContentsStub.callCount, refreshCount + 1)
+    const refreshCount = rebindingStub.callCount
+    await watchedFilesSpy.getCall(0).args[0]()
+    assert.strictEqual(rebindingStub.callCount, refreshCount + 1)
   })
   test('cnxml preview throws upon unexpected message', async () => {
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
