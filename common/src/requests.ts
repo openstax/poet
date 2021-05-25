@@ -3,7 +3,7 @@ import { TocTreeModule, TocTreeCollection } from './toc-tree'
 // Mock out the basic need of the LanguageClient for common,
 // since we can't import the client lib.
 interface LanguageClient {
-  sendRequest<R>(method: string, param: any): Promise<R>
+  sendRequest: <R>(method: string, param: any) => Promise<R>
 }
 
 // The following are all shared between the client and the server
