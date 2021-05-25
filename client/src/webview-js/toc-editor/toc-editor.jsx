@@ -7,6 +7,16 @@ import stringify from 'json-stable-stringify'
 const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'
 
+/**
+ * Imagining the items of a book tree in depth-first order (the order in which
+ * the contents would be viewed in a web page scrolling down), return an array
+ * of the indices of the items that have been expanded in the UI, i.e. items
+ * which have the `expanded` attribute set to true. Used to persist expanded
+ * items between loads and refreshes of the webview panel data by storing the
+ * indices and loading them again with `expandIndices`.
+ * @param {TocTreeCollection} tree tree object to query for expanded indices
+ * @returns {number[]} array of indices which are expanded
+ */
 const getExpandedIndices = (tree) => {
   const stack = [...tree.children.slice().reverse()]
   const subcollections = []
@@ -26,6 +36,13 @@ const getExpandedIndices = (tree) => {
   return indices
 }
 
+/**
+ * Mutates the passed tree by expanding the items in it corresponding to the
+ * indices in the second argument. The passed indices should be sourced from
+ * a prior call to `getExpandedIndices`.
+ * @param {TocTreeCollection} tree the collection tree object to mutate
+ * @param {number[]} indices indices created by the `getExpandedIndices` method
+ */
 const expandIndices = (tree, indices) => {
   const stack = [...tree.children.slice().reverse()]
   const subcollections = []
@@ -41,13 +58,22 @@ const expandIndices = (tree, indices) => {
   }
 }
 
+/**
+ * Helper method for removing the `expanded` key from collection tree objects,
+ * which we must do in order when checking for tree structural equality.
+ * @param {string} key The potential key to check
+ * @param {any} value The value this key would resolve to
+ * @returns If key is `expanded`, `undefined` (indicating to remove the key), otherwise `value`
+ */
 const removeExpanded = (key, value) => key === 'expanded' ? undefined : value
 
 const SearchContext = createContext({})
 
+// Helper method to save state between loads of the page or refreshes
 const saveState = (item) => {
   vscode.setState(item)
 }
+// Helper method to get saved state between loads of the page or refreshes
 const getSavedState = () => {
   return vscode.getState()
 }
@@ -59,6 +85,11 @@ const debug = (item) => {
   vscode.postMessage({ type: 'debug', item })
 }
 
+/**
+ * An element which is a `span` when not in focus, but becomes an input box
+ * upon becoming focused. When unfocused, or the enter key is pressed, the
+ * element becomes a `span` again
+ */
 const InputOnFocus = (props) => {
   const [focus, setFocus] = useState(false)
   const [value, setValue] = useState(props.value)
@@ -115,6 +146,7 @@ const ContentTree = (props) => {
     setSearchFoundCount
   } = useContext(SearchContext)
 
+  // Adjust the search count and focus index upon a change to the search query, if possible
   const searchFinishCallback = (matches) => {
     if (searchFoundCount === matches.length) {
       // Returning prevents infinite render loop
@@ -132,6 +164,7 @@ const ContentTree = (props) => {
     setSearchFocusIndex(matches.length > 0 ? searchFocusIndex % matches.length : 0)
   }
 
+  // Custom search method so that we match case-insensitively on both the title and subtitle of items
   const searchMethod = ({ node, searchQuery }) => {
     if (!searchQuery) {
       return false
@@ -141,6 +174,11 @@ const ContentTree = (props) => {
     return !!(titleMatches || subtitleMatches)
   }
 
+  /**
+   * Handle a potential change in 1) the structure of the tree, or 2) a title of a (sub)collection.
+   * If either a change is meaningful or if `force` is true. We direct the extension host to update
+   * the bundle with our changes in the UI.
+   */
   const handleChange = (newChildren, force = false) => {
     const { treesData, selectionIndices } = getSavedState()
 
