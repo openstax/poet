@@ -70,7 +70,6 @@ const removeExpanded = (key, value) => key === 'expanded' ? undefined : value
 // Global
 const SearchContext = createContext({})
 
-
 // Helper method to save state between loads of the page or refreshes
 const saveState = (item) => {
   vscode.setState(item)
