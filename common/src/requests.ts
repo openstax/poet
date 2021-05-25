@@ -1,4 +1,11 @@
+import { LanguageClient } from 'vscode-languageclient/node'
 import { TocTreeModule, TocTreeCollection } from './toc-tree'
+
+// The following are all shared between the client and the server
+// to ensure that any requests between the two are type-safe.
+// It is discouraged to have any usage of `client.sendRequest`
+// outside this file, or any request handler in the server that
+// does not utilize one of the ExtensionServerRequest types
 
 export enum ExtensionServerRequest {
   BundleTrees = 'bundle-trees',
@@ -19,3 +26,13 @@ export interface BundleModulesArgs {
   workspaceUri: string
 }
 export type BundleModulesResponse = TocTreeModule[] | null
+
+export const requestBundleTrees = async (client: LanguageClient, args: BundleTreesArgs): Promise<BundleTreesResponse> => {
+  return await client.sendRequest(ExtensionServerRequest.BundleTrees, args)
+}
+export const requestBundleOrphanedModules = async (client: LanguageClient, args: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
+  return await client.sendRequest(ExtensionServerRequest.BundleOrphanedModules, args)
+}
+export const requestBundleModules = async (client: LanguageClient, args: BundleModulesArgs): Promise<BundleModulesResponse> => {
+  return await client.sendRequest(ExtensionServerRequest.BundleModules, args)
+}
