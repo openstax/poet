@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { getRootPathUri, expect, constructCollectionUri, constructModuleUri } from './utils'
-import { ExtensionServerRequest, BundleTreesResponse, BundleTreesArgs } from '../../common/src/requests'
+import { BundleTreesResponse, requestBundleTrees } from '../../common/src/requests'
 import { TocTreeCollection, TocTreeElementType, TocTreeModule } from '../../common/src/toc-tree'
 import { ExtensionHostContext } from './panel'
 
@@ -35,17 +35,14 @@ export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
     return element
   }
 
-  private async queryBundleTrees(args: BundleTreesArgs): Promise<BundleTreesResponse> {
-    return await this.context.client.sendRequest(ExtensionServerRequest.BundleTrees, args)
-  }
-
   async getChildren(element?: TocTreeItem): Promise<TocTreeItem[]> {
     if (element !== undefined) {
       return element.children
     }
 
     const uri = expect(getRootPathUri(), 'No workspace root for ToC trees')
-    const bundleTrees: BundleTreesResponse = await this.queryBundleTrees(
+    const bundleTrees: BundleTreesResponse = await requestBundleTrees(
+      this.context.client,
       { workspaceUri: uri.toString() }
     )
     if (bundleTrees == null) {

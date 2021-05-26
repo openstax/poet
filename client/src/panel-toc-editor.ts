@@ -8,7 +8,7 @@ import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, 
 import { TocTreeCollection, TocTreeElementType } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { BundleModulesArgs, BundleModulesResponse, BundleOrphanedModulesArgs, BundleOrphanedModulesResponse, BundleTreesArgs, BundleTreesResponse, ExtensionServerRequest } from '../../common/src/requests'
+import { requestBundleModules, requestBundleOrphanedModules, requestBundleTrees } from '../../common/src/requests'
 import { ExtensionHostContext, Panel } from './panel'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -56,16 +56,6 @@ export type PanelIncomingMessage = (
 export interface PanelOutgoingMessage {
   uneditable: TocTreeCollection[]
   editable: TocTreeCollection[]
-}
-
-const requestBundleTrees = async (client: LanguageClient, args: BundleTreesArgs): Promise<BundleTreesResponse> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleTrees, args)
-}
-const requestBundleOrphanedModules = async (client: LanguageClient, args: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleOrphanedModules, args)
-}
-const requestBundleModules = async (client: LanguageClient, args: BundleModulesArgs): Promise<BundleModulesResponse> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleModules, args)
 }
 
 async function createBlankModule(): Promise<string> {
