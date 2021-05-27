@@ -88,7 +88,10 @@ const viewConfig = {
     // @ts-ignore
     new CopyWebpackPlugin({
       patterns: [{
-        from: 'static'
+        from: 'static',
+        globOptions: {
+          ignore: ["**/*.patch"]
+        }
       }]
     })
   ]
