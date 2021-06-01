@@ -210,7 +210,7 @@ suite('Extension Test Suite', function (this: Suite) {
       html,
       (panel) => {
         const modified = addBaseHref(panel.webview, resource, html)
-        assert(modified.includes('vscode-webview-resource'))
+        assert(modified.includes('vscode-webview'))
       }
     )
   })
@@ -220,7 +220,7 @@ suite('Extension Test Suite', function (this: Suite) {
       html,
       (panel) => {
         const modified = fixResourceReferences(panel.webview, html, TEST_DATA_DIR)
-        assert(modified.includes('vscode-webview-resource'))
+        assert(modified.includes('vscode-webview'))
       }
     )
   })
@@ -241,7 +241,7 @@ suite('Extension Test Suite', function (this: Suite) {
       html,
       (panel) => {
         const modified = fixCspSourceReferences(panel.webview, html)
-        assert(modified.includes('vscode-webview-resource'))
+        assert(modified.includes('vscode-webview'))
       }
     )
   })
