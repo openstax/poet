@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://cnx.rice.edu/mdml" xmlns:cxlxt="http://katalysteducation.org/cxlxt/1.0" xmlns:s="http://cnx.rice.edu/system-info" xmlns:cnxml="http://cnx.rice.edu/cnxml" xmlns:ns1="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:cmlnle="http://katalysteducation.org/cmlnle/1.0" xmlns:ns2="http://bibtexml.sf.net/" xmlns:mathml="http://www.w3.org/1998/Math/MathML" xmlns:qml="http://cnx.rice.edu/qml/1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mdml="http://cnx.rice.edu/mdml">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://cnx.rice.edu/mdml" xmlns:cxlxt="http://katalysteducation.org/cxlxt/1.0" xmlns:collxml="http://cnx.rice.edu/collxml" xmlns:s="http://cnx.rice.edu/system-info" xmlns:cnxml="http://cnx.rice.edu/cnxml" xmlns:ns1="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:cmlnle="http://katalysteducation.org/cmlnle/1.0" xmlns:ns2="http://bibtexml.sf.net/" xmlns:mathml="http://www.w3.org/1998/Math/MathML" xmlns:qml="http://cnx.rice.edu/qml/1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mdml="http://cnx.rice.edu/mdml">
   <xs:import namespace="http://bibtexml.sf.net/" schemaLocation="ns2.xsd"/>
   <xs:import namespace="http://cnx.rice.edu/cnxml" schemaLocation="cnxml.xsd"/>
+  <xs:import namespace="http://cnx.rice.edu/collxml" schemaLocation="collxml.xsd"/>
   <xs:import namespace="http://cnx.rice.edu/qml/1.0" schemaLocation="qml.xsd"/>
   <xs:import namespace="http://cnx.rice.edu/system-info" schemaLocation="s.xsd"/>
   <xs:import namespace="http://katalysteducation.org/cmlnle/1.0" schemaLocation="cmlnle.xsd"/>
@@ -10,10 +11,454 @@
   <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
   <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
   <xs:import namespace="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" schemaLocation="ns1.xsd"/>
-  <xs:element name="content-id">
+  <xs:element name="content-id" type="xs:string"/>
+  <xs:element name="title" type="xs:string"/>
+  <xs:element name="language" type="xs:string"/>
+  <xs:element name="uuid" type="xs:string"/>
+  <xs:element name="slug" type="xs:string"/>
+  <xs:element name="license">
+    <xs:complexType mixed="true">
+      <xs:attribute name="url" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:group name="content-id">
+    <xs:sequence>
+      <xs:element name="content-id">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:NMTOKEN">
+              <xs:attribute ref="xml:lang"/>
+              <xs:attribute name="class" type="xs:token"/>
+              <xs:attribute ref="s:read-only"/>
+              <xs:anyAttribute processContents="skip"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="repository">
+    <xs:sequence>
+      <xs:element name="repository">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="content-url">
+    <xs:sequence>
+      <xs:element name="content-url">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="title">
+    <xs:sequence>
+      <xs:element name="title">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="short-title">
+    <xs:sequence>
+      <xs:element name="short-title">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="subtitle">
+    <xs:sequence>
+      <xs:element name="subtitle">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="version">
+    <xs:sequence>
+      <xs:element name="version">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="created">
+    <xs:sequence>
+      <xs:element name="created">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="revised">
+    <xs:sequence>
+      <xs:element name="revised">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="actors">
+    <xs:sequence>
+      <xs:element name="actors">
+        <xs:complexType>
+          <xs:choice maxOccurs="unbounded">
+            <xs:group ref="mathml:person"/>
+            <xs:group ref="mathml:organization"/>
+          </xs:choice>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="roles">
+    <xs:sequence>
+      <xs:element name="roles">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:role"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="license">
+    <xs:sequence>
+      <xs:element name="license">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:attribute name="url" use="required"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="extended-attribution">
+    <xs:sequence>
+      <xs:element name="extended-attribution">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:link-group"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="derived-from">
+    <xs:sequence>
+      <xs:element name="derived-from">
+        <xs:complexType>
+          <xs:sequence minOccurs="0" maxOccurs="unbounded">
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+              <xs:group ref="mathml:content-id"/>
+              <xs:group ref="mathml:repository"/>
+              <xs:group ref="mathml:content-url"/>
+              <xs:group ref="mathml:title_2"/>
+              <xs:group ref="mathml:short-title"/>
+              <xs:group ref="mathml:subtitle"/>
+              <xs:group ref="mathml:version"/>
+              <xs:group ref="mathml:created"/>
+              <xs:group ref="mathml:revised"/>
+              <xs:group ref="mathml:actors"/>
+              <xs:group ref="mathml:roles"/>
+              <xs:group ref="mathml:license"/>
+              <xs:group ref="mathml:extended-attribution"/>
+              <xs:group ref="mathml:derived-from"/>
+              <xs:group ref="mathml:keywordlist"/>
+              <xs:group ref="mathml:subjectlist"/>
+              <xs:group ref="mathml:education-levellist"/>
+              <xs:group ref="mathml:abstract"/>
+              <xs:group ref="mathml:objectives"/>
+              <xs:group ref="mathml:homepage"/>
+              <xs:group ref="mathml:institution"/>
+              <xs:group ref="mathml:course-code"/>
+              <xs:group ref="mathml:instructor"/>
+              <xs:group ref="mathml:uuid"/>
+              <xs:group ref="mathml:canonical-book-uuid"/>
+              <xs:group ref="mathml:slug"/>
+              <xs:element ref="mdml:ancillary"/>
+              <xs:element ref="mdml:version-history"/>
+            </xs:choice>
+            <xs:group minOccurs="0" ref="mathml:language"/>
+          </xs:sequence>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:attribute ref="s:implementation"/>
+          <xs:attribute name="url"/>
+          <xs:attribute name="document"/>
+          <xs:attribute name="version"/>
+          <xs:attribute name="repository"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="keywordlist">
+    <xs:sequence>
+      <xs:element name="keywordlist">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:keyword"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="subjectlist">
+    <xs:sequence>
+      <xs:element name="subjectlist">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:subject"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="education-levellist">
+    <xs:sequence>
+      <xs:element name="education-levellist">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:education-level"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="abstract">
+    <xs:sequence>
+      <xs:element name="abstract">
+        <xs:complexType mixed="true">
+          <xs:choice maxOccurs="unbounded">
+            <xs:group ref="mathml:para_2"/>
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+              <xs:group ref="mathml:emphasis"/>
+              <xs:group ref="mathml:term"/>
+              <xs:group ref="mathml:foreign"/>
+              <xs:group ref="mathml:cite"/>
+              <xs:group ref="mathml:span"/>
+              <xs:group ref="mathml:sup"/>
+              <xs:group ref="mathml:sub"/>
+              <xs:group ref="mathml:code_2"/>
+              <xs:group ref="mathml:math"/>
+              <xs:group ref="mathml:quote_2"/>
+              <xs:group ref="mathml:preformat_2"/>
+              <xs:group ref="mathml:list_2"/>
+            </xs:choice>
+          </xs:choice>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="objectives">
+    <xs:sequence>
+      <xs:element name="objectives">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="homepage">
+    <xs:sequence>
+      <xs:element name="homepage">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="institution">
+    <xs:sequence>
+      <xs:element name="institution">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="course-code">
+    <xs:sequence>
+      <xs:element name="course-code">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="instructor">
+    <xs:sequence>
+      <xs:element name="instructor">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="uuid">
+    <xs:sequence>
+      <xs:element name="uuid">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="canonical-book-uuid">
+    <xs:sequence>
+      <xs:element name="canonical-book-uuid">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="slug">
+    <xs:sequence>
+      <xs:element name="slug">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:element name="ancillary">
     <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:NMTOKEN">
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="url" use="required"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="version-history">
+    <xs:complexType>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="url" use="required"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:group name="language">
+    <xs:sequence>
+      <xs:element name="language">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="content-id1">
+    <xs:sequence>
+      <xs:element name="content-id">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:NMTOKEN">
+              <xs:attribute ref="cmlnle:case"/>
+              <xs:attribute ref="cmlnle:reference"/>
+              <xs:attribute ref="cxlxt:born"/>
+              <xs:attribute ref="cxlxt:died"/>
+              <xs:attribute ref="cxlxt:index"/>
+              <xs:attribute ref="cxlxt:name"/>
+              <xs:attribute ref="ns1:color"/>
+              <xs:attribute ref="ns1:font-style"/>
+              <xs:attribute ref="ns1:font-weight"/>
+              <xs:attribute ref="xml:lang"/>
+              <xs:attribute name="class" type="xs:token"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="repository1">
+    <xs:sequence>
+      <xs:element name="repository">
+        <xs:complexType mixed="true">
           <xs:attribute ref="cmlnle:case"/>
           <xs:attribute ref="cmlnle:reference"/>
           <xs:attribute ref="cxlxt:born"/>
@@ -25,702 +470,1026 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="repository">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="content-url">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="title">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="short-title">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="subtitle">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="version">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="created">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="revised">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="actors">
-    <xs:complexType>
-      <xs:choice maxOccurs="unbounded">
-        <xs:element ref="mdml:person"/>
-        <xs:element ref="mdml:organization"/>
-      </xs:choice>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="roles">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element maxOccurs="unbounded" ref="mdml:role"/>
-      </xs:sequence>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="license">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-      <xs:attribute name="url" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="extended-attribution">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element maxOccurs="unbounded" ref="cnxml:link-group"/>
-      </xs:sequence>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="derived-from">
-    <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="mdml:content-id"/>
-        <xs:element ref="mdml:repository"/>
-        <xs:element ref="mdml:content-url"/>
-        <xs:element ref="mdml:title"/>
-        <xs:element ref="mdml:short-title"/>
-        <xs:element ref="mdml:subtitle"/>
-        <xs:element ref="mdml:version"/>
-        <xs:element ref="mdml:created"/>
-        <xs:element ref="mdml:revised"/>
-        <xs:element ref="mdml:actors"/>
-        <xs:element ref="mdml:roles"/>
-        <xs:element ref="mdml:license"/>
-        <xs:element ref="mdml:extended-attribution"/>
-        <xs:element ref="mdml:derived-from"/>
-        <xs:element ref="mdml:keywordlist"/>
-        <xs:element ref="mdml:subjectlist"/>
-        <xs:element ref="mdml:education-levellist"/>
-        <xs:element ref="mdml:abstract"/>
-        <xs:element ref="mdml:language"/>
-        <xs:element ref="mdml:objectives"/>
-        <xs:element ref="mdml:homepage"/>
-        <xs:element ref="mdml:institution"/>
-        <xs:element ref="mdml:course-code"/>
-        <xs:element ref="mdml:instructor"/>
-        <xs:element ref="mdml:uuid"/>
-        <xs:element ref="mdml:canonical-book-uuid"/>
-        <xs:element ref="mdml:slug"/>
-      </xs:choice>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-      <xs:attribute ref="s:implementation"/>
-      <xs:attribute name="url"/>
-      <xs:attribute name="document"/>
-      <xs:attribute name="version"/>
-      <xs:attribute name="repository"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="keywordlist">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element maxOccurs="unbounded" ref="mdml:keyword"/>
-      </xs:sequence>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="subjectlist">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element maxOccurs="unbounded" ref="mdml:subject"/>
-      </xs:sequence>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="education-levellist">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element maxOccurs="unbounded" ref="mdml:education-level"/>
-      </xs:sequence>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="abstract">
-    <xs:complexType mixed="true">
-      <xs:choice maxOccurs="unbounded">
-        <xs:group ref="mathml:para_2"/>
-        <xs:choice minOccurs="0" maxOccurs="unbounded">
-          <xs:group ref="mathml:emphasis"/>
-          <xs:group ref="mathml:term"/>
-          <xs:group ref="mathml:foreign"/>
-          <xs:group ref="mathml:cite"/>
-          <xs:group ref="mathml:span"/>
-          <xs:group ref="mathml:sup"/>
-          <xs:group ref="mathml:sub"/>
-          <xs:group ref="mathml:code_2"/>
-          <xs:element ref="mathml:math"/>
-          <xs:group ref="mathml:quote_2"/>
-          <xs:group ref="mathml:preformat_2"/>
-          <xs:group ref="mathml:list_2"/>
-        </xs:choice>
-      </xs:choice>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="language">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="objectives">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="homepage">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="institution">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="course-code">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="instructor">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="uuid">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="canonical-book-uuid">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="slug">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="person">
-    <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="mdml:honorific"/>
-        <xs:element ref="mdml:firstname"/>
-        <xs:element ref="mdml:othername"/>
-        <xs:element ref="mdml:surname"/>
-        <xs:element ref="mdml:lineage"/>
-        <xs:element ref="mdml:fullname"/>
-        <xs:element ref="mdml:email"/>
-        <xs:element ref="mdml:homepage"/>
-      </xs:choice>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-      <xs:attribute name="userid"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="organization">
-    <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="mdml:fullname"/>
-        <xs:element ref="mdml:shortname"/>
-        <xs:element ref="mdml:email"/>
-        <xs:element ref="mdml:homepage"/>
-      </xs:choice>
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-      <xs:attribute name="userid"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="role">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-      <xs:attribute name="type" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="keyword">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="subject">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-      <xs:attribute name="source"/>
-      <xs:attribute name="key"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="education-level">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-      <xs:attribute name="source"/>
-      <xs:attribute name="key"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="honorific">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="firstname">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="othername">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="surname">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="lineage">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="fullname">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="email">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="shortname">
-    <xs:complexType mixed="true">
-      <xs:attribute ref="cmlnle:case"/>
-      <xs:attribute ref="cmlnle:reference"/>
-      <xs:attribute ref="cxlxt:born"/>
-      <xs:attribute ref="cxlxt:died"/>
-      <xs:attribute ref="cxlxt:index"/>
-      <xs:attribute ref="cxlxt:name"/>
-      <xs:attribute ref="ns1:color"/>
-      <xs:attribute ref="ns1:font-style"/>
-      <xs:attribute ref="ns1:font-weight"/>
-      <xs:attribute ref="xml:lang"/>
-      <xs:attribute name="class" type="xs:token"/>
-    </xs:complexType>
-  </xs:element>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="content-url1">
+    <xs:sequence>
+      <xs:element name="content-url">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="title1">
+    <xs:sequence>
+      <xs:element name="title">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="short-title1">
+    <xs:sequence>
+      <xs:element name="short-title">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="subtitle1">
+    <xs:sequence>
+      <xs:element name="subtitle">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="version1">
+    <xs:sequence>
+      <xs:element name="version">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="created1">
+    <xs:sequence>
+      <xs:element name="created">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="revised1">
+    <xs:sequence>
+      <xs:element name="revised">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="actors1">
+    <xs:sequence>
+      <xs:element name="actors">
+        <xs:complexType>
+          <xs:choice maxOccurs="unbounded">
+            <xs:group ref="mathml:person_2"/>
+            <xs:group ref="mathml:organization_2"/>
+          </xs:choice>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="roles1">
+    <xs:sequence>
+      <xs:element name="roles">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:role_2"/>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="license1">
+    <xs:sequence>
+      <xs:element name="license">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute name="url" use="required"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="extended-attribution1">
+    <xs:sequence>
+      <xs:element name="extended-attribution">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:link-group_2"/>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="derived-from1">
+    <xs:sequence>
+      <xs:element name="derived-from">
+        <xs:complexType>
+          <xs:sequence minOccurs="0" maxOccurs="unbounded">
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+              <xs:group ref="mathml:content-id_2"/>
+              <xs:group ref="mathml:repository_2"/>
+              <xs:group ref="mathml:content-url_2"/>
+              <xs:group ref="mathml:title_3"/>
+              <xs:group ref="mathml:short-title_2"/>
+              <xs:group ref="mathml:subtitle_2"/>
+              <xs:group ref="mathml:version_2"/>
+              <xs:group ref="mathml:created_2"/>
+              <xs:group ref="mathml:revised_2"/>
+              <xs:group ref="mathml:actors_2"/>
+              <xs:group ref="mathml:roles_2"/>
+              <xs:group ref="mathml:license_2"/>
+              <xs:group ref="mathml:extended-attribution_2"/>
+              <xs:group ref="mathml:derived-from_2"/>
+              <xs:group ref="mathml:keywordlist_2"/>
+              <xs:group ref="mathml:subjectlist_2"/>
+              <xs:group ref="mathml:education-levellist_2"/>
+              <xs:group ref="mathml:abstract_2"/>
+              <xs:group ref="mathml:objectives_2"/>
+              <xs:group ref="mathml:homepage_2"/>
+              <xs:group ref="mathml:institution_2"/>
+              <xs:group ref="mathml:course-code_2"/>
+              <xs:group ref="mathml:instructor_2"/>
+              <xs:group ref="mathml:uuid_2"/>
+              <xs:group ref="mathml:canonical-book-uuid_2"/>
+              <xs:group ref="mathml:slug_2"/>
+            </xs:choice>
+            <xs:group minOccurs="0" ref="mathml:language_2"/>
+          </xs:sequence>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:implementation"/>
+          <xs:attribute name="url"/>
+          <xs:attribute name="document"/>
+          <xs:attribute name="version"/>
+          <xs:attribute name="repository"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="keywordlist1">
+    <xs:sequence>
+      <xs:element name="keywordlist">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:keyword_2"/>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="subjectlist1">
+    <xs:sequence>
+      <xs:element name="subjectlist">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:subject_2"/>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="education-levellist1">
+    <xs:sequence>
+      <xs:element name="education-levellist">
+        <xs:complexType>
+          <xs:group maxOccurs="unbounded" ref="mathml:education-level_2"/>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="abstract1">
+    <xs:sequence>
+      <xs:element name="abstract">
+        <xs:complexType mixed="true">
+          <xs:choice maxOccurs="unbounded">
+            <xs:group ref="mathml:para_3"/>
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+              <xs:group ref="mathml:emphasis_2"/>
+              <xs:group ref="mathml:term_2"/>
+              <xs:group ref="mathml:foreign_2"/>
+              <xs:group ref="mathml:cite_2"/>
+              <xs:group ref="mathml:span_2"/>
+              <xs:group ref="mathml:sup_2"/>
+              <xs:group ref="mathml:sub_2"/>
+              <xs:group ref="mathml:code_3"/>
+              <xs:group ref="mathml:math_2"/>
+              <xs:group ref="mathml:quote_3"/>
+              <xs:group ref="mathml:preformat_3"/>
+              <xs:group ref="mathml:list_3"/>
+            </xs:choice>
+          </xs:choice>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="objectives1">
+    <xs:sequence>
+      <xs:element name="objectives">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="homepage1">
+    <xs:sequence>
+      <xs:element name="homepage">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="institution1">
+    <xs:sequence>
+      <xs:element name="institution">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="course-code1">
+    <xs:sequence>
+      <xs:element name="course-code">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="instructor1">
+    <xs:sequence>
+      <xs:element name="instructor">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="uuid1">
+    <xs:sequence>
+      <xs:element name="uuid">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="canonical-book-uuid1">
+    <xs:sequence>
+      <xs:element name="canonical-book-uuid">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="slug1">
+    <xs:sequence>
+      <xs:element name="slug">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="language1">
+    <xs:sequence>
+      <xs:element name="language">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="person">
+    <xs:sequence>
+      <xs:element name="person">
+        <xs:complexType>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:honorific"/>
+            <xs:group ref="mathml:firstname"/>
+            <xs:group ref="mathml:othername"/>
+            <xs:group ref="mathml:surname"/>
+            <xs:group ref="mathml:lineage"/>
+            <xs:group ref="mathml:fullname"/>
+            <xs:group ref="mathml:email"/>
+            <xs:group ref="mathml:homepage"/>
+          </xs:choice>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:attribute name="userid"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="organization">
+    <xs:sequence>
+      <xs:element name="organization">
+        <xs:complexType>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:fullname"/>
+            <xs:group ref="mathml:shortname"/>
+            <xs:group ref="mathml:email"/>
+            <xs:group ref="mathml:homepage"/>
+          </xs:choice>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:attribute name="userid"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="role">
+    <xs:sequence>
+      <xs:element name="role">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:attribute name="type" use="required"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="keyword">
+    <xs:sequence>
+      <xs:element name="keyword">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="subject">
+    <xs:sequence>
+      <xs:element name="subject">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:attribute name="source"/>
+          <xs:attribute name="key"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="education-level">
+    <xs:sequence>
+      <xs:element name="education-level">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:attribute name="source"/>
+          <xs:attribute name="key"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="person1">
+    <xs:sequence>
+      <xs:element name="person">
+        <xs:complexType>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:honorific_2"/>
+            <xs:group ref="mathml:firstname_2"/>
+            <xs:group ref="mathml:othername_2"/>
+            <xs:group ref="mathml:surname_2"/>
+            <xs:group ref="mathml:lineage_2"/>
+            <xs:group ref="mathml:fullname_2"/>
+            <xs:group ref="mathml:email_2"/>
+            <xs:group ref="mathml:homepage_2"/>
+          </xs:choice>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute name="userid"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="organization1">
+    <xs:sequence>
+      <xs:element name="organization">
+        <xs:complexType>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:fullname_2"/>
+            <xs:group ref="mathml:shortname_2"/>
+            <xs:group ref="mathml:email_2"/>
+            <xs:group ref="mathml:homepage_2"/>
+          </xs:choice>
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute name="userid"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="role1">
+    <xs:sequence>
+      <xs:element name="role">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute name="type" use="required"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="keyword1">
+    <xs:sequence>
+      <xs:element name="keyword">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="subject1">
+    <xs:sequence>
+      <xs:element name="subject">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute name="source"/>
+          <xs:attribute name="key"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="education-level1">
+    <xs:sequence>
+      <xs:element name="education-level">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute name="source"/>
+          <xs:attribute name="key"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="honorific">
+    <xs:sequence>
+      <xs:element name="honorific">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="firstname">
+    <xs:sequence>
+      <xs:element name="firstname">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="othername">
+    <xs:sequence>
+      <xs:element name="othername">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="surname">
+    <xs:sequence>
+      <xs:element name="surname">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="lineage">
+    <xs:sequence>
+      <xs:element name="lineage">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="fullname">
+    <xs:sequence>
+      <xs:element name="fullname">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="email">
+    <xs:sequence>
+      <xs:element name="email">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="shortname">
+    <xs:sequence>
+      <xs:element name="shortname">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="honorific1">
+    <xs:sequence>
+      <xs:element name="honorific">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="firstname1">
+    <xs:sequence>
+      <xs:element name="firstname">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="othername1">
+    <xs:sequence>
+      <xs:element name="othername">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="surname1">
+    <xs:sequence>
+      <xs:element name="surname">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="lineage1">
+    <xs:sequence>
+      <xs:element name="lineage">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="fullname1">
+    <xs:sequence>
+      <xs:element name="fullname">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="email1">
+    <xs:sequence>
+      <xs:element name="email">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="shortname1">
+    <xs:sequence>
+      <xs:element name="shortname">
+        <xs:complexType mixed="true">
+          <xs:attribute ref="cmlnle:case"/>
+          <xs:attribute ref="cmlnle:reference"/>
+          <xs:attribute ref="cxlxt:born"/>
+          <xs:attribute ref="cxlxt:died"/>
+          <xs:attribute ref="cxlxt:index"/>
+          <xs:attribute ref="cxlxt:name"/>
+          <xs:attribute ref="ns1:color"/>
+          <xs:attribute ref="ns1:font-style"/>
+          <xs:attribute ref="ns1:font-weight"/>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
 </xs:schema>
