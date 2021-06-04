@@ -475,6 +475,7 @@ suite('Extension Test Suite', function (this: Suite) {
   test('cnxml preview rebinds to resource in the active editor', async () => {
     const uri = expect(getRootPathUri())
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
     assert.strictEqual((panel as any).resourceBinding, null)
 
     const resourceFirst = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
@@ -517,6 +518,7 @@ suite('Extension Test Suite', function (this: Suite) {
   test('cnxml preview only rebinds to cnxml', async () => {
     const uri = expect(getRootPathUri())
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
 
     const resourceFirst = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
     const resourceBindingChangedExpectedFirst: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
@@ -719,6 +721,7 @@ suite('Extension Test Suite', function (this: Suite) {
     const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
     const panel = new CnxmlPreviewPanel({ resourceRootDir, client: createMockClient(), events: mockEvents.events })
+    await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
     const rebindingStub = sinon.spy(panel as any, 'rebindToResource')
     const panelBindingChanged = new Promise((resolve, reject) => {
       panel.onDidChangeResourceBinding((event) => {
@@ -747,6 +750,7 @@ suite('Extension Test Suite', function (this: Suite) {
   test('panel hidden and refocused', async () => {
     const command = OpenstaxCommand.SHOW_IMAGE_MANAGER
     await vscode.commands.executeCommand(command)
+    await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
     const panelManager = expect((await extensionExports)[command])
 
     // Hide panel by opening another tab
