@@ -4,7 +4,7 @@ import { runTests } from 'vscode-test'
 
 async function main(): Promise<void> {
   try {
-    const version = '1.54.1' // Update this in .vscode/launch.json too when it changes
+    const version = '1.56.2' // Update this in .vscode/launch.json too when it changes
 
     // The folder containing the Extension Manifest package.json
     // Passed to `--extensionDevelopmentPath`
