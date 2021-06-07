@@ -1,5 +1,8 @@
 <catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
   <uri
-      name="http://cnx.rice.edu/cnxml"
-      uri="./cnxml.xsd" />
+    name="http://cnx.rice.edu/cnxml"
+    uri="./cnxml.xsd" />
+  <uri
+    name="http://cnx.rice.edu/collxml"
+    uri="./collxml.xsd" />
 </catalog>
