@@ -227,9 +227,9 @@ function populateTreeDataToXML(document: XMLDocument, root: any, treeData: TocTr
     const title = document.createElementNS(NS_METADATA, 'md:title')
     const titleContent = document.createTextNode(child.title)
     title.appendChild(titleContent)
-    element.appendChild(title)
     root.appendChild(element)
     if (child.type === TocTreeElementType.subcollection) {
+      element.appendChild(title)
       const contentWrapper = document.createElementNS(NS_COLLECTION, 'content')
       element.appendChild(contentWrapper)
       populateTreeDataToXML(document, contentWrapper, child)
