@@ -1,0 +1,71 @@
+diff --git a/client/static/xsd/collxml.xsd b/client/static/xsd/collxml.xsd
+index 43d3127..744f1b7 100644
+--- a/client/static/xsd/collxml.xsd
++++ b/client/static/xsd/collxml.xsd
+@@ -30,37 +30,14 @@
+   </xs:element>
+   <xs:element name="metadata">
+     <xs:complexType>
+-      <xs:choice minOccurs="0" maxOccurs="unbounded">
+-        <xs:group ref="mathml:content-id"/>
+-        <xs:group ref="mathml:repository"/>
+-        <xs:group ref="mathml:content-url"/>
+-        <xs:group ref="mathml:title_2"/>
+-        <xs:group ref="mathml:short-title"/>
+-        <xs:group ref="mathml:subtitle"/>
+-        <xs:group ref="mathml:version"/>
+-        <xs:group ref="mathml:created"/>
+-        <xs:group ref="mathml:revised"/>
+-        <xs:group ref="mathml:actors"/>
+-        <xs:group ref="mathml:roles"/>
+-        <xs:group ref="mathml:license"/>
+-        <xs:group ref="mathml:extended-attribution"/>
+-        <xs:group ref="mathml:derived-from"/>
+-        <xs:group ref="mathml:keywordlist"/>
+-        <xs:group ref="mathml:subjectlist"/>
+-        <xs:group ref="mathml:education-levellist"/>
+-        <xs:group ref="mathml:abstract"/>
+-        <xs:group ref="mathml:objectives"/>
+-        <xs:group ref="mathml:homepage"/>
+-        <xs:group ref="mathml:institution"/>
+-        <xs:group ref="mathml:course-code"/>
+-        <xs:group ref="mathml:instructor"/>
+-        <xs:group ref="mathml:uuid"/>
+-        <xs:group ref="mathml:canonical-book-uuid"/>
+-        <xs:group ref="mathml:slug"/>
+-        <xs:element ref="mdml:ancillary"/>
+-        <xs:element ref="mdml:version-history"/>
+-        <xs:group ref="mathml:language"/>
+-      </xs:choice>
++      <xs:all>
++        <xs:element ref="mdml:content-id"/>
++        <xs:element ref="mdml:title"/>
++        <xs:element ref="mdml:license"/>
++        <xs:element ref="mdml:uuid"/>
++        <xs:element ref="mdml:slug"/>
++        <xs:element ref="mdml:language"/>
++      </xs:all>
+       <xs:attribute ref="xml:lang"/>
+       <xs:attribute name="class" type="xs:token"/>
+       <xs:attribute ref="s:read-only"/>
+diff --git a/client/static/xsd/mdml.xsd b/client/static/xsd/mdml.xsd
+index ad83744..0824ea8 100644
+--- a/client/static/xsd/mdml.xsd
++++ b/client/static/xsd/mdml.xsd
+@@ -11,6 +11,16 @@
+   <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
+   <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
+   <xs:import namespace="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" schemaLocation="ns1.xsd"/>
++  <xs:element name="content-id" type="xs:string"/>
++  <xs:element name="title" type="xs:string"/>
++  <xs:element name="language" type="xs:string"/>
++  <xs:element name="uuid" type="xs:string"/>
++  <xs:element name="slug" type="xs:string"/>
++  <xs:element name="license">
++    <xs:complexType mixed="true">
++      <xs:attribute name="url" use="required"/>
++    </xs:complexType>
++  </xs:element>
+   <xs:group name="content-id">
+     <xs:sequence>
+       <xs:element name="content-id">

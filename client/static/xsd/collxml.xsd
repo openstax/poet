@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://cnx.rice.edu/collxml" xmlns:cxlxt="http://katalysteducation.org/cxlxt/1.0" xmlns:collxml="http://cnx.rice.edu/collxml" xmlns:s="http://cnx.rice.edu/system-info" xmlns:cnxml="http://cnx.rice.edu/cnxml" xmlns:ns1="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:cmlnle="http://katalysteducation.org/cmlnle/1.0" xmlns:ns2="http://bibtexml.sf.net/" xmlns:mathml="http://www.w3.org/1998/Math/MathML" xmlns:qml="http://cnx.rice.edu/qml/1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mdml="http://cnx.rice.edu/mdml">
+  <xs:import namespace="http://bibtexml.sf.net/" schemaLocation="ns2.xsd"/>
+  <xs:import namespace="http://cnx.rice.edu/cnxml" schemaLocation="cnxml.xsd"/>
+  <xs:import namespace="http://cnx.rice.edu/mdml" schemaLocation="mdml.xsd"/>
+  <xs:import namespace="http://cnx.rice.edu/qml/1.0" schemaLocation="qml.xsd"/>
+  <xs:import namespace="http://cnx.rice.edu/system-info" schemaLocation="s.xsd"/>
+  <xs:import namespace="http://katalysteducation.org/cmlnle/1.0" schemaLocation="cmlnle.xsd"/>
+  <xs:import namespace="http://katalysteducation.org/cxlxt/1.0" schemaLocation="cxlxt.xsd"/>
+  <xs:import namespace="http://www.w3.org/1998/Math/MathML" schemaLocation="mathml.xsd"/>
+  <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
+  <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
+  <xs:import namespace="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" schemaLocation="ns1.xsd"/>
+  <xs:element name="collection">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="collxml:metadata"/>
+        <xs:group ref="mathml:parameters"/>
+        <xs:element ref="collxml:featured-links"/>
+        <xs:element ref="collxml:content"/>
+        <xs:element ref="collxml:declarations"/>
+        <xs:element ref="collxml:extensions"/>
+      </xs:choice>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="type"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="metadata">
+    <xs:complexType>
+      <xs:all>
+        <xs:element ref="mdml:content-id"/>
+        <xs:element ref="mdml:title"/>
+        <xs:element ref="mdml:license"/>
+        <xs:element ref="mdml:uuid"/>
+        <xs:element ref="mdml:slug"/>
+        <xs:element ref="mdml:language"/>
+      </xs:all>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="mdml-version">
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="0.5"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:group name="parameters">
+    <xs:sequence>
+      <xs:element name="parameters">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="collxml:param"/>
+          </xs:sequence>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:element name="featured-links">
+    <xs:complexType>
+      <xs:group maxOccurs="unbounded" ref="mathml:link-group"/>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="display-on-children">
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="true"/>
+            <xs:enumeration value="false"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="id" type="xs:ID"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="content">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="collxml:subcollection"/>
+        <xs:element ref="collxml:module"/>
+        <xs:element ref="collxml:segue"/>
+      </xs:choice>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="declarations">
+    <xs:complexType>
+      <xs:group maxOccurs="unbounded" ref="mathml:parameters_2"/>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="extensions">
+    <xs:complexType mixed="true">
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="param">
+    <xs:complexType>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="name" use="required"/>
+      <xs:attribute name="value" use="required"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="subcollection">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:group ref="mathml:title_2"/>
+        <xs:group ref="mathml:short-title"/>
+        <xs:group ref="mathml:subtitle"/>
+        <xs:group ref="mathml:parameters_3"/>
+        <xs:element ref="collxml:featured-links"/>
+        <xs:element ref="collxml:content"/>
+      </xs:choice>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="module">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:group ref="mathml:title_4"/>
+        <xs:group ref="mathml:short-title"/>
+        <xs:group ref="mathml:subtitle"/>
+        <xs:group ref="mathml:parameters_3"/>
+        <xs:element ref="collxml:featured-links"/>
+        <xs:element ref="collxml:module-featured-link-overrides"/>
+      </xs:choice>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="url"/>
+      <xs:attribute name="document"/>
+      <xs:attribute name="version"/>
+      <xs:attribute name="repository"/>
+      <xs:attribute ref="s:local-path"/>
+      <xs:attribute ref="s:version-at-this-collection-version"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="segue">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:group minOccurs="0" ref="mathml:parameters_3"/>
+        <xs:choice maxOccurs="unbounded">
+          <xs:group ref="mathml:para_2"/>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:term"/>
+            <xs:group ref="mathml:foreign"/>
+            <xs:group ref="mathml:cite"/>
+            <xs:group ref="mathml:span"/>
+            <xs:group ref="mathml:sup"/>
+            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:code_2"/>
+            <xs:group ref="mathml:math"/>
+            <xs:group ref="mathml:quote_2"/>
+            <xs:group ref="mathml:preformat_2"/>
+            <xs:group ref="mathml:list_2"/>
+          </xs:choice>
+        </xs:choice>
+      </xs:sequence>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="id" type="xs:ID"/>
+      <xs:attribute name="parameter-set"/>
+      <xs:attribute name="goes-with">
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="next"/>
+            <xs:enumeration value="previous"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="type"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:group name="parameters1">
+    <xs:sequence>
+      <xs:element name="parameters">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element maxOccurs="unbounded" ref="collxml:param"/>
+          </xs:sequence>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:attribute name="defines" use="required"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="parameters2">
+    <xs:sequence>
+      <xs:element name="parameters">
+        <xs:complexType>
+          <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="class" type="xs:token"/>
+          <xs:attribute ref="s:read-only"/>
+          <xs:attribute name="uses" use="required"/>
+          <xs:anyAttribute processContents="skip"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:element name="module-featured-link-overrides">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" maxOccurs="unbounded" ref="collxml:hide-link"/>
+      </xs:sequence>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="id" type="xs:ID"/>
+      <xs:attribute name="hide-all-links">
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="true"/>
+            <xs:enumeration value="false"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="hide-link">
+    <xs:complexType>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:attribute name="url" use="required"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
