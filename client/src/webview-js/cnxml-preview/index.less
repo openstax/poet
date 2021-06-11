@@ -1,0 +1,151 @@
+// Constants from bootstrap/less/variables.less
+@gray-base:             #000;
+@gray-dark:             lighten(@gray-base, 20%);   // #333
+@gray:                  lighten(@gray-base, 33.5%); // #555
+@gray-medium:           #606163;
+@gray-light:            #cdcdcd;
+@gray-lighter:          gainsboro;
+@gray-lightest:         #ededed;
+@font-size-base:        14px;
+@line-height-base:      1.428571429; // 20/14
+@line-height-computed:  floor((@font-size-base * @line-height-base)); // ~20px
+@table-bg:              transparent;
+@table-border-color:    #ddd;
+@body-bg:               #fff;
+@table-bg-accent:       #f9f9f9;
+@screen-sm:             768px;
+@screen-sm-min:         @screen-sm;
+@screen-xs-max:         (@screen-sm-min - 1);
+
+body {
+  font-size: @font-size-base;
+}
+
+#main-content, .content-excerpt {
+  @import "./content-baked.less";
+
+  // gray is used for text color
+  @gray: #424242;
+
+  sup {
+    top: -.5em;
+  }
+  sub {
+    bottom: -.25em;
+  }
+  h2{
+    font-size: 2.8rem;
+  }
+  h3 {
+    font-size: 2.1rem;
+  }
+  h4 {
+    font-size: 1.6rem;
+  }
+  sub, sup {
+    font-size: 75%;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+  }
+  .os-figure .os-caption-container {
+    line-height: 1.7rem;
+  }
+  .os-glossary-container {
+    dt {
+      font-weight: 700;
+    }
+    dd {
+      margin-left: 0;
+      margin-inline-start: 0;
+    }
+  }
+  [data-type="composite-page"] [data-type="exercise"] [data-type="problem"] p:first-of-type a {
+    font-weight: 700;
+    margin-right: .5em;
+  }
+  code {
+    color: #c7254e;
+    background-color: #f9f2f4;
+    border-radius: 4px;
+  }
+  blockquote {
+    padding: 1rem 2rem;
+    margin: 1rem 0 2rem;
+    border-left: 0.5rem solid #dcdcdc;
+  }
+  figure {
+    margin: 0;
+  }
+  table {
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+
+  .btn-link, .btn-link:hover, .btn-link:focus, .btn-link:active {
+      border-color: transparent;
+  }
+  .btn-link, .btn-link:active, .btn-link.active, .btn-link[disabled], fieldset[disabled] .btn-link {
+      background-color: transparent;
+      -webkit-box-shadow: none;
+      box-shadow: none;
+  }
+  .btn-link {
+      color: #21366b;
+      font-weight: 400;
+      border-radius: 0;
+  }
+  input, button, select, textarea {
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+  }
+  button, html input[type="button"], input[type="reset"], input[type="submit"] {
+      -webkit-appearance: button;
+      cursor: pointer;
+  }
+  button, select {
+      text-transform: none;
+  }
+  button {
+      overflow: visible;
+  }
+  button, input, optgroup, select, textarea {
+      color: inherit;
+      font: inherit;
+      margin: 0;
+  }
+  [data-type="footnote-ref-content"]:before {
+    /* In previous version there was a whitespace in the content */
+    content: " ";
+  }
+
+  .coreq-skills {
+    padding: 0 3rem 3rem 3rem;
+    border: 1px solid #dcdcdc;
+
+    > .os-title {
+      margin: 0 -3rem;
+      padding: 1.5rem 3rem;
+      font-size: 1.5rem;
+      color: @gray;
+      background-color: #ececec;
+      border-bottom: 1px solid #dcdcdc;
+      text-transform: uppercase;
+    }
+
+    .os-coreq-exercises .os-problem-container,
+    .os-coreq-exercises .os-problem-container > p:first-child {
+      display: inline;
+    }
+  }
+}
+
+.content-excerpt {
+  > section {
+    margin-top: 0;
+  }
+  dt {
+    font-weight: 700;
+  }
+}
