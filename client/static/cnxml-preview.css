@@ -6,3 +6,8 @@ body {
 	margin-left: 10px;
 	font-family: sans-serif;
 }
+
+body.vscode-dark {
+	background-color: white;
+	color: black;
+}
