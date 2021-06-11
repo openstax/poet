@@ -1,3 +1,5 @@
+import './index.less'
+
 let vscode
 
 let preview
