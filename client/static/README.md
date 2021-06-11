@@ -1,0 +1,1 @@
+The `cnxml-to-html5.xsl` file in this directory was copied from [rhaptos.cnxmlutils](https://github.com/openstax/rhaptos.cnxmlutils/blob/master/rhaptos/cnxmlutils/xsl/cnxml-to-html5.xsl).
