@@ -1,3 +1,5 @@
+import './index.less'
+
 let vscode
 
 let preview
@@ -112,7 +114,7 @@ window.addEventListener('message', event => {
   const request = event.data
   const type = request.type
   if (type === 'refresh') {
-    handleRefresh(request.xml)
+    handleRefresh(request.xml, request.xsl)
   } else if (type === 'scroll-in-preview') {
     scrollToElementOfSourceLine(parseFloat(request.line))
   } else {
@@ -200,37 +202,20 @@ const scrollToElementOfSourceLine = (line) => {
   window.scroll(window.scrollX, window.scrollY + scrollOffset)
 }
 
-const elementMap = new Map()
-elementMap.set('media', 'div')
-elementMap.set('image', 'img')
-elementMap.set('para', 'p')
-elementMap.set('list', 'ul')
-elementMap.set('item', 'li')
-elementMap.set('title', 'h2')
-// elementMap.set('link', 'a')
-elementMap.set('term', 'strong')
-elementMap.set('strong', 'strong')
-elementMap.set('emphasis', 'em')
-elementMap.set('figure', 'figure')
-elementMap.set('caption', 'figcaption')
-elementMap.set('metadata', null) // Removes the element entirely
-
 let currentVDom
 
-const handleRefresh = (xml) => {
+const handleRefresh = (xml, xsl) => {
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(xml, 'text/xml')
-
-  function translateTag(tagName) {
-    tagName = tagName.toLowerCase().replace('m:', '') // MathJax does not like `m:` prefix on MathML elements
-    return elementMap.has(tagName) ? elementMap.get(tagName) : tagName
-  }
+  const xslDom = parser.parseFromString(xsl, 'text/xml')
+  const xsltProc = new XSLTProcessor()
+  xsltProc.importStylesheet(xslDom)
+  const transformedDoc = xsltProc.transformToFragment(xmlDoc, document)
 
   function recBuildVDom(xmlNode) {
     switch (xmlNode.nodeType) {
       case Node.ELEMENT_NODE: {
-        const tagName = translateTag(xmlNode.tagName)
-        if (!tagName) { return null } // this is an element we want removed (metadata)
+        const tagName = xmlNode.tagName
         const children = [...xmlNode.childNodes]
           .map(c => recBuildVDom(c))
           .filter(c => !!c) // remove any null children (comments, processing instructions, etc)
@@ -248,6 +233,11 @@ const handleRefresh = (xml) => {
       case Node.TEXT_NODE: {
         return xmlNode.nodeValue
       }
+      case Node.DOCUMENT_FRAGMENT_NODE: {
+        // Wrap the children of the document fragment in a <div>
+        const children = [...xmlNode.childNodes].map(c => recBuildVDom(c))
+        return vdom_h('DIV', {}, ...children)
+      }
       default: {
         // ignore anything else by returning null
         return null
@@ -255,7 +245,7 @@ const handleRefresh = (xml) => {
     }
   }
 
-  const newVDom = recBuildVDom(xmlDoc.documentElement)
+  const newVDom = recBuildVDom(transformedDoc)
   vdom_patch(preview, newVDom, currentVDom)
   currentVDom = newVDom
 

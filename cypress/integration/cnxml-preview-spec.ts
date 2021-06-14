@@ -11,7 +11,12 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
       })
     }
     function sendXml(xmlStr: string): void {
-      sendMessage({ type: 'refresh', xml: xmlStr })
+      cy.fixture('cnxml-to-html5.xsl').then(xsl => {
+        sendMessage({ type: 'refresh', xml: xmlStr, xsl: xsl })
+      })
+    }
+    function createCnxmlFromContent(content: string): string {
+      return `<document xmlns="http://cnx.rice.edu/cnxml"><content>${content}</content></document>`
     }
     function sendScrollToLine(line: number): void {
       sendMessage({ type: 'scroll-in-preview', line })
@@ -43,45 +48,45 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
 
     it('Errors when malformed XML is sent', () => {
       sendXml('<invalid-xml-element-name')
-      cy.get('#preview parsererror').should('exist')
+      cy.get('#preview').should('include.text', 'page contains the following errors')
     })
 
     it('Does not error when valid XML is sent', () => {
       sendXml('<valid-xml-element/>')
-      cy.get('#preview parsererror').should('not.exist')
+      cy.get('#preview').should('not.contain', 'page contains the following errors')
     })
 
     it('Updates the DOM when new content is sent', () => {
-      sendXml('<document><para>I am a paragraph</para></document>')
+      sendXml(createCnxmlFromContent('<para>I am a paragraph</para>'))
       cy.get('#preview p').should('exist')
       cy.get('#preview ul').should('not.exist')
-      sendXml('<document><list><item>I am a list with one item</item></list></document>')
+      sendXml(createCnxmlFromContent('<list><item>I am a list with one item</item></list>'))
       cy.get('#preview p').should('not.exist')
       cy.get('#preview ul').should('exist')
     })
 
     describe('cnxml->html conversion', () => {
       it('Translates CNXML tags to HTML', () => {
-        sendXml('<para>I am a paragraph</para>')
+        sendXml(createCnxmlFromContent('<para>I am a paragraph</para>'))
         cy.get('#preview para').should('not.exist')
         cy.get('#preview p').should('exist')
       })
 
       it('Ignores comments', () => {
-        sendXml('<document><!-- I am a comment --></document>')
-        cy.get('#preview document').should('exist')
+        sendXml(createCnxmlFromContent('<!-- I am a comment -->'))
+        cy.get('#preview').should('have.text', '')
       })
 
       it('Removes some elements like metadata', () => {
-        sendXml('<document><metadata><para>Para in a metadata</para></metadata></document>')
+        sendXml('<document xmlns="http://cnx.rice.edu/cnxml"><metadata><para>Para in a metadata</para></metadata></document>')
         cy.get('#preview p').should('not.exist')
       })
     })
 
     describe('Scroll handling', () => {
-      const nLines = (n: number): string => `<pre>${'\n'.repeat(n)}</pre>`
-      const fiveLinesSpaced = `
-        <document data-line="1">
+      const nLines = (n: number): string => `<preformat>${'\n'.repeat(n)}</preformat>`
+      const fiveLinesSpaced = createCnxmlFromContent(`
+        <section data-line="1">
         ${nLines(100)}
         <para data-line="2">Line 2</para>
         ${nLines(100)}
@@ -91,17 +96,17 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
         ${nLines(100)}
         <para data-line="5">Line 5</para>
         ${nLines(100)}
-        </document>`
-      const oneLongLine = `
-        <document data-line="1">
+        </section>`)
+      const oneLongLine = createCnxmlFromContent(`
+        <section data-line="1">
         ${nLines(500)}
         <para data-line="1">Still line 1</para>
-        </document>`
-      const oneLongLineNotFirstLine = `
-        <document data-line="3">
+        </section>`)
+      const oneLongLineNotFirstLine = createCnxmlFromContent(`
+        <section data-line="3">
         ${nLines(500)}
         <para data-line="3">Still line 3</para>
-        </document>`
+        </section>`)
       const emptyDoc = '<document line/>'
       it('scrolls to an element based on its line in the source', () => {
         sendXml(fiveLinesSpaced)
@@ -257,16 +262,16 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
 
     describe('Handling math', () => {
       it('Strips the m: prefix from math elements', () => {
-        sendXml('<document><m:math xmlns:m="https://openstax.org/anything"><m:mtext>I am a math element</m:mtext></m:math></document>')
+        sendXml(createCnxmlFromContent('<m:math xmlns:m="http://www.w3.org/1998/Math/MathML"><m:mtext>I am a math element</m:mtext></m:math>'))
         cy.get('#preview math').should('exist')
       })
 
       it('Updates Math nodes in the DOM when new content is sent', () => {
         // MathJax requires some hacky work
-        sendXml('<document><math><mi>x</mi></math></document>')
+        sendXml(createCnxmlFromContent('<math><mi>x</mi></math>'))
         cy.get('#preview mi').should('exist')
         cy.get('#preview mn').should('not.exist')
-        sendXml('<document><math><mn>2</mn></math></document>')
+        sendXml(createCnxmlFromContent('<math><mn>2</mn></math>'))
         cy.get('#preview mi').should('not.exist')
         cy.get('#preview mn').should('exist')
       })
@@ -274,20 +279,20 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
 
     describe('VirtualDOM (vdom)', () => {
       it('adds multiple elements', () => {
-        sendXml('<root/>')
-        sendXml('<root><child/><child/></root>')
+        sendXml(createCnxmlFromContent('<root/>'))
+        sendXml(createCnxmlFromContent('<root><child/><child/></root>'))
         cy.get('root > child').should('have.length', 2)
       })
 
       it('removes an element', () => {
-        sendXml('<root><child/></root>')
-        sendXml('<root/>')
+        sendXml(createCnxmlFromContent('<root><child/></root>'))
+        sendXml(createCnxmlFromContent('<root/>'))
         cy.get('root > child').should('not.exist')
       })
 
       it('removes an attribute', () => {
-        sendXml('<root id="id123"/>')
-        sendXml('<root/>')
+        sendXml(createCnxmlFromContent('<root id="id123"/>'))
+        sendXml(createCnxmlFromContent('<root/>'))
         cy.get('root').should('not.have.attr', 'id')
       })
     })

@@ -557,7 +557,11 @@ suite('Extension Test Suite', function (this: Suite) {
     tagElementsWithLineNumbers(documentDomSecond)
     const xmlExpectedSecond = new XMLSerializer().serializeToString(documentDomSecond)
     await resourceBindingChangedExpectedSecond
-    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond }))
+    const xsl = await fs.promises.readFile(
+      path.join(resourceRootDir, 'cnxml-to-html5.xsl'),
+      'utf-8'
+    )
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond, xsl: xsl }))
     assert.strictEqual((panel as any).resourceBinding.fsPath, resourceSecond.fsPath)
   }).timeout(5000)
   test('cnxml preview only rebinds to cnxml', async () => {
