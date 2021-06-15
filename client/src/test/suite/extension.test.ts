@@ -333,6 +333,50 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(before.indexOf('m00002'), -1)
     assert.notStrictEqual(after.indexOf('m00002'), -1)
   }).timeout(5000)
+  test('toc editor writes expected collection schema', async () => {
+    const uri = expect(getRootPathUri())
+    const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
+    const mockEditAddModule: TocTreeCollection = {
+      type: TocTreeElementType.collection,
+      title: 'test collection',
+      slug: 'test',
+      children: [{
+        type: TocTreeElementType.subcollection,
+        title: 'subcollection',
+        children: [{
+          type: TocTreeElementType.module,
+          moduleid: 'm00001',
+          title: 'Introduction'
+        }]
+      }, {
+        type: TocTreeElementType.module,
+        moduleid: 'm00002',
+        title: 'Unnamed Module'
+      }]
+    }
+    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+      const handler = tocEditorHandleMessage(panel, createMockClient())
+      await handler({ type: 'write-tree', treeData: mockEditAddModule })
+    })
+    const result = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
+    const expected =
+`<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+  <col:metadata>
+    <md:title>test collection</md:title>
+    <md:slug>test</md:slug>
+  </col:metadata>
+  <content xmlns="http://cnx.rice.edu/collxml">
+    <subcollection>
+      <md:title>subcollection</md:title>
+      <content>
+        <module document="m00001"/>
+      </content>
+    </subcollection>
+    <module document="m00002"/>
+  </content>
+</col:collection>`
+    assert.strictEqual(result, expected)
+  })
   test('toc editor handle error message', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const handler = tocEditorHandleMessage(panel, createMockClient())
@@ -424,14 +468,15 @@ suite('Extension Test Suite', function (this: Suite) {
     await watchedFilesSpy.getCall(0).args[0](undefined)
     assert(refreshStub.called)
   })
-  test('show image upload', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, async (panel) => {
-      const html = panel.webview.html
-      assert.notStrictEqual(html, null)
-      assert.notStrictEqual(html, undefined)
-      assert.notStrictEqual(html.indexOf('html'), -1)
-    })
-  }).timeout(5000)
+  // TODO: image upload test is commented because image upload UX is not finished.
+  // test('show image upload', async () => {
+  //   await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, async (panel) => {
+  //     const html = panel.webview.html
+  //     assert.notStrictEqual(html, null)
+  //     assert.notStrictEqual(html, undefined)
+  //     assert.notStrictEqual(html.indexOf('html'), -1)
+  //   })
+  // }).timeout(5000)
   test('image upload handle message', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     const panel = new ImageManagerPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
@@ -512,7 +557,11 @@ suite('Extension Test Suite', function (this: Suite) {
     tagElementsWithLineNumbers(documentDomSecond)
     const xmlExpectedSecond = new XMLSerializer().serializeToString(documentDomSecond)
     await resourceBindingChangedExpectedSecond
-    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond }))
+    const xsl = await fs.promises.readFile(
+      path.join(resourceRootDir, 'cnxml-to-html5.xsl'),
+      'utf-8'
+    )
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond, xsl: xsl }))
     assert.strictEqual((panel as any).resourceBinding.fsPath, resourceSecond.fsPath)
   }).timeout(5000)
   test('cnxml preview only rebinds to cnxml', async () => {
