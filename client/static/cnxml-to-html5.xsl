@@ -213,11 +213,11 @@
 <!-- ========================= -->
 
 <xsl:template match="/c:document/c:title">
-  <div data-type="document-title">
+  <h2 data-type="document-title">
     <xsl:call-template name="apply-template-no-selfclose">
       <xsl:with-param name="selection" select="@*|node()"/>
     </xsl:call-template>
-  </div>
+  </h2>
 </xsl:template>
 
 <xsl:template match="c:title|c:para//c:list[not(@display)]/c:title|c:para//c:list[@display='block']/c:title">
