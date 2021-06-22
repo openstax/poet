@@ -12,13 +12,11 @@ Add lines into `/package.json`:
 ```json
   "contributes": {
     "commands": [
-      ...
       {
         "comand": "openstax.showImageManager",
         "title": "Show Image Upload",
         "category": "Openstax"
       },
-      ...
     ]
   }
 ```
@@ -26,12 +24,10 @@ Add lines into `/package.json`:
 Change `""viewsWelcome"`->`"contents"` value in `/package.json` and add `[Open Image Upload](command:openstax.showImageManager)\n`. Example:
 
 ```json
-    ...
     "viewsWelcome": [
       {
         "view": "openstax-controls",
         "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageManager)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)"
       }
     ],
-    ...
 ```
