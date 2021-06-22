@@ -40,6 +40,7 @@ export const getRepo = (): Repository => {
 export const taggingDialog = async (): Promise<Tag | undefined> => {
   const tagMode = await vscode.window.showInformationMessage(
     'Tag for release candidate or release?',
+    { modal: true },
     ...[Tag.release, Tag.candidate]
   )
 
