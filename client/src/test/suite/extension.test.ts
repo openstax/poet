@@ -468,14 +468,15 @@ suite('Extension Test Suite', function (this: Suite) {
     await watchedFilesSpy.getCall(0).args[0](undefined)
     assert(refreshStub.called)
   })
-  test('show image upload', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, async (panel) => {
-      const html = panel.webview.html
-      assert.notStrictEqual(html, null)
-      assert.notStrictEqual(html, undefined)
-      assert.notStrictEqual(html.indexOf('html'), -1)
-    })
-  }).timeout(5000)
+  // TODO: image upload test is commented because image upload UX is not finished.
+  // test('show image upload', async () => {
+  //   await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, async (panel) => {
+  //     const html = panel.webview.html
+  //     assert.notStrictEqual(html, null)
+  //     assert.notStrictEqual(html, undefined)
+  //     assert.notStrictEqual(html.indexOf('html'), -1)
+  //   })
+  // }).timeout(5000)
   test('image upload handle message', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     const panel = new ImageManagerPanel({ resourceRootDir, client: createMockClient(), events: createMockEvents().events })
@@ -556,7 +557,11 @@ suite('Extension Test Suite', function (this: Suite) {
     tagElementsWithLineNumbers(documentDomSecond)
     const xmlExpectedSecond = new XMLSerializer().serializeToString(documentDomSecond)
     await resourceBindingChangedExpectedSecond
-    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond }))
+    const xsl = await fs.promises.readFile(
+      path.join(resourceRootDir, 'cnxml-to-html5.xsl'),
+      'utf-8'
+    )
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond, xsl: xsl }))
     assert.strictEqual((panel as any).resourceBinding.fsPath, resourceSecond.fsPath)
   }).timeout(5000)
   test('cnxml preview only rebinds to cnxml', async () => {

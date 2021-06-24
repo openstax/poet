@@ -59,9 +59,9 @@
         "category": "Openstax"
       },
       {
-        "command": "openstax.showImageManager",
-        "title": "Show Image Upload",
-        "category": "Openstax"
+        "__invisible_comand": "openstax.showImageManager",
+        "__invisible_title": "Show Image Upload",
+        "__invisible_category": "Openstax"
       },
       {
         "command": "openstax.pushContent",
@@ -110,7 +110,8 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageManager)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)",
+        "__invisible_image_upload": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageManager)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)"
       }
     ],
     "menus": {
@@ -206,6 +207,8 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.2.1",
     "fs-extra": "^9.1.0",
+    "less": "^4.1.1",
+    "less-loader": "^9.0.0",
     "node-loader": "^1.0.2",
     "nyc": "^15.1.0",
     "sinon": "^9.2.4",

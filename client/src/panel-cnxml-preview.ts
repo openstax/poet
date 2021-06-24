@@ -21,6 +21,7 @@ export type PanelIncomingMessage = ScrollInEditorIncoming | DidReloadIncoming
 export interface RefreshOutgoing {
   type: 'refresh'
   xml: string
+  xsl: string
 }
 
 // Line is one-indexed
@@ -79,6 +80,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
   private resourceBinding: vscode.Uri | null = null
   private webviewIsScrolling: boolean = false
   private resourceIsScrolling: boolean = false
+  private xsl: string = ''
   private readonly _onDidChangeResourceBinding: vscode.EventEmitter<vscode.Uri | null>
   private readonly _onDidInnerPanelReload: vscode.EventEmitter<void>
   constructor(private readonly context: ExtensionHostContext) {
@@ -188,7 +190,14 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     const doc = new DOMParser().parseFromString(contents)
     tagElementsWithLineNumbers(doc)
     const lineTaggedContents = new XMLSerializer().serializeToString(doc)
-    return { type: 'refresh', xml: lineTaggedContents }
+    // Load XSL if we haven't already
+    if (this.xsl === '') {
+      this.xsl = await fs.promises.readFile(
+        path.join(this.context.resourceRootDir, 'cnxml-to-html5.xsl'),
+        'utf-8'
+      )
+    }
+    return { type: 'refresh', xml: lineTaggedContents, xsl: this.xsl }
   }
 
   isPreviewOf(resource: vscode.Uri | null): boolean {
