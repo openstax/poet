@@ -101,20 +101,20 @@ class ModuleInfo {
     return this._imagesUsed(document)
   }
 
-  async imageSources(): Promise<Cachified<ImageSource[]>> {
+  async imageSources(bundleMedia: Cachified<Set<string>>): Promise<Cachified<ImageSource[]>> {
     const document = await this.document()
-    return await this._imageSources(document)
+    return await this._imageSources(document, bundleMedia)
   }
 
   private readonly _imageSources = memoizeOneCache(
-    async ({ inner: doc }: Cachified<Document>) => {
+    async ({ inner: doc }: Cachified<Document>, bundleMedia: Cachified<Set<string>>) => {
       const imageNodes = select('//cnxml:image[@src]', doc) as Element[]
       const imageSourceFromNode = async (imageNode: Element): Promise<ImageSource> => {
         const source = expect(imageNode.getAttribute('src'), 'selection requires attribute exists')
         const basename = path.basename(source)
         // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
         const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), this.moduleid, source)
-        const inBundleMedia = this.bundle.imageExists(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
+        const inBundleMedia = bundleMedia.inner.has(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
         return {
           name: basename,
           path: source,
@@ -529,7 +529,7 @@ export class BookBundle {
     if (moduleInfo == null) {
       return null
     }
-    return await moduleInfo.imageSources()
+    return await moduleInfo.imageSources(this.imagesInternal)
   }
 
   async moduleImages(moduleid: string): Promise<Cachified<Set<string>> | null> {
