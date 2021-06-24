@@ -13,3 +13,15 @@ img {
   max-width: 400px;
   max-height: 400px;
 }
+
+#drop-area {
+  border: 2px dashed #ccc;
+  color: #999;
+  height: 200px;
+  width: 700px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
