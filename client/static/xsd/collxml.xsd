@@ -30,37 +30,14 @@
   </xs:element>
   <xs:element name="metadata">
     <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:group ref="mathml:content-id"/>
-        <xs:group ref="mathml:repository"/>
-        <xs:group ref="mathml:content-url"/>
-        <xs:group ref="mathml:title_2"/>
-        <xs:group ref="mathml:short-title"/>
-        <xs:group ref="mathml:subtitle"/>
-        <xs:group ref="mathml:version"/>
-        <xs:group ref="mathml:created"/>
-        <xs:group ref="mathml:revised"/>
-        <xs:group ref="mathml:actors"/>
-        <xs:group ref="mathml:roles"/>
-        <xs:group ref="mathml:license"/>
-        <xs:group ref="mathml:extended-attribution"/>
-        <xs:group ref="mathml:derived-from"/>
-        <xs:group ref="mathml:keywordlist"/>
-        <xs:group ref="mathml:subjectlist"/>
-        <xs:group ref="mathml:education-levellist"/>
-        <xs:group ref="mathml:abstract"/>
-        <xs:group ref="mathml:objectives"/>
-        <xs:group ref="mathml:homepage"/>
-        <xs:group ref="mathml:institution"/>
-        <xs:group ref="mathml:course-code"/>
-        <xs:group ref="mathml:instructor"/>
-        <xs:group ref="mathml:uuid"/>
-        <xs:group ref="mathml:canonical-book-uuid"/>
-        <xs:group ref="mathml:slug"/>
-        <xs:element ref="mdml:ancillary"/>
-        <xs:element ref="mdml:version-history"/>
-        <xs:group ref="mathml:language"/>
-      </xs:choice>
+      <xs:all>
+        <xs:element ref="mdml:content-id"/>
+        <xs:element ref="mdml:title"/>
+        <xs:element ref="mdml:license"/>
+        <xs:element ref="mdml:uuid"/>
+        <xs:element ref="mdml:slug"/>
+        <xs:element ref="mdml:language"/>
+      </xs:all>
       <xs:attribute ref="xml:lang"/>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute ref="s:read-only"/>
