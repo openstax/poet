@@ -65,35 +65,12 @@
   </xs:group>
   <xs:element name="metadata">
     <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:group ref="mathml:content-id_2"/>
-        <xs:group ref="mathml:repository_2"/>
-        <xs:group ref="mathml:content-url_2"/>
-        <xs:group ref="mathml:title_3"/>
-        <xs:group ref="mathml:short-title_2"/>
-        <xs:group ref="mathml:subtitle_2"/>
-        <xs:group ref="mathml:version_2"/>
-        <xs:group ref="mathml:created_2"/>
-        <xs:group ref="mathml:revised_2"/>
-        <xs:group ref="mathml:actors_2"/>
-        <xs:group ref="mathml:roles_2"/>
-        <xs:group ref="mathml:license_2"/>
-        <xs:group ref="mathml:extended-attribution_2"/>
-        <xs:group ref="mathml:derived-from_2"/>
-        <xs:group ref="mathml:keywordlist_2"/>
-        <xs:group ref="mathml:subjectlist_2"/>
-        <xs:group ref="mathml:education-levellist_2"/>
-        <xs:group ref="mathml:abstract_2"/>
-        <xs:group ref="mathml:objectives_2"/>
-        <xs:group ref="mathml:homepage_2"/>
-        <xs:group ref="mathml:institution_2"/>
-        <xs:group ref="mathml:course-code_2"/>
-        <xs:group ref="mathml:instructor_2"/>
-        <xs:group ref="mathml:uuid_2"/>
-        <xs:group ref="mathml:canonical-book-uuid_2"/>
-        <xs:group ref="mathml:slug_2"/>
-        <xs:group ref="mathml:language_2"/>
-      </xs:choice>
+      <xs:all>
+        <xs:element ref="mdml:content-id"/>
+        <xs:element ref="mdml:title"/>
+        <xs:element ref="mdml:uuid"/>
+        <xs:element minOccurs="0" ref="mdml:abstract"/>
+      </xs:all>
       <xs:attribute ref="cmlnle:case"/>
       <xs:attribute ref="cmlnle:reference"/>
       <xs:attribute ref="cxlxt:born"/>
