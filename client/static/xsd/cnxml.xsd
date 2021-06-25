@@ -15,7 +15,7 @@
     <xs:complexType>
       <xs:sequence>
         <xs:group ref="mathml:title"/>
-        <xs:element minOccurs="0" ref="cnxml:metadata"/>
+        <xs:element ref="cnxml:metadata"/>
         <xs:element minOccurs="0" ref="cnxml:featured-links"/>
         <xs:element ref="cnxml:content"/>
         <xs:element minOccurs="0" ref="cnxml:glossary"/>

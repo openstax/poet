@@ -11,16 +11,6 @@
   <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
   <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
   <xs:import namespace="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" schemaLocation="ns1.xsd"/>
-  <xs:element name="content-id" type="xs:string"/>
-  <xs:element name="title" type="xs:string"/>
-  <xs:element name="language" type="xs:string"/>
-  <xs:element name="uuid" type="xs:string"/>
-  <xs:element name="slug" type="xs:string"/>
-  <xs:element name="license">
-    <xs:complexType mixed="true">
-      <xs:attribute name="url" use="required"/>
-    </xs:complexType>
-  </xs:element>
   <xs:group name="content-id">
     <xs:sequence>
       <xs:element name="content-id">
