@@ -123,9 +123,9 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
             event.data = message;
             window.dispatchEvent(event);
           });
-          window.removeEventListener('DOMContentLoaded', fireInjectedEvents);
+          window.removeEventListener('load', fireInjectedEvents);
         };
-        window.addEventListener('DOMContentLoaded', fireInjectedEvents);
+        window.addEventListener('load', fireInjectedEvents);
       })()
     </script>`
     return html.replace('</body>', `</body>${injection}`)
