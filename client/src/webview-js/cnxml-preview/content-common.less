@@ -68,7 +68,7 @@ figure {
 
   > figcaption {
     padding: 1rem;
-    font-size: 1.3rem;
+    font-size: @font-size-base;
   }
 
   // do not wrap this in a .media so it applies to editing in Aloha
@@ -114,7 +114,7 @@ figure:not([data-orient="vertical"]) {
   }
 
   > figcaption {
-    display: table-caption;
+    // display: table-caption;
     margin-bottom: 1.5rem;
     caption-side: bottom;
   }
@@ -389,14 +389,14 @@ blockquote {
 table {
   width: 100%;
   max-width: 100%;
-  margin-top: 6rem;
+  margin-top: 2rem;
   margin-bottom: @line-height-computed;
   background-color: @table-bg;
   counter-increment: table;
 
   caption {
     margin-top: 0.5rem;
-    font-size: 1.3rem;
+    font-size: @font-size-base;
     text-align: left;
     caption-side: bottom;
 

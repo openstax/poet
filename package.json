@@ -59,11 +59,6 @@
         "category": "Openstax"
       },
       {
-        "__invisible_comand": "openstax.showImageManager",
-        "__invisible_title": "Show Image Upload",
-        "__invisible_category": "Openstax"
-      },
-      {
         "command": "openstax.pushContent",
         "title": "Push Content",
         "category": "Openstax"
@@ -110,8 +105,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)",
-        "__invisible_image_upload": "[Open ToC Editor](command:openstax.showTocEditor)\n[Open Image Upload](command:openstax.showImageManager)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)"
       }
     ],
     "menus": {
