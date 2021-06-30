@@ -121,7 +121,7 @@ export async function ensureCatchPromise<T>(promise: Promise<T>): Promise<void> 
   })
 }
 
-export function populateXsdSchemaFiles(resourceRootDir: string): void {
+export async function populateXsdSchemaFiles(resourceRootDir: string): Promise<void> {
   const relResourcePath = 'xsd'
   const relTargetPath = '.xsd'
   const uri = getRootPathUri()
@@ -145,6 +145,12 @@ export function populateXsdSchemaFiles(resourceRootDir: string): void {
       path.join(targetPath, val)
     )
   })
+
+  const xmlExtension = await expect(
+    vscode.extensions.getExtension('redhat.vscode-xml'),
+    'Expected redhat.vscode-xml extension to be installed'
+  ).activate()
+  xmlExtension.addXMLCatalogs([`./${relTargetPath}/catalog.xml`])
 }
 
 export function launchLanguageServer(context: vscode.ExtensionContext): LanguageClient {
