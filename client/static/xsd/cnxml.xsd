@@ -15,7 +15,7 @@
     <xs:complexType>
       <xs:sequence>
         <xs:group ref="mathml:title"/>
-        <xs:element minOccurs="0" ref="cnxml:metadata"/>
+        <xs:element ref="cnxml:metadata"/>
         <xs:element minOccurs="0" ref="cnxml:featured-links"/>
         <xs:element ref="cnxml:content"/>
         <xs:element minOccurs="0" ref="cnxml:glossary"/>
@@ -65,35 +65,12 @@
   </xs:group>
   <xs:element name="metadata">
     <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:group ref="mathml:content-id_2"/>
-        <xs:group ref="mathml:repository_2"/>
-        <xs:group ref="mathml:content-url_2"/>
-        <xs:group ref="mathml:title_3"/>
-        <xs:group ref="mathml:short-title_2"/>
-        <xs:group ref="mathml:subtitle_2"/>
-        <xs:group ref="mathml:version_2"/>
-        <xs:group ref="mathml:created_2"/>
-        <xs:group ref="mathml:revised_2"/>
-        <xs:group ref="mathml:actors_2"/>
-        <xs:group ref="mathml:roles_2"/>
-        <xs:group ref="mathml:license_2"/>
-        <xs:group ref="mathml:extended-attribution_2"/>
-        <xs:group ref="mathml:derived-from_2"/>
-        <xs:group ref="mathml:keywordlist_2"/>
-        <xs:group ref="mathml:subjectlist_2"/>
-        <xs:group ref="mathml:education-levellist_2"/>
-        <xs:group ref="mathml:abstract_2"/>
-        <xs:group ref="mathml:objectives_2"/>
-        <xs:group ref="mathml:homepage_2"/>
-        <xs:group ref="mathml:institution_2"/>
-        <xs:group ref="mathml:course-code_2"/>
-        <xs:group ref="mathml:instructor_2"/>
-        <xs:group ref="mathml:uuid_2"/>
-        <xs:group ref="mathml:canonical-book-uuid_2"/>
-        <xs:group ref="mathml:slug_2"/>
-        <xs:group ref="mathml:language_2"/>
-      </xs:choice>
+      <xs:all>
+        <xs:element ref="mdml:content-id"/>
+        <xs:element ref="mdml:title"/>
+        <xs:element ref="mdml:uuid"/>
+        <xs:element minOccurs="0" ref="mdml:abstract"/>
+      </xs:all>
       <xs:attribute ref="cmlnle:case"/>
       <xs:attribute ref="cmlnle:reference"/>
       <xs:attribute ref="cxlxt:born"/>
@@ -273,7 +250,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -333,7 +310,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -367,7 +344,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -410,7 +387,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -445,7 +422,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="orient">
             <xs:simpleType>
               <xs:restriction base="xs:token">
@@ -922,7 +899,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="alt" use="required"/>
           <xs:attribute name="longdesc"/>
         </xs:complexType>
@@ -1033,7 +1010,7 @@
               </xs:restriction>
             </xs:simpleType>
           </xs:attribute>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="tabstyle"/>
           <xs:attribute name="tocentry">
             <xs:simpleType>
@@ -1104,7 +1081,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -1133,7 +1110,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -1164,7 +1141,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="print-placement">
             <xs:simpleType>
               <xs:restriction base="xs:token">
@@ -1231,7 +1208,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -2712,7 +2689,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -2904,7 +2881,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -2934,7 +2911,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -3999,7 +3976,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -4042,7 +4019,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -4085,7 +4062,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -4136,7 +4113,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -4197,7 +4174,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -5191,7 +5168,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="alt" use="required"/>
           <xs:attribute name="longdesc"/>
         </xs:complexType>
@@ -5251,7 +5228,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -5627,7 +5604,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -5685,7 +5662,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -5719,7 +5696,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -5762,7 +5739,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -5797,7 +5774,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="orient">
             <xs:simpleType>
               <xs:restriction base="xs:token">
@@ -5848,7 +5825,7 @@
               </xs:restriction>
             </xs:simpleType>
           </xs:attribute>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="tabstyle"/>
           <xs:attribute name="tocentry">
             <xs:simpleType>
@@ -5919,7 +5896,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -5945,7 +5922,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -5973,7 +5950,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="print-placement">
             <xs:simpleType>
               <xs:restriction base="xs:token">
@@ -7010,7 +6987,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -7052,7 +7029,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -7083,7 +7060,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -7182,7 +7159,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -7225,7 +7202,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -7268,7 +7245,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -7319,7 +7296,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
@@ -7379,7 +7356,7 @@
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
           <xs:attribute name="class" type="xs:token"/>
-          <xs:attribute name="id" use="required" type="xs:ID"/>
+          <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
         </xs:complexType>
       </xs:element>
