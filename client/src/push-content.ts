@@ -1,6 +1,8 @@
 import vscode from 'vscode'
-import { expect, getErrorDiagnosticsBySource } from './utils'
+import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref } from './git-api/git'
+import { ExtensionHostContext } from './panel'
+import { requestEnsureIds } from '../../common/src/requests'
 
 export enum Tag {
   release = 'Release',
@@ -84,7 +86,12 @@ export const getMessage = async (): Promise<string | undefined> => {
   return message
 }
 
-export const pushContent = () => async () => {
+export const pushContent = (hostContext: ExtensionHostContext) => async () => {
+  const serverErrorMessage = 'Server cannot properly find workspace'
+  const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
+  // fix ids
+  expect(await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() }), serverErrorMessage)
+  // push content
   if (await canPush(getErrorDiagnosticsBySource())) {
     await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
   }
