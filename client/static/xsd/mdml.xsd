@@ -16,6 +16,31 @@
   <xs:element name="language" type="xs:string"/>
   <xs:element name="uuid" type="xs:string"/>
   <xs:element name="slug" type="xs:string"/>
+  <xs:element name="abstract">
+    <xs:complexType mixed="true">
+      <xs:choice maxOccurs="unbounded">
+        <xs:group ref="mathml:para_2"/>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:group ref="mathml:emphasis"/>
+          <xs:group ref="mathml:term"/>
+          <xs:group ref="mathml:foreign"/>
+          <xs:group ref="mathml:cite"/>
+          <xs:group ref="mathml:span"/>
+          <xs:group ref="mathml:sup"/>
+          <xs:group ref="mathml:sub"/>
+          <xs:group ref="mathml:code_2"/>
+          <xs:group ref="mathml:math"/>
+          <xs:group ref="mathml:quote_2"/>
+          <xs:group ref="mathml:preformat_2"/>
+          <xs:group ref="mathml:list_2"/>
+        </xs:choice>
+      </xs:choice>
+      <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="class" type="xs:token"/>
+      <xs:attribute ref="s:read-only"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
   <xs:element name="license">
     <xs:complexType mixed="true">
       <xs:attribute name="url" use="required"/>

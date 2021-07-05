@@ -27,7 +27,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   expect(process.env.GITPOD_HOST != null && process.env.EDITOR?.includes('code') === false ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
 
   client = launchLanguageServer(context)
-  populateXsdSchemaFiles(resourceRootDir)
+  await populateXsdSchemaFiles(resourceRootDir)
   await client.onReady()
 
   // It is a logic error for anything else to listen to this event from the client.

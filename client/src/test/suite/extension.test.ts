@@ -64,7 +64,17 @@ const createMockEvents = (): { emitters: ExtensionEventEmitters, events: Extensi
   return { emitters, events }
 }
 
+const fakeXmlExtension: vscode.Extension<any> = {
+  activate: SinonRoot.stub().resolves({
+    addXMLCatalogs: (catalogs: string[]): void => {}
+  })
+} as any as vscode.Extension<any>
+
+// Stub the XML extension temporarily for this test helper setup so activate()
+// doesn't error
+SinonRoot.stub(vscode.extensions, 'getExtension').withArgs('redhat.vscode-xml').returns(fakeXmlExtension)
 const extensionExports = activate(contextStub as any)
+SinonRoot.restore()
 
 async function sleep(ms: number): Promise<void> {
   return await new Promise(resolve => setTimeout(resolve, ms))
@@ -132,6 +142,7 @@ suite('Extension Test Suite', function (this: Suite) {
 
   this.beforeEach(() => {
     sinon.spy(CnxmlPreviewPanel.prototype, 'postMessage')
+    sinon.stub(vscode.extensions, 'getExtension').withArgs('redhat.vscode-xml').returns(fakeXmlExtension)
   })
 
   this.afterEach(async () => {
@@ -818,7 +829,7 @@ suite('Extension Test Suite', function (this: Suite) {
     const uri = expect(getRootPathUri())
     const schemaPath = path.join(uri.path, '.xsd')
     assert(!fs.existsSync(schemaPath))
-    populateXsdSchemaFiles(TEST_OUT_DIR)
+    await populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(fs.existsSync(schemaPath))
     assert(fs.existsSync(path.join(schemaPath, 'catalog.xml')))
   })
@@ -830,12 +841,12 @@ suite('Extension Test Suite', function (this: Suite) {
     fs.mkdirSync(path.join(schemaPath))
     fs.writeFileSync(testXsdPath, 'test')
     assert(fs.existsSync(testXsdPath))
-    populateXsdSchemaFiles(TEST_OUT_DIR)
+    await populateXsdSchemaFiles(TEST_OUT_DIR)
     assert(!fs.existsSync(testXsdPath))
   })
   test('schema-generation does not run when there is no workspace', async () => {
     sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
-    populateXsdSchemaFiles('')
+    await populateXsdSchemaFiles('')
   })
   test('getErrorDiagnostics returns expected errors', async () => {
     const file1Uri = { path: '/test1.cnxml', scheme: 'file' } as any as vscode.Uri
