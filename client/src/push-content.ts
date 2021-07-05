@@ -87,10 +87,10 @@ export const getMessage = async (): Promise<string | undefined> => {
 }
 
 export const pushContent = (hostContext: ExtensionHostContext) => async () => {
-  const serverErrorMessage = 'Server cannot properly find workspace'
+  // const serverErrorMessage = 'Server cannot properly find workspace'
   const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
   // fix ids
-  expect(await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() }), serverErrorMessage)
+  await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
   // push content
   if (await canPush(getErrorDiagnosticsBySource())) {
     await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
