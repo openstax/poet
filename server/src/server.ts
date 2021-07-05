@@ -217,7 +217,6 @@ connection.onRequest(ExtensionServerRequest.BundleEnsureIds, async ({ workspaceU
         newId++
       }
       const newIdAttribute = buildNewIdAttribute(prefixId, newId)
-      console.log('fixing ' + tag)
       fixNode.setAttribute('id', newIdAttribute)
     }
   }
