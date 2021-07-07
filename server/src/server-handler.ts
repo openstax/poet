@@ -20,7 +20,9 @@ export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle
       try {
         const tree = expect(await bundle.collectionTree(collection.key), 'collection must exist').inner
         return [tree]
-      } catch {
+      } catch (_error) {
+        const error: Error = _error
+        connection.console.error(`An error occurred while processing bundle tree: ${error.stack ?? error.message}`)
         const uri = expect(bundle.bundleItemToUri(collection), 'No root path to generate diagnostic')
         const diagnostics = await collectionDiagnostic()
         connection.sendDiagnostics({

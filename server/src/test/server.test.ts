@@ -79,7 +79,10 @@ describe('bundleTrees server request', function () {
   })
   it('should handle collection parsing error for xml title', async () => {
     const connection = {
-      sendDiagnostics: sinon.stub()
+      sendDiagnostics: sinon.stub(),
+      console: {
+        error: sinon.stub()
+      }
     }
     const bundle = await BookBundle.from('/bundle')
     const validationQueue = new BundleValidationQueue(bundle, connection as any)
@@ -99,7 +102,10 @@ describe('bundleTrees server request', function () {
   })
   it('should handle collection parsing error for xml slug', async () => {
     const connection = {
-      sendDiagnostics: sinon.stub()
+      sendDiagnostics: sinon.stub(),
+      console: {
+        error: sinon.stub()
+      }
     }
     const bundle = await BookBundle.from('/bundle')
     const validationQueue = new BundleValidationQueue(bundle, connection as any)
@@ -119,7 +125,10 @@ describe('bundleTrees server request', function () {
   })
   it('should return all trees where no error occurs', async () => {
     const connection = {
-      sendDiagnostics: sinon.stub()
+      sendDiagnostics: sinon.stub(),
+      console: {
+        error: sinon.stub()
+      }
     }
     const bundle = await BookBundle.from('/bundle')
     const validationQueue = new BundleValidationQueue(bundle, connection as any)
