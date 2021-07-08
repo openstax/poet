@@ -94,14 +94,14 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
   }, async (progress, token) => {
     token.onCancellationRequested(() => {
       console.log('User canceled the push operation')
-    });
+    })
 
     progress.report({ increment: 15, message: 'Creating Auto Element IDs...' })
 
     // const serverErrorMessage = 'Server cannot properly find workspace'
     const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
     // fix ids
-    // TODO: cosmetic change: use a callback to update progress dynamically on the real progress
+    // TODO: better ui in future: use a callback to update progress dynamically on the real progress
     await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
     progress.report({ increment: 90, message: 'Pushing...' })
     // push content
