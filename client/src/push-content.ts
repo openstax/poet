@@ -87,14 +87,28 @@ export const getMessage = async (): Promise<string | undefined> => {
 }
 
 export const pushContent = (hostContext: ExtensionHostContext) => async () => {
-  // const serverErrorMessage = 'Server cannot properly find workspace'
-  const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
-  // fix ids
-  await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
-  // push content
-  if (await canPush(getErrorDiagnosticsBySource())) {
-    await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
-  }
+  await vscode.window.withProgress({
+    location: vscode.ProgressLocation.Notification,
+    title: 'Push Content',
+    cancellable: true
+  }, async (progress, token) => {
+    token.onCancellationRequested(() => {
+      console.log('User canceled the push operation')
+    });
+
+    progress.report({ increment: 15, message: 'Creating Auto Element IDs...' })
+
+    // const serverErrorMessage = 'Server cannot properly find workspace'
+    const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
+    // fix ids
+    // TODO: cosmetic change: use a callback to update progress dynamically on the real progress
+    await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
+    progress.report({ increment: 90, message: 'Pushing...' })
+    // push content
+    if (await canPush(getErrorDiagnosticsBySource())) {
+      await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+    }
+  })
 }
 
 export const _pushContent = (
