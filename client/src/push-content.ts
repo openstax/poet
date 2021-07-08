@@ -95,15 +95,15 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
     token.onCancellationRequested(() => {
       console.log('User canceled the push operation')
     })
-
-    progress.report({ increment: 15, message: 'Creating Auto Element IDs...' })
+    // indeterminate progress https://github.com/Microsoft/vscode/issues/47387#issuecomment-379537556
+    progress.report({ message: 'Creating Auto Element IDs, please wait...' })
 
     // const serverErrorMessage = 'Server cannot properly find workspace'
     const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
     // fix ids
-    // TODO: better ui in future: use a callback to update progress dynamically on the real progress
+    // TODO: better ui in future. Add `increment` value in `progress.report` and use a callback to update real progress
     await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
-    progress.report({ increment: 90, message: 'Pushing...' })
+    progress.report({ message: 'Pushing...' })
     // push content
     if (await canPush(getErrorDiagnosticsBySource())) {
       await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
