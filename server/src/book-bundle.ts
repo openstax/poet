@@ -307,10 +307,12 @@ export class BookBundle {
     const collections = cachify(new Map<string, CollectionInfo>())
     const bundle = new BookBundle(workspaceRoot, images, modules, collections)
     const loadImages = async (bundle: BookBundle, set: Set<string>): Promise<void> => {
-      const foundImages = await fs.promises.readdir(bundle.mediaDirectory())
-      for (const image of foundImages) {
-        set.add(image)
-      }
+      try { // media directory may not exist
+        const foundImages = await fs.promises.readdir(bundle.mediaDirectory())
+        for (const image of foundImages) {
+          set.add(image)
+        }
+      } catch (err) { }
     }
     const loadModules = async (bundle: BookBundle, map: Map<string, ModuleInfo>): Promise<void> => {
       const foundPossibleModules = await fs.promises.readdir(bundle.moduleDirectory())
