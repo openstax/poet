@@ -15,6 +15,11 @@ import {
   BundleEnsureIdsArgs
 } from '../../common/src/requests'
 
+const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
+const NS_CNXML = 'http://cnx.rice.edu/cnxml'
+const NS_METADATA = 'http://cnx.rice.edu/mdml'
+const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
+
 export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]>, connection: Connection): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
   return async (request: BundleTreesArgs) => {
     const bundleAndValidator = workspaceBookBundles.get(request.workspaceUri)
@@ -41,45 +46,63 @@ export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle
   }
 }
 
+function needFixes(doc: Document): boolean {
+  const needFixNodes = select('//cnxml:para[not(@id)]|//cnxml:equation[not(@id)]|//cnxml:list[not(@id)]|//cnxml:item[not(@id)]|//cnxml:section[not(@id)]|//cnxml:problem[not(@id)]|//cnxml:solution[not(@id)]|//cnxml:exercise[not(@id)]|//cnxml:example[not(@id)]|//cnxml:figure[not(@id)]|//cnxml:definition[not(@id)]|//cnxml:term[not(@id)]|//cnxml:meaning[not(@id)]|//cnxml:table[not(@id)]|//cnxml:quote[not(@id)]|//cnxml:note[not(@id)]|//cnxml:footnote[not(@id)]|//cnxml:cite[not(@id)]', doc) as Element[]
+  return (needFixNodes.length > 0)
+}
+
+function padLeft(text: string, padChar: string, size: number): string {
+  return (String(padChar).repeat(size) + text).substr((size * -1), size)
+}
+
+function buildNewIdAttribute(prefixId: string, id: number): string {
+  const result = prefixId + padLeft(String(id), '0', 5)
+  return result
+}
+
+function isIdAttributeExisting(doc: Document, tag: string, prefixId: string, id: number): boolean {
+  const newId = buildNewIdAttribute(prefixId, id)
+  const checkElements = select('//cnxml:' + tag + '[@id = "' + newId + '"]', doc) as Element[]
+  return (checkElements.length > 0)
+}
+
+function fixIds(doc: Document, tag: string, prefixId: string): void {
+  const fixNodes = select('//cnxml:' + tag + '[not(@id)]', doc) as Element[]
+  for (const fixNode of fixNodes) {
+    let newId: number = 1
+    while (isIdAttributeExisting(doc, tag, prefixId, newId)) {
+      newId++
+    }
+    const newIdAttribute = buildNewIdAttribute(prefixId, newId)
+    fixNode.setAttribute('id', newIdAttribute)
+  }
+}
+
+export function fixDocument(doc: Document): void {
+  if (needFixes(doc)) {
+    fixIds(doc, 'para', 'para')
+    fixIds(doc, 'equation', 'eq')
+    fixIds(doc, 'list', 'list')
+    fixIds(doc, 'item', 'item')
+    fixIds(doc, 'section', 'sect')
+    fixIds(doc, 'problem', 'prob')
+    fixIds(doc, 'solution', 'sol')
+    fixIds(doc, 'exercise', 'exer')
+    fixIds(doc, 'example', 'exam')
+    fixIds(doc, 'figure', 'fig')
+    fixIds(doc, 'definition', 'def')
+    fixIds(doc, 'term', 'term')
+    fixIds(doc, 'meaning', 'mean')
+    fixIds(doc, 'table', 'table')
+    fixIds(doc, 'quote', 'quote')
+    fixIds(doc, 'note', 'note')
+    fixIds(doc, 'footnote', 'foot')
+    fixIds(doc, 'cite', 'cite')
+  }
+}
+
 export function bundleEnsureIdsHandler(workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]>, connection: Connection): (request: BundleEnsureIdsArgs) => Promise<void> {
   return async (request: BundleEnsureIdsArgs) => {
-    const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
-    const NS_CNXML = 'http://cnx.rice.edu/cnxml'
-    const NS_METADATA = 'http://cnx.rice.edu/mdml'
-    const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
-
-    function padLeft(text: string, padChar: string, size: number): string {
-      return (String(padChar).repeat(size) + text).substr((size * -1), size)
-    }
-
-    function needFixes(doc: Document): boolean {
-      const needFixNodes = select('//cnxml:para[not(@id)]|//cnxml:equation[not(@id)]|//cnxml:list[not(@id)]|//cnxml:item[not(@id)]|//cnxml:section[not(@id)]|//cnxml:problem[not(@id)]|//cnxml:solution[not(@id)]|//cnxml:exercise[not(@id)]|//cnxml:example[not(@id)]|//cnxml:figure[not(@id)]|//cnxml:definition[not(@id)]|//cnxml:term[not(@id)]|//cnxml:meaning[not(@id)]|//cnxml:table[not(@id)]|//cnxml:quote[not(@id)]|//cnxml:note[not(@id)]|//cnxml:footnote[not(@id)]|//cnxml:cite[not(@id)]', doc) as Element[]
-      return (needFixNodes.length > 0)
-    }
-
-    function buildNewIdAttribute(prefixId: string, id: number): string {
-      const result = prefixId + padLeft(String(id), '0', 5)
-      return result
-    }
-
-    function isIdAttributeExisting(doc: Document, tag: string, prefixId: string, id: number): boolean {
-      const newId = buildNewIdAttribute(prefixId, id)
-      const checkElements = select('//cnxml:' + tag + '[@id = "' + newId + '"]', doc) as Element[]
-      return (checkElements.length > 0)
-    }
-
-    function fixIds(doc: Document, tag: string, prefixId: string): void {
-      const fixNodes = select('//cnxml:' + tag + '[not(@id)]', doc) as Element[]
-      for (const fixNode of fixNodes) {
-        let newId: number = 1
-        while (isIdAttributeExisting(doc, tag, prefixId, newId)) {
-          newId++
-        }
-        const newIdAttribute = buildNewIdAttribute(prefixId, newId)
-        fixNode.setAttribute('id', newIdAttribute)
-      }
-    }
-
     async function fixModule(moduleName: string): Promise<void> {
       // 3 steps necessary for element id creation: check, fix, save
       // == check xml ==
@@ -88,26 +111,7 @@ export function bundleEnsureIdsHandler(workspaceBookBundles: Map<string, [BookBu
       const data = await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
       const doc = new DOMParser().parseFromString(data)
       // == fix xml ==
-      if (needFixes(doc)) {
-        fixIds(doc, 'para', 'para')
-        fixIds(doc, 'equation', 'eq')
-        fixIds(doc, 'list', 'list')
-        fixIds(doc, 'item', 'item')
-        fixIds(doc, 'section', 'sect')
-        fixIds(doc, 'problem', 'prob')
-        fixIds(doc, 'solution', 'sol')
-        fixIds(doc, 'exercise', 'exer')
-        fixIds(doc, 'example', 'exam')
-        fixIds(doc, 'figure', 'fig')
-        fixIds(doc, 'definition', 'def')
-        fixIds(doc, 'term', 'term')
-        fixIds(doc, 'meaning', 'mean')
-        fixIds(doc, 'table', 'table')
-        fixIds(doc, 'quote', 'quote')
-        fixIds(doc, 'note', 'note')
-        fixIds(doc, 'footnote', 'foot')
-        fixIds(doc, 'cite', 'cite')
-      }
+      fixDocument(doc)
       // == save xml ==
       const out = new XMLSerializer().serializeToString(doc)
       await fs.promises.writeFile(modulePath, out, { encoding: 'utf-8' })
