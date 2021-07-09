@@ -105,7 +105,7 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
       // push content
       progress.report({ message: 'Pushing...' })
-      // await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+      await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
     })
   }
 }
