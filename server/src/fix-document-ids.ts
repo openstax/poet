@@ -28,7 +28,7 @@ ELEMENT_TO_PREFIX.set('cite', 'cite')
 function padLeft(text: string, padChar: string, size: number): string {
   return (String(padChar).repeat(size) + text).substr((size * -1), size)
 }
-function buildId(tag: string, counter: number) {
+function buildId(tag: string, counter: number): string {
   const prefix = expect(ELEMENT_TO_PREFIX.get(tag), 'BUG: Element was not in the id-prefix map')
   return `${prefix}-${padLeft(String(counter), '0', ID_PADDING_CHARS)}`
 }
@@ -38,7 +38,7 @@ function isIdAttributeExisting(doc: Document, id: string): boolean {
   return checkElements.length > 0
 }
 
-export function fixDocument(doc: Document) {
+export function fixDocument(doc: Document): void {
   const xpath = Array.from(ELEMENT_TO_PREFIX.keys()).map(e => `//cnxml:${e}[not(@id)]`).join('|')
   const els = select(xpath, doc) as Element[]
   for (const el of els) {
