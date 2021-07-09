@@ -70,6 +70,3 @@ export function bundleEnsureIdsHandler(workspaceBookBundles: Map<string, [BookBu
     }
   }
 }
-
-
-fixDocument()
