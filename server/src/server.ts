@@ -261,6 +261,7 @@ connection.onRequest(ExtensionServerRequest.BundleEnsureIds, async ({ workspaceU
   const modules = bundle.modules()
   const orphanModules = Array.from((await bundle.orphanedModules()).inner)
   const allModules = modules.concat(orphanModules)
+  // TODO: fix modules in parallel. Problem: Could be a memory hog.
   for (const moduleName of allModules) {
     await fixModule(moduleName)
   }
