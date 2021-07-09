@@ -38,8 +38,12 @@ function isIdAttributeExisting(doc: Document, id: string): boolean {
   return checkElements.length > 0
 }
 
+// Do not add ids to <term> inside a definition.
+function termSpecificSelector(e: string) {
+    return e === 'term' ? '[not(parent::cnxml:definition)]': ''
+}
 export function fixDocument(doc: Document): void {
-  const xpath = Array.from(ELEMENT_TO_PREFIX.keys()).map(e => `//cnxml:${e}[not(@id)]`).join('|')
+  const xpath = Array.from(ELEMENT_TO_PREFIX.keys()).map(e => `//cnxml:${e}[not(@id)]${termSpecificSelector(e)}`).join('|')
   const els = select(xpath, doc) as Element[]
   for (const el of els) {
     const tag = el.tagName.toLowerCase()
@@ -53,7 +57,7 @@ export function fixDocument(doc: Document): void {
 
 // // $ npx ts-node server/src/fix-document-ids.ts
 // import { DOMParser, XMLSerializer } from 'xmldom'
-// const doc = new DOMParser().parseFromString('<document xmlns="http://cnx.rice.edu/cnxml"><term>hi</term></document>', 'text/xml')
+// const doc = new DOMParser().parseFromString('<document xmlns="http://cnx.rice.edu/cnxml"><term>normal</term><definition><term>no-id</term></definition></document>', 'text/xml')
 // fixDocument(doc)
 // const out = new XMLSerializer().serializeToString(doc)
 // console.log(out)
