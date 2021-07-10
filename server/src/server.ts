@@ -1,5 +1,3 @@
-require('source-map-support').install()
-
 import {
   createConnection,
   TextDocuments,
@@ -36,6 +34,9 @@ import {
 
 import { BookBundle } from './book-bundle'
 import { BundleValidationQueue } from './bundle-validation'
+
+import * as sourcemaps from 'source-map-support'
+sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.

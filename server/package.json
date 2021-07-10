@@ -1,6 +1,7 @@
 {
   "name": "server",
   "dependencies": {
+    "@types/source-map-support": "^0.5.4",
     "glob": "^7.1.6",
     "memoize-one": "^5.1.1",
     "source-map-support": "^0.5.19",
