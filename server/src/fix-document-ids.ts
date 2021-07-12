@@ -39,9 +39,10 @@ function isIdAttributeExisting(doc: Document, id: string): boolean {
 }
 
 // Do not add ids to <term> inside a definition.
-function termSpecificSelector(e: string) {
-    return e === 'term' ? '[not(parent::cnxml:definition)]': ''
+function termSpecificSelector(e: string): string {
+  return e === 'term' ? '[not(parent::cnxml:definition)]' : ''
 }
+
 export function fixDocument(doc: Document): void {
   const xpath = Array.from(ELEMENT_TO_PREFIX.keys()).map(e => `//cnxml:${e}[not(@id)]${termSpecificSelector(e)}`).join('|')
   const els = select(xpath, doc) as Element[]
