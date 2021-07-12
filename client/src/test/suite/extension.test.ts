@@ -373,8 +373,12 @@ suite('Extension Test Suite', function (this: Suite) {
     const expected =
 `<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
   <col:metadata>
+    <md:content-id>col00042</md:content-id>
     <md:title>test collection</md:title>
     <md:slug>test</md:slug>
+    <md:language>en</md:language>
+    <md:uuid>e36d32a7-1379-4690-a029-e37246102438</md:uuid>
+    <md:license url="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution License 4.0</md:license>
   </col:metadata>
   <content xmlns="http://cnx.rice.edu/collxml">
     <subcollection>
