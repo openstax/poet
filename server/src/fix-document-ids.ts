@@ -25,7 +25,7 @@ ELEMENT_TO_PREFIX.set('note', 'note')
 ELEMENT_TO_PREFIX.set('footnote', 'foot')
 ELEMENT_TO_PREFIX.set('cite', 'cite')
 
-function padLeft(text: string, padChar: string, size: number): string {
+export function padLeft(text: string, padChar: string, size: number): string {
   if (text.length < size) {
     return (String(padChar).repeat(size) + text).substr((size * -1), size)
   } else {

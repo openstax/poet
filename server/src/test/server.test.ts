@@ -30,7 +30,7 @@ import { DOMParser, XMLSerializer } from 'xmldom'
 import {
   bundleTreesHandler
 } from '../server-handler'
-import { fixDocument } from '../fix-document-ids'
+import { fixDocument, padLeft } from '../fix-document-ids'
 
 const DIAGNOSTIC_SOURCE = 'cnxml'
 
@@ -1535,6 +1535,15 @@ describe('Element ID creation', () => {
       fixDocument(doc)
       const out = new XMLSerializer().serializeToString(doc)
       assert.strictEqual(out, xmlFixed)
+    })
+    it('check high id number generation works right', () => {
+      assert.strictEqual(padLeft('1', '0', 5), '00001')
+      assert.strictEqual(padLeft('1000', '0', 5), '01000')
+      assert.strictEqual(padLeft('10000', '0', 5), '10000')
+      assert.strictEqual(padLeft('100000', '0', 5), '100000')
+      assert.strictEqual(padLeft('34262934876', '0', 5), '34262934876')
+      assert.strictEqual(padLeft('99999', '0', 5), '99999')
+      assert.strictEqual(padLeft('9999', '0', 5), '09999')
     })
   })
 })
