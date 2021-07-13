@@ -1576,6 +1576,25 @@ describe('bundleEnsureIdsHandler server request', function () {
           <title>Module</title>
           <content>
             <para>missing id</para>
+            <para>missing id too</para>
+          </content>
+        </document>
+      `,
+      '/bundle/collections/valid2.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:slug>valid xml slug</md:slug>
+            <md:title>valid xml title</md:title>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/modules/valid2/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <title>Module</title>
+          <content>
+            <para>missing <term>id</term></para>
+            <para>missing id too</para>
           </content>
         </document>
       `
@@ -1598,13 +1617,23 @@ describe('bundleEnsureIdsHandler server request', function () {
     const handler = bundleEnsureIdsHandler(workspaceBookBundles, connection as any)
     const request = { workspaceUri: 'file:///bundle' }
     await handler(request)
-    // check mockedfs file
+    // check mockfs file (file valid)
     const modulePath = '/bundle/modules/valid/index.cnxml'
-    const data = await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
-    const doc = new DOMParser().parseFromString(data)
+    const data1 = await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
+    const doc1 = new DOMParser().parseFromString(data1)
     const NS_CNXML = 'http://cnx.rice.edu/cnxml'
     const select = xpath.useNamespaces({ cnxml: NS_CNXML })
-    const fixParaNodes = select('//cnxml:para', doc) as Element[]
-    assert.strictEqual(fixParaNodes[0].getAttribute('id'), 'para-00001')
+    const fixParaNodes1 = select('//cnxml:para', doc1) as Element[]
+    assert.strictEqual(fixParaNodes1[0].getAttribute('id'), 'para-00001')
+    assert.strictEqual(fixParaNodes1[1].getAttribute('id'), 'para-00002')
+    // check mockfs file (file valid2)
+    const modulePath2 = '/bundle/modules/valid2/index.cnxml'
+    const data2 = await fs.promises.readFile(modulePath2, { encoding: 'utf-8' })
+    const doc2 = new DOMParser().parseFromString(data2)
+    const fixParaNodes2 = select('//cnxml:para', doc2) as Element[]
+    assert.strictEqual(fixParaNodes2[0].getAttribute('id'), 'para-00001')
+    assert.strictEqual(fixParaNodes2[1].getAttribute('id'), 'para-00002')
+    const fixTermNodes2 = select('//cnxml:term', doc2) as Element[]
+    assert.strictEqual(fixTermNodes2[0].getAttribute('id'), 'term-00001')
   })
 })
