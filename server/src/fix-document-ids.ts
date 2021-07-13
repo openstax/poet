@@ -26,8 +26,13 @@ ELEMENT_TO_PREFIX.set('footnote', 'foot')
 ELEMENT_TO_PREFIX.set('cite', 'cite')
 
 function padLeft(text: string, padChar: string, size: number): string {
-  return (String(padChar).repeat(size) + text).substr((size * -1), size)
+  if (text.length < size) {
+    return (String(padChar).repeat(size) + text).substr((size * -1), size)
+  } else {
+    return text
+  }
 }
+
 function buildId(tag: string, counter: number): string {
   const prefix = expect(ELEMENT_TO_PREFIX.get(tag), 'BUG: Element was not in the id-prefix map')
   return `${prefix}-${padLeft(String(counter), '0', ID_PADDING_CHARS)}`
