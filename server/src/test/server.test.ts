@@ -32,6 +32,7 @@ import {
   bundleEnsureIdsHandler
 } from '../server-handler'
 import { fixDocument, padLeft } from '../fix-document-ids'
+import fs from 'fs'
 
 const DIAGNOSTIC_SOURCE = 'cnxml'
 
@@ -1597,6 +1598,13 @@ describe('bundleEnsureIdsHandler server request', function () {
     const handler = bundleEnsureIdsHandler(workspaceBookBundles, connection as any)
     const request = { workspaceUri: 'file:///bundle' }
     await handler(request)
-    // TODO: check module IDs here
+    // check mockedfs file
+    const modulePath = '/bundle/modules/valid/index.cnxml'
+    const data = await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
+    const doc = new DOMParser().parseFromString(data)
+    const NS_CNXML = 'http://cnx.rice.edu/cnxml'
+    const select = xpath.useNamespaces({ cnxml: NS_CNXML })
+    const fixParaNodes = select('//cnxml:para', doc) as Element[]
+    assert.strictEqual(fixParaNodes[0].getAttribute('id'), 'para-00001')
   })
 })
