@@ -26,10 +26,13 @@ import {
   validateModuleImagePaths,
   validateModuleLinks
 } from '../bundle-validation'
-import { DOMParser } from 'xmldom'
+import { DOMParser, XMLSerializer } from 'xmldom'
 import {
-  bundleTreesHandler
+  bundleTreesHandler,
+  bundleEnsureIdsHandler
 } from '../server-handler'
+import { fixDocument, padLeft } from '../fix-document-ids'
+import fs from 'fs'
 
 const DIAGNOSTIC_SOURCE = 'cnxml'
 
@@ -1373,5 +1376,264 @@ describe('BookBundle caching', () => {
       const c = { cacheKey: 'c', resetCacheKey }
       assert.deepStrictEqual(cacheSort([b, c, a]), [a, b, c])
     })
+  })
+})
+describe('Element ID creation', () => {
+  describe('fixDocument', () => {
+    it('check if ids are created', () => {
+      const simple = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
+          <title>Introduction</title>
+          <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Introduction</md:title>
+          </metadata>
+          <content>
+            <para id="test">Test Introduction</para>
+            <para>no id here</para>
+          </content>
+        </document>`
+      const simpleFixed = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
+          <title>Introduction</title>
+          <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Introduction</md:title>
+          </metadata>
+          <content>
+            <para id="test">Test Introduction</para>
+            <para id="para-00001">no id here</para>
+          </content>
+        </document>`
+      const doc = new DOMParser().parseFromString(simple)
+      fixDocument(doc)
+      const out = new XMLSerializer().serializeToString(doc)
+      assert.strictEqual(out, simpleFixed)
+    })
+    it('check if ids are created in right order', () => {
+      const paraPartialId = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
+          <title>Introduction</title>
+          <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Introduction</md:title>
+          </metadata>
+          <content>
+            <section>
+              <para id="para-00001">Test Introduction</para>
+              <para>no id here</para>
+            </section>
+            <section id="sect-00001">
+              <para id="para-00002">oh we have id2 here</para>
+              <para id="para-00003">oh we have id3 here</para>
+              <para>no id here</para>
+              <para>no id here</para>
+            </section>
+          </content>
+        </document>`
+      const doc = new DOMParser().parseFromString(paraPartialId)
+      fixDocument(doc)
+      const NS_CNXML = 'http://cnx.rice.edu/cnxml'
+      const select = xpath.useNamespaces({ cnxml: NS_CNXML })
+      const fixParaNodes = select('//cnxml:para', doc) as Element[]
+      assert.strictEqual(fixParaNodes[0].getAttribute('id'), 'para-00001')
+      assert.strictEqual(fixParaNodes[1].getAttribute('id'), 'para-00004')
+      assert.strictEqual(fixParaNodes[2].getAttribute('id'), 'para-00002')
+      assert.strictEqual(fixParaNodes[3].getAttribute('id'), 'para-00003')
+      assert.strictEqual(fixParaNodes[4].getAttribute('id'), 'para-00005')
+      assert.strictEqual(fixParaNodes[5].getAttribute('id'), 'para-00006')
+      const fixSectionNodes = select('//cnxml:section', doc) as Element[]
+      assert.strictEqual(fixSectionNodes[0].getAttribute('id'), 'sect-00002')
+      assert.strictEqual(fixSectionNodes[1].getAttribute('id'), 'sect-00001')
+    })
+    it('check if ids are generated with right (short) prefix', () => {
+      const xml = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
+          <title>Introduction</title>
+          <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Introduction</md:title>
+          </metadata>
+          <content>
+            <para>no id here</para>
+            <equation/>
+            <list/>
+            <section/>
+            <problem/>
+            <solution/>
+            <exercise/>
+            <example/>
+            <figure/>
+            <definition/>
+            <para>
+              <term>hello</term>
+            </para>
+            <table/>
+            <quote/>
+            <note/>
+            <footnote/>
+            <cite/>
+          </content>
+        </document>`
+      const xmlFixed = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
+          <title>Introduction</title>
+          <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Introduction</md:title>
+          </metadata>
+          <content>
+            <para id="para-00001">no id here</para>
+            <equation id="eq-00001"/>
+            <list id="list-00001"/>
+            <section id="sect-00001"/>
+            <problem id="prob-00001"/>
+            <solution id="sol-00001"/>
+            <exercise id="exer-00001"/>
+            <example id="exam-00001"/>
+            <figure id="fig-00001"/>
+            <definition id="def-00001"/>
+            <para id="para-00002">
+              <term id="term-00001">hello</term>
+            </para>
+            <table id="table-00001"/>
+            <quote id="quote-00001"/>
+            <note id="note-00001"/>
+            <footnote id="foot-00001"/>
+            <cite id="cite-00001"/>
+          </content>
+        </document>`
+      const doc = new DOMParser().parseFromString(xml)
+      fixDocument(doc)
+      const out = new XMLSerializer().serializeToString(doc)
+      assert.strictEqual(out, xmlFixed)
+    })
+    it('check if term in defintion does not get an id', () => {
+      const xml = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
+          <title>Introduction</title>
+          <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Introduction</md:title>
+          </metadata>
+          <content>
+            <para>
+              <term id="term-00001">hello</term>
+            </para>
+            <definition>
+              <term>I should not get an id</term>
+            </definition>
+            <para>
+              <term>need id</term>
+            </para>
+          </content>
+        </document>`
+      const xmlFixed = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
+          <title>Introduction</title>
+          <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
+            <md:title>Introduction</md:title>
+          </metadata>
+          <content>
+            <para id="para-00001">
+              <term id="term-00001">hello</term>
+            </para>
+            <definition id="def-00001">
+              <term>I should not get an id</term>
+            </definition>
+            <para id="para-00002">
+              <term id="term-00002">need id</term>
+            </para>
+          </content>
+        </document>`
+      const doc = new DOMParser().parseFromString(xml)
+      fixDocument(doc)
+      const out = new XMLSerializer().serializeToString(doc)
+      assert.strictEqual(out, xmlFixed)
+    })
+    it('check high id number generation works right', () => {
+      assert.strictEqual(padLeft('1', '0', 5), '00001')
+      assert.strictEqual(padLeft('1000', '0', 5), '01000')
+      assert.strictEqual(padLeft('10000', '0', 5), '10000')
+      assert.strictEqual(padLeft('100000', '0', 5), '100000')
+      assert.strictEqual(padLeft('34262934876', '0', 5), '34262934876')
+      assert.strictEqual(padLeft('99999', '0', 5), '99999')
+      assert.strictEqual(padLeft('9999', '0', 5), '09999')
+    })
+  })
+})
+
+describe('bundleEnsureIdsHandler server request', function () {
+  before(function () {
+    mockfs({
+      '/bundle/media/test.jpg': '',
+      '/bundle/collections/invalidslug.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>valid</md:title>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/collections/valid1.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:slug>valid xml slug</md:slug>
+            <md:title>valid xml title</md:title>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/modules/valid1/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <title>Module</title>
+          <content>
+            <para>missing id</para>
+            <para>missing id too</para>
+          </content>
+        </document>
+      `,
+      '/bundle/collections/valid2.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:slug>valid xml slug</md:slug>
+            <md:title>valid xml title</md:title>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/modules/valid2/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <title>Module</title>
+          <content>
+            <para>missing <term>id</term></para>
+            <para>missing id too</para>
+          </content>
+        </document>
+      `
+    })
+  })
+  after(function () {
+    mockfs.restore()
+  })
+  it('should create IDs for files on filesystem', async () => {
+    const connection = {
+      sendDiagnostics: sinon.stub(),
+      console: {
+        error: sinon.stub()
+      }
+    }
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
+    workspaceBookBundles.set('file:///bundle', [bundle, validationQueue])
+    const handler = bundleEnsureIdsHandler(workspaceBookBundles, connection as any)
+    const request = { workspaceUri: 'file:///bundle' }
+    await handler(request)
+    // check mockfs file (file valid)
+    const modulePath = '/bundle/modules/valid1/index.cnxml'
+    const data1 = await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
+    const doc1 = new DOMParser().parseFromString(data1)
+    const NS_CNXML = 'http://cnx.rice.edu/cnxml'
+    const select = xpath.useNamespaces({ cnxml: NS_CNXML })
+    const fixParaNodes1 = select('//cnxml:para', doc1) as Element[]
+    assert.strictEqual(fixParaNodes1[0].getAttribute('id'), 'para-00001')
+    assert.strictEqual(fixParaNodes1[1].getAttribute('id'), 'para-00002')
+    // check mockfs file (file valid2)
+    const modulePath2 = '/bundle/modules/valid2/index.cnxml'
+    const data2 = await fs.promises.readFile(modulePath2, { encoding: 'utf-8' })
+    const doc2 = new DOMParser().parseFromString(data2)
+    const fixParaNodes2 = select('//cnxml:para', doc2) as Element[]
+    assert.strictEqual(fixParaNodes2[0].getAttribute('id'), 'para-00001')
+    assert.strictEqual(fixParaNodes2[1].getAttribute('id'), 'para-00002')
+    const fixTermNodes2 = select('//cnxml:term', doc2) as Element[]
+    assert.strictEqual(fixTermNodes2[0].getAttribute('id'), 'term-00001')
   })
 })

@@ -15,7 +15,8 @@ interface LanguageClient {
 export enum ExtensionServerRequest {
   BundleTrees = 'bundle-trees',
   BundleModules = 'bundle-modules',
-  BundleOrphanedModules = 'bundle-orphaned-modules'
+  BundleOrphanedModules = 'bundle-orphaned-modules',
+  BundleEnsureIds = 'bundle-ensure-ids'
 }
 export interface BundleTreesArgs {
   workspaceUri: string
@@ -31,6 +32,9 @@ export interface BundleModulesArgs {
   workspaceUri: string
 }
 export type BundleModulesResponse = TocTreeModule[] | null
+export interface BundleEnsureIdsArgs {
+  workspaceUri: string
+}
 
 export const requestBundleTrees = async (client: LanguageClient, args: BundleTreesArgs): Promise<BundleTreesResponse> => {
   return await client.sendRequest(ExtensionServerRequest.BundleTrees, args)
@@ -40,4 +44,7 @@ export const requestBundleOrphanedModules = async (client: LanguageClient, args:
 }
 export const requestBundleModules = async (client: LanguageClient, args: BundleModulesArgs): Promise<BundleModulesResponse> => {
   return await client.sendRequest(ExtensionServerRequest.BundleModules, args)
+}
+export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsArgs): Promise<void> => {
+  return await client.sendRequest(ExtensionServerRequest.BundleEnsureIds, args)
 }

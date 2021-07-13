@@ -29,6 +29,7 @@ import {
 } from '../../common/src/requests'
 
 import {
+  bundleEnsureIdsHandler,
   bundleTreesHandler
 } from './server-handler'
 
@@ -179,6 +180,8 @@ connection.onRequest(ExtensionServerRequest.BundleModules, async ({ workspaceUri
   const result = await Promise.all(modules.map(async m => await bundle.moduleAsTreeObject(m)))
   return result
 })
+
+connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler(workspaceBookBundles, connection))
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

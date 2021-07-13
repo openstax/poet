@@ -1223,6 +1223,12 @@ export const makeMockNewTag = (tag: string | undefined): (repo: Repository, rele
 suite('Push Button Test Suite', function (this: Suite) {
   const sinon = SinonRoot.createSandbox()
   this.afterEach(() => sinon.restore())
+  const sendRequestMock = sinon.stub()
+  const mockHostContext: ExtensionHostContext = {
+    client: {
+      sendRequest: sendRequestMock
+    }
+  } as any as ExtensionHostContext
 
   test('getRepo returns repository', async () => {
     const repo = pushContent.getRepo()
@@ -1364,15 +1370,19 @@ suite('Push Button Test Suite', function (this: Suite) {
     sinon.stub(pushContent, 'canPush').resolves(false)
     const stubPushContentHelperInner = sinon.stub()
     sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
-    await pushContent.pushContent()()
+    await pushContent.pushContent(mockHostContext)()
     assert(stubPushContentHelperInner.notCalled)
+    assert(sendRequestMock.notCalled)
   })
   test('pushContent invokes _pushContent when canPush is true', async () => {
     sinon.stub(pushContent, 'canPush').resolves(true)
     const stubPushContentHelperInner = sinon.stub()
     sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
-    await pushContent.pushContent()()
+    await pushContent.pushContent(mockHostContext)()
     assert(stubPushContentHelperInner.calledOnce)
+    assert(sendRequestMock.calledOnceWith(
+      ExtensionServerRequest.BundleEnsureIds
+    ))
   })
   test('push to new branch', async () => {
     const messages: string[] = []

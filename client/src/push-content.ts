@@ -1,6 +1,8 @@
 import vscode from 'vscode'
-import { expect, getErrorDiagnosticsBySource } from './utils'
+import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref } from './git-api/git'
+import { ExtensionHostContext } from './panel'
+import { requestEnsureIds } from '../../common/src/requests'
 
 export enum Tag {
   release = 'Release',
@@ -84,9 +86,28 @@ export const getMessage = async (): Promise<string | undefined> => {
   return message
 }
 
-export const pushContent = () => async () => {
+export const pushContent = (hostContext: ExtensionHostContext) => async () => {
   if (await canPush(getErrorDiagnosticsBySource())) {
-    await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'Push Content',
+      cancellable: true
+    }, async (progress, token) => {
+      token.onCancellationRequested(() => {
+        /* istanbul ignore next */
+        console.log('User canceled the push operation')
+      })
+      // indeterminate progress https://github.com/Microsoft/vscode/issues/47387#issuecomment-379537556
+      progress.report({ message: 'Creating Auto Element IDs, please wait...' })
+      // const serverErrorMessage = 'Server cannot properly find workspace'
+      const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
+      // fix ids
+      // TODO: better ui in future. Add `increment` value in `progress.report` and use a callback to update real progress
+      await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
+      // push content
+      progress.report({ message: 'Pushing...' })
+      await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+    })
   }
 }
 
