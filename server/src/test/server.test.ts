@@ -1562,7 +1562,7 @@ describe('bundleEnsureIdsHandler server request', function () {
           <col:content />
         </col:collection>
       `,
-      '/bundle/collections/valid.xml': `
+      '/bundle/collections/valid1.xml': `
         <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
           <col:metadata>
             <md:slug>valid xml slug</md:slug>
@@ -1571,7 +1571,7 @@ describe('bundleEnsureIdsHandler server request', function () {
           <col:content />
         </col:collection>
       `,
-      '/bundle/modules/valid/index.cnxml': `
+      '/bundle/modules/valid1/index.cnxml': `
         <document xmlns="http://cnx.rice.edu/cnxml">
           <title>Module</title>
           <content>
@@ -1618,7 +1618,7 @@ describe('bundleEnsureIdsHandler server request', function () {
     const request = { workspaceUri: 'file:///bundle' }
     await handler(request)
     // check mockfs file (file valid)
-    const modulePath = '/bundle/modules/valid/index.cnxml'
+    const modulePath = '/bundle/modules/valid1/index.cnxml'
     const data1 = await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
     const doc1 = new DOMParser().parseFromString(data1)
     const NS_CNXML = 'http://cnx.rice.edu/cnxml'
