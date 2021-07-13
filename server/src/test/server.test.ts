@@ -28,7 +28,8 @@ import {
 } from '../bundle-validation'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import {
-  bundleTreesHandler
+  bundleTreesHandler,
+  bundleEnsureIdsHandler
 } from '../server-handler'
 import { fixDocument, padLeft } from '../fix-document-ids'
 
@@ -1545,5 +1546,57 @@ describe('Element ID creation', () => {
       assert.strictEqual(padLeft('99999', '0', 5), '99999')
       assert.strictEqual(padLeft('9999', '0', 5), '09999')
     })
+  })
+})
+
+describe('bundleEnsureIdsHandler server request', function () {
+  before(function () {
+    mockfs({
+      '/bundle/media/test.jpg': '',
+      '/bundle/collections/invalidslug.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:title>valid</md:title>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/collections/valid.xml': `
+        <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+          <col:metadata>
+            <md:slug>valid xml slug</md:slug>
+            <md:title>valid xml title</md:title>
+          </col:metadata>
+          <col:content />
+        </col:collection>
+      `,
+      '/bundle/modules/valid/index.cnxml': `
+        <document xmlns="http://cnx.rice.edu/cnxml">
+          <title>Module</title>
+          <content>
+            <para>missing id</para>
+          </content>
+        </document>
+      `
+    })
+  })
+  after(function () {
+    mockfs.restore()
+  })
+  it('should create IDs for files on filesystem', async () => {
+    const connection = {
+      sendDiagnostics: sinon.stub(),
+      console: {
+        error: sinon.stub()
+      }
+    }
+    const bundle = await BookBundle.from('/bundle')
+    const validationQueue = new BundleValidationQueue(bundle, connection as any)
+    const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
+    workspaceBookBundles.set('file:///bundle', [bundle, validationQueue])
+    const handler = bundleEnsureIdsHandler(workspaceBookBundles, connection as any)
+    const request = { workspaceUri: 'file:///bundle' }
+    await handler(request)
+    // TODO: check module IDs here
   })
 })
