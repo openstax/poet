@@ -94,6 +94,7 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       cancellable: true
     }, async (progress, token) => {
       token.onCancellationRequested(() => {
+        /* istanbul ignore next */
         console.log('User canceled the push operation')
       })
       // indeterminate progress https://github.com/Microsoft/vscode/issues/47387#issuecomment-379537556
