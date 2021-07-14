@@ -106,6 +106,10 @@ There is a launch configuration to attach to the language server which can be us
 
 You can now set breakpoints, etc. in the server source code.
 
+## Releasing the extension to open-vsx.org
+
+[This Concourse Pipeline](https://github.com/openstax/concourse-pipelines/tree/master/release-poet) uploads to https://open-vsx.org/extension/openstax/editor whenever a new tag is created on this repository.
+
 ## Generating XSD schema files
 
 The CNXML schema validation in the extension is performed using XSD files generated using the RelaxNG schema files in the `poet-schema` branch of the [cnxml repo](https://github.com/openstax/cnxml). The XSD files can be regenerated using [jing-trang](https://github.com/relaxng/jing-trang.git). You can clone that repo and follow the instructions to build `trang.jar` and `jing.jar`. The following steps assume:
