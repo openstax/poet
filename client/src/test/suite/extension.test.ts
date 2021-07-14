@@ -371,12 +371,16 @@ suite('Extension Test Suite', function (this: Suite) {
     })
     const result = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
     const expected =
-`<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
+`<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns="http://cnx.rice.edu/collxml">
   <col:metadata>
+    <md:content-id>col00042</md:content-id>
     <md:title>test collection</md:title>
     <md:slug>test</md:slug>
+    <md:language>en</md:language>
+    <md:uuid>e36d32a7-1379-4690-a029-e37246102438</md:uuid>
+    <md:license url="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution License 4.0</md:license>
   </col:metadata>
-  <content xmlns="http://cnx.rice.edu/collxml">
+  <content>
     <subcollection>
       <md:title>subcollection</md:title>
       <content>
@@ -455,16 +459,27 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(moduleTitle[0].textContent, 'rename')
   })
   test('toc editor handle module rename worst case', async () => {
+    // The worst case scenario entails CNXML with no existing metadata or title,
+    // so delete them from one of our test book modules prior to doing the
+    // rename
+    const uri = expect(getRootPathUri())
+    const modulePath = path.join(uri.fsPath, 'modules', 'm00002', 'index.cnxml')
+    let moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
+    let document = new DOMParser().parseFromString(moduleData)
+    const metadata = select('//cnxml:metadata', document) as Element[]
+    metadata[0].parentNode?.removeChild(metadata[0])
+    let moduleTitle = select('//cnxml:title', document) as Element[]
+    moduleTitle[0].parentNode?.removeChild(moduleTitle[0])
+    const modifiedModule = new XMLSerializer().serializeToString(document)
+    fs.writeFileSync(modulePath, modifiedModule, { encoding: 'utf-8' })
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const handler = tocEditorHandleMessage(panel, createMockClient())
       await handler({ type: 'module-rename', moduleid: 'm00002', newName: 'rename' })
     })
-    const uri = expect(getRootPathUri())
-    const modulePath = path.join(uri.fsPath, 'modules', 'm00002', 'index.cnxml')
-    const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
-    const document = new DOMParser().parseFromString(moduleData)
+    moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
+    document = new DOMParser().parseFromString(moduleData)
     const moduleMetaTitle = select('//cnxml:metadata/md:title', document) as Element[]
-    const moduleTitle = select('//cnxml:title', document) as Element[]
+    moduleTitle = select('//cnxml:title', document) as Element[]
     assert.strictEqual(moduleMetaTitle.length, 1)
     assert.strictEqual(moduleMetaTitle[0].textContent, 'rename')
     assert.strictEqual(moduleTitle.length, 1)
