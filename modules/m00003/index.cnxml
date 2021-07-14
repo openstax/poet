@@ -1,9 +1,11 @@
 <document xmlns="http://cnx.rice.edu/cnxml">
+  <title>Module 3</title>
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
-    <md:title />
+    <md:title>Module 3</md:title>
+    <md:content-id>m00003</md:content-id>
+    <md:uuid>7681558a-1046-46eb-a595-a8e981adfe3b</md:uuid>
   </metadata>
   <content>
-    <para>Empty title! Oh no!</para>
-    <para>Also an orphan :(</para>
+    <para id="test">Test content</para>
   </content>
 </document>
