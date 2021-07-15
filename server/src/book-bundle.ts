@@ -2,21 +2,14 @@ import { DOMParser } from 'xmldom'
 import path from 'path'
 import fs from 'fs'
 import { FileChangeType, FileEvent } from 'vscode-languageserver/node'
-import * as xpath from 'xpath-ts'
-import { expect, fileExistsAt } from './utils'
+import { expect, select, fileExistsAt, NS_METADATA, NS_COLLECTION, NS_CNXML } from './utils'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
 import {
   URI
 } from 'vscode-uri'
 import { cacheSort, Cachified, cachify, memoizeOneCache, recachify } from './cachify'
 
-export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
-export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
-export const NS_METADATA = 'http://cnx.rice.edu/mdml'
-
 const FS_SEP = path.sep
-
-const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
 export interface Link {
   moduleid: string
@@ -53,7 +46,7 @@ export interface BundleItem {
 
 class ModuleInfo {
   private fileDataInternal: Cachified<FileData> | null = null
-  constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
+  constructor(private readonly bundle: BookBundle, readonly moduleid: string) { }
   async fileData(): Promise<Cachified<FileData>> {
     if (this.fileDataInternal == null) {
       const modulePath = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
@@ -224,7 +217,7 @@ class ModuleInfo {
 
 class CollectionInfo {
   private fileDataInternal: Cachified<FileData> | null = null
-  constructor(private readonly bundle: BookBundle, readonly filename: string) {}
+  constructor(private readonly bundle: BookBundle, readonly filename: string) { }
   async fileData(): Promise<Cachified<FileData>> {
     if (this.fileDataInternal == null) {
       const modulePath = path.join(this.bundle.workspaceRoot(), 'collections', this.filename)
@@ -299,7 +292,7 @@ export class BookBundle {
     private imagesInternal: Cachified<Set<string>>,
     private modulesInternal: Cachified<Map<string, ModuleInfo>>,
     private collectionsInternal: Cachified<Map<string, CollectionInfo>>
-  ) {}
+  ) { }
 
   static async from(workspaceRoot: string): Promise<BookBundle> {
     const images = cachify(new Set<string>())
@@ -579,7 +572,7 @@ export class BookBundle {
     this.imagesInternal = recachify(this.imagesInternal)
   }
 
-  private onImageChanged(name: string): void {}
+  private onImageChanged(name: string): void { }
   private onImageDeleted(name: string): void {
     this.imagesInternal.inner.delete(name)
     this.imagesInternal = recachify(this.imagesInternal)
@@ -647,7 +640,7 @@ export class BookBundle {
     const indexOfLastSep = deletedPath.lastIndexOf(FS_SEP)
     const maybeModuleId = deletedPath.substring(indexOfLastSep + 1)
     return ((deletedPath === this.moduleDirectory()) ||
-            (deletedPath.includes(this.moduleDirectory()) && this.moduleExists(maybeModuleId)))
+      (deletedPath.includes(this.moduleDirectory()) && this.moduleExists(maybeModuleId)))
   }
 
   processDirectoryDeletion(change: FileEvent): void {

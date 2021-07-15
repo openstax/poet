@@ -5,7 +5,11 @@ import {
   InitializeParams,
   TextDocumentSyncKind,
   InitializeResult,
-  WorkspaceFolder
+  WorkspaceFolder,
+  CompletionItem,
+  CompletionItemKind,
+  DidChangeTextDocumentParams,
+  TextDocumentPositionParams
 } from 'vscode-languageserver/node'
 
 import {
@@ -17,7 +21,8 @@ import {
 } from 'vscode-uri'
 
 import {
-  expect
+  expect,
+  matchElement
 } from './utils'
 
 import {
@@ -72,6 +77,9 @@ connection.onInitialize(async (params: InitializeParams) => {
         openClose: true,
         change: TextDocumentSyncKind.Incremental
       },
+      completionProvider: {
+        resolveProvider: true
+      },
       workspace: {
         workspaceFolders: {
           supported: true
@@ -83,6 +91,7 @@ connection.onInitialize(async (params: InitializeParams) => {
 })
 
 connection.onInitialized(() => {
+  connection.console.log('init')
   const inner = async (): Promise<void> => {
     const currentWorkspaces = await connection.workspace.getWorkspaceFolders()
     if (currentWorkspaces != null) {
@@ -182,6 +191,21 @@ connection.onRequest(ExtensionServerRequest.BundleModules, async ({ workspaceUri
 })
 
 connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler(workspaceBookBundles, connection))
+
+connection.onDidChangeTextDocument((params: DidChangeTextDocumentParams): void => {
+  connection.console.log('test')
+})
+
+connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
+  return item
+})
+
+connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
+  const document = _textDocumentPosition.textDocument.uri
+  const pos = _textDocumentPosition.position
+  matchElement(document, pos, '//cnxml:image[@src]')
+  return []
+})
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

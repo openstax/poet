@@ -4,8 +4,17 @@ import {
   Position
 } from 'vscode-languageserver/node'
 import fs from 'fs'
+import * as xpath from 'xpath-ts'
+import { DOMParser } from 'xmldom'
+import { URI } from 'vscode-uri'
 
 const SOURCE = 'cnxml'
+
+export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
+export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
+export const NS_METADATA = 'http://cnx.rice.edu/mdml'
+
+export const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
 export function generateDiagnostic(severity: DiagnosticSeverity,
   startPosition: Position, endPosition: Position, message: string,
@@ -21,6 +30,29 @@ export function generateDiagnostic(severity: DiagnosticSeverity,
     code: diagnosticCode
   }
   return diagnostic
+}
+
+export function matchElement(documentURI: string, position: Position, xpath: string): void {
+  const doc = URI.parse(documentURI)
+  const file = fs.readFileSync(doc.fsPath, { encoding: 'utf-8' })
+  const p = new DOMParser()
+  const dom = p.parseFromString(file)
+
+  const potentialMatches = select(xpath, dom) as any[]
+
+  console.log(position)
+
+  console.log('matches')
+  const elementMatches = potentialMatches.filter((element) => {
+    const srcAttr = element.attributes.getNamedItem('src')
+    return srcAttr.lineNumber === position.line + 1
+    // return position.line >= element.lineNumber && position.line < element.nextSibling?.lineNumber
+  })
+
+  //console.log(`${element.attributes[0].lineNumber as string}, ${element.attributes[0].columnNumber as string}`)
+  // const idAttr = dom.documentElement.firstChild.attributes[0]
+  // console.log(idAttr.lineNumber, idAttr.columnNumber)
+  console.log(elementMatches)
 }
 
 export function calculateElementPositions(element: any): Position[] {
