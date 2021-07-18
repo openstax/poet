@@ -48,13 +48,15 @@ export function fixDocument(doc: Document): void {
   const ids = new Set(elsWithIds.map(el => el.getAttribute('id')))
   const xpath = Array.from(ELEMENT_TO_PREFIX.keys()).map(e => `//cnxml:${e}[not(@id)]${termSpecificSelector(e)}`).join('|')
   const els = select(xpath, doc) as Element[]
+  const cacheHighId: { [tag: string]: number } = {}
   for (const el of els) {
     const tag = el.tagName.toLowerCase()
-    let counter = 1
+    let counter = cacheHighId[tag] > 0 ? cacheHighId[tag] + 1 : 1
     while (ids.has(buildId(tag, counter))) {
       counter++
     }
     ids.add(buildId(tag, counter)) // avoid reusage of new generated id
+    cacheHighId[tag] = counter // cache new highest counter
     el.setAttribute('id', buildId(tag, counter))
   }
 }
