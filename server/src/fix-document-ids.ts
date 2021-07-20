@@ -38,25 +38,25 @@ function buildId(tag: string, counter: number): string {
   return `${prefix}-${padLeft(String(counter), '0', ID_PADDING_CHARS)}`
 }
 
-function isIdAttributeExisting(doc: Document, id: string): boolean {
-  const checkElements = select(`//*[@id="${id}"]`, doc) as Element[]
-  return checkElements.length > 0
-}
-
 // Do not add ids to <term> inside a definition.
 function termSpecificSelector(e: string): string {
   return e === 'term' ? '[not(parent::cnxml:definition)]' : ''
 }
 
 export function fixDocument(doc: Document): void {
+  const elsWithIds = select('//cnxml:*[@id]', doc) as Element[]
+  const ids = new Set(elsWithIds.map(el => el.getAttribute('id')))
   const xpath = Array.from(ELEMENT_TO_PREFIX.keys()).map(e => `//cnxml:${e}[not(@id)]${termSpecificSelector(e)}`).join('|')
   const els = select(xpath, doc) as Element[]
+  const cacheHighId: { [tag: string]: number } = {}
   for (const el of els) {
     const tag = el.tagName.toLowerCase()
-    let counter = 1
-    while (isIdAttributeExisting(doc, buildId(tag, counter))) {
+    let counter = cacheHighId[tag] > 0 ? cacheHighId[tag] + 1 : 1
+    while (ids.has(buildId(tag, counter))) {
       counter++
     }
+    ids.add(buildId(tag, counter)) // avoid reusage of new generated id
+    cacheHighId[tag] = counter // cache new highest counter
     el.setAttribute('id', buildId(tag, counter))
   }
 }
