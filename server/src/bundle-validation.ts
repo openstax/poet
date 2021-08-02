@@ -149,14 +149,14 @@ export const validateModuleImagePaths = async (bundle: BookBundle, moduleid: str
     if (source.inBundleMedia) {
       continue
     }
-    const [startPosition, endPosition] = calculateElementPositions(source.element)
+    const {startPos, endPos} = source
     const message = source.exists
       ? `Image file '${source.path}' exists, but not in the bundle media directory`
       : `Image file '${source.path}' does not exist`
     const diagnostic = generateDiagnostic(
       DiagnosticSeverity.Error,
-      startPosition,
-      endPosition,
+      startPos,
+      endPos,
       message,
       DiagnosticCode.ImagePath
     )

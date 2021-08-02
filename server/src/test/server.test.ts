@@ -1039,7 +1039,7 @@ describe('BookBundle', () => {
         targetid: 'other'
       }
     ]
-    const actual = links.inner.sort((a, b) => a.moduleid.localeCompare(b.moduleid))
+    const actual = [...links.inner].sort((a, b) => a.moduleid.localeCompare(b.moduleid))
     expected.forEach((value, i) => {
       assert.strictEqual(actual[i].moduleid, value.moduleid)
       assert.strictEqual(actual[i].targetid, value.targetid)

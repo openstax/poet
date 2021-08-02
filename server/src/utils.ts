@@ -23,7 +23,7 @@ export function generateDiagnostic(severity: DiagnosticSeverity,
   return diagnostic
 }
 
-export function calculateElementPositions(element: any): Position[] {
+export function calculateElementPositions(element: any): [Position, Position] {
   // Calculate positions accounting for the zero-based convention used by
   // vscode
   const startPosition: Position = {
@@ -79,6 +79,17 @@ export const fileExistsAt = async (filepath: string): Promise<boolean> => {
   let exists = true
   try {
     const stat = await fs.promises.stat(filepath)
+    exists = stat.isFile()
+  } catch (err) {
+    exists = false
+  }
+  return exists
+}
+
+export const fileExistsAtSync = (filepath: string): boolean => {
+  let exists = true
+  try {
+    const stat = fs.statSync(filepath)
     exists = stat.isFile()
   } catch (err) {
     exists = false

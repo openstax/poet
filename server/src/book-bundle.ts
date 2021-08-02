@@ -1,9 +1,11 @@
 import { DOMParser } from 'xmldom'
 import path from 'path'
 import fs from 'fs'
-import { FileChangeType, FileEvent } from 'vscode-languageserver/node'
+import { FileChangeType, FileEvent, Position } from 'vscode-languageserver/node'
 import * as xpath from 'xpath-ts'
-import { expect, fileExistsAt } from './utils'
+import Immutable from 'immutable'
+import * as Quarx from 'quarx'
+import { calculateElementPositions, expect, fileExistsAt, fileExistsAtSync } from './utils'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
 import {
   URI
@@ -18,6 +20,11 @@ const FS_SEP = path.sep
 
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
+const toJSMap = <K,V>(i: Immutable.Map<K,V>) => new Map(i.entries())
+const fromJSMap = <K,V>(m: Map<K,V>) => Immutable.Map(m.entries())
+const toJSSet = <V>(i: Immutable.Set<V>) => new Set(i.values())
+
+
 export interface Link {
   moduleid: string
   targetid: string | null
@@ -31,9 +38,16 @@ export interface ModuleTitle { title: string, moduleid: string }
 export interface ImageSource {
   name: string
   path: string
-  element: any
+  startPos: Position
+  endPos: Position
   inBundleMedia: boolean
   exists: boolean
+}
+
+type ImageWithPosition = {
+  relPath: string
+  startPos: Position
+  endPos: Position
 }
 
 export interface ModuleLink {
@@ -52,9 +66,30 @@ export interface BundleItem {
 }
 
 class ModuleInfo {
+  private __idsDeclared = Quarx.observable.box(Immutable.Map<string, number>())
+  private __imagesUsed = Quarx.observable.box(Immutable.Set<ImageWithPosition>())
+  private __linksDeclared = Quarx.observable.box(Immutable.Set<Link>())
+  private __titleFromDocument = Quarx.observable.box('Unknown Module')
+
   private fileDataInternal: Cachified<FileData> | null = null
   constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
-  async fileData(): Promise<Cachified<FileData>> {
+
+  private async readFile() {
+    const modulePath = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
+    return await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
+  }
+
+  async refresh() {
+    const doc = new DOMParser().parseFromString(await this.readFile())
+    
+    this.__idsDeclared.set(this.phil_idsDeclared(doc))
+    this.__imagesUsed.set(this.phil_imagesUsed(doc)) // need to path.basename(x) and unwrapso .imagesUsed() only returns strings
+    this.__linksDeclared.set(this.phil_linksDeclared(doc))
+    this.__titleFromDocument.set(this.phil_titleFromDocument(doc))
+  }
+
+
+  private async fileData(): Promise<Cachified<FileData>> {
     if (this.fileDataInternal == null) {
       const modulePath = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
       const data = await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
@@ -63,7 +98,7 @@ class ModuleInfo {
     return this.fileDataInternal
   }
 
-  async document(): Promise<Cachified<Document>> {
+  private async document(): Promise<Cachified<Document>> {
     const fileData = await this.fileData()
     return this._document(fileData)
   }
@@ -74,27 +109,98 @@ class ModuleInfo {
     }
   )
 
-  async idsDeclared(): Promise<Cachified<Map<string, Element[]>>> {
+  async idsDeclared(): Promise<Cachified<Map<string, number>>> {
     const document = await this.document()
     return this._idsDeclared(document)
   }
 
   private readonly _idsDeclared = memoizeOneCache(
     ({ inner: doc }: Cachified<Document>) => {
-      const ids = new Map<string, Element[]>()
-      const idNodes = select('//cnxml:*[@id]', doc) as Element[]
-      for (const idNode of idNodes) {
-        const id = expect(idNode.getAttribute('id'), 'selection requires attribute exists')
-        const existing = ids.get(id)
-        if (existing != null) {
-          existing.push(idNode)
-        } else {
-          ids.set(id, [idNode])
-        }
-      }
+      const ids = toJSMap(this.phil_idsDeclared(doc))
       return cachify(ids)
     }
   )
+
+  private phil_idsDeclared(doc: Document) {
+    const idNodes = select('//cnxml:*[@id]', doc) as Element[]
+    return Immutable.Map<string, number>().withMutations(map => {
+      for (const idNode of idNodes) {
+        const id = expect(idNode.getAttribute('id'), 'selection requires attribute exists')
+        const existing = map.get(id) || 0
+        map.set(id, existing+1)
+      }
+    })
+  }
+
+  private phil_imagesUsed(doc: Document) {
+    const imageNodes = select('//cnxml:image[@src]', doc) as Element[]
+    return Immutable.Set<ImageWithPosition>().withMutations(s => {
+      for (const imageNode of imageNodes) {
+        const relPath = expect(imageNode.getAttribute('src'), 'selection requires attribute exists')
+        const [startPos, endPos] = calculateElementPositions(imageNode)
+        s.add({
+          relPath,
+          startPos,
+          endPos,
+        })
+      }
+    })
+  }
+
+  // TODO: Make this async again (remove fileExistsAtSync)
+  private phil_imageSources(doc: Document, bundleMedia: Set<string>): Immutable.Set<ImageSource> {
+    return this.phil_imagesUsed(doc).map(img => {
+      const basename = path.basename(img.relPath)
+      // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
+      const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), this.moduleid, img.relPath)
+      const inBundleMedia = bundleMedia.has(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
+      return {
+        name: basename,
+        path: img.relPath,
+        inBundleMedia,
+        exists: inBundleMedia || (img.relPath !== '' && fileExistsAtSync(mediaSourceResolved)),
+        startPos: img.startPos,
+        endPos: img.endPos
+      }
+    })
+  }
+
+  private phil_linksDeclared(doc: Document) {
+    const linkNodes = select('//cnxml:link', doc) as Element[]
+    return Immutable.Set<Link>().withMutations(s =>{
+      for (const linkNode of linkNodes) {
+        const toDocument = linkNode.hasAttribute('document')
+        const toTargetId = linkNode.hasAttribute('target-id')
+        if (toTargetId && !toDocument) {
+          s.add({
+            moduleid: this.moduleid,
+            targetid: expect(linkNode.getAttribute('target-id'), 'logic requires attribute exists'),
+            element: linkNode
+          })
+        } else if (toDocument && !toTargetId) {
+          s.add({
+            moduleid: expect(linkNode.getAttribute('document'), 'logic requires attribute exists'),
+            targetid: null,
+            element: linkNode
+          })
+        } else if (toDocument && toTargetId) {
+          s.add({
+            moduleid: expect(linkNode.getAttribute('document'), 'logic requires attribute exists'),
+            targetid: expect(linkNode.getAttribute('target-id'), 'logic requires attribute exists'),
+            element: linkNode
+          })
+        }
+      }
+    })
+  }
+
+  private phil_titleFromDocument(doc: Document) {
+    const titleNode = select('//cnxml:title', doc) as Element[]
+    if (titleNode[0]) {
+      return titleNode[0].textContent || ''
+    }
+    return 'Unnamed Module'
+  }
 
   async imagesUsed(): Promise<Cachified<Set<string>>> {
     const document = await this.document()
@@ -108,70 +214,26 @@ class ModuleInfo {
 
   private readonly _imageSources = memoizeOneCache(
     async ({ inner: doc }: Cachified<Document>, bundleMedia: Cachified<Set<string>>) => {
-      const imageNodes = select('//cnxml:image[@src]', doc) as Element[]
-      const imageSourceFromNode = async (imageNode: Element): Promise<ImageSource> => {
-        const source = expect(imageNode.getAttribute('src'), 'selection requires attribute exists')
-        const basename = path.basename(source)
-        // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
-        const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), this.moduleid, source)
-        const inBundleMedia = bundleMedia.inner.has(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
-        return {
-          name: basename,
-          path: source,
-          inBundleMedia,
-          exists: inBundleMedia || (source !== '' && await fileExistsAt(mediaSourceResolved)),
-          element: imageNode
-        }
-      }
-      return cachify(await Promise.all(imageNodes.map(async (imageNode) => await imageSourceFromNode(imageNode))))
+      const ret = [...this.phil_imageSources(doc, bundleMedia.inner)]
+      return cachify(ret)
     }
   )
 
   private readonly _imagesUsed = memoizeOneCache(
     ({ inner: doc }: Cachified<Document>) => {
-      const images = new Set<string>()
-      const imageNodes = select('//cnxml:image[@src]', doc) as Element[]
-      for (const imageNode of imageNodes) {
-        const source = expect(imageNode.getAttribute('src'), 'selection requires attribute exists')
-        const basename = path.basename(source)
-        images.add(basename)
-      }
+      const images = toJSSet(this.phil_imagesUsed(doc).map((v) => path.basename(v.relPath)))
       return cachify(images)
     }
   )
 
-  async linksDelared(): Promise<Cachified<Link[]>> {
+  async linksDelared(): Promise<Cachified<Set<Link>>> {
     const document = await this.document()
     return this._linksDeclared(document)
   }
 
   private readonly _linksDeclared = memoizeOneCache(
     ({ inner: doc }: Cachified<Document>) => {
-      const links: Link[] = []
-      const linkNodes = select('//cnxml:link', doc) as Element[]
-      for (const linkNode of linkNodes) {
-        const toDocument = linkNode.hasAttribute('document')
-        const toTargetId = linkNode.hasAttribute('target-id')
-        if (toTargetId && !toDocument) {
-          links.push({
-            moduleid: this.moduleid,
-            targetid: expect(linkNode.getAttribute('target-id'), 'logic requires attribute exists'),
-            element: linkNode
-          })
-        } else if (toDocument && !toTargetId) {
-          links.push({
-            moduleid: expect(linkNode.getAttribute('document'), 'logic requires attribute exists'),
-            targetid: null,
-            element: linkNode
-          })
-        } else if (toDocument && toTargetId) {
-          links.push({
-            moduleid: expect(linkNode.getAttribute('document'), 'logic requires attribute exists'),
-            targetid: expect(linkNode.getAttribute('target-id'), 'logic requires attribute exists'),
-            element: linkNode
-          })
-        }
-      }
+      const links = toJSSet(this.phil_linksDeclared(doc))
       return cachify(links)
     }
   )
@@ -192,12 +254,7 @@ class ModuleInfo {
 
   private readonly _titleFromDocument = memoizeOneCache(
     ({ inner: doc }: Cachified<Document>): Cachified<ModuleTitle> => {
-      try {
-        const moduleTitle = doc.getElementsByTagNameNS(NS_CNXML, 'title')[0].textContent
-        return cachify(this._moduleTitleFromString(moduleTitle ?? 'Unnamed Module'))
-      } catch {
-        return cachify(this._moduleTitleFromString('Unnamed Module'))
-      }
+      return cachify(this._moduleTitleFromString(this.phil_titleFromDocument(doc)))
     }
   )
 
@@ -250,17 +307,22 @@ class CollectionInfo {
     return this._modulesUsed(document)
   }
 
+  private phil_modulesUsed(doc: Document) {
+    const modules: ModuleLink[] = []
+    const moduleNodes = select('//col:module', doc) as Element[]
+    for (const moduleNode of moduleNodes) {
+      const moduleid = moduleNode.getAttribute('document') ?? ''
+      modules.push({
+        element: moduleNode,
+        moduleid: moduleid
+      })
+    }
+    return modules
+  }
+
   private readonly _modulesUsed = memoizeOneCache(
     ({ inner: doc }: Cachified<Document>) => {
-      const modules: ModuleLink[] = []
-      const moduleNodes = select('//col:module', doc) as Element[]
-      for (const moduleNode of moduleNodes) {
-        const moduleid = moduleNode.getAttribute('document') ?? ''
-        modules.push({
-          element: moduleNode,
-          moduleid: moduleid
-        })
-      }
+      const modules = this.phil_modulesUsed(doc)
       return cachify(modules)
     }
   )
@@ -273,21 +335,26 @@ class CollectionInfo {
     return this._tree(document, cacheSort(moduleTitlesDefined))
   }
 
+  private phil_tree(doc: Document, titles: ModuleTitle[]) {
+    const moduleTitleMap = new Map<string, string>()
+    for (const entry of titles) {
+      moduleTitleMap.set(entry.moduleid, entry.title)
+    }
+    const moduleToObjectResolver = (moduleid: string): TocTreeModule => {
+      return {
+        type: TocTreeElementType.module,
+        moduleid: moduleid,
+        title: moduleTitleMap.get(moduleid) ?? '**DOES NOT EXIST**',
+        subtitle: moduleid
+      }
+    }
+    const tree = parseCollection(doc, moduleToObjectResolver)
+    return tree
+  }
+
   private readonly _tree = memoizeOneCache(
     async ({ inner: doc }: Cachified<Document>, titles: Array<Cachified<ModuleTitle>>) => {
-      const moduleTitleMap = new Map<string, string>()
-      for (const entry of titles) {
-        moduleTitleMap.set(entry.inner.moduleid, entry.inner.title)
-      }
-      const moduleToObjectResolver = (moduleid: string): TocTreeModule => {
-        return {
-          type: TocTreeElementType.module,
-          moduleid: moduleid,
-          title: moduleTitleMap.get(moduleid) ?? '**DOES NOT EXIST**',
-          subtitle: moduleid
-        }
-      }
-      const tree = parseCollection(doc, moduleToObjectResolver)
+      const tree = this.phil_tree(doc, titles.map(t => t.inner))
       return cachify(tree)
     }
   )
@@ -498,13 +565,13 @@ export class BookBundle {
       return false
     }
     const elements = (await moduleInfo.idsDeclared()).inner.get(id)
-    if (elements == null) {
+    if (elements == 0) {
       return false
     }
-    return elements.length === 1
+    return elements === 1
   }
 
-  async moduleLinks(moduleid: string): Promise<Cachified<Link[]> | null> {
+  async moduleLinks(moduleid: string): Promise<Cachified<Set<Link>> | null> {
     const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
@@ -521,7 +588,7 @@ export class BookBundle {
   }
 
   private readonly _moduleIds = memoizeOneCache(
-    (moduleIdsAsMap: Cachified<Map<string, Element[]>>): Cachified<Set<string>> => {
+    (moduleIdsAsMap: Cachified<Map<string, number>>): Cachified<Set<string>> => {
       return cachify(new Set(moduleIdsAsMap.inner.keys()))
     }
   )
