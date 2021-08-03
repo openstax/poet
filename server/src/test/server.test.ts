@@ -1076,14 +1076,12 @@ describe('BookBundle', () => {
   it('tracks and caches orphaned modules', async () => {
     const bundle = await BookBundle.from('/bundle')
     const orphaned = await bundle.orphanedModules()
-    assert.deepStrictEqual(Array.from(orphaned.inner).sort(), ['m00002', 'm00004', 'm00005'])
-    assert(cacheEquals(orphaned, await bundle.orphanedModules()))
+    assert.deepStrictEqual(Array.from(orphaned).sort(), ['m00002', 'm00004', 'm00005'])
+    assert.deepStrictEqual(Array.from(orphaned), Array.from(await bundle.orphanedModules()))
   })
   it('tracks and caches orphaned images', async () => {
     const bundle = await BookBundle.from('/bundle')
     const orphaned = await bundle.orphanedImages()
-    console.log('qoieuqwoieuwoieu')
-    console.log(orphaned.inner)
     assert.deepStrictEqual(Array.from(orphaned.inner), ['orphan.jpg'])
     assert.deepStrictEqual(Array.from(orphaned.inner), Array.from((await bundle.orphanedImages()).inner))
   })
@@ -1157,21 +1155,22 @@ describe('BookBundle', () => {
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/modules/m00000' })
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle2/modules/m00000/index.cnxml' })
     const orphanedModulesAgain = await bundle.orphanedModules()
-    assert(cacheEquals(orphanedModules, orphanedModulesAgain))
+    assert.deepStrictEqual(orphanedModules.toArray(), orphanedModulesAgain.toArray())
   })
   it('busts caches when a module is created', async () => {
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = await bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/modules/m00000/index.cnxml' })
     const orphanedModulesAgain = await bundle.orphanedModules()
-    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+    assert.notDeepStrictEqual(orphanedModules.toArray(), orphanedModulesAgain.toArray())
   })
-  it('busts caches when a module is deleted', async () => {
+  it.skip('busts caches when a module is deleted', async () => {
+    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = await bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00000/index.cnxml' })
     const orphanedModulesAgain = await bundle.orphanedModules()
-    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+    assert.notDeepStrictEqual(orphanedModules.toArray(), orphanedModulesAgain.toArray())
   })
   it.skip('busts caches when a module is changed', async () => {
     const bundle = await BookBundle.from('/bundle')
@@ -1205,26 +1204,29 @@ describe('BookBundle', () => {
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media/test.png' })
     assert(!cacheEquals(orphanedImages, await bundle.orphanedImages()))
   })
-  it('busts caches when a collection is created', async () => {
+  it.skip('busts caches when a collection is created', async () => {
+    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = await bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/collections/normal.collection.xml' })
     const orphanedModulesAgain = await bundle.orphanedModules()
-    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+    assert.notDeepStrictEqual(orphanedModules.toArray(), orphanedModulesAgain.toArray())
   })
-  it('busts caches when a collection is changed', async () => {
+  it.skip('busts caches when a collection is changed', async () => {
+    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = await bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/collections/normal.collection.xml' })
     const orphanedModulesAgain = await bundle.orphanedModules()
-    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+    assert.notDeepStrictEqual(orphanedModules.toArray(), orphanedModulesAgain.toArray())
   })
-  it('busts caches when a collection is deleted', async () => {
+  it.skip('busts caches when a collection is deleted', async () => {
+    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = await bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/collections/normal.collection.xml' })
     const orphanedModulesAgain = await bundle.orphanedModules()
-    assert(!cacheEquals(orphanedModules, orphanedModulesAgain))
+    assert.notDeepStrictEqual(orphanedModules.toArray(), orphanedModulesAgain.toArray())
   })
   it.skip('busts image source cache when bundle media files are created / deleted', async () => {
     const bundle = await BookBundle.from('/bundle')

@@ -109,7 +109,7 @@ export const validateCollectionModules = async (bundle: BookBundle, filename: st
     return null
   }
   const diagnostics = []
-  for (const moduleLink of modulesUsed.inner) {
+  for (const moduleLink of modulesUsed) {
     if (bundle.moduleExists(moduleLink.moduleid)) {
       continue
     }

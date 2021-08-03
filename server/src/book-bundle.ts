@@ -66,6 +66,7 @@ export interface BundleItem {
 }
 
 class ModuleInfo {
+  private __isLoaded = false
   private __idsDeclared = Quarx.observable.box(Immutable.Map<string, number>())
   private __imagesUsed = Quarx.observable.box(Immutable.Set<ImageWithPosition>())
   private __linksDeclared = Quarx.observable.box(Immutable.Set<Link>())
@@ -80,21 +81,22 @@ class ModuleInfo {
 
   async refresh() {
     const doc = new DOMParser().parseFromString(await this.readFile())
-    
     this.__idsDeclared.set(this.phil_idsDeclared(doc))
     this.__imagesUsed.set(this.phil_imagesUsed(doc)) // need to path.basename(x) and unwrapso .imagesUsed() only returns strings
     this.__linksDeclared.set(this.phil_linksDeclared(doc))
     this.__titleFromDocument.set(this.phil_titleFromDocument(doc))
+    this.__isLoaded = true
   }
 
-  private async hack_refreshIfNeeded() {
-    if (this.__titleFromDocument.get() === null) {
+  private async _loadIfNeeded() {
+    if (!this.__isLoaded) {
       await this.refresh()
+      this.__isLoaded = true
     }
   }
 
   async idsDeclared(): Promise<Immutable.Map<string, number>> {
-    await this.hack_refreshIfNeeded()
+    await this._loadIfNeeded()
     return this.__idsDeclared.get()
   }
 
@@ -162,12 +164,12 @@ class ModuleInfo {
   }
 
   async imagesUsed(): Promise<Immutable.Set<ImageWithPosition>> {
-    await this.hack_refreshIfNeeded()
+    await this._loadIfNeeded()
     return this.__imagesUsed.get()
   }
 
   async imageSources(bundleMedia: Set<string>): Promise<Immutable.Set<ImageSource>> {
-    await this.hack_refreshIfNeeded()
+    await this._loadIfNeeded()
     // TODO: Make this async again (remove fileExistsAtSync)
     return this.__imagesUsed.get().map(img => {
       const basename = path.basename(img.relPath)
@@ -186,7 +188,7 @@ class ModuleInfo {
   }
 
   async linksDelared(): Promise<Immutable.Set<Link>> {
-    await this.hack_refreshIfNeeded()
+    await this._loadIfNeeded()
     return this.__linksDeclared.get()
   }
 
@@ -226,9 +228,30 @@ class ModuleInfo {
 }
 
 class CollectionInfo {
+  private __isLoaded = false
+  private __modulesUsed = Quarx.observable.box(Immutable.Set<ModuleLink>())
+
   private fileDataInternal: Cachified<FileData> | null = null
   constructor(private readonly bundle: BookBundle, readonly filename: string) {}
-  async fileData(): Promise<Cachified<FileData>> {
+  
+  private async _readFile() {
+    const modulePath = path.join(this.bundle.workspaceRoot(), 'collections', this.filename)
+    return fs.promises.readFile(modulePath, { encoding: 'utf-8' })
+  }
+  private async _loadIfNeeded() {
+    if (!this.__isLoaded) {
+      await this.refresh()
+    }
+  }
+
+  public async refresh() {
+    const doc = new DOMParser().parseFromString(await this._readFile())
+    this.__modulesUsed.set(this.phil_modulesUsed(doc))
+
+    this.__isLoaded = true
+  }
+  
+  private async fileData(): Promise<Cachified<FileData>> {
     if (this.fileDataInternal == null) {
       const modulePath = path.join(this.bundle.workspaceRoot(), 'collections', this.filename)
       const data = fs.readFileSync(modulePath, { encoding: 'utf-8' })
@@ -248,35 +271,28 @@ class CollectionInfo {
     }
   )
 
-  async modulesUsed(): Promise<Cachified<ModuleLink[]>> {
-    const document = await this.document()
-    return this._modulesUsed(document)
+  async modulesUsed(): Promise<Immutable.Set<ModuleLink>> {
+    await this._loadIfNeeded()
+    return this.__modulesUsed.get()
   }
 
   private phil_modulesUsed(doc: Document) {
-    const modules: ModuleLink[] = []
     const moduleNodes = select('//col:module', doc) as Element[]
-    for (const moduleNode of moduleNodes) {
-      const moduleid = moduleNode.getAttribute('document') ?? ''
-      modules.push({
-        element: moduleNode,
-        moduleid: moduleid
-      })
-    }
-    return modules
+    return Immutable.Set<ModuleLink>().withMutations(s => {
+      for (const moduleNode of moduleNodes) {
+        const moduleid = moduleNode.getAttribute('document') ?? ''
+        s.add({
+          element: moduleNode,
+          moduleid: moduleid
+        })
+      }
+    })
   }
-
-  private readonly _modulesUsed = memoizeOneCache(
-    ({ inner: doc }: Cachified<Document>) => {
-      const modules = this.phil_modulesUsed(doc)
-      return cachify(modules)
-    }
-  )
 
   async tree(): Promise<Cachified<TocTreeCollection>> {
     const document = await this.document()
     const modulesUsed = await this.modulesUsed()
-    const moduleTitles = await Promise.all(modulesUsed.inner.map(async moduleLink => await this.bundle.moduleTitle(moduleLink.moduleid)))
+    const moduleTitles = await Promise.all(modulesUsed.map(async moduleLink => await this.bundle.moduleTitle(moduleLink.moduleid)))
     const moduleTitlesDefined = moduleTitles.filter(t => t != null) as Array<ModuleTitle>
     return this._tree(document, moduleTitlesDefined)
   }
@@ -464,24 +480,22 @@ export class BookBundle {
     }
   )
 
-  async orphanedModules(): Promise<Cachified<Set<string>>> {
+  async orphanedModules(): Promise<Immutable.Set<string>> {
     const usedModulesPerCollection = await Promise.all(Array.from(this.collectionsInternal.inner.values()).map(async collection => await collection.modulesUsed()))
-    return this._orphanedModules(this.modulesInternal, cacheSort(usedModulesPerCollection))
+    return this._orphanedModules(this.modulesInternal, usedModulesPerCollection)
   }
 
-  private readonly _orphanedModules = memoizeOneCache(
-    (allModules: Cachified<Map<string, ModuleInfo>>, usedModulesPerCollection: Array<Cachified<ModuleLink[]>>): Cachified<Set<string>> => {
-      const orphanModules = new Set(allModules.inner.keys())
+  private _orphanedModules(allModules: Cachified<Map<string, ModuleInfo>>, usedModulesPerCollection: Array<Immutable.Set<ModuleLink>>): Immutable.Set<string> {
+    return Immutable.Set(allModules.inner.keys()).withMutations(s => {
       for (const collectionModules of usedModulesPerCollection) {
-        for (const moduleLink of collectionModules.inner) {
-          orphanModules.delete(moduleLink.moduleid)
+        for (const moduleLink of collectionModules) {
+          s.delete(moduleLink.moduleid)
         }
       }
-      return cachify(orphanModules)
-    }
-  )
+    })  
+  }  
 
-  async modulesUsed(filename: string): Promise<Cachified<ModuleLink[]> | null> {
+  async modulesUsed(filename: string): Promise<Immutable.Set<ModuleLink> | null> {
     const collectionInfo = this.collectionsInternal.inner.get(filename)
     if (collectionInfo == null) {
       return null
