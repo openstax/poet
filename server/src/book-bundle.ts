@@ -214,22 +214,29 @@ class ModuleInfo {
 
   }
 
-  async imageSources(bundleMedia: Cachified<Set<string>>): Promise<Cachified<ImageSource[]>> {
-    const document = await this.document()
-    return await this._imageSources(document, bundleMedia)
+  async imageSources(bundleMedia: Set<string>): Promise<Immutable.Set<ImageSource>> {
+    await this.hack_refreshIfNeeded()
+    // TODO: Make this async again (remove fileExistsAtSync)
+    return this.__imagesUsed.get().map(img => {
+      const basename = path.basename(img.relPath)
+      // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
+      const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), this.moduleid, img.relPath)
+      const inBundleMedia = bundleMedia.has(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
+      return {
+        name: basename,
+        path: img.relPath,
+        inBundleMedia,
+        exists: inBundleMedia || (img.relPath !== '' && fileExistsAtSync(mediaSourceResolved)),
+        startPos: img.startPos,
+        endPos: img.endPos
+      }
+    })
   }
 
   private readonly _imageSources = memoizeOneCache(
     async ({ inner: doc }: Cachified<Document>, bundleMedia: Cachified<Set<string>>) => {
       const ret = [...this.phil_imageSources(doc, bundleMedia.inner)]
       return cachify(ret)
-    }
-  )
-
-  private readonly _imagesUsed = memoizeOneCache(
-    ({ inner: doc }: Cachified<Document>) => {
-      const images = toJSSet(this.phil_imagesUsed(doc).map((v) => path.basename(v.relPath)))
-      return cachify(images)
     }
   )
 
@@ -593,12 +600,12 @@ export class BookBundle {
     }
   )
 
-  async moduleImageSources(moduleid: string): Promise<Cachified<ImageSource[]> | null> {
+  async moduleImageSources(moduleid: string): Promise<Immutable.Set<ImageSource> | null> {
     const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return await moduleInfo.imageSources(this.imagesInternal)
+    return await moduleInfo.imageSources(this.imagesInternal.inner)
   }
 
   async _moduleImageFilenames(moduleid: string): Promise<Immutable.Set<string> | null> {

@@ -145,7 +145,7 @@ export const validateModuleImagePaths = async (bundle: BookBundle, moduleid: str
     return null
   }
   const diagnostics = []
-  for (const source of imageSources.inner) {
+  for (const source of imageSources) {
     if (source.inBundleMedia) {
       continue
     }
