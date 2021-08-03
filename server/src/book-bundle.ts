@@ -69,7 +69,7 @@ class ModuleInfo {
   private __idsDeclared = Quarx.observable.box(Immutable.Map<string, number>())
   private __imagesUsed = Quarx.observable.box(Immutable.Set<ImageWithPosition>())
   private __linksDeclared = Quarx.observable.box(Immutable.Set<Link>())
-  private __titleFromDocument = Quarx.observable.box('Unknown Module')
+  private __titleFromDocument = Quarx.observable.box<string|null>(null)
 
   private fileDataInternal: Cachified<FileData> | null = null
   constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
@@ -238,14 +238,17 @@ class ModuleInfo {
     }
   )
 
-  async title(): Promise<Cachified<ModuleTitle>> {
-    const fileData = await this.fileData()
-    const guessedTitle = this._guessFromFileData(fileData)
-    if (guessedTitle != null) {
-      return guessedTitle
+  async title(): Promise<ModuleTitle> {
+    if (this.__titleFromDocument.get() === null) {
+      const fileData = await this.readFile()
+      const guessedTitle = this._guessFromFileData(fileData)
+      if (guessedTitle != null) {
+        this.__titleFromDocument.set(guessedTitle.title)
+        return guessedTitle
+      }
     }
-    const document = await this.document()
-    return this._titleFromDocument(document)
+    await this.refresh()
+    return this._moduleTitleFromString(expect(this.__titleFromDocument.get(), 'Should be defined by now because refresh was called'))
   }
 
   private _moduleTitleFromString(titleString: string): ModuleTitle {
@@ -258,9 +261,7 @@ class ModuleInfo {
     }
   )
 
-  private readonly _guessFromFileData = memoizeOneCache(
-    ({ inner }: Cachified<FileData>): Cachified<ModuleTitle> | null => {
-      const { data } = inner
+  private _guessFromFileData(data: string) {
       const titleTagStart = data.indexOf('<title>')
       const titleTagEnd = data.indexOf('</title>')
       if (titleTagStart === -1 || titleTagEnd === -1) {
@@ -274,9 +275,8 @@ class ModuleInfo {
         return null
       }
       const moduleTitle = data.substring(actualTitleStart, titleTagEnd).trim()
-      return cachify(this._moduleTitleFromString(moduleTitle))
+      return this._moduleTitleFromString(moduleTitle)
     }
-  )
 }
 
 class CollectionInfo {
@@ -331,8 +331,8 @@ class CollectionInfo {
     const document = await this.document()
     const modulesUsed = await this.modulesUsed()
     const moduleTitles = await Promise.all(modulesUsed.inner.map(async moduleLink => await this.bundle.moduleTitle(moduleLink.moduleid)))
-    const moduleTitlesDefined = moduleTitles.filter(t => t != null) as Array<Cachified<ModuleTitle>>
-    return this._tree(document, cacheSort(moduleTitlesDefined))
+    const moduleTitlesDefined = moduleTitles.filter(t => t != null) as Array<ModuleTitle>
+    return this._tree(document, moduleTitlesDefined)
   }
 
   private phil_tree(doc: Document, titles: ModuleTitle[]) {
@@ -353,8 +353,8 @@ class CollectionInfo {
   }
 
   private readonly _tree = memoizeOneCache(
-    async ({ inner: doc }: Cachified<Document>, titles: Array<Cachified<ModuleTitle>>) => {
-      const tree = this.phil_tree(doc, titles.map(t => t.inner))
+    async ({ inner: doc }: Cachified<Document>, titles: Array<ModuleTitle>) => {
+      const tree = this.phil_tree(doc, titles)
       return cachify(tree)
     }
   )
@@ -543,7 +543,7 @@ export class BookBundle {
     return await collectionInfo.modulesUsed()
   }
 
-  async moduleTitle(moduleid: string): Promise<Cachified<ModuleTitle> | null> {
+  async moduleTitle(moduleid: string): Promise<ModuleTitle | null> {
     const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
@@ -622,7 +622,7 @@ export class BookBundle {
     return {
       type: TocTreeElementType.module,
       moduleid: moduleid,
-      title: title?.inner.title ?? 'Unnamed Module',
+      title: title?.title ?? 'Unnamed Module',
       subtitle: moduleid
     }
   }
