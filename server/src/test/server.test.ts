@@ -1008,11 +1008,11 @@ describe('BookBundle', () => {
   })
   it('tracks and caches used images per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const images = expect(await bundle.moduleImages('m00001'))
-    assert.deepStrictEqual(Array.from(images.inner), ['empty.jpg'])
-    const cached = expect(await bundle.moduleImages('m00001'))
-    assert(cacheEquals(images, cached))
-    assert.strictEqual(await bundle.moduleImages('does-not-exist'), null)
+    const images = expect(await bundle._moduleImageFilenames('m00001'))
+    assert.deepStrictEqual(Array.from(images), ['empty.jpg'])
+    const cached = expect(await bundle._moduleImageFilenames('m00001'))
+    assert.deepStrictEqual(Array.from(images), Array.from(cached))
+    assert.strictEqual(await bundle._moduleImageFilenames('does-not-exist'), null)
   })
   it('tracks and caches declared ids per module', async () => {
     const bundle = await BookBundle.from('/bundle')
@@ -1039,13 +1039,13 @@ describe('BookBundle', () => {
         targetid: 'other'
       }
     ]
-    const actual = [...links.inner].sort((a, b) => a.moduleid.localeCompare(b.moduleid))
+    const actual = [...links].sort((a, b) => a.moduleid.localeCompare(b.moduleid))
     expected.forEach((value, i) => {
       assert.strictEqual(actual[i].moduleid, value.moduleid)
       assert.strictEqual(actual[i].targetid, value.targetid)
     })
     const cached = expect(await bundle.moduleLinks('m00001'))
-    assert(cacheEquals(links, cached))
+    assert.strictEqual(links, cached)
     assert.strictEqual(await bundle.moduleLinks('does-not-exist'), null)
   })
   it('tracks and caches titles per module', async () => {
@@ -1082,8 +1082,10 @@ describe('BookBundle', () => {
   it('tracks and caches orphaned images', async () => {
     const bundle = await BookBundle.from('/bundle')
     const orphaned = await bundle.orphanedImages()
-    assert.deepStrictEqual(Array.from(orphaned.inner).sort(), ['orphan.jpg'])
-    assert(cacheEquals(orphaned, await bundle.orphanedImages()))
+    console.log('qoieuqwoieuwoieu')
+    console.log(orphaned.inner)
+    assert.deepStrictEqual(Array.from(orphaned.inner), ['orphan.jpg'])
+    assert.deepStrictEqual(Array.from(orphaned.inner), Array.from((await bundle.orphanedImages()).inner))
   })
   it('tracks and caches table of contents trees', async () => {
     const bundle = await BookBundle.from('/bundle')

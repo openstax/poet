@@ -88,6 +88,12 @@ class ModuleInfo {
     this.__titleFromDocument.set(this.phil_titleFromDocument(doc))
   }
 
+  private async hack_refreshIfNeeded() {
+    if (this.__titleFromDocument.get() === null) {
+      await this.refresh()
+    }
+  }
+
 
   private async fileData(): Promise<Cachified<FileData>> {
     if (this.fileDataInternal == null) {
@@ -202,9 +208,10 @@ class ModuleInfo {
     return 'Unnamed Module'
   }
 
-  async imagesUsed(): Promise<Cachified<Set<string>>> {
-    const document = await this.document()
-    return this._imagesUsed(document)
+  async imagesUsed(): Promise<Immutable.Set<ImageWithPosition>> {
+    await this.hack_refreshIfNeeded()
+    return this.__imagesUsed.get()
+
   }
 
   async imageSources(bundleMedia: Cachified<Set<string>>): Promise<Cachified<ImageSource[]>> {
@@ -226,17 +233,10 @@ class ModuleInfo {
     }
   )
 
-  async linksDelared(): Promise<Cachified<Set<Link>>> {
-    const document = await this.document()
-    return this._linksDeclared(document)
+  async linksDelared(): Promise<Immutable.Set<Link>> {
+    await this.hack_refreshIfNeeded()
+    return this.__linksDeclared.get()
   }
-
-  private readonly _linksDeclared = memoizeOneCache(
-    ({ inner: doc }: Cachified<Document>) => {
-      const links = toJSSet(this.phil_linksDeclared(doc))
-      return cachify(links)
-    }
-  )
 
   async title(): Promise<ModuleTitle> {
     if (this.__titleFromDocument.get() === null) {
@@ -503,15 +503,15 @@ export class BookBundle {
 
   async orphanedImages(): Promise<Cachified<Set<string>>> {
     const usedImagesPerModule = await Promise.all(Array.from(this.modulesInternal.inner.values()).map(async module => await module.imagesUsed()))
-    return this._orphanedImages(this.imagesInternal, cacheSort(usedImagesPerModule))
+    return this._orphanedImages(this.imagesInternal, usedImagesPerModule)
   }
 
   private readonly _orphanedImages = memoizeOneCache(
-    (allImages: Cachified<Set<string>>, usedImagesPerModule: Array<Cachified<Set<string>>>): Cachified<Set<string>> => {
+    (allImages: Cachified<Set<string>>, usedImagesPerModule: Array<Immutable.Set<ImageWithPosition>>): Cachified<Set<string>> => {
       const orphanImages = new Set(allImages.inner)
       for (const moduleImages of usedImagesPerModule) {
-        for (const image of moduleImages.inner) {
-          orphanImages.delete(image)
+        for (const image of moduleImages) {
+          orphanImages.delete(path.basename(image.relPath))
         }
       }
       return cachify(orphanImages)
@@ -571,7 +571,7 @@ export class BookBundle {
     return elements === 1
   }
 
-  async moduleLinks(moduleid: string): Promise<Cachified<Set<Link>> | null> {
+  async moduleLinks(moduleid: string): Promise<Immutable.Set<Link> | null> {
     const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
@@ -601,12 +601,12 @@ export class BookBundle {
     return await moduleInfo.imageSources(this.imagesInternal)
   }
 
-  async moduleImages(moduleid: string): Promise<Cachified<Set<string>> | null> {
+  async _moduleImageFilenames(moduleid: string): Promise<Immutable.Set<string> | null> {
     const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return await moduleInfo.imagesUsed()
+    return (await moduleInfo.imagesUsed()).map(i => path.basename(i.relPath))
   }
 
   async collectionTree(filename: string): Promise<Cachified<TocTreeCollection> | null> {

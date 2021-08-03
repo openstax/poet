@@ -171,7 +171,7 @@ export const validateModuleLinks = async (bundle: BookBundle, moduleid: string):
     return null
   }
   const diagnostics: Diagnostic[] = []
-  for (const link of links.inner) {
+  for (const link of links) {
     const pushLinkDiagnostic = (message: string): void => {
       const [startPosition, endPosition] = calculateElementPositions(link.element)
       const diagnostic = generateDiagnostic(
