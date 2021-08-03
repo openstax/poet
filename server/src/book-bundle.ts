@@ -5,7 +5,7 @@ import { FileChangeType, FileEvent, Position } from 'vscode-languageserver/node'
 import * as xpath from 'xpath-ts'
 import Immutable from 'immutable'
 import * as Quarx from 'quarx'
-import { calculateElementPositions, expect, fileExistsAt, fileExistsAtSync } from './utils'
+import { calculateElementPositions, expect, fileExistsAt, fileExistsAtSync, getOrAdd } from './utils'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
 import {
   URI
@@ -170,7 +170,7 @@ class ModuleInfo {
     return this.__imagesUsed.get()
   }
 
-  async imageSources(bundleMedia: Set<string>): Promise<Immutable.Set<ImageSource>> {
+  async imageSources(bundleMedia: Immutable.Set<string>): Promise<Immutable.Set<ImageSource>> {
     await this._loadIfNeeded()
     // TODO: Make this async again (remove fileExistsAtSync)
     return this.__imagesUsed.get().map(img => {
@@ -308,44 +308,56 @@ class CollectionInfo {
   }
 }
 
+async function readdir(filePath: string) {
+  try { // dir may not exist
+    return await fs.promises.readdir(filePath)
+  } catch (e) { }
+  return []
+}
+
 export class BookBundle {
   constructor(
     readonly workspaceRootInternal: string,
-    private imagesInternal: Cachified<Set<string>>,
-    private modulesInternal: Cachified<Map<string, ModuleInfo>>,
-    private collectionsInternal: Cachified<Map<string, CollectionInfo>>
+    private imagesInternal: Quarx.Box<Immutable.Set<string>>,
+    private modulesInternal: Quarx.Box<Immutable.Map<string, ModuleInfo>>,
+    private collectionsInternal: Quarx.Box<Immutable.Map<string, CollectionInfo>>
   ) {}
 
   static async from(workspaceRoot: string): Promise<BookBundle> {
-    const images = cachify(new Set<string>())
-    const modules = cachify(new Map<string, ModuleInfo>())
-    const collections = cachify(new Map<string, CollectionInfo>())
+    const images = Quarx.observable.box(Immutable.Set<string>())
+    const modules = Quarx.observable.box(Immutable.Map<string, ModuleInfo>())
+    const collections = Quarx.observable.box(Immutable.Map<string, CollectionInfo>())
     const bundle = new BookBundle(workspaceRoot, images, modules, collections)
-    const loadImages = async (bundle: BookBundle, set: Set<string>): Promise<void> => {
-      try { // media directory may not exist
-        const foundImages = await fs.promises.readdir(bundle.mediaDirectory())
+    const loadImages = async (): Promise<void> => {
+      const dir = bundle.mediaDirectory()
+      const foundImages = await readdir(bundle.mediaDirectory())
+      images.set(images.get().withMutations(s => {
         for (const image of foundImages) {
-          set.add(image)
+          s.add(image)
         }
-      } catch (err) { }
+      }))
     }
-    const loadModules = async (bundle: BookBundle, map: Map<string, ModuleInfo>): Promise<void> => {
-      const foundPossibleModules = await fs.promises.readdir(bundle.moduleDirectory())
+    const loadModules = async (): Promise<void> => {
+      const foundPossibleModules = await readdir(bundle.moduleDirectory())
       const moduleCnxmlExists = await Promise.all(foundPossibleModules.map(
         (moduleId) => (path.join(bundle.moduleDirectory(), moduleId, 'index.cnxml'))
       ).map(fileExistsAt))
       const foundModules = foundPossibleModules.filter((_, indx) => moduleCnxmlExists[indx])
-      for (const module of foundModules) {
-        map.set(module, new ModuleInfo(bundle, module))
-      }
+      modules.set(modules.get().withMutations(m => {
+        for (const module of foundModules) {
+          m.set(module, new ModuleInfo(bundle, module))
+        }
+      }))
     }
-    const loadCollections = async (bundle: BookBundle, map: Map<string, CollectionInfo>): Promise<void> => {
-      const foundCollections = await fs.promises.readdir(bundle.collectionDirectory())
-      for (const collection of foundCollections) {
-        map.set(collection, new CollectionInfo(bundle, collection))
-      }
+    const loadCollections = async (): Promise<void> => {
+      const foundCollections = await readdir(bundle.collectionDirectory())
+      collections.set(collections.get().withMutations(m => {
+        for (const collection of foundCollections) {
+          m.set(collection, new CollectionInfo(bundle, collection))
+        }
+      }))
     }
-    await Promise.all([loadImages(bundle, images.inner), loadModules(bundle, modules.inner), loadCollections(bundle, collections.inner)])
+    await Promise.all([loadImages(), loadModules(), loadCollections()])
     return bundle
   }
 
@@ -366,35 +378,35 @@ export class BookBundle {
   }
 
   images(): string[] {
-    return Array.from(this.imagesInternal.inner.values())
+    return Array.from(this.imagesInternal.get().values())
   }
 
   modules(): string[] {
-    return Array.from(this.modulesInternal.inner.keys())
+    return Array.from(this.modulesInternal.get().keys())
   }
 
   moduleItems(): BundleItem[] {
-    return Array.from(this.modulesInternal.inner.keys()).map(key => ({ type: 'modules', key: key }))
+    return Array.from(this.modulesInternal.get().keys()).map(key => ({ type: 'modules', key: key }))
   }
 
   collections(): string[] {
-    return Array.from(this.collectionsInternal.inner.keys())
+    return Array.from(this.collectionsInternal.get().keys())
   }
 
   collectionItems(): BundleItem[] {
-    return Array.from(this.collectionsInternal.inner.keys()).map(key => ({ type: 'collections', key: key }))
+    return Array.from(this.collectionsInternal.get().keys()).map(key => ({ type: 'collections', key: key }))
   }
 
   imageExists(name: string): boolean {
-    return this.imagesInternal.inner.has(name)
+    return this.imagesInternal.get().has(name)
   }
 
   moduleExists(moduleid: string): boolean {
-    return this.modulesInternal.inner.has(moduleid)
+    return this.modulesInternal.get().has(moduleid)
   }
 
   collectionExists(filename: string): boolean {
-    return this.collectionsInternal.inner.has(filename)
+    return this.collectionsInternal.get().has(filename)
   }
 
   containsBundleItem(item: BundleItem): boolean {
@@ -449,30 +461,28 @@ export class BookBundle {
     }).toString()
   }
 
-  async orphanedImages(): Promise<Cachified<Set<string>>> {
-    const usedImagesPerModule = await Promise.all(Array.from(this.modulesInternal.inner.values()).map(async module => await module.imagesUsed()))
-    return this._orphanedImages(this.imagesInternal, usedImagesPerModule)
+  async orphanedImages(): Promise<Immutable.Set<string>> {
+    const usedImagesPerModule = await Promise.all(Array.from(this.modulesInternal.get().values()).map(async module => await module.imagesUsed()))
+    return this._orphanedImages(this.imagesInternal.get(), usedImagesPerModule)
   }
 
-  private readonly _orphanedImages = memoizeOneCache(
-    (allImages: Cachified<Set<string>>, usedImagesPerModule: Array<Immutable.Set<ImageWithPosition>>): Cachified<Set<string>> => {
-      const orphanImages = new Set(allImages.inner)
+  private _orphanedImages(allImages: Immutable.Set<string>, usedImagesPerModule: Array<Immutable.Set<ImageWithPosition>>): Immutable.Set<string> {
+    return allImages.withMutations(s => {
       for (const moduleImages of usedImagesPerModule) {
         for (const image of moduleImages) {
-          orphanImages.delete(path.basename(image.relPath))
+          s.delete(path.basename(image.relPath))
         }
       }
-      return cachify(orphanImages)
-    }
-  )
-
-  async orphanedModules(): Promise<Immutable.Set<string>> {
-    const usedModulesPerCollection = await Promise.all(Array.from(this.collectionsInternal.inner.values()).map(async collection => await collection.modulesUsed()))
-    return this._orphanedModules(this.modulesInternal, usedModulesPerCollection)
+    })
   }
 
-  private _orphanedModules(allModules: Cachified<Map<string, ModuleInfo>>, usedModulesPerCollection: Array<Immutable.Set<ModuleLink>>): Immutable.Set<string> {
-    return Immutable.Set(allModules.inner.keys()).withMutations(s => {
+  async orphanedModules(): Promise<Immutable.Set<string>> {
+    const usedModulesPerCollection = await Promise.all(Array.from(this.collectionsInternal.get().values()).map(async collection => await collection.modulesUsed()))
+    return this._orphanedModules(this.modulesInternal.get(), usedModulesPerCollection)
+  }
+
+  private _orphanedModules(allModules: Immutable.Map<string, ModuleInfo>, usedModulesPerCollection: Array<Immutable.Set<ModuleLink>>): Immutable.Set<string> {
+    return Immutable.Set(allModules.keys()).withMutations(s => {
       for (const collectionModules of usedModulesPerCollection) {
         for (const moduleLink of collectionModules) {
           s.delete(moduleLink.moduleid)
@@ -482,7 +492,7 @@ export class BookBundle {
   }  
 
   async modulesUsed(filename: string): Promise<Immutable.Set<ModuleLink> | null> {
-    const collectionInfo = this.collectionsInternal.inner.get(filename)
+    const collectionInfo = this.collectionsInternal.get().get(filename)
     if (collectionInfo == null) {
       return null
     }
@@ -490,7 +500,7 @@ export class BookBundle {
   }
 
   async moduleTitle(moduleid: string): Promise<ModuleTitle | null> {
-    const moduleInfo = this.modulesInternal.inner.get(moduleid)
+    const moduleInfo = this.modulesInternal.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
@@ -498,7 +508,7 @@ export class BookBundle {
   }
 
   async isIdInModule(id: string, moduleid: string): Promise<boolean> {
-    const moduleInfo = this.modulesInternal.inner.get(moduleid)
+    const moduleInfo = this.modulesInternal.get().get(moduleid)
     if (moduleInfo == null) {
       return false
     }
@@ -506,7 +516,7 @@ export class BookBundle {
   }
 
   async isIdUniqueInModule(id: string, moduleid: string): Promise<boolean> {
-    const moduleInfo = this.modulesInternal.inner.get(moduleid)
+    const moduleInfo = this.modulesInternal.get().get(moduleid)
     if (moduleInfo == null) {
       return false
     }
@@ -518,7 +528,7 @@ export class BookBundle {
   }
 
   async moduleLinks(moduleid: string): Promise<Immutable.Set<Link> | null> {
-    const moduleInfo = this.modulesInternal.inner.get(moduleid)
+    const moduleInfo = this.modulesInternal.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
@@ -526,7 +536,7 @@ export class BookBundle {
   }
 
   async moduleIds(moduleid: string): Promise<Immutable.Set<string> | null> {
-    const moduleInfo = this.modulesInternal.inner.get(moduleid)
+    const moduleInfo = this.modulesInternal.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
@@ -534,15 +544,15 @@ export class BookBundle {
   }
 
   async moduleImageSources(moduleid: string): Promise<Immutable.Set<ImageSource> | null> {
-    const moduleInfo = this.modulesInternal.inner.get(moduleid)
+    const moduleInfo = this.modulesInternal.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return await moduleInfo.imageSources(this.imagesInternal.inner)
+    return await moduleInfo.imageSources(this.imagesInternal.get())
   }
 
   async _moduleImageFilenames(moduleid: string): Promise<Immutable.Set<string> | null> {
-    const moduleInfo = this.modulesInternal.inner.get(moduleid)
+    const moduleInfo = this.modulesInternal.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
@@ -550,7 +560,7 @@ export class BookBundle {
   }
 
   async collectionTree(filename: string): Promise<TocTreeCollection | null> {
-    const collectionInfo = this.collectionsInternal.inner.get(filename)
+    const collectionInfo = this.collectionsInternal.get().get(filename)
     if (collectionInfo == null) {
       return null
     }
@@ -567,46 +577,40 @@ export class BookBundle {
     }
   }
 
-  private onModuleCreated(moduleid: string): void {
-    this.modulesInternal.inner.set(moduleid, new ModuleInfo(this, moduleid))
-    this.modulesInternal = recachify(this.modulesInternal)
+  private async onModuleCreated(moduleid: string) {
+    await getOrAdd(this.modulesInternal, moduleid, () => new ModuleInfo(this, moduleid)).refresh()
   }
 
-  private onModuleChanged(moduleid: string): void {
-    this.modulesInternal.inner.set(moduleid, new ModuleInfo(this, moduleid))
+  private async onModuleChanged(moduleid: string) {
+    await getOrAdd(this.modulesInternal, moduleid, () => new ModuleInfo(this, moduleid)).refresh()
   }
 
-  private onModuleDeleted(moduleid: string): void {
-    this.modulesInternal.inner.delete(moduleid)
-    this.modulesInternal = recachify(this.modulesInternal)
+  private async onModuleDeleted(moduleid: string) {
+    this.modulesInternal.set(this.modulesInternal.get().delete(moduleid))
   }
 
-  private onImageCreated(name: string): void {
-    this.imagesInternal.inner.add(name)
-    this.imagesInternal = recachify(this.imagesInternal)
+  private async onImageCreated(name: string) {
+    this.imagesInternal.set(this.imagesInternal.get().add(name))
   }
 
-  private onImageChanged(name: string): void {}
-  private onImageDeleted(name: string): void {
-    this.imagesInternal.inner.delete(name)
-    this.imagesInternal = recachify(this.imagesInternal)
+  private async onImageChanged(name: string) {}
+  private async onImageDeleted(name: string) {
+    this.imagesInternal.set(this.imagesInternal.get().delete(name))
   }
 
-  private onCollectionCreated(filename: string): void {
-    this.collectionsInternal.inner.set(filename, new CollectionInfo(this, filename))
-    this.collectionsInternal = recachify(this.collectionsInternal)
+  private async onCollectionCreated(filename: string) {
+    await getOrAdd(this.collectionsInternal, filename, () => new CollectionInfo(this, filename)).refresh()
   }
 
-  private onCollectionChanged(filename: string): void {
-    this.collectionsInternal.inner.set(filename, new CollectionInfo(this, filename))
+  private async onCollectionChanged(filename: string) {
+    await getOrAdd(this.collectionsInternal, filename, () => new CollectionInfo(this, filename)).refresh()
   }
 
-  private onCollectionDeleted(filename: string): void {
-    this.collectionsInternal.inner.delete(filename)
-    this.collectionsInternal = recachify(this.collectionsInternal)
+  private async onCollectionDeleted(filename: string) {
+    this.collectionsInternal.set(this.collectionsInternal.get().delete(filename))
   }
 
-  processChange(change: FileEvent): void {
+  processChange(change: FileEvent) {
     if (this.isDirectoryDeletion(change)) {
       // Special casing directory deletion processing since while these might
       // be rare / unexpected, the file watcher events don't necessarily notify

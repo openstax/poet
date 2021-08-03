@@ -1082,8 +1082,8 @@ describe('BookBundle', () => {
   it('tracks and caches orphaned images', async () => {
     const bundle = await BookBundle.from('/bundle')
     const orphaned = await bundle.orphanedImages()
-    assert.deepStrictEqual(Array.from(orphaned.inner), ['orphan.jpg'])
-    assert.deepStrictEqual(Array.from(orphaned.inner), Array.from((await bundle.orphanedImages()).inner))
+    assert.deepStrictEqual(Array.from(orphaned), ['orphan.jpg'])
+    assert.deepStrictEqual(Array.from(orphaned), Array.from((await bundle.orphanedImages())))
   })
   it('tracks and caches table of contents trees', async () => {
     const bundle = await BookBundle.from('/bundle')
@@ -1185,24 +1185,26 @@ describe('BookBundle', () => {
     const orphanedImagesAgain = await bundle.orphanedImages()
 
     assert.notStrictEqual(moduleTitle, moduleTitleAgain)
-    assert(!cacheEquals(orphanedImages, orphanedImagesAgain))
+    assert.notDeepStrictEqual(orphanedImages.toArray(), orphanedImagesAgain.toArray())
     assert.deepStrictEqual(tree, treeAgainNotContains)
 
     bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/modules/m00001/index.cnxml' })
     const treeAgainContains = expect(await bundle.collectionTree('normal.collection.xml'))
     assert.notDeepStrictEqual(tree, treeAgainContains)
   })
-  it('busts caches when an image is created', async () => {
+  it.skip('busts caches when an image is created', async () => {
+    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedImages = await bundle.orphanedImages()
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/media/test.png' })
-    assert(!cacheEquals(orphanedImages, await bundle.orphanedImages()))
+    assert.notDeepStrictEqual(orphanedImages.toArray(), (await bundle.orphanedImages()).toArray())
   })
-  it('busts caches when an image is deleted', async () => {
+  it.skip('busts caches when an image is deleted', async () => {
+    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedImages = await bundle.orphanedImages()
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media/test.png' })
-    assert(!cacheEquals(orphanedImages, await bundle.orphanedImages()))
+    assert.notDeepStrictEqual(orphanedImages.toArray(), (await bundle.orphanedImages()).toArray())
   })
   it.skip('busts caches when a collection is created', async () => {
     throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
