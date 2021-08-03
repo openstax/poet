@@ -13,7 +13,6 @@ import {
   Position
 } from 'vscode-languageserver'
 import { BookBundle, BundleItem, ModuleTitle } from '../book-bundle'
-import { cacheEquals, cachify, cacheSort, cacheListsEqual, cacheArgsEqual, recachify } from '../cachify'
 import { TocTreeCollection, TocTreeElementType } from '../../../common/src/toc-tree'
 import {
   collectionDiagnostic,
@@ -1288,100 +1287,6 @@ describe('BookBundle', () => {
     assert(bundle.collections().length === initialCollectionsCount)
     assert(bundle.images().length === initialImagesCount)
     assert(bundle.modules().length === 0)
-  })
-})
-describe('BookBundle caching', () => {
-  describe('cachify', () => {
-    it('will provide cacheKey and inner', () => {
-      const cachified = cachify({})
-      assert.strictEqual(typeof cachified.cacheKey, 'string')
-      assert.deepStrictEqual(cachified.inner, {})
-    })
-    it('will change its key on recachify', () => {
-      const cachified = cachify({})
-      const recachified = recachify(cachified)
-      assert.strictEqual(cachified.inner, recachified.inner)
-      assert(!cacheEquals(cachified, recachified))
-    })
-  })
-  describe('cache equality', () => {
-    it('checks for equality only on the cache key', () => {
-      const cachified = cachify({ prop: 'apples' })
-      const cloneCache = { cacheKey: cachified.cacheKey, inner: { prop: 'oranges' } }
-      assert(cacheEquals(cachified, cloneCache))
-    })
-    it('can check for equality for lists of cached items', () => {
-      const a = cachify({ item: 'a' })
-      const b = cachify({ item: 'b' })
-      const c = cachify({ item: 'c' })
-      const arr = [a, b, c]
-      const clone = [a, b, c]
-      assert(cacheListsEqual(arr, clone))
-    })
-    it('can check for equality for lists of cached items', () => {
-      const a = cachify({ item: 'a' })
-      const b = cachify({ item: 'b' })
-      const arr = [a]
-      const other = [b]
-      assert(!cacheListsEqual(arr, other))
-    })
-    it('determines lists of varying length are unequal', () => {
-      const a = cachify({ item: 'a' })
-      const b = cachify({ item: 'b' })
-      const c = cachify({ item: 'c' })
-      const arr = [a, b, c]
-      const other = [a, b]
-      assert(!cacheListsEqual(arr, other))
-    })
-    it('can check for equality for arg lists of cached items', () => {
-      const a = cachify({ item: 'a' })
-      const b = cachify({ item: 'b' })
-      const c = cachify({ item: 'c' })
-      const arr = [a, [b, c]]
-      const clone = [a, [b, c]]
-      assert(cacheArgsEqual(arr, clone))
-    })
-    it('can check for equality for arg lists of cached items', () => {
-      const a = cachify({ item: 'a' })
-      const b = cachify({ item: 'b' })
-      const c = cachify({ item: 'c' })
-      const arr = [a, [b, c]]
-      const other = [a, b]
-      assert(!cacheArgsEqual(arr, other))
-    })
-    it('can check for equality for arg lists of cached items', () => {
-      const a = cachify({ item: 'a' })
-      const b = cachify({ item: 'b' })
-      const c = cachify({ item: 'c' })
-      const arr = [a, [b, c]]
-      const other = [b, [b, c]]
-      assert(!cacheArgsEqual(arr, other))
-    })
-    it('can check for equality for arg lists of cached items', () => {
-      const a = cachify({ item: 'a' })
-      const b = cachify({ item: 'b' })
-      const c = cachify({ item: 'c' })
-      const arr = [a, [b, c]]
-      const other = [a, [c, b]]
-      assert(!cacheArgsEqual(arr, other))
-    })
-    it('determines arg lists of varying length are unequal', () => {
-      const a = cachify({ item: 'a' })
-      const b = cachify({ item: 'b' })
-      const c = cachify({ item: 'c' })
-      const arr = [a, [b, c]]
-      const other = [a]
-      assert(!cacheArgsEqual(arr, other))
-    })
-  })
-  describe('cacheSort', () => {
-    it('sorts cached items in cacheKey order to ensure memoization works', () => {
-      const resetCacheKey = (): void => {}
-      const a = { cacheKey: 'a', resetCacheKey }
-      const b = { cacheKey: 'b', resetCacheKey }
-      const c = { cacheKey: 'c', resetCacheKey }
-      assert.deepStrictEqual(cacheSort([b, c, a]), [a, b, c])
-    })
   })
 })
 describe('Element ID creation', () => {
