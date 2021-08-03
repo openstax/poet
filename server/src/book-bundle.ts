@@ -238,7 +238,7 @@ class CollectionInfo {
     const modulePath = path.join(this.bundle.workspaceRoot(), 'collections', this.filename)
     return fs.promises.readFile(modulePath, { encoding: 'utf-8' })
   }
-  private async _loadIfNeeded() {
+  async loadIfNeeded() {
     if (!this._isLoaded) {
       await this.refresh()
     }
@@ -253,8 +253,7 @@ class CollectionInfo {
     this._isLoaded = true
   }
   
-  async modulesUsed(): Promise<Immutable.Set<ModuleLink>> {
-    await this._loadIfNeeded()
+  modulesUsed(): Immutable.Set<ModuleLink> {
     return this._modulesUsed.get()
   }
 
@@ -272,7 +271,7 @@ class CollectionInfo {
   }
 
   async tree(): Promise<TocTreeCollection> {
-    await this._loadIfNeeded()
+    await this.loadIfNeeded()
     return await this._tree(this._doc.get())
   }
 
@@ -402,6 +401,12 @@ export class BookBundle {
     return this._collections.get().has(filename)
   }
 
+  async loadIfNeeded() {
+    for (const c of this._collections.get().values()) {
+      await c.loadIfNeeded()
+    }
+  }
+
   containsBundleItem(item: BundleItem): boolean {
     const existsFunc = {
       collections: this.collectionExists,
@@ -469,8 +474,8 @@ export class BookBundle {
     })
   }
 
-  async orphanedModules(): Promise<Immutable.Set<string>> {
-    const usedModulesPerCollection = await Promise.all(Array.from(this._collections.get().values()).map(async collection => await collection.modulesUsed()))
+  orphanedModules(): Immutable.Set<string> {
+    const usedModulesPerCollection = Array.from(this._collections.get().values()).map(collection => collection.modulesUsed())
     return this._orphanedModules(this._modules.get(), usedModulesPerCollection)
   }
 
@@ -484,12 +489,12 @@ export class BookBundle {
     })  
   }  
 
-  async modulesUsed(filename: string): Promise<Immutable.Set<ModuleLink> | null> {
+  modulesUsed(filename: string): Immutable.Set<ModuleLink> | null {
     const collectionInfo = this._collections.get().get(filename)
     if (collectionInfo == null) {
       return null
     }
-    return await collectionInfo.modulesUsed()
+    return collectionInfo.modulesUsed()
   }
 
   async moduleTitle(moduleid: string): Promise<ModuleTitle | null> {

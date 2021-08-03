@@ -104,7 +104,8 @@ export const validateCollection = async (bundle: BookBundle, filename: string): 
 }
 
 export const validateCollectionModules = async (bundle: BookBundle, filename: string): Promise<Diagnostic[] | null> => {
-  const modulesUsed = await bundle.modulesUsed(filename)
+  await bundle.loadIfNeeded()
+  const modulesUsed = bundle.modulesUsed(filename)
   if (modulesUsed == null) {
     return null
   }
