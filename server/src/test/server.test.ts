@@ -1017,15 +1017,15 @@ describe('BookBundle', () => {
   it('tracks and caches declared ids per module', async () => {
     const bundle = await BookBundle.from('/bundle')
     const ids = expect(await bundle.moduleIds('m00001'))
-    assert.deepStrictEqual(Array.from(ids.inner).sort(), ['para', 'para2'])
+    assert.deepStrictEqual(Array.from(ids).sort(), ['para', 'para2'])
     const cached = expect(await bundle.moduleIds('m00001'))
-    assert(cacheEquals(ids, cached))
+    assert.deepStrictEqual([...ids], [...cached])
     assert.strictEqual(await bundle.moduleIds('does-not-exist'), null)
   })
   it('removes duplicates from tracked ids per module', async () => {
     const bundle = await BookBundle.from('/bundle')
     const ids = expect(await bundle.moduleIds('m00002'))
-    assert.deepStrictEqual(Array.from(ids.inner), ['duplicate'])
+    assert.deepStrictEqual(Array.from(ids), ['duplicate'])
   })
   it('tracks and caches declared links per module', async () => {
     const bundle = await BookBundle.from('/bundle')

@@ -71,7 +71,6 @@ class ModuleInfo {
   private __linksDeclared = Quarx.observable.box(Immutable.Set<Link>())
   private __titleFromDocument = Quarx.observable.box<string|null>(null)
 
-  private fileDataInternal: Cachified<FileData> | null = null
   constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
 
   private async readFile() {
@@ -94,38 +93,10 @@ class ModuleInfo {
     }
   }
 
-
-  private async fileData(): Promise<Cachified<FileData>> {
-    if (this.fileDataInternal == null) {
-      const modulePath = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
-      const data = await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
-      this.fileDataInternal = cachify({ data })
-    }
-    return this.fileDataInternal
+  async idsDeclared(): Promise<Immutable.Map<string, number>> {
+    await this.hack_refreshIfNeeded()
+    return this.__idsDeclared.get()
   }
-
-  private async document(): Promise<Cachified<Document>> {
-    const fileData = await this.fileData()
-    return this._document(fileData)
-  }
-
-  private readonly _document = memoizeOneCache(
-    ({ inner }: Cachified<FileData>): Cachified<Document> => {
-      return cachify(new DOMParser().parseFromString(inner.data))
-    }
-  )
-
-  async idsDeclared(): Promise<Cachified<Map<string, number>>> {
-    const document = await this.document()
-    return this._idsDeclared(document)
-  }
-
-  private readonly _idsDeclared = memoizeOneCache(
-    ({ inner: doc }: Cachified<Document>) => {
-      const ids = toJSMap(this.phil_idsDeclared(doc))
-      return cachify(ids)
-    }
-  )
 
   private phil_idsDeclared(doc: Document) {
     const idNodes = select('//cnxml:*[@id]', doc) as Element[]
@@ -149,24 +120,6 @@ class ModuleInfo {
           startPos,
           endPos,
         })
-      }
-    })
-  }
-
-  // TODO: Make this async again (remove fileExistsAtSync)
-  private phil_imageSources(doc: Document, bundleMedia: Set<string>): Immutable.Set<ImageSource> {
-    return this.phil_imagesUsed(doc).map(img => {
-      const basename = path.basename(img.relPath)
-      // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
-      const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), this.moduleid, img.relPath)
-      const inBundleMedia = bundleMedia.has(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
-      return {
-        name: basename,
-        path: img.relPath,
-        inBundleMedia,
-        exists: inBundleMedia || (img.relPath !== '' && fileExistsAtSync(mediaSourceResolved)),
-        startPos: img.startPos,
-        endPos: img.endPos
       }
     })
   }
@@ -211,7 +164,6 @@ class ModuleInfo {
   async imagesUsed(): Promise<Immutable.Set<ImageWithPosition>> {
     await this.hack_refreshIfNeeded()
     return this.__imagesUsed.get()
-
   }
 
   async imageSources(bundleMedia: Set<string>): Promise<Immutable.Set<ImageSource>> {
@@ -232,13 +184,6 @@ class ModuleInfo {
       }
     })
   }
-
-  private readonly _imageSources = memoizeOneCache(
-    async ({ inner: doc }: Cachified<Document>, bundleMedia: Cachified<Set<string>>) => {
-      const ret = [...this.phil_imageSources(doc, bundleMedia.inner)]
-      return cachify(ret)
-    }
-  )
 
   async linksDelared(): Promise<Immutable.Set<Link>> {
     await this.hack_refreshIfNeeded()
@@ -261,12 +206,6 @@ class ModuleInfo {
   private _moduleTitleFromString(titleString: string): ModuleTitle {
     return { title: titleString, moduleid: this.moduleid }
   }
-
-  private readonly _titleFromDocument = memoizeOneCache(
-    ({ inner: doc }: Cachified<Document>): Cachified<ModuleTitle> => {
-      return cachify(this._moduleTitleFromString(this.phil_titleFromDocument(doc)))
-    }
-  )
 
   private _guessFromFileData(data: string) {
       const titleTagStart = data.indexOf('<title>')
@@ -563,7 +502,7 @@ export class BookBundle {
     if (moduleInfo == null) {
       return false
     }
-    return (await moduleInfo.idsDeclared()).inner.has(id)
+    return (await moduleInfo.idsDeclared()).has(id)
   }
 
   async isIdUniqueInModule(id: string, moduleid: string): Promise<boolean> {
@@ -571,7 +510,7 @@ export class BookBundle {
     if (moduleInfo == null) {
       return false
     }
-    const elements = (await moduleInfo.idsDeclared()).inner.get(id)
+    const elements = (await moduleInfo.idsDeclared()).get(id)
     if (elements == 0) {
       return false
     }
@@ -586,19 +525,13 @@ export class BookBundle {
     return await moduleInfo.linksDelared()
   }
 
-  async moduleIds(moduleid: string): Promise<Cachified<Set<string>> | null> {
+  async moduleIds(moduleid: string): Promise<Immutable.Set<string> | null> {
     const moduleInfo = this.modulesInternal.inner.get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return this._moduleIds(await moduleInfo.idsDeclared())
+    return Immutable.Set((await moduleInfo.idsDeclared()).keys())
   }
-
-  private readonly _moduleIds = memoizeOneCache(
-    (moduleIdsAsMap: Cachified<Map<string, number>>): Cachified<Set<string>> => {
-      return cachify(new Set(moduleIdsAsMap.inner.keys()))
-    }
-  )
 
   async moduleImageSources(moduleid: string): Promise<Immutable.Set<ImageSource> | null> {
     const moduleInfo = this.modulesInternal.inner.get(moduleid)
