@@ -74,13 +74,15 @@ class ModuleInfo {
 
   constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
 
-  private async readFile() {
+  private async _readFile() {
     const modulePath = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
     return await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
   }
 
   async refresh() {
-    const doc = new DOMParser().parseFromString(await this.readFile())
+    const xml = await this._readFile()
+    const doc = new DOMParser().parseFromString(xml)
+    if (!doc) return
     this.__idsDeclared.set(this.phil_idsDeclared(doc))
     this.__imagesUsed.set(this.phil_imagesUsed(doc)) // need to path.basename(x) and unwrapso .imagesUsed() only returns strings
     this.__linksDeclared.set(this.phil_linksDeclared(doc))
@@ -194,7 +196,7 @@ class ModuleInfo {
 
   async title(): Promise<ModuleTitle> {
     if (this.__titleFromDocument.get() === null) {
-      const fileData = await this.readFile()
+      const fileData = await this._readFile()
       const guessedTitle = this._guessFromFileData(fileData)
       if (guessedTitle != null) {
         this.__titleFromDocument.set(guessedTitle.title)
@@ -202,7 +204,7 @@ class ModuleInfo {
       }
     }
     await this.refresh()
-    return this._moduleTitleFromString(expect(this.__titleFromDocument.get(), 'Should be defined by now because refresh was called'))
+    return this._moduleTitleFromString(this.__titleFromDocument.get() || '')
   }
 
   private _moduleTitleFromString(titleString: string): ModuleTitle {
@@ -230,8 +232,12 @@ class ModuleInfo {
 class CollectionInfo {
   private __isLoaded = false
   private __modulesUsed = Quarx.observable.box(Immutable.Set<ModuleLink>())
+  // UGH, Store document in memory because some code relies on thrown exceptions to send diagnostics
+  // that the collection.xml file is invalid.
+  // So, we cache the DOM but delay actually parsing the fields (like title, uuid, slug, etc) until later.
+  // TODO: Maybe there is a better way.
+  private __doc = Quarx.observable.box(new DOMParser().parseFromString('<unparsed-file-yet/>'))
 
-  private fileDataInternal: Cachified<FileData> | null = null
   constructor(private readonly bundle: BookBundle, readonly filename: string) {}
   
   private async _readFile() {
@@ -245,32 +251,14 @@ class CollectionInfo {
   }
 
   public async refresh() {
-    const doc = new DOMParser().parseFromString(await this._readFile())
+    const xml = await this._readFile()
+    const doc = new DOMParser().parseFromString(xml)
+    if (!doc) return
     this.__modulesUsed.set(this.phil_modulesUsed(doc))
-
+    this.__doc.set(doc)
     this.__isLoaded = true
   }
   
-  private async fileData(): Promise<Cachified<FileData>> {
-    if (this.fileDataInternal == null) {
-      const modulePath = path.join(this.bundle.workspaceRoot(), 'collections', this.filename)
-      const data = fs.readFileSync(modulePath, { encoding: 'utf-8' })
-      this.fileDataInternal = cachify({ data })
-    }
-    return this.fileDataInternal
-  }
-
-  async document(): Promise<Cachified<Document>> {
-    const fileData = await this.fileData()
-    return this._document(fileData)
-  }
-
-  private readonly _document = memoizeOneCache(
-    ({ inner }: Cachified<FileData>): Cachified<Document> => {
-      return cachify(new DOMParser().parseFromString(inner.data))
-    }
-  )
-
   async modulesUsed(): Promise<Immutable.Set<ModuleLink>> {
     await this._loadIfNeeded()
     return this.__modulesUsed.get()
@@ -289,12 +277,17 @@ class CollectionInfo {
     })
   }
 
-  async tree(): Promise<Cachified<TocTreeCollection>> {
-    const document = await this.document()
-    const modulesUsed = await this.modulesUsed()
+  async tree(): Promise<TocTreeCollection> {
+    await this._loadIfNeeded()
+    return await this.phil2_tree(this.__doc.get())
+  }
+
+  private async phil2_tree(doc: Document) {
+    debugger
+    const modulesUsed = this.__modulesUsed.get()
     const moduleTitles = await Promise.all(modulesUsed.map(async moduleLink => await this.bundle.moduleTitle(moduleLink.moduleid)))
     const moduleTitlesDefined = moduleTitles.filter(t => t != null) as Array<ModuleTitle>
-    return this._tree(document, moduleTitlesDefined)
+    return this.phil_tree(doc, moduleTitlesDefined)
   }
 
   private phil_tree(doc: Document, titles: ModuleTitle[]) {
@@ -313,13 +306,6 @@ class CollectionInfo {
     const tree = parseCollection(doc, moduleToObjectResolver)
     return tree
   }
-
-  private readonly _tree = memoizeOneCache(
-    async ({ inner: doc }: Cachified<Document>, titles: Array<ModuleTitle>) => {
-      const tree = this.phil_tree(doc, titles)
-      return cachify(tree)
-    }
-  )
 }
 
 export class BookBundle {
@@ -563,7 +549,7 @@ export class BookBundle {
     return (await moduleInfo.imagesUsed()).map(i => path.basename(i.relPath))
   }
 
-  async collectionTree(filename: string): Promise<Cachified<TocTreeCollection> | null> {
+  async collectionTree(filename: string): Promise<TocTreeCollection | null> {
     const collectionInfo = this.collectionsInternal.inner.get(filename)
     if (collectionInfo == null) {
       return null

@@ -1101,8 +1101,8 @@ describe('BookBundle', () => {
         }
       ]
     }
-    assert.deepStrictEqual(tree.inner, expected)
-    assert(cacheEquals(tree, expect(await bundle.collectionTree('normal.collection.xml'))))
+    assert.deepStrictEqual(tree, expected)
+    assert.deepStrictEqual(tree, expect(await bundle.collectionTree('normal.collection.xml')))
     assert.strictEqual(await bundle.collectionTree('does-not-exist'), null)
   })
   it('tracks and caches table of contents trees containing subcollections', async () => {
@@ -1128,9 +1128,9 @@ describe('BookBundle', () => {
         }]
       }]
     }
-    assert.deepStrictEqual(tree.inner, expected)
+    assert.deepStrictEqual(tree, expected)
     const cacheExpected = expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
-    assert(cacheEquals(tree, cacheExpected))
+    assert.deepStrictEqual(tree, cacheExpected)
   })
   it('can provide modules directly as toc tree objects', async () => {
     const bundle = await BookBundle.from('/bundle')
@@ -1186,11 +1186,11 @@ describe('BookBundle', () => {
 
     assert.notStrictEqual(moduleTitle, moduleTitleAgain)
     assert(!cacheEquals(orphanedImages, orphanedImagesAgain))
-    assert(cacheEquals(tree, treeAgainNotContains))
+    assert.deepStrictEqual(tree, treeAgainNotContains)
 
     bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/modules/m00001/index.cnxml' })
     const treeAgainContains = expect(await bundle.collectionTree('normal.collection.xml'))
-    assert(!cacheEquals(tree, treeAgainContains))
+    assert.notDeepStrictEqual(tree, treeAgainContains)
   })
   it('busts caches when an image is created', async () => {
     const bundle = await BookBundle.from('/bundle')

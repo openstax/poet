@@ -22,7 +22,7 @@ export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle
     const bundle = bundleAndValidator[0]
     const promises = bundle.collectionItems().map(async (collection: BundleItem): Promise<TocTreeCollection[]> => {
       try {
-        const tree = expect(await bundle.collectionTree(collection.key), 'collection must exist').inner
+        const tree = expect(await bundle.collectionTree(collection.key), 'collection must exist')
         return [tree]
       } catch (_error) {
         const error: Error = _error
