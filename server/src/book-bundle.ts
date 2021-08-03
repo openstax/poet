@@ -19,11 +19,6 @@ const FS_SEP = path.sep
 
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
-const toJSMap = <K,V>(i: Immutable.Map<K,V>) => new Map(i.entries())
-const fromJSMap = <K,V>(m: Map<K,V>) => Immutable.Map(m.entries())
-const toJSSet = <V>(i: Immutable.Set<V>) => new Set(i.values())
-
-
 export interface Link {
   moduleid: string
   targetid: string | null
@@ -65,11 +60,11 @@ export interface BundleItem {
 }
 
 class ModuleInfo {
-  private __isLoaded = false
-  private __idsDeclared = Quarx.observable.box(Immutable.Map<string, number>())
-  private __imagesUsed = Quarx.observable.box(Immutable.Set<ImageWithPosition>())
-  private __linksDeclared = Quarx.observable.box(Immutable.Set<Link>())
-  private __titleFromDocument = Quarx.observable.box<string|null>(null)
+  private _isLoaded = false
+  private _idsDeclared = Quarx.observable.box(Immutable.Map<string, number>())
+  private _imagesUsed = Quarx.observable.box(Immutable.Set<ImageWithPosition>())
+  private _linksDeclared = Quarx.observable.box(Immutable.Set<Link>())
+  private _titleFromDocument = Quarx.observable.box<string|null>(null)
 
   constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
 
@@ -82,26 +77,68 @@ class ModuleInfo {
     const xml = await this._readFile()
     const doc = new DOMParser().parseFromString(xml)
     if (!doc) return
-    this.__idsDeclared.set(this.phil_idsDeclared(doc))
-    this.__imagesUsed.set(this.phil_imagesUsed(doc)) // need to path.basename(x) and unwrapso .imagesUsed() only returns strings
-    this.__linksDeclared.set(this.phil_linksDeclared(doc))
-    this.__titleFromDocument.set(this.phil_titleFromDocument(doc))
-    this.__isLoaded = true
-  }
-
-  private async _loadIfNeeded() {
-    if (!this.__isLoaded) {
-      await this.refresh()
-      this.__isLoaded = true
-    }
+    this._idsDeclared.set(this.__idsDeclared(doc))
+    this._imagesUsed.set(this.__imagesUsed(doc)) // need to path.basename(x) and unwrapso .imagesUsed() only returns strings
+    this._linksDeclared.set(this.__linksDeclared(doc))
+    this._titleFromDocument.set(this.__titleFromDocument(doc))
+    this._isLoaded = true
   }
 
   async idsDeclared(): Promise<Immutable.Map<string, number>> {
     await this._loadIfNeeded()
-    return this.__idsDeclared.get()
+    return this._idsDeclared.get()
   }
 
-  private phil_idsDeclared(doc: Document) {
+  async linksDelared(): Promise<Immutable.Set<Link>> {
+    await this._loadIfNeeded()
+    return this._linksDeclared.get()
+  }
+
+  async imagesUsed(): Promise<Immutable.Set<ImageWithPosition>> {
+    await this._loadIfNeeded()
+    return this._imagesUsed.get()
+  }
+
+  async imageSources(bundleMedia: Immutable.Set<string>): Promise<Immutable.Set<ImageSource>> {
+    await this._loadIfNeeded()
+    // TODO: Make this async again (remove fileExistsAtSync)
+    return this._imagesUsed.get().map(img => {
+      const basename = path.basename(img.relPath)
+      // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
+      const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), this.moduleid, img.relPath)
+      const inBundleMedia = bundleMedia.has(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
+      return {
+        name: basename,
+        path: img.relPath,
+        inBundleMedia,
+        exists: inBundleMedia || (img.relPath !== '' && fileExistsAtSync(mediaSourceResolved)),
+        startPos: img.startPos,
+        endPos: img.endPos
+      }
+    })
+  }
+
+  async title(): Promise<ModuleTitle> {
+    if (this._titleFromDocument.get() === null) {
+      const fileData = await this._readFile()
+      const guessedTitle = this._guessFromFileData(fileData)
+      if (guessedTitle != null) {
+        this._titleFromDocument.set(guessedTitle.title)
+        return guessedTitle
+      }
+    }
+    await this.refresh()
+    return this._moduleTitleFromString(this._titleFromDocument.get() || '')
+  }
+
+  private async _loadIfNeeded() {
+    if (!this._isLoaded) {
+      await this.refresh()
+      this._isLoaded = true
+    }
+  }
+
+  private __idsDeclared(doc: Document) {
     const idNodes = select('//cnxml:*[@id]', doc) as Element[]
     return Immutable.Map<string, number>().withMutations(map => {
       for (const idNode of idNodes) {
@@ -112,7 +149,7 @@ class ModuleInfo {
     })
   }
 
-  private phil_imagesUsed(doc: Document) {
+  private __imagesUsed(doc: Document) {
     const imageNodes = select('//cnxml:image[@src]', doc) as Element[]
     return Immutable.Set<ImageWithPosition>().withMutations(s => {
       for (const imageNode of imageNodes) {
@@ -127,7 +164,7 @@ class ModuleInfo {
     })
   }
 
-  private phil_linksDeclared(doc: Document) {
+  private __linksDeclared(doc: Document) {
     const linkNodes = select('//cnxml:link', doc) as Element[]
     return Immutable.Set<Link>().withMutations(s =>{
       for (const linkNode of linkNodes) {
@@ -156,54 +193,12 @@ class ModuleInfo {
     })
   }
 
-  private phil_titleFromDocument(doc: Document) {
+  private __titleFromDocument(doc: Document) {
     const titleNode = select('//cnxml:title', doc) as Element[]
     if (titleNode[0]) {
       return titleNode[0].textContent || ''
     }
     return 'Unnamed Module'
-  }
-
-  async imagesUsed(): Promise<Immutable.Set<ImageWithPosition>> {
-    await this._loadIfNeeded()
-    return this.__imagesUsed.get()
-  }
-
-  async imageSources(bundleMedia: Immutable.Set<string>): Promise<Immutable.Set<ImageSource>> {
-    await this._loadIfNeeded()
-    // TODO: Make this async again (remove fileExistsAtSync)
-    return this.__imagesUsed.get().map(img => {
-      const basename = path.basename(img.relPath)
-      // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
-      const mediaSourceResolved = path.resolve(this.bundle.moduleDirectory(), this.moduleid, img.relPath)
-      const inBundleMedia = bundleMedia.has(basename) && path.dirname(mediaSourceResolved) === this.bundle.mediaDirectory()
-      return {
-        name: basename,
-        path: img.relPath,
-        inBundleMedia,
-        exists: inBundleMedia || (img.relPath !== '' && fileExistsAtSync(mediaSourceResolved)),
-        startPos: img.startPos,
-        endPos: img.endPos
-      }
-    })
-  }
-
-  async linksDelared(): Promise<Immutable.Set<Link>> {
-    await this._loadIfNeeded()
-    return this.__linksDeclared.get()
-  }
-
-  async title(): Promise<ModuleTitle> {
-    if (this.__titleFromDocument.get() === null) {
-      const fileData = await this._readFile()
-      const guessedTitle = this._guessFromFileData(fileData)
-      if (guessedTitle != null) {
-        this.__titleFromDocument.set(guessedTitle.title)
-        return guessedTitle
-      }
-    }
-    await this.refresh()
-    return this._moduleTitleFromString(this.__titleFromDocument.get() || '')
   }
 
   private _moduleTitleFromString(titleString: string): ModuleTitle {
@@ -229,13 +224,13 @@ class ModuleInfo {
 }
 
 class CollectionInfo {
-  private __isLoaded = false
-  private __modulesUsed = Quarx.observable.box(Immutable.Set<ModuleLink>())
+  private _isLoaded = false
+  private _modulesUsed = Quarx.observable.box(Immutable.Set<ModuleLink>())
   // UGH, Store document in memory because some code relies on thrown exceptions to send diagnostics
   // that the collection.xml file is invalid.
   // So, we cache the DOM but delay actually parsing the fields (like title, uuid, slug, etc) until later.
   // TODO: Maybe there is a better way.
-  private __doc = Quarx.observable.box(new DOMParser().parseFromString('<unparsed-file-yet/>'))
+  private _doc = Quarx.observable.box(new DOMParser().parseFromString('<unparsed-file-yet/>'))
 
   constructor(private readonly bundle: BookBundle, readonly filename: string) {}
   
@@ -244,7 +239,7 @@ class CollectionInfo {
     return fs.promises.readFile(modulePath, { encoding: 'utf-8' })
   }
   private async _loadIfNeeded() {
-    if (!this.__isLoaded) {
+    if (!this._isLoaded) {
       await this.refresh()
     }
   }
@@ -253,17 +248,17 @@ class CollectionInfo {
     const xml = await this._readFile()
     const doc = new DOMParser().parseFromString(xml)
     if (!doc) return
-    this.__modulesUsed.set(this.phil_modulesUsed(doc))
-    this.__doc.set(doc)
-    this.__isLoaded = true
+    this._modulesUsed.set(this.__modulesUsed(doc))
+    this._doc.set(doc)
+    this._isLoaded = true
   }
   
   async modulesUsed(): Promise<Immutable.Set<ModuleLink>> {
     await this._loadIfNeeded()
-    return this.__modulesUsed.get()
+    return this._modulesUsed.get()
   }
 
-  private phil_modulesUsed(doc: Document) {
+  private __modulesUsed(doc: Document) {
     const moduleNodes = select('//col:module', doc) as Element[]
     return Immutable.Set<ModuleLink>().withMutations(s => {
       for (const moduleNode of moduleNodes) {
@@ -278,18 +273,17 @@ class CollectionInfo {
 
   async tree(): Promise<TocTreeCollection> {
     await this._loadIfNeeded()
-    return await this.phil2_tree(this.__doc.get())
+    return await this._tree(this._doc.get())
   }
 
-  private async phil2_tree(doc: Document) {
-    debugger
-    const modulesUsed = this.__modulesUsed.get()
+  private async _tree(doc: Document) {
+    const modulesUsed = this._modulesUsed.get()
     const moduleTitles = await Promise.all(modulesUsed.map(async moduleLink => await this.bundle.moduleTitle(moduleLink.moduleid)))
     const moduleTitlesDefined = moduleTitles.filter(t => t != null) as Array<ModuleTitle>
-    return this.phil_tree(doc, moduleTitlesDefined)
+    return this.__tree(doc, moduleTitlesDefined)
   }
 
-  private phil_tree(doc: Document, titles: ModuleTitle[]) {
+  private __tree(doc: Document, titles: ModuleTitle[]) {
     const moduleTitleMap = new Map<string, string>()
     for (const entry of titles) {
       moduleTitleMap.set(entry.moduleid, entry.title)
