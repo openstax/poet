@@ -99,10 +99,10 @@ export const fileExistsAtSync = (filepath: string): boolean => {
   return exists
 }
 
-export function getOrAdd<K,V>(boxedMap: Quarx.Box<Immutable.Map<K,V>>, key: K, newInstance: () => V) {
+export function getOrAdd<K, V>(boxedMap: Quarx.Box<Immutable.Map<K, V>>, key: K, newInstance: () => V): V {
   const m = boxedMap.get()
   const v = m.get(key)
-  if (v) {
+  if (v !== undefined) {
     return v
   } else {
     const i = newInstance()

@@ -1158,7 +1158,7 @@ describe('BookBundle', () => {
   })
   it('busts caches when a module is created', async () => {
     const bundle = await BookBundle.from('/bundle')
-    fs.mkdirSync('/bundle/modules/m00000', {recursive: true})
+    fs.mkdirSync('/bundle/modules/m00000', { recursive: true })
     fs.writeFileSync('/bundle/modules/m00000/index.cnxml', '', 'utf-8')
     const orphanedModules = bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/modules/m00000/index.cnxml' })
@@ -1166,7 +1166,6 @@ describe('BookBundle', () => {
     assert.notDeepStrictEqual(orphanedModules.toArray(), orphanedModulesAgain.toArray())
   })
   it.skip('busts caches when a module is deleted', async () => {
-    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/modules/m00000/index.cnxml' })
@@ -1175,40 +1174,37 @@ describe('BookBundle', () => {
   })
   it.skip('busts caches when a module is changed', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const tree = expect(await bundle.collectionTree('normal.collection.xml'))
-    const orphanedImages = await bundle.orphanedImages()
-    const moduleTitle = expect(await bundle.moduleTitle('m00002'))
+    const tree = expect(bundle.collectionTree('normal.collection.xml'))
+    const orphanedImages = bundle.orphanedImages()
+    const moduleTitle = expect(bundle.moduleTitle('m00002'))
 
     bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/modules/m00002/index.cnxml' })
 
-    const treeAgainNotContains = expect(await bundle.collectionTree('normal.collection.xml'))
-    const moduleTitleAgain = expect(await bundle.moduleTitle('m00002'))
-    const orphanedImagesAgain = await bundle.orphanedImages()
+    const treeAgainNotContains = expect(bundle.collectionTree('normal.collection.xml'))
+    const moduleTitleAgain = expect(bundle.moduleTitle('m00002'))
+    const orphanedImagesAgain = bundle.orphanedImages()
 
     assert.notStrictEqual(moduleTitle, moduleTitleAgain)
     assert.notDeepStrictEqual(orphanedImages.toArray(), orphanedImagesAgain.toArray())
     assert.deepStrictEqual(tree, treeAgainNotContains)
 
     bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/modules/m00001/index.cnxml' })
-    const treeAgainContains = expect(await bundle.collectionTree('normal.collection.xml'))
+    const treeAgainContains = expect(bundle.collectionTree('normal.collection.xml'))
     assert.notDeepStrictEqual(tree, treeAgainContains)
   })
   it.skip('busts caches when an image is created', async () => {
-    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
-    const orphanedImages = await bundle.orphanedImages()
+    const orphanedImages = bundle.orphanedImages()
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/media/test.png' })
-    assert.notDeepStrictEqual(orphanedImages.toArray(), (await bundle.orphanedImages()).toArray())
+    assert.notDeepStrictEqual(orphanedImages.toArray(), (bundle.orphanedImages()).toArray())
   })
   it.skip('busts caches when an image is deleted', async () => {
-    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
-    const orphanedImages = await bundle.orphanedImages()
+    const orphanedImages = bundle.orphanedImages()
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media/test.png' })
-    assert.notDeepStrictEqual(orphanedImages.toArray(), (await bundle.orphanedImages()).toArray())
+    assert.notDeepStrictEqual(orphanedImages.toArray(), (bundle.orphanedImages()).toArray())
   })
   it.skip('busts caches when a collection is created', async () => {
-    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/collections/normal.collection.xml' })
@@ -1216,7 +1212,6 @@ describe('BookBundle', () => {
     assert.notDeepStrictEqual(orphanedModules.toArray(), orphanedModulesAgain.toArray())
   })
   it.skip('busts caches when a collection is changed', async () => {
-    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/collections/normal.collection.xml' })
@@ -1224,7 +1219,6 @@ describe('BookBundle', () => {
     assert.notDeepStrictEqual(orphanedModules.toArray(), orphanedModulesAgain.toArray())
   })
   it.skip('busts caches when a collection is deleted', async () => {
-    throw new Error('This code originally checked if the cache keys are the same. We are no longer cache-busting this way.')
     const bundle = await BookBundle.from('/bundle')
     const orphanedModules = bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/collections/normal.collection.xml' })
@@ -1233,12 +1227,12 @@ describe('BookBundle', () => {
   })
   it.skip('busts image source cache when bundle media files are created / deleted', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const beforeImageSources = expect(await bundle.moduleImageSources('m00001'))
-    const checkImageSources = expect(await bundle.moduleImageSources('m00001'))
+    const beforeImageSources = expect(bundle.moduleImageSources('m00001'))
+    const checkImageSources = expect(bundle.moduleImageSources('m00001'))
     assert.deepStrictEqual([...beforeImageSources], [...checkImageSources])
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media/empty.jpg' })
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/media/newempty.jpg' })
-    const afterImageSources = expect(await bundle.moduleImageSources('m00001'))
+    const afterImageSources = expect(bundle.moduleImageSources('m00001'))
     assert.notDeepStrictEqual([...beforeImageSources], [...afterImageSources])
   })
   it('detects directory deletions correctly', async () => {

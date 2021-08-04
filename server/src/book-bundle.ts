@@ -38,7 +38,7 @@ export interface ImageSource {
   exists: boolean
 }
 
-type ImageWithPosition = {
+interface ImageWithPosition {
   relPath: string
   startPos: Position
   endPos: Position
@@ -61,22 +61,22 @@ export interface BundleItem {
 
 class ModuleInfo {
   private _isLoaded = false
-  private _idsDeclared = Quarx.observable.box(Immutable.Map<string, number>())
-  private _imagesUsed = Quarx.observable.box(Immutable.Set<ImageWithPosition>())
-  private _linksDeclared = Quarx.observable.box(Immutable.Set<Link>())
-  private _titleFromDocument = Quarx.observable.box<string|null>(null)
+  private readonly _idsDeclared = Quarx.observable.box(Immutable.Map<string, number>())
+  private readonly _imagesUsed = Quarx.observable.box(Immutable.Set<ImageWithPosition>())
+  private readonly _linksDeclared = Quarx.observable.box(Immutable.Set<Link>())
+  private readonly _titleFromDocument = Quarx.observable.box<string|null>(null)
 
   constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
 
-  private _readFileSync() {
+  private _readFileSync(): string {
     const p = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
     return fs.readFileSync(p, { encoding: 'utf-8' })
   }
 
-  refresh() {
+  refresh(): void {
     const xml = this._readFileSync()
+    if (xml === '') return
     const doc = new DOMParser().parseFromString(xml)
-    if (!doc) return
     this._idsDeclared.set(this.__idsDeclared(doc))
     this._imagesUsed.set(this.__imagesUsed(doc)) // need to path.basename(x) and unwrapso .imagesUsed() only returns strings
     this._linksDeclared.set(this.__linksDeclared(doc))
@@ -101,7 +101,6 @@ class ModuleInfo {
 
   imageSources(bundleMedia: Immutable.Set<string>): Immutable.Set<ImageSource> {
     this._expectLoaded()
-    // TODO: Make this async again (remove fileExistsAtSync)
     return this._imagesUsed.get().map(img => {
       const basename = path.basename(img.relPath)
       // Assume this module is found in /modules/*/index.cnxml and image src is a relative path
@@ -128,25 +127,25 @@ class ModuleInfo {
       }
     }
     this.refresh()
-    return this._moduleTitleFromString(this._titleFromDocument.get() || '')
+    return this._moduleTitleFromString(this._titleFromDocument.get() ?? '')
   }
 
-  private _expectLoaded() {
+  private _expectLoaded(): void {
     expect(this._isLoaded || null, 'This Object has not been loaded yet. Be sure to call .refresh() first')
   }
 
-  private __idsDeclared(doc: Document) {
+  private __idsDeclared(doc: Document): Immutable.Map<string, number> {
     const idNodes = select('//cnxml:*[@id]', doc) as Element[]
     return Immutable.Map<string, number>().withMutations(map => {
       for (const idNode of idNodes) {
         const id = expect(idNode.getAttribute('id'), 'selection requires attribute exists')
-        const existing = map.get(id) || 0
-        map.set(id, existing+1)
+        const existing = map.get(id) ?? 0
+        map.set(id, existing + 1)
       }
     })
   }
 
-  private __imagesUsed(doc: Document) {
+  private __imagesUsed(doc: Document): Immutable.Set<ImageWithPosition> {
     const imageNodes = select('//cnxml:image[@src]', doc) as Element[]
     return Immutable.Set<ImageWithPosition>().withMutations(s => {
       for (const imageNode of imageNodes) {
@@ -155,15 +154,15 @@ class ModuleInfo {
         s.add({
           relPath,
           startPos,
-          endPos,
+          endPos
         })
       }
     })
   }
 
-  private __linksDeclared(doc: Document) {
+  private __linksDeclared(doc: Document): Immutable.Set<Link> {
     const linkNodes = select('//cnxml:link', doc) as Element[]
-    return Immutable.Set<Link>().withMutations(s =>{
+    return Immutable.Set<Link>().withMutations(s => {
       for (const linkNode of linkNodes) {
         const toDocument = linkNode.hasAttribute('document')
         const toTargetId = linkNode.hasAttribute('target-id')
@@ -190,10 +189,10 @@ class ModuleInfo {
     })
   }
 
-  private __titleFromDocument(doc: Document) {
+  private __titleFromDocument(doc: Document): string {
     const titleNode = select('//cnxml:title', doc) as Element[]
-    if (titleNode[0]) {
-      return titleNode[0].textContent || ''
+    if (titleNode.length > 0) {
+      return titleNode[0].textContent ?? ''
     }
     return 'Unnamed Module'
   }
@@ -202,59 +201,59 @@ class ModuleInfo {
     return { title: titleString, moduleid: this.moduleid }
   }
 
-  private _guessFromFileData(data: string) {
-      const titleTagStart = data.indexOf('<title>')
-      const titleTagEnd = data.indexOf('</title>')
-      if (titleTagStart === -1 || titleTagEnd === -1) {
-        return null
-      }
-      const actualTitleStart = titleTagStart + 7 // Add length of '<title>'
-      if (titleTagEnd - actualTitleStart > 280) {
-        // If the title is so long you can't tweet it,
-        // then something probably went wrong.
-        /* istanbul ignore next */
-        return null
-      }
-      const moduleTitle = data.substring(actualTitleStart, titleTagEnd).trim()
-      return this._moduleTitleFromString(moduleTitle)
+  private _guessFromFileData(data: string): ModuleTitle | null {
+    const titleTagStart = data.indexOf('<title>')
+    const titleTagEnd = data.indexOf('</title>')
+    if (titleTagStart === -1 || titleTagEnd === -1) {
+      return null
     }
+    const actualTitleStart = titleTagStart + 7 // Add length of '<title>'
+    if (titleTagEnd - actualTitleStart > 280) {
+      // If the title is so long you can't tweet it,
+      // then something probably went wrong.
+      /* istanbul ignore next */
+      return null
+    }
+    const moduleTitle = data.substring(actualTitleStart, titleTagEnd).trim()
+    return this._moduleTitleFromString(moduleTitle)
+  }
 }
 
 class CollectionInfo {
   private _isLoaded = false
-  private _modulesUsed = Quarx.observable.box(Immutable.Set<ModuleLink>())
+  private readonly _modulesUsed = Quarx.observable.box(Immutable.Set<ModuleLink>())
   // UGH, Store document in memory because some code relies on thrown exceptions to send diagnostics
   // that the collection.xml file is invalid.
   // So, we cache the DOM but delay actually parsing the fields (like title, uuid, slug, etc) until later.
   // TODO: Maybe there is a better way.
-  private _doc = Quarx.observable.box(new DOMParser().parseFromString('<unparsed-file-yet/>'))
+  private readonly _doc = Quarx.observable.box(new DOMParser().parseFromString('<unparsed-file-yet/>'))
 
   constructor(private readonly bundle: BookBundle, readonly filename: string) {}
-  
-  private _readFileSync() {
+
+  private _readFileSync(): string {
     const modulePath = path.join(this.bundle.workspaceRoot(), 'collections', this.filename)
     return fs.readFileSync(modulePath, { encoding: 'utf-8' })
   }
 
-  public refresh() {
+  public refresh(): void {
     const xml = this._readFileSync()
+    if (xml === '') return
     const doc = new DOMParser().parseFromString(xml)
-    if (!doc) return
     this._modulesUsed.set(this.__modulesUsed(doc))
     this._doc.set(doc)
     this._isLoaded = true
   }
 
-  private _expectLoaded() {
+  private _expectLoaded(): void {
     expect(this._isLoaded || null, 'This Object has not been loaded yet. Be sure to call .refresh() first')
   }
-  
+
   modulesUsed(): Immutable.Set<ModuleLink> {
     this._expectLoaded()
     return this._modulesUsed.get()
   }
 
-  private __modulesUsed(doc: Document) {
+  private __modulesUsed(doc: Document): Immutable.Set<ModuleLink> {
     const moduleNodes = select('//col:module', doc) as Element[]
     return Immutable.Set<ModuleLink>().withMutations(s => {
       for (const moduleNode of moduleNodes) {
@@ -272,14 +271,14 @@ class CollectionInfo {
     return this._tree(this._doc.get())
   }
 
-  private _tree(doc: Document) {
+  private _tree(doc: Document): TocTreeCollection {
     const modulesUsed = this._modulesUsed.get()
     const moduleTitles = modulesUsed.map(moduleLink => this.bundle.moduleTitle(moduleLink.moduleid))
-    const moduleTitlesDefined = moduleTitles.toArray().filter(t => t != null) as Array<ModuleTitle>
+    const moduleTitlesDefined = moduleTitles.toArray().filter(t => t != null) as ModuleTitle[]
     return this.__tree(doc, moduleTitlesDefined)
   }
 
-  private __tree(doc: Document, titles: ModuleTitle[]) {
+  private __tree(doc: Document, titles: ModuleTitle[]): TocTreeCollection {
     const moduleTitleMap = new Map<string, string>()
     for (const entry of titles) {
       moduleTitleMap.set(entry.moduleid, entry.title)
@@ -297,7 +296,7 @@ class CollectionInfo {
   }
 }
 
-async function readdir(filePath: string) {
+async function readdir(filePath: string): Promise<string[]> {
   try { // dir may not exist
     return await fs.promises.readdir(filePath)
   } catch (e) { }
@@ -307,9 +306,9 @@ async function readdir(filePath: string) {
 export class BookBundle {
   constructor(
     readonly _workspaceRoot: string,
-    private _images: Quarx.Box<Immutable.Set<string>>,
-    private _modules: Quarx.Box<Immutable.Map<string, ModuleInfo>>,
-    private _collections: Quarx.Box<Immutable.Map<string, CollectionInfo>>
+    private readonly _images: Quarx.Box<Immutable.Set<string>>,
+    private readonly _modules: Quarx.Box<Immutable.Map<string, ModuleInfo>>,
+    private readonly _collections: Quarx.Box<Immutable.Map<string, CollectionInfo>>
   ) {}
 
   static async from(workspaceRoot: string): Promise<BookBundle> {
@@ -398,9 +397,9 @@ export class BookBundle {
     return this._collections.get().has(filename)
   }
 
-  async refresh() {
-    const c = [...this._collections.get().values()].map(c=>c.refresh())
-    const m = [...this._modules.get().values()].map(c=>c.refresh())
+  async refresh(): Promise<void> {
+    const c = [...this._collections.get().values()].map(c => c.refresh())
+    const m = [...this._modules.get().values()].map(c => c.refresh())
     await Promise.all([...c, ...m])
   }
 
@@ -483,8 +482,8 @@ export class BookBundle {
           s.delete(moduleLink.moduleid)
         }
       }
-    })  
-  }  
+    })
+  }
 
   modulesUsed(filename: string): Immutable.Set<ModuleLink> | null {
     const collectionInfo = this._collections.get().get(filename)
@@ -516,7 +515,7 @@ export class BookBundle {
       return false
     }
     const elements = (moduleInfo.idsDeclared()).get(id)
-    if (elements == 0) {
+    if (elements === 0) {
       return false
     }
     return elements === 1
@@ -547,7 +546,6 @@ export class BookBundle {
   }
 
   _moduleImageFilenames(moduleid: string): Immutable.Set<string> | null {
-    this.refresh()
     const moduleInfo = this._modules.get().get(moduleid)
     if (moduleInfo == null) {
       return null
@@ -573,40 +571,40 @@ export class BookBundle {
     }
   }
 
-  private onModuleCreated(moduleid: string) {
+  private onModuleCreated(moduleid: string): void {
     getOrAdd(this._modules, moduleid, () => new ModuleInfo(this, moduleid)).refresh()
   }
 
-  private onModuleChanged(moduleid: string) {
+  private onModuleChanged(moduleid: string): void {
     getOrAdd(this._modules, moduleid, () => new ModuleInfo(this, moduleid)).refresh()
   }
 
-  private onModuleDeleted(moduleid: string) {
+  private onModuleDeleted(moduleid: string): void {
     this._modules.set(this._modules.get().delete(moduleid))
   }
 
-  private onImageCreated(name: string) {
+  private onImageCreated(name: string): void {
     this._images.set(this._images.get().add(name))
   }
 
-  private onImageChanged(name: string) {}
-  private onImageDeleted(name: string) {
+  private onImageChanged(name: string): void {}
+  private onImageDeleted(name: string): void {
     this._images.set(this._images.get().delete(name))
   }
 
-  private onCollectionCreated(filename: string) {
+  private onCollectionCreated(filename: string): void {
     getOrAdd(this._collections, filename, () => new CollectionInfo(this, filename)).refresh()
   }
 
-  private onCollectionChanged(filename: string) {
+  private onCollectionChanged(filename: string): void {
     getOrAdd(this._collections, filename, () => new CollectionInfo(this, filename)).refresh()
   }
 
-  private onCollectionDeleted(filename: string) {
+  private onCollectionDeleted(filename: string): void {
     this._collections.set(this._collections.get().delete(filename))
   }
 
-  processChange(change: FileEvent) {
+  processChange(change: FileEvent): void {
     if (this.isDirectoryDeletion(change)) {
       // Special casing directory deletion processing since while these might
       // be rare / unexpected, the file watcher events don't necessarily notify
