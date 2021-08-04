@@ -296,9 +296,9 @@ class CollectionInfo {
   }
 }
 
-async function readdir(filePath: string): Promise<string[]> {
+function readdirSync(filePath: string): string[] {
   try { // dir may not exist
-    return await fs.promises.readdir(filePath)
+    return fs.readdirSync(filePath)
   } catch (e) { }
   return []
 }
@@ -316,29 +316,29 @@ export class BookBundle {
     const modules = Quarx.observable.box(Immutable.Map<string, ModuleInfo>())
     const collections = Quarx.observable.box(Immutable.Map<string, CollectionInfo>())
     const bundle = new BookBundle(workspaceRoot, images, modules, collections)
-    const loadImages = async (): Promise<void> => {
-      const foundImages = await readdir(bundle.mediaDirectory())
-      images.set(images.get().withMutations(s => {
+    const loadImages = (): void => {
+      const foundImages = readdirSync(bundle.mediaDirectory())
+      images.set(Immutable.Set<string>().withMutations(s => {
         for (const image of foundImages) {
           s.add(image)
         }
       }))
     }
     const loadModules = async (): Promise<void> => {
-      const foundPossibleModules = await readdir(bundle.moduleDirectory())
+      const foundPossibleModules = readdirSync(bundle.moduleDirectory())
       const moduleCnxmlExists = await Promise.all(foundPossibleModules.map(
         (moduleId) => (path.join(bundle.moduleDirectory(), moduleId, 'index.cnxml'))
       ).map(fileExistsAt))
       const foundModules = foundPossibleModules.filter((_, indx) => moduleCnxmlExists[indx])
-      modules.set(modules.get().withMutations(m => {
+      modules.set(Immutable.Map<string, ModuleInfo>().withMutations(m => {
         for (const module of foundModules) {
           m.set(module, new ModuleInfo(bundle, module))
         }
       }))
     }
-    const loadCollections = async (): Promise<void> => {
-      const foundCollections = await readdir(bundle.collectionDirectory())
-      collections.set(collections.get().withMutations(m => {
+    const loadCollections = (): void => {
+      const foundCollections = readdirSync(bundle.collectionDirectory())
+      collections.set(Immutable.Map<string, CollectionInfo>().withMutations(m => {
         for (const collection of foundCollections) {
           m.set(collection, new CollectionInfo(bundle, collection))
         }

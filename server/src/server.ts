@@ -163,7 +163,6 @@ connection.onRequest('onDidChangeWorkspaceFolders', async (event) => {
 
 connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler(workspaceBookBundles, connection))
 
-// TODO: Turn this into Quarx.autorun() because it uses bundle.*
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, ({ workspaceUri }: BundleOrphanedModulesArgs): BundleOrphanedModulesResponse => {
   const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
   if (bundleAndValidator == null) { return null }
