@@ -68,13 +68,13 @@ class ModuleInfo {
 
   constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
 
-  private async _readFile() {
-    const modulePath = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
-    return await fs.promises.readFile(modulePath, { encoding: 'utf-8' })
+  private _readFileSync() {
+    const p = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
+    return fs.readFileSync(p, { encoding: 'utf-8' })
   }
 
-  async refresh() {
-    const xml = await this._readFile()
+  refresh() {
+    const xml = this._readFileSync()
     const doc = new DOMParser().parseFromString(xml)
     if (!doc) return
     this._idsDeclared.set(this.__idsDeclared(doc))
@@ -84,23 +84,23 @@ class ModuleInfo {
     this._isLoaded = true
   }
 
-  async idsDeclared(): Promise<Immutable.Map<string, number>> {
-    await this._loadIfNeeded()
+  idsDeclared(): Immutable.Map<string, number> {
+    this._expectLoaded()
     return this._idsDeclared.get()
   }
 
-  async linksDelared(): Promise<Immutable.Set<Link>> {
-    await this._loadIfNeeded()
+  linksDeclared(): Immutable.Set<Link> {
+    this._expectLoaded()
     return this._linksDeclared.get()
   }
 
-  async imagesUsed(): Promise<Immutable.Set<ImageWithPosition>> {
-    await this._loadIfNeeded()
+  imagesUsed(): Immutable.Set<ImageWithPosition> {
+    this._expectLoaded()
     return this._imagesUsed.get()
   }
 
-  async imageSources(bundleMedia: Immutable.Set<string>): Promise<Immutable.Set<ImageSource>> {
-    await this._loadIfNeeded()
+  imageSources(bundleMedia: Immutable.Set<string>): Immutable.Set<ImageSource> {
+    this._expectLoaded()
     // TODO: Make this async again (remove fileExistsAtSync)
     return this._imagesUsed.get().map(img => {
       const basename = path.basename(img.relPath)
@@ -118,24 +118,21 @@ class ModuleInfo {
     })
   }
 
-  async title(): Promise<ModuleTitle> {
+  title(): ModuleTitle {
     if (this._titleFromDocument.get() === null) {
-      const fileData = await this._readFile()
+      const fileData = this._readFileSync()
       const guessedTitle = this._guessFromFileData(fileData)
       if (guessedTitle != null) {
         this._titleFromDocument.set(guessedTitle.title)
         return guessedTitle
       }
     }
-    await this.refresh()
+    this.refresh()
     return this._moduleTitleFromString(this._titleFromDocument.get() || '')
   }
 
-  private async _loadIfNeeded() {
-    if (!this._isLoaded) {
-      await this.refresh()
-      this._isLoaded = true
-    }
+  private _expectLoaded() {
+    expect(this._isLoaded || null, 'This Object has not been loaded yet. Be sure to call .refresh() first')
   }
 
   private __idsDeclared(doc: Document) {
@@ -234,26 +231,26 @@ class CollectionInfo {
 
   constructor(private readonly bundle: BookBundle, readonly filename: string) {}
   
-  private async _readFile() {
+  private _readFileSync() {
     const modulePath = path.join(this.bundle.workspaceRoot(), 'collections', this.filename)
-    return fs.promises.readFile(modulePath, { encoding: 'utf-8' })
-  }
-  async loadIfNeeded() {
-    if (!this._isLoaded) {
-      await this.refresh()
-    }
+    return fs.readFileSync(modulePath, { encoding: 'utf-8' })
   }
 
-  public async refresh() {
-    const xml = await this._readFile()
+  public refresh() {
+    const xml = this._readFileSync()
     const doc = new DOMParser().parseFromString(xml)
     if (!doc) return
     this._modulesUsed.set(this.__modulesUsed(doc))
     this._doc.set(doc)
     this._isLoaded = true
   }
+
+  private _expectLoaded() {
+    expect(this._isLoaded || null, 'This Object has not been loaded yet. Be sure to call .refresh() first')
+  }
   
   modulesUsed(): Immutable.Set<ModuleLink> {
+    this._expectLoaded()
     return this._modulesUsed.get()
   }
 
@@ -270,15 +267,15 @@ class CollectionInfo {
     })
   }
 
-  async tree(): Promise<TocTreeCollection> {
-    await this.loadIfNeeded()
-    return await this._tree(this._doc.get())
+  tree(): TocTreeCollection {
+    this._expectLoaded()
+    return this._tree(this._doc.get())
   }
 
-  private async _tree(doc: Document) {
+  private _tree(doc: Document) {
     const modulesUsed = this._modulesUsed.get()
-    const moduleTitles = await Promise.all(modulesUsed.map(async moduleLink => await this.bundle.moduleTitle(moduleLink.moduleid)))
-    const moduleTitlesDefined = moduleTitles.filter(t => t != null) as Array<ModuleTitle>
+    const moduleTitles = modulesUsed.map(moduleLink => this.bundle.moduleTitle(moduleLink.moduleid))
+    const moduleTitlesDefined = moduleTitles.toArray().filter(t => t != null) as Array<ModuleTitle>
     return this.__tree(doc, moduleTitlesDefined)
   }
 
@@ -321,7 +318,6 @@ export class BookBundle {
     const collections = Quarx.observable.box(Immutable.Map<string, CollectionInfo>())
     const bundle = new BookBundle(workspaceRoot, images, modules, collections)
     const loadImages = async (): Promise<void> => {
-      const dir = bundle.mediaDirectory()
       const foundImages = await readdir(bundle.mediaDirectory())
       images.set(images.get().withMutations(s => {
         for (const image of foundImages) {
@@ -350,6 +346,7 @@ export class BookBundle {
       }))
     }
     await Promise.all([loadImages(), loadModules(), loadCollections()])
+    await bundle.refresh()
     return bundle
   }
 
@@ -401,10 +398,10 @@ export class BookBundle {
     return this._collections.get().has(filename)
   }
 
-  async loadIfNeeded() {
-    for (const c of this._collections.get().values()) {
-      await c.loadIfNeeded()
-    }
+  async refresh() {
+    const c = [...this._collections.get().values()].map(c=>c.refresh())
+    const m = [...this._modules.get().values()].map(c=>c.refresh())
+    await Promise.all([...c, ...m])
   }
 
   containsBundleItem(item: BundleItem): boolean {
@@ -459,8 +456,8 @@ export class BookBundle {
     }).toString()
   }
 
-  async orphanedImages(): Promise<Immutable.Set<string>> {
-    const usedImagesPerModule = await Promise.all(Array.from(this._modules.get().values()).map(async module => await module.imagesUsed()))
+  orphanedImages(): Immutable.Set<string> {
+    const usedImagesPerModule = Array.from(this._modules.get().values()).map(module => module.imagesUsed())
     return this._orphanedImages(this._images.get(), usedImagesPerModule)
   }
 
@@ -497,20 +494,20 @@ export class BookBundle {
     return collectionInfo.modulesUsed()
   }
 
-  async moduleTitle(moduleid: string): Promise<ModuleTitle | null> {
+  moduleTitle(moduleid: string): ModuleTitle | null {
     const moduleInfo = this._modules.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return await moduleInfo.title()
+    return moduleInfo.title()
   }
 
-  async isIdInModule(id: string, moduleid: string): Promise<boolean> {
+  isIdInModule(id: string, moduleid: string): boolean {
     const moduleInfo = this._modules.get().get(moduleid)
     if (moduleInfo == null) {
       return false
     }
-    return (await moduleInfo.idsDeclared()).has(id)
+    return (moduleInfo.idsDeclared()).has(id)
   }
 
   async isIdUniqueInModule(id: string, moduleid: string): Promise<boolean> {
@@ -530,7 +527,7 @@ export class BookBundle {
     if (moduleInfo == null) {
       return null
     }
-    return await moduleInfo.linksDelared()
+    return await moduleInfo.linksDeclared()
   }
 
   async moduleIds(moduleid: string): Promise<Immutable.Set<string> | null> {
@@ -550,11 +547,12 @@ export class BookBundle {
   }
 
   async _moduleImageFilenames(moduleid: string): Promise<Immutable.Set<string> | null> {
+    await this.refresh()
     const moduleInfo = this._modules.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return (await moduleInfo.imagesUsed()).map(i => path.basename(i.relPath))
+    return (moduleInfo.imagesUsed()).map(i => path.basename(i.relPath))
   }
 
   async collectionTree(filename: string): Promise<TocTreeCollection | null> {

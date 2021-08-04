@@ -1074,16 +1074,15 @@ describe('BookBundle', () => {
   })
   it('tracks and caches orphaned modules', async () => {
     const bundle = await BookBundle.from('/bundle')
-    await bundle.loadIfNeeded()
     const orphaned = bundle.orphanedModules()
     assert.deepStrictEqual(Array.from(orphaned).sort(), ['m00002', 'm00004', 'm00005'])
     assert.deepStrictEqual(Array.from(orphaned), Array.from(bundle.orphanedModules()))
   })
   it('tracks and caches orphaned images', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const orphaned = await bundle.orphanedImages()
+    const orphaned = bundle.orphanedImages()
     assert.deepStrictEqual(Array.from(orphaned), ['orphan.jpg'])
-    assert.deepStrictEqual(Array.from(orphaned), Array.from((await bundle.orphanedImages())))
+    assert.deepStrictEqual(Array.from(orphaned), Array.from(bundle.orphanedImages()))
   })
   it('tracks and caches table of contents trees', async () => {
     const bundle = await BookBundle.from('/bundle')
