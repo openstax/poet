@@ -68,20 +68,23 @@ class ModuleInfo {
 
   constructor(private readonly bundle: BookBundle, readonly moduleid: string) {}
 
+  static pathToFile(workspaceRoot: string, moduleid: string) {
+    return path.join(workspaceRoot, 'modules', moduleid, 'index.cnxml')
+  }
   private _readFileSync(): string {
-    const p = path.join(this.bundle.workspaceRoot(), 'modules', this.moduleid, 'index.cnxml')
+    const p = ModuleInfo.pathToFile(this.bundle.workspaceRoot(), this.moduleid)
     return fs.readFileSync(p, { encoding: 'utf-8' })
   }
 
   refresh(): void {
     const xml = this._readFileSync()
+    this._isLoaded = true
     if (xml === '') return
     const doc = new DOMParser().parseFromString(xml)
     this._idsDeclared.set(this.__idsDeclared(doc))
     this._imagesUsed.set(this.__imagesUsed(doc)) // need to path.basename(x) and unwrapso .imagesUsed() only returns strings
     this._linksDeclared.set(this.__linksDeclared(doc))
     this._titleFromDocument.set(this.__titleFromDocument(doc))
-    this._isLoaded = true
   }
 
   idsDeclared(): Immutable.Map<string, number> {
@@ -237,11 +240,11 @@ class CollectionInfo {
 
   public refresh(): void {
     const xml = this._readFileSync()
+    this._isLoaded = true
     if (xml === '') return
     const doc = new DOMParser().parseFromString(xml)
     this._modulesUsed.set(this.__modulesUsed(doc))
     this._doc.set(doc)
-    this._isLoaded = true
   }
 
   private _expectLoaded(): void {
@@ -326,13 +329,19 @@ export class BookBundle {
     }
     const loadModules = async (): Promise<void> => {
       const foundPossibleModules = readdirSync(bundle.moduleDirectory())
-      const moduleCnxmlExists = await Promise.all(foundPossibleModules.map(
+      const moduleCnxmlExists = foundPossibleModules.map(
         (moduleId) => (path.join(bundle.moduleDirectory(), moduleId, 'index.cnxml'))
-      ).map(fileExistsAt))
+      ).map(fileExistsAt)
       const foundModules = foundPossibleModules.filter((_, indx) => moduleCnxmlExists[indx])
       modules.set(Immutable.Map<string, ModuleInfo>().withMutations(m => {
         for (const module of foundModules) {
-          m.set(module, new ModuleInfo(bundle, module))
+          // TODO: We seem to be ok with missing module files. Why????
+          const file = ModuleInfo.pathToFile(bundle.workspaceRoot(), module)
+          if (fileExistsAtSync(file)) {
+            m.set(module, new ModuleInfo(bundle, module))
+          } else {
+            console.warn('Warn: Could not find module file. Why not fail at this point?', file)
+          }
         }
       }))
     }
