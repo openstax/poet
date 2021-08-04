@@ -110,3 +110,9 @@ export function getOrAdd<K, V>(boxedMap: Quarx.Box<Immutable.Map<K, V>>, key: K,
     return i
   }
 }
+
+export function profile(fn: () => void): number {
+  const start = Date.now()
+  fn()
+  return Date.now() - start
+}

@@ -1223,9 +1223,9 @@ describe('BookBundle', () => {
     const initialCollectionsCount = bundle.collections().length
 
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media' })
-    assert(bundle.images().length === 0)
-    assert(bundle.modules().length === initialModuleCount)
-    assert(bundle.collections().length === initialCollectionsCount)
+    assert.strictEqual(bundle.images().length, 0)
+    assert.strictEqual(bundle.modules().length, initialModuleCount)
+    assert.strictEqual(bundle.collections().length, initialCollectionsCount)
   })
   it('processes collections directory deletions appropriately', () => {
     const initialModuleCount = bundle.modules().length

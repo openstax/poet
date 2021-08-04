@@ -5,7 +5,7 @@ import { FileChangeType, FileEvent, Position } from 'vscode-languageserver/node'
 import * as xpath from 'xpath-ts'
 import Immutable from 'immutable'
 import * as Quarx from 'quarx'
-import { calculateElementPositions, expect, fileExistsAt, fileExistsAtSync, getOrAdd } from './utils'
+import { calculateElementPositions, expect, fileExistsAt, fileExistsAtSync, getOrAdd, profile } from './utils'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
 import {
   URI
@@ -307,6 +307,7 @@ function readdirSync(filePath: string): string[] {
 }
 
 export class BookBundle {
+  private _isLoaded = false
   constructor(
     readonly _workspaceRoot: string,
     private readonly _images: Quarx.Box<Immutable.Set<string>>,
@@ -314,12 +315,17 @@ export class BookBundle {
     private readonly _collections: Quarx.Box<Immutable.Map<string, CollectionInfo>>
   ) {}
 
+  // Logging
+  static error = console.error
+  static debug(...args: any[]) { if (process.env['NODE_ENV'] !== 'production') { console.debug(...args) } }
+  
   static async from(workspaceRoot: string): Promise<BookBundle> {
     const images = Quarx.observable.box(Immutable.Set<string>())
     const modules = Quarx.observable.box(Immutable.Map<string, ModuleInfo>())
     const collections = Quarx.observable.box(Immutable.Map<string, CollectionInfo>())
     const bundle = new BookBundle(workspaceRoot, images, modules, collections)
     const loadImages = (): void => {
+      if (bundle._isLoaded) { BookBundle.debug('autorun rerunning loadImages') }
       const foundImages = readdirSync(bundle.mediaDirectory())
       images.set(Immutable.Set<string>().withMutations(s => {
         for (const image of foundImages) {
@@ -327,7 +333,8 @@ export class BookBundle {
         }
       }))
     }
-    const loadModules = async (): Promise<void> => {
+    const loadModules = (): void => {
+      if (bundle._isLoaded) { BookBundle.debug('autorun rerunning loadModules') }
       const foundPossibleModules = readdirSync(bundle.moduleDirectory())
       const moduleCnxmlExists = foundPossibleModules.map(
         (moduleId) => (path.join(bundle.moduleDirectory(), moduleId, 'index.cnxml'))
@@ -340,12 +347,13 @@ export class BookBundle {
           if (fileExistsAtSync(file)) {
             m.set(module, new ModuleInfo(bundle, module))
           } else {
-            console.warn('Warn: Could not find module file. Why not fail at this point?', file)
+            BookBundle.debug('Warn: Could not find module file. Why not fail at this point?', file)
           }
         }
       }))
     }
     const loadCollections = (): void => {
+      if (bundle._isLoaded) { BookBundle.debug('autorun rerunning loadCollections') }
       const foundCollections = readdirSync(bundle.collectionDirectory())
       collections.set(Immutable.Map<string, CollectionInfo>().withMutations(m => {
         for (const collection of foundCollections) {
@@ -353,8 +361,16 @@ export class BookBundle {
         }
       }))
     }
-    await Promise.all([loadImages(), loadModules(), loadCollections()])
-    await bundle.refresh()
+    const ms = profile(() => {
+      Quarx.autorun(loadImages)
+      Quarx.autorun(loadModules)
+      Quarx.autorun(loadCollections)
+      bundle.refresh()
+    })
+    Quarx.untracked(() => 
+      BookBundle.debug(`Loaded ${bundle._images.get().size} images, ${bundle._modules.get().size} modules, and ${bundle._collections.get().size} collections in ${ms} ms`)
+    )
+    bundle._isLoaded = true
     return bundle
   }
 
@@ -406,10 +422,9 @@ export class BookBundle {
     return this._collections.get().has(filename)
   }
 
-  async refresh(): Promise<void> {
-    const c = [...this._collections.get().values()].map(c => c.refresh())
-    const m = [...this._modules.get().values()].map(c => c.refresh())
-    await Promise.all([...c, ...m])
+  refresh(): void {
+    [...this._collections.get().values()].forEach(c => c.refresh())
+    ;[...this._modules.get().values()].forEach(c => c.refresh())
   }
 
   containsBundleItem(item: BundleItem): boolean {
@@ -596,7 +611,8 @@ export class BookBundle {
     this._images.set(this._images.get().add(name))
   }
 
-  private onImageChanged(name: string): void {}
+  private onImageChanged(name: string): void {
+  }
   private onImageDeleted(name: string): void {
     this._images.set(this._images.get().delete(name))
   }
@@ -644,6 +660,7 @@ export class BookBundle {
         [FileChangeType.Deleted]: this.onImageDeleted
       }
     }[item.type][change.type].bind(this)
+    BookBundle.debug('Filesystem updated. Running', func.name)
     func(item.key)
   }
 
@@ -668,19 +685,19 @@ export class BookBundle {
     const deletedPath = URI.parse(change.uri).fsPath
 
     if (deletedPath === this.collectionDirectory()) {
-      this.collections().forEach((col) => { this.onCollectionDeleted(col) })
+      Quarx.batch(() => this.collections().forEach((col) => { this.onCollectionDeleted(col) }))
       return
     }
 
     if (deletedPath === this.mediaDirectory()) {
-      this.images().forEach((img) => { this.onImageDeleted(img) })
+      Quarx.batch(() => this.images().forEach((img) => { this.onImageDeleted(img) }))
       return
     }
 
     // Process a module directory deletion which could be either the parent or
     // a specific module
     if (deletedPath === this.moduleDirectory()) {
-      this.modules().forEach((module) => { this.onModuleDeleted(module) })
+      Quarx.batch(() => this.modules().forEach((module) => { this.onModuleDeleted(module) }))
       return
     }
 
