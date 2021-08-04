@@ -1158,6 +1158,8 @@ describe('BookBundle', () => {
   })
   it('busts caches when a module is created', async () => {
     const bundle = await BookBundle.from('/bundle')
+    fs.mkdirSync('/bundle/modules/m00000', {recursive: true})
+    fs.writeFileSync('/bundle/modules/m00000/index.cnxml', '', 'utf-8')
     const orphanedModules = bundle.orphanedModules()
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/modules/m00000/index.cnxml' })
     const orphanedModulesAgain = bundle.orphanedModules()

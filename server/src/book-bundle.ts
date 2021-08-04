@@ -510,44 +510,44 @@ export class BookBundle {
     return (moduleInfo.idsDeclared()).has(id)
   }
 
-  async isIdUniqueInModule(id: string, moduleid: string): Promise<boolean> {
+  isIdUniqueInModule(id: string, moduleid: string): boolean {
     const moduleInfo = this._modules.get().get(moduleid)
     if (moduleInfo == null) {
       return false
     }
-    const elements = (await moduleInfo.idsDeclared()).get(id)
+    const elements = (moduleInfo.idsDeclared()).get(id)
     if (elements == 0) {
       return false
     }
     return elements === 1
   }
 
-  async moduleLinks(moduleid: string): Promise<Immutable.Set<Link> | null> {
+  moduleLinks(moduleid: string): Immutable.Set<Link> | null {
     const moduleInfo = this._modules.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return await moduleInfo.linksDeclared()
+    return moduleInfo.linksDeclared()
   }
 
-  async moduleIds(moduleid: string): Promise<Immutable.Set<string> | null> {
+  moduleIds(moduleid: string): Immutable.Set<string> | null {
     const moduleInfo = this._modules.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return Immutable.Set((await moduleInfo.idsDeclared()).keys())
+    return Immutable.Set((moduleInfo.idsDeclared()).keys())
   }
 
-  async moduleImageSources(moduleid: string): Promise<Immutable.Set<ImageSource> | null> {
+  moduleImageSources(moduleid: string): Immutable.Set<ImageSource> | null {
     const moduleInfo = this._modules.get().get(moduleid)
     if (moduleInfo == null) {
       return null
     }
-    return await moduleInfo.imageSources(this._images.get())
+    return moduleInfo.imageSources(this._images.get())
   }
 
-  async _moduleImageFilenames(moduleid: string): Promise<Immutable.Set<string> | null> {
-    await this.refresh()
+  _moduleImageFilenames(moduleid: string): Immutable.Set<string> | null {
+    this.refresh()
     const moduleInfo = this._modules.get().get(moduleid)
     if (moduleInfo == null) {
       return null
@@ -555,16 +555,16 @@ export class BookBundle {
     return (moduleInfo.imagesUsed()).map(i => path.basename(i.relPath))
   }
 
-  async collectionTree(filename: string): Promise<TocTreeCollection | null> {
+  collectionTree(filename: string): TocTreeCollection | null {
     const collectionInfo = this._collections.get().get(filename)
     if (collectionInfo == null) {
       return null
     }
-    return await collectionInfo.tree()
+    return collectionInfo.tree()
   }
 
-  async moduleAsTreeObject(moduleid: string): Promise<TocTreeModule> {
-    const title = await this.moduleTitle(moduleid)
+  moduleAsTreeObject(moduleid: string): TocTreeModule {
+    const title = this.moduleTitle(moduleid)
     return {
       type: TocTreeElementType.module,
       moduleid: moduleid,
@@ -573,36 +573,36 @@ export class BookBundle {
     }
   }
 
-  private async onModuleCreated(moduleid: string) {
-    await getOrAdd(this._modules, moduleid, () => new ModuleInfo(this, moduleid)).refresh()
+  private onModuleCreated(moduleid: string) {
+    getOrAdd(this._modules, moduleid, () => new ModuleInfo(this, moduleid)).refresh()
   }
 
-  private async onModuleChanged(moduleid: string) {
-    await getOrAdd(this._modules, moduleid, () => new ModuleInfo(this, moduleid)).refresh()
+  private onModuleChanged(moduleid: string) {
+    getOrAdd(this._modules, moduleid, () => new ModuleInfo(this, moduleid)).refresh()
   }
 
-  private async onModuleDeleted(moduleid: string) {
-    await this._modules.set(this._modules.get().delete(moduleid))
+  private onModuleDeleted(moduleid: string) {
+    this._modules.set(this._modules.get().delete(moduleid))
   }
 
-  private async onImageCreated(name: string) {
+  private onImageCreated(name: string) {
     this._images.set(this._images.get().add(name))
   }
 
-  private async onImageChanged(name: string) {}
-  private async onImageDeleted(name: string) {
+  private onImageChanged(name: string) {}
+  private onImageDeleted(name: string) {
     this._images.set(this._images.get().delete(name))
   }
 
-  private async onCollectionCreated(filename: string) {
-    await getOrAdd(this._collections, filename, () => new CollectionInfo(this, filename)).refresh()
+  private onCollectionCreated(filename: string) {
+    getOrAdd(this._collections, filename, () => new CollectionInfo(this, filename)).refresh()
   }
 
-  private async onCollectionChanged(filename: string) {
-    await getOrAdd(this._collections, filename, () => new CollectionInfo(this, filename)).refresh()
+  private onCollectionChanged(filename: string) {
+    getOrAdd(this._collections, filename, () => new CollectionInfo(this, filename)).refresh()
   }
 
-  private async onCollectionDeleted(filename: string) {
+  private onCollectionDeleted(filename: string) {
     this._collections.set(this._collections.get().delete(filename))
   }
 
