@@ -20,15 +20,15 @@ export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle
     const bundleAndValidator = workspaceBookBundles.get(request.workspaceUri)
     if (bundleAndValidator == null) { return null }
     const bundle = bundleAndValidator[0]
-    const promises = bundle.collectionItems().map(async (collection: BundleItem): Promise<TocTreeCollection[]> => {
+    const trees = bundle.collectionItems().map((collection: BundleItem): TocTreeCollection[] => {
       try {
-        const tree = expect(await bundle.collectionTree(collection.key), 'collection must exist')
+        const tree = expect(bundle.collectionTree(collection.key), 'collection must exist')
         return [tree]
       } catch (_error) {
         const error: Error = _error
         connection.console.error(`An error occurred while processing bundle tree: ${error.stack ?? error.message}`)
         const uri = expect(bundle.bundleItemToUri(collection), 'No root path to generate diagnostic')
-        const diagnostics = await collectionDiagnostic()
+        const diagnostics = collectionDiagnostic()
         connection.sendDiagnostics({
           uri,
           diagnostics
@@ -36,8 +36,7 @@ export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle
         return []
       }
     })
-    const trees = (await Promise.all(promises)).flat()
-    return trees
+    return trees.flat()
   }
 }
 
@@ -62,7 +61,7 @@ export function bundleEnsureIdsHandler(workspaceBookBundles: Map<string, [BookBu
     if (bundleAndValidator == null) { return undefined }
     const bundle = bundleAndValidator[0]
     const modules = bundle.modules()
-    const orphanModules = Array.from((await bundle.orphanedModules()))
+    const orphanModules = bundle.orphanedModules().toArray()
     const allModules = modules.concat(orphanModules)
     // TODO: fix modules in parallel. Problem: Could be a memory hog.
     for (const moduleName of allModules) {

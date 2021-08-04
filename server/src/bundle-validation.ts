@@ -36,7 +36,7 @@ export class BundleValidationQueue {
     this.trigger()
   }
 
-  private async processQueue(): Promise<void> {
+  private processQueue(): void {
     // This is slower than pop, but we shouldn't ever have more than a couple hundred items.
     // It's still sub-ms total to shift all the items in total
     const item = this.queue.shift()
@@ -45,13 +45,13 @@ export class BundleValidationQueue {
     }
     const uri = expect(this.bundle.bundleItemToUri(item), 'item must be in bundle')
     if (item.type === 'collections') {
-      const diagnostics = expect(await validateCollection(this.bundle, item.key), 'collection must be in bundle')
+      const diagnostics = expect(validateCollection(this.bundle, item.key), 'collection must be in bundle')
       this.connection.sendDiagnostics({
         uri,
         diagnostics
       })
     } else if (item.type === 'modules') {
-      const diagnostics = expect(await validateModule(this.bundle, item.key), 'module must be in bundle')
+      const diagnostics = expect(validateModule(this.bundle, item.key), 'module must be in bundle')
       this.connection.sendDiagnostics({
         uri,
         diagnostics
@@ -69,20 +69,22 @@ export class BundleValidationQueue {
     }
 
     const processNext = (): void => {
-      this.processQueue().catch(err => {
+      try {
+        this.processQueue()
+      } catch(err) {
         this.errorEncountered = err
         this.connection.console.error('Error occured while processing validation queue')
-      }).finally(() => {
+      } finally {
         this.timer = undefined
         this.trigger()
-      })
+      }
     }
 
     this.timer = setImmediate(processNext)
   }
 }
 
-export const collectionDiagnostic = async (): Promise<Diagnostic[]> => {
+export const collectionDiagnostic = (): Diagnostic[] => {
   return [generateDiagnostic(
     DiagnosticSeverity.Error,
     { line: 0, character: 0 },
@@ -92,19 +94,15 @@ export const collectionDiagnostic = async (): Promise<Diagnostic[]> => {
   )]
 }
 
-export const validateCollection = async (bundle: BookBundle, filename: string): Promise<Diagnostic[] | null> => {
+export const validateCollection = (bundle: BookBundle, filename: string): Diagnostic[] | null => {
   const collectionExists = bundle.collectionExists(filename)
   if (!collectionExists) {
     return null
   }
-  const allDiagnostics = (await Promise.all([
-    validateCollectionModules(bundle, filename)
-  ])).map(value => expect(value, 'collection must exist')).flat()
-  return allDiagnostics
+  return expect(validateCollectionModules(bundle, filename), 'collection must exist')
 }
 
-export const validateCollectionModules = async (bundle: BookBundle, filename: string): Promise<Diagnostic[] | null> => {
-  await bundle.refresh()
+export const validateCollectionModules = (bundle: BookBundle, filename: string): Diagnostic[] | null => {
   const modulesUsed = bundle.modulesUsed(filename)
   if (modulesUsed == null) {
     return null
@@ -128,20 +126,20 @@ export const validateCollectionModules = async (bundle: BookBundle, filename: st
   return diagnostics
 }
 
-export const validateModule = async (bundle: BookBundle, moduleid: string): Promise<Diagnostic[] | null> => {
+export const validateModule = (bundle: BookBundle, moduleid: string): Diagnostic[] | null => {
   const moduleExists = bundle.moduleExists(moduleid)
   if (!moduleExists) {
     return null
   }
-  const allDiagnostics = (await Promise.all([
+  const allDiagnostics = [
     validateModuleImagePaths(bundle, moduleid),
     validateModuleLinks(bundle, moduleid)
-  ])).map(value => expect(value, 'module must exist')).flat()
+  ].map(value => expect(value, 'module must exist')).flat()
   return allDiagnostics
 }
 
-export const validateModuleImagePaths = async (bundle: BookBundle, moduleid: string): Promise<Diagnostic[] | null> => {
-  const imageSources = await bundle.moduleImageSources(moduleid)
+export const validateModuleImagePaths = (bundle: BookBundle, moduleid: string): Diagnostic[] | null => {
+  const imageSources = bundle.moduleImageSources(moduleid)
   if (imageSources == null) {
     return null
   }
@@ -166,8 +164,8 @@ export const validateModuleImagePaths = async (bundle: BookBundle, moduleid: str
   return diagnostics
 }
 
-export const validateModuleLinks = async (bundle: BookBundle, moduleid: string): Promise<Diagnostic[] | null> => {
-  const links = await bundle.moduleLinks(moduleid)
+export const validateModuleLinks = (bundle: BookBundle, moduleid: string): Diagnostic[] | null => {
+  const links = bundle.moduleLinks(moduleid)
   if (links == null) {
     return null
   }
@@ -191,11 +189,11 @@ export const validateModuleLinks = async (bundle: BookBundle, moduleid: string):
     if (link.targetid == null) {
       continue
     }
-    if (!(await bundle.isIdInModule(link.targetid, link.moduleid))) {
+    if (!(bundle.isIdInModule(link.targetid, link.moduleid))) {
       pushLinkDiagnostic(`Target ID '${link.targetid}' in document '${link.moduleid}' does not exist`)
       continue
     }
-    if (!(await bundle.isIdUniqueInModule(link.targetid, link.moduleid))) {
+    if (!(bundle.isIdUniqueInModule(link.targetid, link.moduleid))) {
       pushLinkDiagnostic(`Target ID '${link.targetid}' in document '${link.moduleid}' is not unique`)
       continue
     }

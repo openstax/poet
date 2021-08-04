@@ -542,7 +542,9 @@ describe('validateLinks', function () {
 })
 
 describe('ValidationQueue', function () {
-  const noConnection: any = {}
+  const noConnection: any = {
+    sendDiagnostics: sinon.stub()
+  }
   before(function () {
     mockfs({
       '/bundle/media/test.jpg': '',
@@ -593,11 +595,12 @@ describe('ValidationQueue', function () {
       causeUri: 'file:///bundle/modules/no-exist/index.cnxml'
     }
     validationQueue.addRequest(validationRequest)
-    await assert.rejects((validationQueue as any).processQueue())
+    assert.throws(() => (validationQueue as any).processQueue())
   })
   it('will error when validation is requested for an uri that cannot be validated', async () => {
     const bundle = await BookBundle.from('/bundle')
     const connection = {
+      sendDiagnostics: sinon.stub(),
       console: {
         error: sinon.stub()
       }
@@ -623,6 +626,7 @@ describe('ValidationQueue', function () {
     const clock = sinon.useFakeTimers()
     const bundle = await BookBundle.from('/bundle')
     const connection = {
+      sendDiagnostics: sinon.stub(),
       console: {
         error: sinon.stub()
       }
@@ -759,8 +763,7 @@ describe('ValidationQueue', function () {
   it('should do nothing when processing empty queue', async () => {
     const bundle = await BookBundle.from('/bundle')
     const validationQueue = new BundleValidationQueue(bundle, noConnection)
-    const promise = (validationQueue as any).processQueue()
-    await assert.doesNotReject(promise)
+    assert.doesNotThrow(() => (validationQueue as any).processQueue())
   })
 })
 
@@ -996,39 +999,39 @@ describe('BookBundle', () => {
   })
   it('provides basic element id information within modules', async () => {
     const bundle = await BookBundle.from('/bundle')
-    assert(await bundle.isIdInModule('para', 'm00001'))
-    assert(!(await bundle.isIdInModule('nope', 'm00001')))
-    assert(await bundle.isIdUniqueInModule('para', 'm00001'))
-    assert(await bundle.isIdInModule('duplicate', 'm00002'))
-    assert(!(await bundle.isIdUniqueInModule('duplicate', 'm00002')))
-    assert(!(await bundle.isIdInModule('does-not-exist', 'does-not-exist')))
-    assert(!(await bundle.isIdUniqueInModule('does-not-exist', 'does-not-exist')))
-    assert(!(await bundle.isIdUniqueInModule('does-not-exist', 'm00001')))
+    assert(bundle.isIdInModule('para', 'm00001'))
+    assert(!(bundle.isIdInModule('nope', 'm00001')))
+    assert(bundle.isIdUniqueInModule('para', 'm00001'))
+    assert(bundle.isIdInModule('duplicate', 'm00002'))
+    assert(!(bundle.isIdUniqueInModule('duplicate', 'm00002')))
+    assert(!(bundle.isIdInModule('does-not-exist', 'does-not-exist')))
+    assert(!(bundle.isIdUniqueInModule('does-not-exist', 'does-not-exist')))
+    assert(!(bundle.isIdUniqueInModule('does-not-exist', 'm00001')))
   })
   it('tracks and caches used images per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const images = expect(await bundle._moduleImageFilenames('m00001'))
+    const images = expect(bundle._moduleImageFilenames('m00001'))
     assert.deepStrictEqual(Array.from(images), ['empty.jpg'])
-    const cached = expect(await bundle._moduleImageFilenames('m00001'))
+    const cached = expect(bundle._moduleImageFilenames('m00001'))
     assert.deepStrictEqual(Array.from(images), Array.from(cached))
-    assert.strictEqual(await bundle._moduleImageFilenames('does-not-exist'), null)
+    assert.strictEqual(bundle._moduleImageFilenames('does-not-exist'), null)
   })
   it('tracks and caches declared ids per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const ids = expect(await bundle.moduleIds('m00001'))
+    const ids = expect(bundle.moduleIds('m00001'))
     assert.deepStrictEqual(Array.from(ids).sort(), ['para', 'para2'])
-    const cached = expect(await bundle.moduleIds('m00001'))
+    const cached = expect(bundle.moduleIds('m00001'))
     assert.deepStrictEqual([...ids], [...cached])
-    assert.strictEqual(await bundle.moduleIds('does-not-exist'), null)
+    assert.strictEqual(bundle.moduleIds('does-not-exist'), null)
   })
   it('removes duplicates from tracked ids per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const ids = expect(await bundle.moduleIds('m00002'))
+    const ids = expect(bundle.moduleIds('m00002'))
     assert.deepStrictEqual(Array.from(ids), ['duplicate'])
   })
   it('tracks and caches declared links per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const links = expect(await bundle.moduleLinks('m00001'))
+    const links = expect(bundle.moduleLinks('m00001'))
     const expected = [
       {
         moduleid: 'm00001',
@@ -1043,33 +1046,33 @@ describe('BookBundle', () => {
       assert.strictEqual(actual[i].moduleid, value.moduleid)
       assert.strictEqual(actual[i].targetid, value.targetid)
     })
-    const cached = expect(await bundle.moduleLinks('m00001'))
+    const cached = expect(bundle.moduleLinks('m00001'))
     assert.strictEqual(links, cached)
-    assert.strictEqual(await bundle.moduleLinks('does-not-exist'), null)
+    assert.strictEqual(bundle.moduleLinks('does-not-exist'), null)
   })
   it('tracks and caches titles per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const title = expect(await bundle.moduleTitle('m00001'))
+    const title = expect(bundle.moduleTitle('m00001'))
     const expected: ModuleTitle = { title: 'Introduction', moduleid: 'm00001' }
     assert.deepStrictEqual(title, expected)
-    const cached = expect(await bundle.moduleTitle('m00001'))
+    const cached = expect(bundle.moduleTitle('m00001'))
     assert.deepStrictEqual(title, cached)
-    assert.strictEqual(await bundle.moduleTitle('does-not-exist'), null)
+    assert.strictEqual(bundle.moduleTitle('does-not-exist'), null)
   })
   it('Allows existant but empty module titles', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const title = expect(await bundle.moduleTitle('m00004'))
+    const title = expect(bundle.moduleTitle('m00004'))
     const expected: ModuleTitle = { title: '', moduleid: 'm00004' }
     assert.deepStrictEqual(title, expected)
-    const cached = expect(await bundle.moduleTitle('m00004'))
+    const cached = expect(bundle.moduleTitle('m00004'))
     assert.deepStrictEqual(title, cached)
   })
   it('reports module as unnamed if no title exists', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const title = expect(await bundle.moduleTitle('m00005'))
+    const title = expect(bundle.moduleTitle('m00005'))
     const expected: ModuleTitle = { title: 'Unnamed Module', moduleid: 'm00005' }
     assert.deepStrictEqual(title, expected)
-    const cached = expect(await bundle.moduleTitle('m00005'))
+    const cached = expect(bundle.moduleTitle('m00005'))
     assert.deepStrictEqual(title, cached)
   })
   it('tracks and caches orphaned modules', async () => {
@@ -1086,7 +1089,7 @@ describe('BookBundle', () => {
   })
   it('tracks and caches table of contents trees', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const tree = expect(await bundle.collectionTree('normal.collection.xml'))
+    const tree = expect(bundle.collectionTree('normal.collection.xml'))
     const expected: TocTreeCollection = {
       type: TocTreeElementType.collection,
       title: 'normal',
@@ -1101,12 +1104,12 @@ describe('BookBundle', () => {
       ]
     }
     assert.deepStrictEqual(tree, expected)
-    assert.deepStrictEqual(tree, expect(await bundle.collectionTree('normal.collection.xml')))
-    assert.strictEqual(await bundle.collectionTree('does-not-exist'), null)
+    assert.deepStrictEqual(tree, expect(bundle.collectionTree('normal.collection.xml')))
+    assert.strictEqual(bundle.collectionTree('does-not-exist'), null)
   })
   it('tracks and caches table of contents trees containing subcollections', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const tree = expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
+    const tree = expect(bundle.collectionTree('normal-with-subcollection.collection.xml'))
     const expected: TocTreeCollection = {
       type: TocTreeElementType.collection,
       title: 'normal-with-subcollection',
@@ -1128,12 +1131,12 @@ describe('BookBundle', () => {
       }]
     }
     assert.deepStrictEqual(tree, expected)
-    const cacheExpected = expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
+    const cacheExpected = expect(bundle.collectionTree('normal-with-subcollection.collection.xml'))
     assert.deepStrictEqual(tree, cacheExpected)
   })
   it('can provide modules directly as toc tree objects', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const module = await bundle.moduleAsTreeObject('m00001')
+    const module = bundle.moduleAsTreeObject('m00001')
     const expected = {
       type: TocTreeElementType.module,
       title: 'Introduction',

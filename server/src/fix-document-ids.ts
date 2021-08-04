@@ -60,10 +60,3 @@ export function fixDocument(doc: Document): void {
     el.setAttribute('id', buildId(tag, counter))
   }
 }
-
-// // $ npx ts-node server/src/fix-document-ids.ts
-// import { DOMParser, XMLSerializer } from 'xmldom'
-// const doc = new DOMParser().parseFromString('<document xmlns="http://cnx.rice.edu/cnxml"><term>normal</term><definition><term>no-id</term></definition></document>', 'text/xml')
-// fixDocument(doc)
-// const out = new XMLSerializer().serializeToString(doc)
-// console.log(out)
