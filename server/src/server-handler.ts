@@ -21,7 +21,7 @@ export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle
   return async (request: BundleTreesArgs) => {
 
     const {bundle, manager} = bundleFactory.get(request.workspaceUri)
-    await manager.loadEnoughForToc(connection) // Just enough to send the ToC and list orphans
+    await manager.loadEnoughForToc() // Just enough to send the ToC and list orphans
     return bundle.books().map(bookTocAsTreeCollection).toArray()
 
     // const bundleAndValidator = workspaceBookBundles.get(request.workspaceUri)

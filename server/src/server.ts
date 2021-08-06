@@ -38,7 +38,7 @@ import { BundleValidationQueue } from './bundle-validation'
 
 import * as sourcemaps from 'source-map-support'
 import { Bundle, Factory, Validator } from './model'
-import { processFilesystemChange, pageAsTreeObject, BundleLoadManager } from './model-adapter'
+import { pageAsTreeObject, BundleLoadManager } from './model-adapter'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -54,7 +54,7 @@ export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUr
   const b = new Bundle(filePath)
   return {
     bundle: b,
-    manager: new BundleLoadManager(b) 
+    manager: new BundleLoadManager(b, connection) 
   }
 })
 
@@ -143,8 +143,8 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
       }
       const [bundleChanged, bundleValidator] = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')
       bundleChanged.processChange(change)
-      const {bundle} = bundleFactory.get(workspaceChanged.uri)
-      processFilesystemChange(bundle, change, connection)
+      const {manager} = bundleFactory.get(workspaceChanged.uri)
+      manager.processFilesystemChange(change)
       bundleValidator.addRequest({ causeUri: change.uri })
     }
     await connection.sendRequest('onDidChangeWatchedFiles')
@@ -178,7 +178,7 @@ connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler(work
 
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
   const {manager} = bundleFactory.get(workspaceUri)
-  await manager.loadEnoughForOrphans(connection)
+  await manager.loadEnoughForOrphans()
   return manager.orhpanedPages().map(pageAsTreeObject).toArray()
 })
 

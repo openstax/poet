@@ -27,10 +27,15 @@ export interface Position {
     character: number // 0-based
 }
 
-export class ParseError extends Error {
+export class ModelError extends Error {
     constructor(public readonly node: Fileish, message: string, public readonly startPos: Opt<Position>, public readonly endPos: Opt<Position>) {
         super(message)
         this.name = this.constructor.name
+    }
+}
+export class ParseError extends ModelError {
+    constructor(node: Fileish, message: string, startPos: Opt<Position>, endPos: Opt<Position>) {
+        super(node, message, startPos, endPos)
     }
 }
 export class WrappedParseError<T extends Error> extends ParseError {
