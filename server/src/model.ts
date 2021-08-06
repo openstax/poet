@@ -27,15 +27,16 @@ export interface Position {
     character: number // 0-based
 }
 
-class Fileish {
+export abstract class Fileish {
     private _isLoaded = false
     private _exists = false
     private _parseError: Opt<Error> = null
     protected parseXML: Opt<(doc: Document) => void> = null // Subclasses define this
     protected childrenToLoad: Opt<() => I.Set<Fileish>> = null // Subclasses define this
 
-    constructor(private readonly _bundle: Opt<Bundle>, protected readonly filePath: string) { }
+    constructor(private _bundle: Opt<Bundle>, public readonly filePath: string) { }
 
+    protected setBundle(bundle: Bundle) { this._bundle = bundle /* avoid catch-22 */ }
     protected bundle() { return expect(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
     protected ensureLoaded<T>(field: Opt<T>) {
         return expect(field, `${LOAD_ERROR} [${this.filePath}]`)
@@ -81,7 +82,7 @@ class Fileish {
     }
 }
 
-class ImageNode extends Fileish {
+export class ImageNode extends Fileish {
 }
 
 type ImageLink = {
@@ -171,7 +172,7 @@ export class PageNode extends Fileish {
 export type TocNode = TocInner | PageNode
 export type TocInner = { readonly title: string, readonly children: TocNode[] }
 
-class BookNode extends Fileish {
+export class BookNode extends Fileish {
     private _title: Opt<string> = null
     private _slug: Opt<string> = null
     private _toc: Opt<TocNode[]> = null
@@ -232,6 +233,7 @@ export class Bundle extends Fileish {
 
     constructor(private readonly _workspaceRoot: string) {
         super(null, path.join(_workspaceRoot, 'META-INF/books.xml'))
+        super.setBundle(this)
     }
     protected childrenToLoad = () => this.ensureLoaded(this._books)
     protected parseXML = (doc: Document) => {
@@ -252,16 +254,20 @@ export class Bundle extends Fileish {
     }
 }
 
-enum PathType {
+export enum PathType {
     REL_TO_REL = 'REL_TO_REL',
     COLLECTION_TO_MODULEID = 'COLLECTION_TO_MODULEID',
     MODULE_TO_MODULEID = 'MODULE_TO_MODULEID',
     MODULE_TO_IMAGE = 'MODULE_TO_IMAGE',
+    ABSOLUTE_JUST_ONE_FILE = 'ABSOLUTE',
 }
 
-class Factory<T> {
+export class Factory<T> {
     private _map = I.Map<string, T>()
     constructor(private readonly builder: (filePath: string) => T) { }
+    getIfHas(filePath: string): Opt<T> {
+        return this._map.get(filePath) ?? null
+    }
     get(type: PathType, parent: string, child: string) {
         const absPath = resolveWonkyPaths(type, parent, child)
         const v = this._map.get(absPath)
@@ -275,7 +281,12 @@ class Factory<T> {
     }
     private remove(filePath: string) {
         expect(this._map.has(filePath) || null, `ERROR: Attempting to remove a file that was never created: '${filePath}'`)
-        this._map.delete(filePath)
+        this._map = this._map.delete(filePath)
+    }
+    public removeByPathPrefix(pathPrefix: string) {
+        const size = this._map.size
+        this._map = this._map.filter((_, key) => !key.startsWith(pathPrefix))
+        return size - this._map.size
     }
     private size() { return this._map.size }
     public all() { return I.Set(this._map.values()) }
@@ -289,6 +300,9 @@ function resolveWonkyPaths(type: PathType, parent: string, child: string) {
         case PathType.REL_TO_REL: p = path.dirname(parent); c = child; break
         case PathType.COLLECTION_TO_MODULEID: p = path.dirname(path.dirname(parent)); c = path.join('modules', child, 'index.cnxml'); break;
         case PathType.MODULE_TO_MODULEID: p = path.dirname(path.dirname(parent)); c = path.join(child, 'index.cnxml'); break
+        case PathType.ABSOLUTE_JUST_ONE_FILE:
+            expect(child === '' || null, 'When using ABSOLUTE, there is no second argument to this function')
+            return path.resolve(parent)
         default: throw new Error(`BUG: Unsupported path type '${type}'. Consider adding it`)
     }
     return path.resolve(p, c)
