@@ -49,6 +49,7 @@ export abstract class Fileish {
             const doc = await this.readXML()
             try {
                 this.parseXML(doc)
+                this._parseError = null
                 this._isLoaded = true
             } catch (err) {
                 console.error('Errored but continuing', err)
@@ -143,7 +144,7 @@ export class PageNode extends Fileish {
         const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
         this._imageLinks = I.Set(imageNodes.map(attr => {
             const src = expect(attr.nodeValue, 'BUG: Attribute does not have a value')
-            const image = super.bundle().allImages.get(PathType.REL_TO_REL, this.filePath, src)
+            const image = super.bundle().allImages.get(joiner(PathType.REL_TO_REL, this.filePath, src))
             // Get the line/col position of the <image> tag
             const imageNode = expect(attr.ownerElement, 'BUG: attributes always have a parent element')
             const [startPos, endPos] = calculateElementPositions(imageNode)
@@ -155,7 +156,7 @@ export class PageNode extends Fileish {
             const toDocument = linkNode.getAttribute('document')
             const toTargetId = linkNode.getAttribute('target-id')
             return {
-                page: toDocument ? super.bundle().allPages.get(PathType.MODULE_TO_MODULEID, this.filePath, toDocument) : this,
+                page: toDocument ? super.bundle().allPages.get(joiner(PathType.MODULE_TO_MODULEID, this.filePath, toDocument)) : this,
                 targetElementId: toTargetId ? toTargetId : null // could be empty string
             }
         }))
@@ -169,8 +170,13 @@ export class PageNode extends Fileish {
     }
 }
 
-export type TocNode = TocInner | PageNode
-export type TocInner = { readonly title: string, readonly children: TocNode[] }
+export enum TocNodeType {
+    Inner,
+    Leaf
+}
+export type TocNode = TocInner | TocLeaf
+type TocInner = { readonly type: TocNodeType.Inner, readonly title: string, readonly children: TocNode[] }
+type TocLeaf = { readonly type: TocNodeType.Leaf, readonly page: PageNode, startPos: Position, endPos: Position }
 
 export class BookNode extends Fileish {
     private _title: Opt<string> = null
@@ -190,12 +196,20 @@ export class BookNode extends Fileish {
             switch (childNode.localName) {
                 case 'subcollection':
                     return {
+                        type: TocNodeType.Inner,
                         title: expect(selectOne('md:title/text()', childNode).nodeValue, 'ERROR: Malformed or missing md:title element in Subcollection'),
                         children: this.buildChildren(selectOne('./col:content', childNode))
-                    }
+                    } as TocInner
                 case 'module':
                     const pageId = expect(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
-                    return super.bundle().allPages.get(PathType.COLLECTION_TO_MODULEID, this.filePath, pageId)
+                    const page = super.bundle().allPages.get(joiner(PathType.COLLECTION_TO_MODULEID, this.filePath, pageId))
+                    const [startPos, endPos] = calculateElementPositions(childNode)
+                    return {
+                        type: TocNodeType.Leaf,
+                        page,
+                        startPos,
+                        endPos,
+                    } as TocLeaf
                 default:
                     throw new Error('ERROR: Unknown element in the ToC')
             }
@@ -206,19 +220,22 @@ export class BookNode extends Fileish {
     public toc() {
         return this.ensureLoaded(this._toc)
     }
-    private title() {
+    public title() {
         return this.ensureLoaded(this._title)
     }
-    private slug() {
+    public slug() {
         return this.ensureLoaded(this._slug)
     }
     public pages() {
-        const toc = this.toc()
-        return I.List<PageNode>().withMutations(acc => this.collectPages(toc, acc))
+        return this.tocLeaves().map(l => l.page)
     }
-    private collectPages(nodes: TocNode[], acc: I.List<PageNode>) {
+    private tocLeaves() {
+        const toc = this.toc()
+        return I.List<TocLeaf>().withMutations(acc => this.collectPages(toc, acc))
+    }
+    private collectPages(nodes: TocNode[], acc: I.List<TocLeaf>) {
         nodes.forEach(n => {
-            if (n instanceof PageNode) { acc.push(n) }
+            if (n.type === TocNodeType.Leaf) { acc.push(n) }
             else { this.collectPages(n.children, acc) }
         })
     }
@@ -231,8 +248,8 @@ export class Bundle extends Fileish {
     public readonly allBooks = new Factory((absPath: string) => new BookNode(this, absPath))
     private _books: Opt<I.Set<BookNode>> = null
 
-    constructor(private readonly _workspaceRoot: string) {
-        super(null, path.join(_workspaceRoot, 'META-INF/books.xml'))
+    constructor(public readonly workspaceRoot: string) {
+        super(null, path.join(workspaceRoot, 'META-INF/books.xml'))
         super.setBundle(this)
     }
     protected childrenToLoad = () => this.ensureLoaded(this._books)
@@ -240,12 +257,17 @@ export class Bundle extends Fileish {
         const bookNodes = select('//bk:book', doc) as Element[]
         this._books = I.Set(bookNodes.map(b => {
             const href = expect(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
-            return this.allBooks.get(PathType.REL_TO_REL, this.filePath, href)
+            return this.allBooks.get(joiner(PathType.REL_TO_REL, this.filePath, href))
         }))
     }
 
     public books() {
         return this.ensureLoaded(this._books)
+    }
+
+    public async loadEnoughForToc() {
+        await this.load(false)
+        await Promise.all(this.books().map(b => b.load(false)))
     }
 
     private gc() {
@@ -268,8 +290,7 @@ export class Factory<T> {
     getIfHas(filePath: string): Opt<T> {
         return this._map.get(filePath) ?? null
     }
-    get(type: PathType, parent: string, child: string) {
-        const absPath = resolveWonkyPaths(type, parent, child)
+    get(absPath: string) {
         const v = this._map.get(absPath)
         if (v !== undefined) {
             return v
@@ -279,7 +300,7 @@ export class Factory<T> {
             return n
         }
     }
-    private remove(filePath: string) {
+    public remove(filePath: string) {
         expect(this._map.has(filePath) || null, `ERROR: Attempting to remove a file that was never created: '${filePath}'`)
         this._map = this._map.delete(filePath)
     }
@@ -292,7 +313,7 @@ export class Factory<T> {
     public all() { return I.Set(this._map.values()) }
 }
 
-function resolveWonkyPaths(type: PathType, parent: string, child: string) {
+function joiner(type: PathType, parent: string, child: string) {
     let p = null
     let c = null
     switch (type) {
@@ -310,30 +331,37 @@ function resolveWonkyPaths(type: PathType, parent: string, child: string) {
 
 
 export class Validator {
-    constructor(private readonly bundle: Bundle) { }
+    constructor(protected readonly bundle: Bundle) { }
 
-    validationErrors() {
+    public allPages() {
+        return this.bundle.allPages.all()
+    }
+    public missingImages() {
+        return this.bundle.books().flatMap(this._missingImages)
+    }
+    public missingPageTargets() {
+        return this.bundle.books().flatMap(this._missingPageTargets)
+    }
+    public duplicatePagesInToC() {
+        return this.bundle.books().flatMap(this._duplicatePagesInToc)
+    }
+    public orhpanedPages() {
         const books = this.bundle.books()
-
-        return {
-            missingImages: books.flatMap(this.missingImages),
-            missingPageTargets: books.flatMap(this.missingPageTargets),
-            duplicatePagesInToC: books.flatMap(this.duplicatePagesInToc),
-        }
+        return this.bundle.allPages.all().subtract(books.flatMap(b => b.pages()))
     }
 
-    private missingImages(book: BookNode) {
+    private _missingImages(book: BookNode) {
         const pages = book.pages()
         const links = pages.flatMap(page => page.imageLinks().map(link => ({ page, link })))
         return links.filter(i => !i.link.image.exists())
     }
-    private missingPageTargets(book: BookNode) {
+    private _missingPageTargets(book: BookNode) {
         const pages = book.pages()
         const links = pages.flatMap(page => page.pageLinks().map(link => ({ page, link })))
         return links.filter(i => !i.link.page.exists() || (i.link.targetElementId && !i.page.hasElementId(i.link.targetElementId)))
     }
 
-    private duplicatePagesInToc(book: BookNode) {
+    private _duplicatePagesInToc(book: BookNode) {
         return book.pages().reduce((acc, page) => {
             const { visited, duplicates } = acc
             if (visited.has(page)) {

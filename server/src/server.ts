@@ -37,6 +37,8 @@ import { BookBundle } from './book-bundle'
 import { BundleValidationQueue } from './bundle-validation'
 
 import * as sourcemaps from 'source-map-support'
+import { Bundle, Factory, Validator } from './model'
+import { processFilesystemChange, pageAsTreeObject, BundleLoadManager } from './model-adapter'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -47,6 +49,14 @@ const connection = createConnection(ProposedFeatures.all)
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
 
 const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
+export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUri => {
+  const filePath = URI.parse(workspaceUri).fsPath
+  const b = new Bundle(filePath)
+  return {
+    bundle: b,
+    manager: new BundleLoadManager(b) 
+  }
+})
 
 const getWorkspaceRootPath = (workspace: WorkspaceFolder): string => {
   return URI.parse(workspace.uri).fsPath
@@ -133,6 +143,8 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
       }
       const [bundleChanged, bundleValidator] = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')
       bundleChanged.processChange(change)
+      const {bundle} = bundleFactory.get(workspaceChanged.uri)
+      processFilesystemChange(bundle, change)
       bundleValidator.addRequest({ causeUri: change.uri })
     }
     await connection.sendRequest('onDidChangeWatchedFiles')
@@ -147,6 +159,7 @@ connection.onRequest('onDidChangeWorkspaceFolders', async (event) => {
       name: workspace.uri.name
     }
     removeBookBundleForWorkspace(workspaceCompat)
+    bundleFactory.remove(workspace.uri.external)
   }
   for (const workspace of event.added) {
     const workspaceCompat: WorkspaceFolder = {
@@ -163,22 +176,15 @@ connection.onRequest('onDidChangeWorkspaceFolders', async (event) => {
 
 connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler(workspaceBookBundles, connection))
 
-connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, ({ workspaceUri }: BundleOrphanedModulesArgs): BundleOrphanedModulesResponse => {
-  const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
-  if (bundleAndValidator == null) { return null }
-  const bundle = bundleAndValidator[0]
-  const orphanModules = Array.from(bundle.orphanedModules())
-  const result = orphanModules.map(m => bundle.moduleAsTreeObject(m))
-  return result
+connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
+  const {manager} = bundleFactory.get(workspaceUri)
+  await manager.loadEnoughForOrphans()
+  return manager.orhpanedPages().map(pageAsTreeObject).toArray()
 })
 
 connection.onRequest(ExtensionServerRequest.BundleModules, ({ workspaceUri }: BundleModulesArgs): BundleModulesResponse => {
-  const bundleAndValidator = workspaceBookBundles.get(workspaceUri)
-  if (bundleAndValidator == null) { return null }
-  const bundle = bundleAndValidator[0]
-  const modules = bundle.modules()
-  const result = modules.map(m => bundle.moduleAsTreeObject(m))
-  return result
+  const {manager} = bundleFactory.get(workspaceUri)
+  return manager.allPages().map(pageAsTreeObject).toArray()
 })
 
 connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler(workspaceBookBundles, connection))

@@ -14,29 +14,36 @@ import {
   BundleEnsureIdsArgs
 } from '../../common/src/requests'
 import { fixDocument } from './fix-document-ids'
+import { bundleFactory } from './server'
+import { bookTocAsTreeCollection } from './model-adapter'
 
 export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]>, connection: Connection): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
   return async (request: BundleTreesArgs) => {
-    const bundleAndValidator = workspaceBookBundles.get(request.workspaceUri)
-    if (bundleAndValidator == null) { return null }
-    const bundle = bundleAndValidator[0]
-    const trees = bundle.collectionItems().map((collection: BundleItem): TocTreeCollection[] => {
-      try {
-        const tree = expect(bundle.collectionTree(collection.key), 'collection must exist')
-        return [tree]
-      } catch (_error) {
-        const error: Error = _error
-        connection.console.error(`An error occurred while processing bundle tree: ${error.stack ?? error.message}`)
-        const uri = expect(bundle.bundleItemToUri(collection), 'No root path to generate diagnostic')
-        const diagnostics = collectionDiagnostic()
-        connection.sendDiagnostics({
-          uri,
-          diagnostics
-        })
-        return []
-      }
-    })
-    return trees.flat()
+
+    const {bundle, manager} = bundleFactory.get(request.workspaceUri)
+    await manager.loadEnoughForToc() // Just enough to send the ToC and list orphans
+    return bundle.books().map(bookTocAsTreeCollection).toArray()
+
+    // const bundleAndValidator = workspaceBookBundles.get(request.workspaceUri)
+    // if (bundleAndValidator == null) { return null }
+    // const bundle = bundleAndValidator[0]
+    // const trees = bundle.collectionItems().map((collection: BundleItem): TocTreeCollection[] => {
+    //   try {
+    //     const tree = expect(bundle.collectionTree(collection.key), 'collection must exist')
+    //     return [tree]
+    //   } catch (_error) {
+    //     const error: Error = _error
+    //     connection.console.error(`An error occurred while processing bundle tree: ${error.stack ?? error.message}`)
+    //     const uri = expect(bundle.bundleItemToUri(collection), 'No root path to generate diagnostic')
+    //     const diagnostics = collectionDiagnostic()
+    //     connection.sendDiagnostics({
+    //       uri,
+    //       diagnostics
+    //     })
+    //     return []
+    //   }
+    // })
+    // return trees.flat()
   }
 }
 
