@@ -178,6 +178,7 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
     documentSelector: [{ scheme: 'file', language: 'xml' }],
     synchronize: {
       fileEvents: [
+        vscode.workspace.createFileSystemWatcher('**/META-INF/books.xml'),
         vscode.workspace.createFileSystemWatcher('**/media/**'),
         vscode.workspace.createFileSystemWatcher('**/modules/**'),
         vscode.workspace.createFileSystemWatcher('**/collections/**')

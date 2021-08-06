@@ -62,7 +62,8 @@ async function processItem(type: FileChangeType, item: Fileish, conn: Connection
         case FileChangeType.Deleted:
         case FileChangeType.Changed:
             const err = await item.update()
-            sendErrors(conn, err ? I.Set<ParseError>().add(err) : null)
+            sendErrors(conn, err ? I.Set<ParseError>().add(err) : I.Set())
+            return
         case FileChangeType.Created:
         default:
             throw new Error('BUG: We do not know how to handle created items yet')
@@ -122,18 +123,21 @@ export class BundleLoadManager extends Validator {
     private _didLoadFull = false
 
     public async loadEnoughForToc(conn: Connection) {
-        if (this._didLoadToc) return
-        const errs = await this.bundle.loadEnoughForToc()
-        sendErrors(conn, errs)
-        this._didLoadToc = true
+        if (!this._didLoadToc) {
+            const errs = await this.bundle.loadEnoughForToc()
+            sendErrors(conn, errs)
+            this._didLoadToc = true
+        }
+        await Promise.all(this.bundle.books().map(b => b.update()))
     }
     public async loadEnoughForOrphans(conn: Connection) {
-        if (this._didLoadOrphans) return
-        await this.loadEnoughForToc(conn)
-        // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-        const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', {cwd: this.bundle.workspaceRoot, absolute: true})
-        files.forEach(absPath => expect(findTheNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
-        this._didLoadOrphans = true
+        if (!this._didLoadOrphans) {
+            await this.loadEnoughForToc(conn)
+            // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
+            const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', {cwd: this.bundle.workspaceRoot, absolute: true})
+            files.forEach(absPath => expect(findTheNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+            this._didLoadOrphans = true
+        }
     }
     private async loadFull(conn: Connection) {
         if (this._didLoadFull) return
@@ -143,8 +147,8 @@ export class BundleLoadManager extends Validator {
     }
 }
 
-function sendErrors(conn: Connection, errs: Opt<I.Set<ParseError>>) {
-    if (!errs) { return }
+function sendErrors(conn: Connection, errs: I.Set<ParseError>) {
+    if (errs.isEmpty()) { return }
     const grouped = errs.groupBy(err => err.node)
     grouped.forEach((errs, node) => {
         const uri = nodeToUri(node)
