@@ -132,10 +132,12 @@ type PageLink = {
 }
 
 export class PageNode extends Fileish {
+    private _uuid: Opt<string> = null
     private _title: Opt<string> = null
     private _elementIds: Opt<I.Set<string>> = null
     private _imageLinks: Opt<I.Set<ImageLink>> = null
     private _pageLinks: Opt<I.Set<PageLink>> = null
+    public uuid() { return this.ensureLoaded(this._uuid) }
     public title() {
         // A quick way to get the title for the ToC
         if (this._title === null) {
@@ -172,6 +174,8 @@ export class PageNode extends Fileish {
 
     protected childrenToLoad = () => this.imageLinks().map(l => l.image)
     protected parseXML = (doc: Document) => {
+        this._uuid = selectOne('//md:uuid/text()', doc).nodeValue
+
         const ids = select('//cnxml:*/@id', doc) as Attr[]
         this._elementIds = I.Set(ids.map(attr => expect(attr.nodeValue, 'BUG: Attribute does not have a value')))
 
@@ -263,6 +267,9 @@ export class BookNode extends Fileish {
     public pages() {
         return this.tocLeaves().map(l => l.page)
     }
+    public nonPages() {
+        return I.List<TocInner>().withMutations(acc => this.collectNonPages(this.toc(), acc)).map(n => n.title)
+    }
     private tocLeaves() {
         const toc = this.toc()
         return I.List<TocLeaf>().withMutations(acc => this.collectPages(toc, acc))
@@ -271,6 +278,14 @@ export class BookNode extends Fileish {
         nodes.forEach(n => {
             if (n.type === TocNodeType.Leaf) { acc.push(n) }
             else { this.collectPages(n.children, acc) }
+        })
+    }
+    private collectNonPages(nodes: TocNode[], acc: I.List<TocInner>) {
+        nodes.forEach(n => {
+            if (n.type !== TocNodeType.Leaf) { 
+                acc.push(n)
+                this.collectNonPages(n.children, acc)
+            }
         })
     }
 }
@@ -365,6 +380,10 @@ function joiner(type: PathType, parent: string, child: string) {
 }
 
 
+function findDuplicates<T>(list: I.List<T>) {
+    return list.filter((item, index) => index !== list.indexOf(item))
+}
+
 export class Validator {
     constructor(protected readonly bundle: Bundle) { }
 
@@ -383,6 +402,15 @@ export class Validator {
     public orhpanedPages() {
         const books = this.bundle.books()
         return this.bundle.allPages.all().subtract(books.flatMap(b => b.pages()))
+    }
+    public duplicateChapterTitles() {
+        const books = this.bundle.books()
+        return books.flatMap(b => findDuplicates(b.nonPages()))
+    }
+    public duplicatePageUuids() {
+        const pages = this.bundle.books().flatMap(b => b.pages())
+        const duplicateUuids = I.Set(findDuplicates(I.List(pages.map(p => p.uuid()))))
+        return pages.filter(p => duplicateUuids.has(p.uuid()))
     }
 
     private _missingImages(book: BookNode) {
