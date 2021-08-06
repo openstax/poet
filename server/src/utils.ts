@@ -111,8 +111,13 @@ export function getOrAdd<K, V>(boxedMap: Quarx.Box<Immutable.Map<K, V>>, key: K,
   }
 }
 
-export function profile(fn: () => void): number {
+export function profile<T>(fn: () => T): [T, number] {
   const start = Date.now()
-  fn()
-  return Date.now() - start
+  const ret = fn()
+  return [ret, Date.now() - start]
+}
+export async function profileAsync<T>(fn: () => Promise<T>): Promise<[T, number]> {
+  const start = Date.now()
+  const ret = await fn()
+  return [ret, Date.now() - start]
 }
