@@ -144,7 +144,7 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
       const [bundleChanged, bundleValidator] = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')
       bundleChanged.processChange(change)
       const {bundle} = bundleFactory.get(workspaceChanged.uri)
-      processFilesystemChange(bundle, change)
+      processFilesystemChange(bundle, change, connection)
       bundleValidator.addRequest({ causeUri: change.uri })
     }
     await connection.sendRequest('onDidChangeWatchedFiles')
@@ -178,7 +178,7 @@ connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler(work
 
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
   const {manager} = bundleFactory.get(workspaceUri)
-  await manager.loadEnoughForOrphans()
+  await manager.loadEnoughForOrphans(connection)
   return manager.orhpanedPages().map(pageAsTreeObject).toArray()
 })
 

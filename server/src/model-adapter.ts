@@ -1,9 +1,11 @@
 import { glob } from 'glob';
 import path from 'path'
-import { FileChangeType, FileEvent } from "vscode-languageserver-protocol";
+import I from 'immutable'
+import { Connection, Range } from 'vscode-languageserver';
+import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from "vscode-languageserver-protocol";
 import { URI } from "vscode-uri";
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree';
-import { BookNode, Bundle, Fileish, PageNode, PathType, TocNode, TocNodeType, Validator } from "./model";
+import { BookNode, Bundle, Fileish, PageNode, ParseError, Opt, TocNode, TocNodeType, Validator } from "./model";
 import { expect } from './utils';
 
 // Note: `[^\/]+` means "All characters except slash"
@@ -13,7 +15,7 @@ const BOOK_RE = /\/collections\/[^\/]+\.collection\.xml$/
 
 const PATH_SEP = path.sep
 
-export async function processFilesystemChange(bundle: Bundle, evt: FileEvent): Promise<number> {
+export async function processFilesystemChange(bundle: Bundle, evt: FileEvent, conn: Connection): Promise<number> {
     const {type, uri} = evt
     const absPath = URI.parse(uri).fsPath
     
@@ -37,7 +39,7 @@ export async function processFilesystemChange(bundle: Bundle, evt: FileEvent): P
             bundle.allPages.getIfHas(absPath) ||
             bundle.allImages.getIfHas(absPath))
 
-        if (item) { await processItem(type, item); return 1 }
+        if (item) { await processItem(type, item, conn); return 1 }
 
         // Now, we might be deleting a whole directory.
         // Remove anything inside that directory
@@ -55,11 +57,12 @@ function findTheNode(bundle: Bundle, absPath: string) {
     else { return null }
 }
 
-async function processItem(type: FileChangeType, item: Fileish) {
+async function processItem(type: FileChangeType, item: Fileish, conn: Connection) {
     switch(type) {
         case FileChangeType.Deleted:
         case FileChangeType.Changed:
-            return await item.update()
+            const err = await item.update()
+            sendErrors(conn, err ? I.Set<ParseError>().add(err) : null)
         case FileChangeType.Created:
         default:
             throw new Error('BUG: We do not know how to handle created items yet')
@@ -69,6 +72,10 @@ async function processItem(type: FileChangeType, item: Fileish) {
 function pageToModuleId(page: PageNode) {
     // /path/to/modules/m123456/index.cnxml
     return path.basename(path.dirname(page.filePath))
+}
+
+export function nodeToUri(node: Fileish) {
+    return `file:${node.filePath}`
 }
 
 export function pageAsTreeObject(page: PageNode): TocTreeModule {
@@ -114,24 +121,42 @@ export class BundleLoadManager extends Validator {
     private _didLoadOrphans = false
     private _didLoadFull = false
 
-    public async loadEnoughForToc() {
+    public async loadEnoughForToc(conn: Connection) {
         if (this._didLoadToc) return
-        await this.bundle.loadEnoughForToc()
+        const errs = await this.bundle.loadEnoughForToc()
+        sendErrors(conn, errs)
         this._didLoadToc = true
     }
-    public async loadEnoughForOrphans() {
+    public async loadEnoughForOrphans(conn: Connection) {
         if (this._didLoadOrphans) return
-        await this.loadEnoughForToc()
+        await this.loadEnoughForToc(conn)
         // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
         const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', {cwd: this.bundle.workspaceRoot, absolute: true})
         files.forEach(absPath => expect(findTheNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
         this._didLoadOrphans = true
     }
-    private async loadFull() {
+    private async loadFull(conn: Connection) {
         if (this._didLoadFull) return
-        await this.bundle.load(true)
+        const errs = await this.bundle.load(true)
+        sendErrors(conn, errs)
         this._didLoadFull = true
     }
-    
 }
 
+function sendErrors(conn: Connection, errs: Opt<I.Set<ParseError>>) {
+    if (!errs) { return }
+    const grouped = errs.groupBy(err => err.node)
+    grouped.forEach((errs, node) => {
+        const uri = nodeToUri(node)
+        const diagnostics = errs.toSet().map(err => {
+            const start = err.startPos ?? { line: 0, character: 0 }
+            const end = err.endPos ?? start
+            const range = Range.create(start, end)
+            return Diagnostic.create(range, err.message, DiagnosticSeverity.Error)
+        }).toArray()
+        conn.sendDiagnostics({
+          uri,
+          diagnostics  
+        })
+    })
+}

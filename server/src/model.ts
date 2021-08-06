@@ -19,7 +19,7 @@ const selectOne = <T extends Node>(sel: string, doc: Node): T => {
     return ret[0] as T
 }
 
-type Opt<T> = T | null
+export type Opt<T> = T | null
 
 // This matches the signature of vscode-languageserver-textdocument.Position without needing to import it
 export interface Position {
@@ -27,11 +27,23 @@ export interface Position {
     character: number // 0-based
 }
 
+export class ParseError extends Error {
+    constructor(public readonly node: Fileish, message: string, public readonly startPos: Opt<Position>, public readonly endPos: Opt<Position>) {
+        super(message)
+        this.name = this.constructor.name
+    }
+}
+export class WrappedParseError<T extends Error> extends ParseError {
+    constructor(node: Fileish, originalError: T) {
+        super(node, originalError.message, null, null)
+        console.error(node.filePath, originalError)
+    }
+}
+
 export abstract class Fileish {
     private _isLoaded = false
     private _exists = false
-    private _parseError: Opt<Error> = null
-    protected parseXML: Opt<(doc: Document) => void> = null // Subclasses define this
+    protected parseXML: Opt<(doc: Document) => (ParseError | void)> = null // Subclasses define this
     protected childrenToLoad: Opt<() => I.Set<Fileish>> = null // Subclasses define this
 
     constructor(private _bundle: Opt<Bundle>, public readonly filePath: string) { }
@@ -42,18 +54,19 @@ export abstract class Fileish {
         return expect(field, `${LOAD_ERROR} [${this.filePath}]`)
     }
     public exists() { return this._exists }
-    public async update() {
+    public async update(): Promise<Opt<ParseError>> {
         // console.info(this.filePath, 'update() started')
         if (this.parseXML) {
             // console.info(this.filePath, 'parsing XML')
-            const doc = await this.readXML()
             try {
-                this.parseXML(doc)
-                this._parseError = null
+                const {err, doc} = await this.readXML()
+                if (err) return err
+                const err2 = this.parseXML(doc)
+                if (err2) return err2
                 this._isLoaded = true
-            } catch (err) {
-                console.error('Errored but continuing', err)
-                this._parseError = err
+            } catch (e) {
+                console.error('Errored but continuing', e)
+                return new WrappedParseError(this, e)
             }
             // console.info(this.filePath, 'parsing XML (done)')
         } else {
@@ -61,25 +74,46 @@ export abstract class Fileish {
         }
         this._exists = (await fs.promises.stat(this.filePath)).isFile()
         // console.info(this.filePath, 'update done')
-        return this._isLoaded
+        return null
     }
-    public async load(recurse: boolean) {
+    // Update this Node, load all children (if recurse is true), and collect all Parse errors
+    public async load(recurse: boolean): Promise<I.Set<ParseError>> {
         // console.info(this.filePath, 'load started')
-        await this.update()
+        const err = await this.update()
         if (recurse && this._isLoaded && this.childrenToLoad) {
             const children = this.childrenToLoad()
             // console.info(this.filePath, 'loading children start', children.size)
-            await Promise.all(children.map(c => c.load(true)))
+            let errs = I.Set(await Promise.all(children.map(c => c.load(true)))).flatMap(c => c)
+            if (err) { errs = errs.add(err) }
             // console.info(this.filePath, 'loading children done', children.size)
+            return errs
         }
         // console.info(this.filePath, 'load done')
-        return this._isLoaded
+        return err ? I.Set<ParseError>().add(err) : I.Set<ParseError>()
     }
     private async readFile() {
         return fs.promises.readFile(this.filePath, 'utf-8')
     }
     private async readXML() {
-        return new DOMParser().parseFromString(await this.readFile())
+        let parseError: Opt<ParseError> = null
+        const locator = {lineNumber: 0, columnNumber: 0}
+        const cb = (msg: string) => {
+            const pos = {
+                line: locator.lineNumber - 1,
+                character: locator.columnNumber - 1
+            }
+            parseError = new ParseError(this, msg, pos, pos)
+        }
+        const p = new DOMParser({
+            locator,
+            errorHandler: {
+                warning: console.warn,
+                error: cb,
+                fatalError: cb
+            }
+        })
+        const doc = p.parseFromString(await this.readFile())
+        return {err: parseError, doc} as {err: Opt<ParseError>, doc: Document}
     }
 }
 
@@ -266,8 +300,9 @@ export class Bundle extends Fileish {
     }
 
     public async loadEnoughForToc() {
-        await this.load(false)
-        await Promise.all(this.books().map(b => b.load(false)))
+        const errs1 = await this.load(false)
+        const errs2 = I.Set(await Promise.all(this.books().map(b => b.load(false)))).flatMap(c=>c)
+        return errs1.union(errs2)
     }
 
     private gc() {

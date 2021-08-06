@@ -15,13 +15,13 @@ import {
 } from '../../common/src/requests'
 import { fixDocument } from './fix-document-ids'
 import { bundleFactory } from './server'
-import { bookTocAsTreeCollection } from './model-adapter'
+import { bookTocAsTreeCollection, nodeToUri } from './model-adapter'
 
 export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]>, connection: Connection): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
   return async (request: BundleTreesArgs) => {
 
     const {bundle, manager} = bundleFactory.get(request.workspaceUri)
-    await manager.loadEnoughForToc() // Just enough to send the ToC and list orphans
+    await manager.loadEnoughForToc(connection) // Just enough to send the ToC and list orphans
     return bundle.books().map(bookTocAsTreeCollection).toArray()
 
     // const bundleAndValidator = workspaceBookBundles.get(request.workspaceUri)
