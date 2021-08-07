@@ -5,7 +5,7 @@ import { Connection, Range } from 'vscode-languageserver';
 import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from "vscode-languageserver-protocol";
 import { URI } from "vscode-uri";
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree';
-import { BookNode, Bundle, Fileish, PageNode, ModelError, TocNode, TocNodeType, Validator } from "./model";
+import { BookNode, Bundle, Fileish, PageNode, ModelError, Opt, TocNode, TocNodeType } from "./model";
 import { expect } from './utils';
 
 // Note: `[^\/]+` means "All characters except slash"
@@ -68,15 +68,22 @@ function recTocConvert(node: TocNode): TocTreeElement {
 }
 
 
-export class BundleLoadManager extends Validator {
+export class BundleLoadManager {
 
     private _didLoadToc = false
     private _didLoadOrphans = false
     private _didLoadFull = false
 
-    constructor(bundle: Bundle, private readonly conn: Connection) {
-        super(bundle)
+    constructor(public bundle: Bundle, private readonly conn: Connection) {}
+
+    public allPages() {
+        return this.bundle.allPages.all()
     }
+    public orhpanedPages() {
+        const books = this.bundle.books()
+        return this.bundle.allPages.all().subtract(books.flatMap(b => b.pages()))
+    }
+
     public async loadEnoughForToc() {
         if (!this._didLoadToc) {
             const errs = await this.bundle.loadEnoughForToc()
@@ -169,17 +176,57 @@ export class BundleLoadManager extends Validator {
     }
 
     async performInitialValidation() {
-        await this.bundle.load(true)
-        await Promise.all(this.bundle.allNodes().map(n => this.sendErrors(n.getAllValidationErrors())).toArray())
+        const jobs = [
+            async () => this._didLoadFull || await this.bundle.load(false),
+            async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(f => f.load(false))),
+            async () => this._didLoadFull || await Promise.all(this.bundle.allPages.all().map(f => f.load(false))),
+            async () => this._didLoadFull || await Promise.all(this.bundle.allImages.all().map(f => f.load(false))),
+            async () => this._didLoadFull || this.bundle.allNodes().forEach(n => this.sendErrors(n.getAllValidationErrors())),
+            () => this._didLoadFull = true
+        ]
+        jobs.reverse().forEach(j => jobRunner.enqueue(j))
     }
 
     async loadEnoughToSendDiagnostics(docUri: string) {
         // load the books to see if this URI is a page in a book
-        await this.bundle.load(false)
-        await Promise.all(this.bundle.books().map(b => b.load(false)))
-        const page = this.bundle.allPages.getIfHas(URI.parse(docUri).fsPath)
-        if (page) {
-            this.sendErrors(await page.getCheapValidationErrors())
-        }
+        const jobs = [
+            async () => this._didLoadFull || await this.bundle.load(false),
+            async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(f => f.load(false))),
+            async () => {
+                const page = this.bundle.allPages.getIfHas(URI.parse(docUri).fsPath)
+                if (page) {
+                    if (this._didLoadFull) {
+                        this.sendErrors(page.getAllValidationErrors())
+                    } else {
+                        this.sendErrors(await page.getCheapValidationErrors())
+                    }
+                }
+            }
+        ]
+        jobs.reverse().forEach(j => jobRunner.enqueue(j))
     }
 }
+
+
+class JobRunner {
+    private stack: (() => Promise<void>)[] = []
+    private timeout: Opt<NodeJS.Immediate> = null
+
+    public enqueue(job: () => any) {
+        this.stack.push(job)
+        this.tick()
+    }
+    private tick() {
+        if (this.timeout !== null) return // job is running
+        this.timeout = setImmediate(async () => {
+            const fn = this.stack.pop()
+            if (fn) {
+                await fn()
+            }
+            this.timeout = null
+            if (this.stack.length > 0) this.tick()
+        })
+    }
+}
+
+export const jobRunner = new JobRunner()

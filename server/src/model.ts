@@ -58,6 +58,9 @@ export class WrappedParseError<T extends Error> extends ParseError {
     }
 }
 
+// https://stackoverflow.com/a/35008327
+const checkFileExists = async (s: string): Promise<boolean> => new Promise(r=>fs.access(s, fs.constants.F_OK, e => r(!e)))
+
 export abstract class Fileish {
     private _isLoaded = false
     private _exists = false
@@ -99,7 +102,7 @@ export abstract class Fileish {
         } else {
             this._isLoaded = true
         }
-        this._exists = (await fs.promises.stat(this.filePath)).isFile()
+        this._exists = await checkFileExists(this.filePath)
         // console.info(this.filePath, 'update done')
         return null
     }
@@ -334,12 +337,14 @@ export class BookNode extends Fileish {
 
     private buildChildren(root: Element): TocNode[] {
         const ret = (select('./col:*', root) as Element[]).map(childNode => {
-            const [startPos, endPos] = calculateElementPositions(childNode)
+            let [startPos, endPos] = calculateElementPositions(childNode)
             switch (childNode.localName) {
                 case 'subcollection':
+                    const titleNode = selectOne('md:title', childNode) as Element
+                    [startPos, endPos] = calculateElementPositions(titleNode)
                     return {
                         type: TocNodeType.Inner,
-                        title: expect(selectOne('md:title/text()', childNode).nodeValue, 'ERROR: Malformed or missing md:title element in Subcollection'),
+                        title: expect(titleNode.textContent, 'ERROR: Malformed or missing md:title element in Subcollection'),
                         children: this.buildChildren(selectOne('./col:content', childNode)),
                         startPos,
                         endPos,
@@ -392,14 +397,23 @@ export class BookNode extends Fileish {
     }
 
     public getAllValidationErrors() {
-        return this.missingPages().union(this.duplicateChapterTitles())
+        return this.missingPages()
+        .union(this.duplicateChapterTitles())
+        .union(this.duplicatePages())
     }
     private missingPages(): I.Set<ModelError> {
         return toValidationErrors(this, 'Missing Page', I.Set(this.tocLeaves()).filter(p => !p.page.exists()))
     }
     private duplicateChapterTitles(): I.Set<ModelError> {
         const nonPages = I.List<TocInner>().withMutations(acc => this.collectNonPages(this.toc(), acc))
-        return toValidationErrors(this, 'Duplicate Chapter Title', I.Set(findDuplicates(nonPages)))
+        const duplicateTitles = I.Set(findDuplicates(nonPages.map(subcol => subcol.title)))
+        return toValidationErrors(this, 'Duplicate Chapter Title', I.Set(nonPages.filter(subcol => duplicateTitles.has(subcol.title))))
+    }
+    private duplicatePages(): I.Set<ModelError> {
+        const pages = this.pages()
+        const pageLeaves = I.List<TocLeaf>().withMutations(acc => this.collectPages(this.toc(), acc))
+        const duplicates = I.Set(findDuplicates(pages))
+        return toValidationErrors(this, 'Duplicate Page in ToC', I.Set(pageLeaves.filter(p => duplicates.has(p.page))))
     }
 }
 
@@ -528,16 +542,4 @@ function joiner(type: PathType, parent: string, child: string) {
 
 function findDuplicates<T>(list: I.List<T>) {
     return list.filter((item, index) => index !== list.indexOf(item))
-}
-
-export class Validator {
-    constructor(protected readonly bundle: Bundle) { }
-
-    public allPages() {
-        return this.bundle.allPages.all()
-    }
-    public orhpanedPages() {
-        const books = this.bundle.books()
-        return this.bundle.allPages.all().subtract(books.flatMap(b => b.pages()))
-    }
 }

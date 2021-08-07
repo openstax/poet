@@ -1,4 +1,4 @@
-import { Bundle, PageNode, TocNode, TocNodeType, Validator } from "./model"
+import { Bundle, PageNode, TocNode, TocNodeType } from "./model"
 import { profileAsync } from "./utils"
 
 function printToc(node: TocNode, depth: number = 1) {

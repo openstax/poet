@@ -20,9 +20,9 @@ import { bookTocAsTreeCollection, nodeToUri } from './model-adapter'
 export function bundleTreesHandler(workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]>, connection: Connection): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
   return async (request: BundleTreesArgs) => {
 
-    const {bundle, manager} = bundleFactory.get(request.workspaceUri)
+    const manager = bundleFactory.get(request.workspaceUri)
     await manager.loadEnoughForToc() // Just enough to send the ToC and list orphans
-    return bundle.books().map(bookTocAsTreeCollection).toArray()
+    return manager.bundle.books().map(bookTocAsTreeCollection).toArray()
 
     // const bundleAndValidator = workspaceBookBundles.get(request.workspaceUri)
     // if (bundleAndValidator == null) { return null }
