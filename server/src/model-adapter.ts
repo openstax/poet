@@ -170,6 +170,16 @@ export class BundleLoadManager extends Validator {
 
     async performInitialValidation() {
         await this.bundle.load(true)
-        await Promise.all(this.bundle.allNodes().map(n => this.sendErrors(n.getValidationErrors())).toArray())
+        await Promise.all(this.bundle.allNodes().map(n => this.sendErrors(n.getAllValidationErrors())).toArray())
+    }
+
+    async loadEnoughToSendDiagnostics(docUri: string) {
+        // load the books to see if this URI is a page in a book
+        await this.bundle.load(false)
+        await Promise.all(this.bundle.books().map(b => b.load(false)))
+        const page = this.bundle.allPages.getIfHas(URI.parse(docUri).fsPath)
+        if (page) {
+            this.sendErrors(await page.getCheapValidationErrors())
+        }
     }
 }

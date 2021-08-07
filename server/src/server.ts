@@ -94,24 +94,13 @@ connection.onInitialize(async (params: InitializeParams) => {
 
 connection.onInitialized(() => {
   const inner = async (): Promise<void> => {
-    const currentWorkspaces = await connection.workspace.getWorkspaceFolders()
-    if (currentWorkspaces != null) {
-      for (const workspace of currentWorkspaces) {
-        try {
-          await createBookBundleForWorkspace(workspace)
-          const bundleValidator = expect(workspaceBookBundles.get(workspace.uri), 'already returned if key missing')[1]
-          bundleValidator.addRequest()
-
-          const { manager} = bundleFactory.get(workspace.uri)
-          const [_, ms] = await profileAsync(async () => {
-            await manager.performInitialValidation()
-          })
-          console.log('Initial validation took', ms)
-
-        } catch (err) {
-          connection.console.error(`Could not parse ${workspace.uri} as a book bundle`)
-        }
-      }
+    const currentWorkspaces = (await connection.workspace.getWorkspaceFolders()) || []
+    for (const workspace of currentWorkspaces) {
+      const { manager} = bundleFactory.get(workspace.uri)
+      const [_, ms] = await profileAsync(async () => {
+        await manager.performInitialValidation()
+      })
+      console.log('Initial validation took', ms)
     }
   }
   inner().catch(e => { throw e })
@@ -125,12 +114,15 @@ documents.onDidOpen(event => {
       return
     }
     const workspaceChanged = expect(workspaces.find((workspace) => event.document.uri.startsWith(workspace.uri)), `file ${eventUri.fsPath} must exist in workspace`)
-    if (!workspaceBookBundles.has(workspaceChanged.uri)) {
-      await createBookBundleForWorkspace(workspaceChanged)
-      return
-    }
-    const bundleValidator = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')[1]
-    bundleValidator.addRequest({ causeUri: event.document.uri })
+    // if (!workspaceBookBundles.has(workspaceChanged.uri)) {
+    //   await createBookBundleForWorkspace(workspaceChanged)
+    //   return
+    // }
+    // const bundleValidator = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')[1]
+    // bundleValidator.addRequest({ causeUri: event.document.uri })
+
+    const {manager} = bundleFactory.get(workspaceChanged.uri)
+    await manager.loadEnoughToSendDiagnostics(event.document.uri)
   }
   inner().catch(err => { throw err })
 })

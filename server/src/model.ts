@@ -22,6 +22,16 @@ const selectOne = <T extends Node>(sel: string, doc: Node): T => {
     return ret[0] as T
 }
 
+function filterNull<T>(set: I.Set<Opt<T>>): I.Set<T> {
+    return I.Set<T>().withMutations(s => {
+        set.forEach(s1 => {
+            if (s1 !== null) {
+                s.add(s1)
+            }
+        })
+    })
+}
+
 export type Opt<T> = T | null
 
 // This matches the signature of vscode-languageserver-textdocument.Position without needing to import it
@@ -56,7 +66,7 @@ export abstract class Fileish {
 
     constructor(private _bundle: Opt<Bundle>, public readonly filePath: string) { }
 
-    public abstract getValidationErrors(): I.Set<ModelError>
+    public abstract getAllValidationErrors(): I.Set<ModelError>
     protected setBundle(bundle: Bundle) { this._bundle = bundle /* avoid catch-22 */ }
     protected bundle() { return expect(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
     protected ensureLoaded<T>(field: Opt<T>) {
@@ -165,7 +175,7 @@ function textWithSource(el: Element, attr?: string): WithSource<string> {
 }
 
 export class ImageNode extends Fileish {
-    public getValidationErrors(): I.Set<ModelError> { return I.Set() }
+    public getAllValidationErrors(): I.Set<ModelError> { return I.Set() }
 }
 
 function convertToPos(str: string, cursor: number): Position {
@@ -263,9 +273,23 @@ export class PageNode extends Fileish {
         }
     }
 
-    public getValidationErrors() {
+    // Cheap errors are ones that only require parsing link destinations at most, 
+    // not ones that require global state (e.g. uuid)
+    public async getCheapValidationErrors() {
+        await this.load(false)
+        // load the associated images & pages so we can tell if the links are broken
+        await Promise.all(filterNull(this.pageLinks().map(l => l.page))
+            .union(this.imageLinks()
+            .map(l => l.image))
+            .map(async n => n.load(false)))
+        return this._getCheapValidationErrors()
+    }
+    private _getCheapValidationErrors() {
         return this.findBrokenImageLinks()
         .union(this.findBrokenPageLinks())
+    }
+    public getAllValidationErrors() {
+        return this._getCheapValidationErrors()
         .union(this.findDuplicateUuid())
     }
     private findBrokenImageLinks(): I.Set<ModelError> {
@@ -367,7 +391,7 @@ export class BookNode extends Fileish {
         })
     }
 
-    public getValidationErrors() {
+    public getAllValidationErrors() {
         return this.missingPages().union(this.duplicateChapterTitles())
     }
     private missingPages(): I.Set<ModelError> {
@@ -432,7 +456,7 @@ export class Bundle extends Fileish {
         return I.Set(findDuplicates(uuids))
     }
 
-    public getValidationErrors() {
+    public getAllValidationErrors() {
         // Check that there is at least one book and that every book exists
         return this.missingBooks().union(this.atLeastOneBook())
     }
