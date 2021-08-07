@@ -149,8 +149,9 @@ export interface ImageLink extends Source {
 
 
 export interface PageLink extends Source {
-    page: PageNode
+    page: Opt<PageNode>
     targetElementId: Opt<string>
+    url: Opt<string>
 }
 
 function textWithSource(el: Element, attr?: string): WithSource<string> {
@@ -164,7 +165,7 @@ function textWithSource(el: Element, attr?: string): WithSource<string> {
 }
 
 export class ImageNode extends Fileish {
-    public getValidationErrors(): never { throw new Error('BUG: Unimplemented yet') }
+    public getValidationErrors(): I.Set<ModelError> { return I.Set() }
 }
 
 function convertToPos(str: string, cursor: number): Position {
@@ -239,11 +240,13 @@ export class PageNode extends Fileish {
         const linkNodes = select('//cnxml:link', doc) as Element[]
         this._pageLinks = I.Set(linkNodes.map(linkNode => {
             const [startPos, endPos] = calculateElementPositions(linkNode)
-            const toDocument = linkNode.getAttribute('document')
-            const toTargetId = linkNode.getAttribute('target-id')
+            const toDocument = linkNode.getAttribute('document') || null
+            const toTargetId = linkNode.getAttribute('target-id') || null // xmldom never returns null, it reutnrs ''
+            const toUrl = linkNode.getAttribute('url')
             return {
-                page: toDocument ? super.bundle().allPages.get(joiner(PathType.MODULE_TO_MODULEID, this.filePath, toDocument)) : this,
-                targetElementId: toTargetId ? toTargetId : null, // could be empty string
+                page: toDocument ? super.bundle().allPages.get(joiner(PathType.MODULE_TO_MODULEID, this.filePath, toDocument)) : (toTargetId ? this : null),
+                url: toUrl,
+                targetElementId: toTargetId,
                 startPos, endPos
             }
         }))
@@ -270,7 +273,12 @@ export class PageNode extends Fileish {
     }
     private findBrokenPageLinks(): I.Set<ModelError> {
         return toValidationErrors(this, 'Link target not found', this.pageLinks()
-        .filter(l => !l.page.exists() || (l.targetElementId && !l.page.hasElementId(l.targetElementId))))
+        .filter(l => {
+            if (!l.page) return false // URL links are ok
+            if (!l.page.exists()) return true // link to non-existent page are bad
+            if (l.targetElementId === null) return false // linking to the whole page and it exists is ok
+            return !l.page.hasElementId(l.targetElementId)
+        }))
     }
     private findDuplicateUuid(): I.Set<ModelError> {
         const uuid = this.ensureLoaded(this._uuid)
@@ -395,6 +403,10 @@ export class Bundle extends Fileish {
                 endPos
             }
         }))
+    }
+
+    public allNodes() {
+        return I.Set([this]).union(this.allBooks.all()).union(this.allPages.all()).union(this.allImages.all())
     }
 
     public books() {

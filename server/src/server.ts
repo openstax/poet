@@ -17,7 +17,7 @@ import {
 } from 'vscode-uri'
 
 import {
-  expect
+  expect, profileAsync
 } from './utils'
 
 import {
@@ -101,6 +101,13 @@ connection.onInitialized(() => {
           await createBookBundleForWorkspace(workspace)
           const bundleValidator = expect(workspaceBookBundles.get(workspace.uri), 'already returned if key missing')[1]
           bundleValidator.addRequest()
+
+          const { manager} = bundleFactory.get(workspace.uri)
+          const [_, ms] = await profileAsync(async () => {
+            await manager.performInitialValidation()
+          })
+          console.log('Initial validation took', ms)
+
         } catch (err) {
           connection.console.error(`Could not parse ${workspace.uri} as a book bundle`)
         }

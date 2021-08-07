@@ -167,4 +167,9 @@ export class BundleLoadManager extends Validator {
             })
         })
     }
+
+    async performInitialValidation() {
+        await this.bundle.load(true)
+        await Promise.all(this.bundle.allNodes().map(n => this.sendErrors(n.getValidationErrors())).toArray())
+    }
 }

@@ -24,16 +24,17 @@ export class BundleValidationQueue {
   }
 
   addRequest(request?: BundleValidationRequest): void {
-    this.clearQueue()
-    if (request != null) {
-      const priorityItem = this.bundle.bundleItemFromUri(request.causeUri)
-      if ((priorityItem !== null) && (priorityItem.type === 'collections' || priorityItem.type === 'modules')) {
-        this.queue.push(priorityItem)
-      }
-    }
-    this.queue.push(...this.bundle.collectionItems())
-    this.queue.push(...this.bundle.moduleItems())
-    this.trigger()
+    return // Disable the old-way
+    // this.clearQueue()
+    // if (request != null) {
+    //   const priorityItem = this.bundle.bundleItemFromUri(request.causeUri)
+    //   if ((priorityItem !== null) && (priorityItem.type === 'collections' || priorityItem.type === 'modules')) {
+    //     this.queue.push(priorityItem)
+    //   }
+    // }
+    // this.queue.push(...this.bundle.collectionItems())
+    // this.queue.push(...this.bundle.moduleItems())
+    // this.trigger()
   }
 
   private processQueue(): void {
