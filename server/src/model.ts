@@ -63,15 +63,23 @@ export abstract class Fileish {
         // console.info(this.filePath, 'update() started')
         if (this.parseXML) {
             // console.info(this.filePath, 'parsing XML')
-            try {
-                const {err, doc} = await this.readXML()
-                if (err) return err
-                const err2 = this.parseXML(doc)
-                if (err2) return err2
+
+            // Development branch throws errors instead of turning them into messages
+            if (process.env['NODE_ENV'] !== 'production') {
+                const {doc} = await this.readXML()
+                this.parseXML(doc)
                 this._isLoaded = true
-            } catch (e) {
-                console.error('Errored but continuing', e)
-                return new WrappedParseError(this, e)
+            } else {
+                try {
+                    const {err, doc} = await this.readXML()
+                    if (err) return err
+                    const err2 = this.parseXML(doc)
+                    if (err2) return err2
+                    this._isLoaded = true
+                } catch (e) {
+                    console.error('Errored but continuing', e)
+                    return new WrappedParseError(this, e)
+                }
             }
             // console.info(this.filePath, 'parsing XML (done)')
         } else {
@@ -122,24 +130,46 @@ export abstract class Fileish {
     }
 }
 
-export class ImageNode extends Fileish {
-}
-
-type ImageLink = {
-    image: ImageNode
+export interface Source {
     startPos: Position
     endPos: Position
 }
 
-type PageLink = {
+export interface WithSource<T> extends Source {
+    v: T
+}
+
+export interface ImageLink extends Source {
+    image: ImageNode
+}
+
+
+export interface PageLink extends Source {
     page: PageNode
     targetElementId: Opt<string>
 }
 
+function textWithSource(el: Element, attr?: string): WithSource<string> {
+    const [startPos, endPos] = calculateElementPositions(el)
+    const v = attr ? el.getAttribute(attr) : el.textContent
+    return {
+        v: expect(v, `BUG: Element/Attribute does not have a value. ${JSON.stringify(startPos)}`),
+        startPos,
+        endPos
+    }
+}
+
+export class ImageNode extends Fileish {
+}
+
+function convertToPos(str: string, cursor: number): Position {
+    const lines = str.substring(cursor).split('\n')
+    return {line: lines.length, character: lines[lines.length-1].length}
+}
 export class PageNode extends Fileish {
-    private _uuid: Opt<string> = null
-    private _title: Opt<string> = null
-    private _elementIds: Opt<I.Set<string>> = null
+    private _uuid: Opt<WithSource<string>> = null
+    private _title: Opt<WithSource<string>> = null
+    private _elementIds: Opt<I.Set<WithSource<string>>> = null
     private _imageLinks: Opt<I.Set<ImageLink>> = null
     private _pageLinks: Opt<I.Set<PageLink>> = null
     public uuid() { return this.ensureLoaded(this._uuid) }
@@ -149,12 +179,13 @@ export class PageNode extends Fileish {
             const data = fs.readFileSync(this.filePath, 'utf-8')
             this._title = this.guessTitle(data)
         }
-        return this._title ?? 'UntitledFile'
+        return this._title?.v ?? 'UntitledFile'
     }
-    private guessTitle(data: string): string | null {
+    private guessTitle(data: string): WithSource<string> | null {
         const openTag = '<title>'
+        const closeTag = '</title>'
         const titleTagStart = data.indexOf(openTag)
-        const titleTagEnd = data.indexOf('</title>')
+        const titleTagEnd = data.indexOf(closeTag)
         if (titleTagStart === -1 || titleTagEnd === -1) {
             return null
         }
@@ -165,7 +196,11 @@ export class PageNode extends Fileish {
             /* istanbul ignore next */
             return null
         }
-        return data.substring(actualTitleStart, titleTagEnd).trim()
+        return {
+            v: data.substring(actualTitleStart, titleTagEnd).trim(),
+            startPos: convertToPos(data, actualTitleStart),
+            endPos: convertToPos(data, titleTagEnd),
+        }
     }
     public imageLinks() {
         return this.ensureLoaded(this._imageLinks)
@@ -174,15 +209,14 @@ export class PageNode extends Fileish {
         return this.ensureLoaded(this._pageLinks)
     }
     public hasElementId(id: string) {
-        return this.ensureLoaded(this._elementIds).has(id)
+        return !!this.ensureLoaded(this._elementIds).toSeq().find(n => n.v === id)
     }
 
     protected childrenToLoad = () => this.imageLinks().map(l => l.image)
     protected parseXML = (doc: Document) => {
-        this._uuid = selectOne('//md:uuid/text()', doc).nodeValue
+        this._uuid = textWithSource(selectOne('//md:uuid', doc))
 
-        const ids = select('//cnxml:*/@id', doc) as Attr[]
-        this._elementIds = I.Set(ids.map(attr => expect(attr.nodeValue, 'BUG: Attribute does not have a value')))
+        this._elementIds = I.Set((select('//cnxml:*[@id]', doc) as Element[]).map(el => textWithSource(el, 'id')))
 
         const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
         this._imageLinks = I.Set(imageNodes.map(attr => {
@@ -196,19 +230,25 @@ export class PageNode extends Fileish {
 
         const linkNodes = select('//cnxml:link', doc) as Element[]
         this._pageLinks = I.Set(linkNodes.map(linkNode => {
+            const [startPos, endPos] = calculateElementPositions(linkNode)
             const toDocument = linkNode.getAttribute('document')
             const toTargetId = linkNode.getAttribute('target-id')
             return {
                 page: toDocument ? super.bundle().allPages.get(joiner(PathType.MODULE_TO_MODULEID, this.filePath, toDocument)) : this,
-                targetElementId: toTargetId ? toTargetId : null // could be empty string
+                targetElementId: toTargetId ? toTargetId : null, // could be empty string
+                startPos, endPos
             }
         }))
 
         const titleNode = select('//cnxml:title', doc) as Element[]
         if (titleNode.length > 0) {
-            this._title = titleNode[0].textContent ?? ''
+            this._title = textWithSource(titleNode[0])
         } else {
-            this._title = 'Unnamed Module'
+            this._title = {
+                v: 'Unnamed Module',
+                startPos: {line: 0, character: 0},
+                endPos: {line: 0, character: 1},
+            }
         }
     }
 }
@@ -218,35 +258,37 @@ export enum TocNodeType {
     Leaf
 }
 export type TocNode = TocInner | TocLeaf
-type TocInner = { readonly type: TocNodeType.Inner, readonly title: string, readonly children: TocNode[] }
-type TocLeaf = { readonly type: TocNodeType.Leaf, readonly page: PageNode, startPos: Position, endPos: Position }
+interface TocInner extends Source { readonly type: TocNodeType.Inner, readonly title: string, readonly children: TocNode[] }
+interface TocLeaf extends Source { readonly type: TocNodeType.Leaf, readonly page: PageNode }
 
 export class BookNode extends Fileish {
-    private _title: Opt<string> = null
-    private _slug: Opt<string> = null
+    private _title: Opt<WithSource<string>> = null
+    private _slug: Opt<WithSource<string>> = null
     private _toc: Opt<TocNode[]> = null
 
     protected childrenToLoad = () => I.Set(this.pages())
     protected parseXML = (doc: Document) => {
-        this._title = selectOne('/col:collection/col:metadata/md:title/text()', doc).nodeValue
-        this._slug = selectOne('/col:collection/col:metadata/md:slug/text()', doc).nodeValue
+        this._title = textWithSource(selectOne('/col:collection/col:metadata/md:title', doc))
+        this._slug = textWithSource(selectOne('/col:collection/col:metadata/md:slug', doc))
         const root: Element = selectOne('/col:collection/col:content', doc)
         this._toc = this.buildChildren(root)
     }
 
     private buildChildren(root: Element): TocNode[] {
         const ret = (select('./col:*', root) as Element[]).map(childNode => {
+            const [startPos, endPos] = calculateElementPositions(childNode)
             switch (childNode.localName) {
                 case 'subcollection':
                     return {
                         type: TocNodeType.Inner,
                         title: expect(selectOne('md:title/text()', childNode).nodeValue, 'ERROR: Malformed or missing md:title element in Subcollection'),
-                        children: this.buildChildren(selectOne('./col:content', childNode))
+                        children: this.buildChildren(selectOne('./col:content', childNode)),
+                        startPos,
+                        endPos,
                     } as TocInner
                 case 'module':
                     const pageId = expect(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
                     const page = super.bundle().allPages.get(joiner(PathType.COLLECTION_TO_MODULEID, this.filePath, pageId))
-                    const [startPos, endPos] = calculateElementPositions(childNode)
                     return {
                         type: TocNodeType.Leaf,
                         page,
@@ -264,10 +306,10 @@ export class BookNode extends Fileish {
         return this.ensureLoaded(this._toc)
     }
     public title() {
-        return this.ensureLoaded(this._title)
+        return this.ensureLoaded(this._title).v
     }
     public slug() {
-        return this.ensureLoaded(this._slug)
+        return this.ensureLoaded(this._slug).v
     }
     public pages() {
         return this.tocLeaves().map(l => l.page)
@@ -300,23 +342,29 @@ export class Bundle extends Fileish {
     public readonly allImages = new Factory((absPath: string) => new ImageNode(this, absPath))
     public readonly allPages = new Factory((absPath: string) => new PageNode(this, absPath))
     public readonly allBooks = new Factory((absPath: string) => new BookNode(this, absPath))
-    private _books: Opt<I.Set<BookNode>> = null
+    private _books: Opt<I.Set<WithSource<BookNode>>> = null
 
     constructor(public readonly workspaceRoot: string) {
         super(null, path.join(workspaceRoot, 'META-INF/books.xml'))
         super.setBundle(this)
     }
-    protected childrenToLoad = () => this.ensureLoaded(this._books)
+    protected childrenToLoad = () => this.books()
     protected parseXML = (doc: Document) => {
         const bookNodes = select('//bk:book', doc) as Element[]
         this._books = I.Set(bookNodes.map(b => {
+            const [startPos, endPos] = calculateElementPositions(b)
             const href = expect(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
-            return this.allBooks.get(joiner(PathType.REL_TO_REL, this.filePath, href))
+            const book = this.allBooks.get(joiner(PathType.REL_TO_REL, this.filePath, href))
+            return {
+                v: book,
+                startPos,
+                endPos
+            }
         }))
     }
 
     public books() {
-        return this.ensureLoaded(this._books)
+        return this.ensureLoaded(this._books).map(b => b.v)
     }
 
     public async loadEnoughForToc() {
