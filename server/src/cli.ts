@@ -37,11 +37,6 @@ function printToc(node: TocNode, depth: number = 1) {
         console.log('  Images', (x.allImages as any).size())
 
         // console.log('Loaded Pages', x.allPages.all().filter(p => (p as any)._isLoaded).map(p => (p as any).filePath).toArray())
-        const v = new Validator(x)
-        console.log('Missing Images:', v.missingImages().size)
-        console.log('Missing Page Targets:', v.missingPageTargets().size, 'of', x.books().flatMap(b => b.pages().flatMap(p => p.pageLinks())).size)
-        console.log('Duplicate Pages in ToC:', v.duplicatePagesInToC().size)
-        // console.log('here is one:', [...x.books().flatMap(b => b.brokenPageLinks())][0])
 
     }))[1], 'ms')
 

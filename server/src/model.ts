@@ -12,6 +12,9 @@ const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 const NS_METADATA = 'http://cnx.rice.edu/mdml'
 const NS_CONTAINER = 'https://openstax.org/namespaces/book-container'
 
+const NOWHERE_START: Position = {line: 0, character: 0}
+const NOWHERE_END: Position = {line: 0, character: Number.MAX_VALUE}
+
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA, bk: NS_CONTAINER })
 const selectOne = <T extends Node>(sel: string, doc: Node): T => {
     const ret = select(sel, doc) as Node[]
@@ -53,6 +56,7 @@ export abstract class Fileish {
 
     constructor(private _bundle: Opt<Bundle>, public readonly filePath: string) { }
 
+    public abstract getValidationErrors(): I.Set<ModelError>
     protected setBundle(bundle: Bundle) { this._bundle = bundle /* avoid catch-22 */ }
     protected bundle() { return expect(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
     protected ensureLoaded<T>(field: Opt<T>) {
@@ -160,11 +164,15 @@ function textWithSource(el: Element, attr?: string): WithSource<string> {
 }
 
 export class ImageNode extends Fileish {
+    public getValidationErrors(): never { throw new Error('BUG: Unimplemented yet') }
 }
 
 function convertToPos(str: string, cursor: number): Position {
     const lines = str.substring(cursor).split('\n')
     return {line: lines.length, character: lines[lines.length-1].length}
+}
+function toValidationErrors(node: Fileish, message: string, sources: I.Set<Source>) {
+    return sources.map(s => new ModelError(node, message, s.startPos, s.endPos))
 }
 export class PageNode extends Fileish {
     private _uuid: Opt<WithSource<string>> = null
@@ -172,7 +180,7 @@ export class PageNode extends Fileish {
     private _elementIds: Opt<I.Set<WithSource<string>>> = null
     private _imageLinks: Opt<I.Set<ImageLink>> = null
     private _pageLinks: Opt<I.Set<PageLink>> = null
-    public uuid() { return this.ensureLoaded(this._uuid) }
+    public uuid() { return this.ensureLoaded(this._uuid).v }
     public title() {
         // A quick way to get the title for the ToC
         if (this._title === null) {
@@ -246,10 +254,28 @@ export class PageNode extends Fileish {
         } else {
             this._title = {
                 v: 'Unnamed Module',
-                startPos: {line: 0, character: 0},
-                endPos: {line: 0, character: 1},
+                startPos: NOWHERE_START,
+                endPos: NOWHERE_END,
             }
         }
+    }
+
+    public getValidationErrors() {
+        return this.findBrokenImageLinks()
+        .union(this.findBrokenPageLinks())
+        .union(this.findDuplicateUuid())
+    }
+    private findBrokenImageLinks(): I.Set<ModelError> {
+        return toValidationErrors(this, 'Image not found', this.imageLinks().filter(img => !img.image.exists()))
+    }
+    private findBrokenPageLinks(): I.Set<ModelError> {
+        return toValidationErrors(this, 'Link target not found', this.pageLinks()
+        .filter(l => !l.page.exists() || (l.targetElementId && !l.page.hasElementId(l.targetElementId))))
+    }
+    private findDuplicateUuid(): I.Set<ModelError> {
+        const uuid = this.ensureLoaded(this._uuid)
+        const dup = this.bundle().allDuplicatePageUuids().has(uuid.v) ? [uuid]: []
+        return toValidationErrors(this, 'Duplicate UUID detected', I.Set(dup))
     }
 }
 
@@ -314,9 +340,6 @@ export class BookNode extends Fileish {
     public pages() {
         return this.tocLeaves().map(l => l.page)
     }
-    public nonPages() {
-        return I.List<TocInner>().withMutations(acc => this.collectNonPages(this.toc(), acc)).map(n => n.title)
-    }
     private tocLeaves() {
         const toc = this.toc()
         return I.List<TocLeaf>().withMutations(acc => this.collectPages(toc, acc))
@@ -334,6 +357,17 @@ export class BookNode extends Fileish {
                 this.collectNonPages(n.children, acc)
             }
         })
+    }
+
+    public getValidationErrors() {
+        return this.missingPages().union(this.duplicateChapterTitles())
+    }
+    private missingPages(): I.Set<ModelError> {
+        return toValidationErrors(this, 'Missing Page', I.Set(this.tocLeaves()).filter(p => !p.page.exists()))
+    }
+    private duplicateChapterTitles(): I.Set<ModelError> {
+        const nonPages = I.List<TocInner>().withMutations(acc => this.collectNonPages(this.toc(), acc))
+        return toValidationErrors(this, 'Duplicate Chapter Title', I.Set(findDuplicates(nonPages)))
     }
 }
 
@@ -364,7 +398,10 @@ export class Bundle extends Fileish {
     }
 
     public books() {
-        return this.ensureLoaded(this._books).map(b => b.v)
+        return this.__books().map(b => b.v)
+    }
+    private __books() {
+        return this.ensureLoaded(this._books)
     }
 
     public async loadEnoughForToc() {
@@ -377,6 +414,26 @@ export class Bundle extends Fileish {
         // Remove any objects that don't exist and are not pointed to by a book
         // This may need to run every time an object is deleted (or exists is set to false)
     }
+
+    public allDuplicatePageUuids() {
+        const uuids = I.List(this.books().flatMap(b => b.pages())).map(p => p.uuid())
+        return I.Set(findDuplicates(uuids))
+    }
+
+    public getValidationErrors() {
+        // Check that there is at least one book and that every book exists
+        return this.missingBooks().union(this.atLeastOneBook())
+    }
+
+    private missingBooks(): I.Set<ModelError> {
+        return toValidationErrors(this, 'Missing Book', I.Set(this.__books()).filter(b => !b.v.exists()))
+    }
+    private atLeastOneBook(): I.Set<ModelError> {
+        if (this.books().size === 0) {
+            return I.Set([new ModelError(this, 'At least one book must be in the bundle', NOWHERE_START, NOWHERE_END)])
+        } else { return I.Set() }
+    }
+
 }
 
 export enum PathType {
@@ -443,48 +500,8 @@ export class Validator {
     public allPages() {
         return this.bundle.allPages.all()
     }
-    public missingImages() {
-        return this.bundle.books().flatMap(this._missingImages)
-    }
-    public missingPageTargets() {
-        return this.bundle.books().flatMap(this._missingPageTargets)
-    }
-    public duplicatePagesInToC() {
-        return this.bundle.books().flatMap(this._duplicatePagesInToc)
-    }
     public orhpanedPages() {
         const books = this.bundle.books()
         return this.bundle.allPages.all().subtract(books.flatMap(b => b.pages()))
-    }
-    public duplicateChapterTitles() {
-        const books = this.bundle.books()
-        return books.flatMap(b => findDuplicates(b.nonPages()))
-    }
-    public duplicatePageUuids() {
-        const pages = this.bundle.books().flatMap(b => b.pages())
-        const duplicateUuids = I.Set(findDuplicates(I.List(pages.map(p => p.uuid()))))
-        return pages.filter(p => duplicateUuids.has(p.uuid()))
-    }
-
-    private _missingImages(book: BookNode) {
-        const pages = book.pages()
-        const links = pages.flatMap(page => page.imageLinks().map(link => ({ page, link })))
-        return links.filter(i => !i.link.image.exists())
-    }
-    private _missingPageTargets(book: BookNode) {
-        const pages = book.pages()
-        const links = pages.flatMap(page => page.pageLinks().map(link => ({ page, link })))
-        return links.filter(i => !i.link.page.exists() || (i.link.targetElementId && !i.page.hasElementId(i.link.targetElementId)))
-    }
-
-    private _duplicatePagesInToc(book: BookNode) {
-        return book.pages().reduce((acc, page) => {
-            const { visited, duplicates } = acc
-            if (visited.has(page)) {
-                return { visited, duplicates: duplicates.add(page) }
-            } else {
-                return { visited: acc.visited.add(page), duplicates }
-            }
-        }, { visited: I.Set<PageNode>(), duplicates: I.Set<PageNode>() }).duplicates
     }
 }
