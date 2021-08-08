@@ -80,6 +80,12 @@ export class ValidationResponse {
     }
 }
 
+// path.join mangles URIs (converts from file:///foo to file:/foo)
+export type PathHelper<T> = {
+    join: (root: T, ...components: string[]) => T
+    dirname: (p: T) => T
+}
+
 export abstract class Fileish {
     private _isLoaded = false
     private _exists = false
@@ -87,7 +93,7 @@ export abstract class Fileish {
     protected parseXML: Opt<(doc: Document) => (ParseError | void)> = null // Subclasses define this
     protected childrenToLoad: Opt<() => I.Set<Fileish>> = null // Subclasses define this
 
-    constructor(private _bundle: Opt<Bundle>, public readonly absPath: string) { }
+    constructor(private _bundle: Opt<Bundle>, protected _pathHelper: PathHelper<string>, public readonly absPath: string) { }
 
     public abstract getValidationChecks(): ValidationCheck[]
     public isLoaded() { return this._isLoaded }
@@ -172,6 +178,23 @@ export abstract class Fileish {
             return new ValidationResponse(errors, nodesToLoad)
         }
     }
+    join(type: PathType, parent: string, child: string) {
+        const { dirname, join } = this._pathHelper
+        let p = null
+        let c = null
+        switch (type) {
+            case PathType.MODULE_TO_IMAGE:
+            case PathType.ABS_TO_REL: p = dirname(parent); c = child; break
+            case PathType.COLLECTION_TO_MODULEID: p = dirname(dirname(parent)); c = /*relative_path*/path.join('modules', child, 'index.cnxml'); break;
+            case PathType.MODULE_TO_MODULEID: p = dirname(dirname(parent)); c = /*relative_path*/path.join(child, 'index.cnxml'); break
+            case PathType.ABSOLUTE_JUST_ONE_FILE:
+                expect(child === '' || null, 'When using ABSOLUTE, there is no second argument to this function')
+                return path.resolve(parent)
+            default: throw new Error(`BUG: Unsupported path type '${type}'. Consider adding it`)
+        }
+        return join(p, c)
+    }
+    
 }
 
 export interface Source {
@@ -270,7 +293,7 @@ export class PageNode extends Fileish {
         const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
         this._imageLinks = I.Set(imageNodes.map(attr => {
             const src = expect(attr.nodeValue, 'BUG: Attribute does not have a value')
-            const image = super.bundle().allImages.get(joiner(PathType.ABS_TO_REL, this.absPath, src))
+            const image = super.bundle().allImages.get(this.join(PathType.ABS_TO_REL, this.absPath, src))
             // Get the line/col position of the <image> tag
             const imageNode = expect(attr.ownerElement, 'BUG: attributes always have a parent element')
             const [startPos, endPos] = calculateElementPositions(imageNode)
@@ -284,7 +307,7 @@ export class PageNode extends Fileish {
             const toTargetId = linkNode.getAttribute('target-id') || null // xmldom never returns null, it reutnrs ''
             const toUrl = linkNode.getAttribute('url')
             return {
-                page: toDocument ? super.bundle().allPages.get(joiner(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId ? this : null),
+                page: toDocument ? super.bundle().allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId ? this : null),
                 url: toUrl,
                 targetElementId: toTargetId,
                 startPos, endPos
@@ -363,7 +386,7 @@ export class BookNode extends Fileish {
                     } as TocInner
                 case 'module':
                     const pageId = expect(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
-                    const page = super.bundle().allPages.get(joiner(PathType.COLLECTION_TO_MODULEID, this.absPath, pageId))
+                    const page = super.bundle().allPages.get(this.join(PathType.COLLECTION_TO_MODULEID, this.absPath, pageId))
                     return {
                         type: TocNodeType.Leaf,
                         page,
@@ -436,13 +459,13 @@ export class BookNode extends Fileish {
 
 
 export class Bundle extends Fileish {
-    public readonly allImages = new Factory((absPath: string) => new ImageNode(this, absPath))
-    public readonly allPages = new Factory((absPath: string) => new PageNode(this, absPath))
-    public readonly allBooks = new Factory((absPath: string) => new BookNode(this, absPath))
+    public readonly allImages = new Factory((absPath: string) => new ImageNode(this, this._pathHelper, absPath))
+    public readonly allPages = new Factory((absPath: string) => new PageNode(this, this._pathHelper, absPath))
+    public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this._pathHelper, absPath))
     private _books: Opt<I.Set<WithSource<BookNode>>> = null
 
-    constructor(public readonly workspaceRoot: string) {
-        super(null, path.join(workspaceRoot, 'META-INF/books.xml'))
+    constructor(pathHelper: PathHelper<string>, public readonly workspaceRoot: string) {
+        super(null, pathHelper, pathHelper.join(workspaceRoot, 'META-INF/books.xml'))
         super.setBundle(this)
     }
     protected childrenToLoad = () => this.books()
@@ -451,7 +474,7 @@ export class Bundle extends Fileish {
         this._books = I.Set(bookNodes.map(b => {
             const [startPos, endPos] = calculateElementPositions(b)
             const href = expect(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
-            const book = this.allBooks.get(joiner(PathType.ABS_TO_REL, this.absPath, href))
+            const book = this.allBooks.get(this.join(PathType.ABS_TO_REL, this.absPath, href))
             return {
                 v: book,
                 startPos,
@@ -547,23 +570,6 @@ export class Factory<T> {
     private size() { return this._map.size }
     public all() { return I.Set(this._map.values()) }
 }
-
-function joiner(type: PathType, parent: string, child: string) {
-    let p = null
-    let c = null
-    switch (type) {
-        case PathType.MODULE_TO_IMAGE:
-        case PathType.ABS_TO_REL: p = path.dirname(parent); c = child; break
-        case PathType.COLLECTION_TO_MODULEID: p = path.dirname(path.dirname(parent)); c = path.join('modules', child, 'index.cnxml'); break;
-        case PathType.MODULE_TO_MODULEID: p = path.dirname(path.dirname(parent)); c = path.join(child, 'index.cnxml'); break
-        case PathType.ABSOLUTE_JUST_ONE_FILE:
-            expect(child === '' || null, 'When using ABSOLUTE, there is no second argument to this function')
-            return path.resolve(parent)
-        default: throw new Error(`BUG: Unsupported path type '${type}'. Consider adding it`)
-    }
-    return path.join(p, c)
-}
-
 
 function findDuplicates<T>(list: I.List<T>) {
     return list.filter((item, index) => index !== list.indexOf(item))

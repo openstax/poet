@@ -1,5 +1,6 @@
 import fs from 'fs'
-import { Bundle, PageNode, TocNode, TocNodeType } from "./model"
+import path from 'path'
+import { Bundle, PathHelper, TocNode, TocNodeType } from "./model"
 import { profileAsync } from "./utils"
 
 function printToc(node: TocNode, depth: number = 1) {
@@ -10,10 +11,15 @@ function printToc(node: TocNode, depth: number = 1) {
     }
 }
 
+const pathHelper = {
+    join: path.join,
+    dirname: path.dirname
+} as PathHelper<string>
+
 (async function () {
     console.log('whole process took', (await profileAsync(async () => {
 
-        const x = new Bundle(process.argv[2] || process.cwd())
+        const x = new Bundle(pathHelper, process.argv[2] || process.cwd())
         x.load(fs.readFileSync(x.absPath, 'utf-8'))
 
         console.log('After cheap load there are this many:')

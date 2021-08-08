@@ -16,12 +16,20 @@ const BOOK_RE = /\/collections\/[^\/]+\.collection\.xml$/
 
 const PATH_SEP = path.sep
 
-function findTheNode(bundle: Bundle, absPath: string) {
+function findOrCreateNode(bundle: Bundle, absPath: string) {
     if (IMAGE_RE.test(absPath)) { return bundle.allImages.get(absPath) }
     else if (PAGE_RE.test(absPath)) { return bundle.allPages.get(absPath) }
     else if (BOOK_RE.test(absPath)) { return bundle.allBooks.get(absPath) }
     else { return null }
 }
+
+function findNode(bundle: Bundle, absPath: string) {
+    return bundle.absPath === absPath ? bundle : (
+        bundle.allBooks.getIfHas(absPath) ||
+        bundle.allPages.getIfHas(absPath) ||
+        bundle.allImages.getIfHas(absPath))
+}
+
 
 function pageToModuleId(page: PageNode) {
     // /path/to/modules/m123456/index.cnxml
@@ -79,9 +87,15 @@ function readSync(n: Fileish) {
     return fs.readFileSync(fsPath, 'utf-8')
 }
 
+function toStringFileChangeType(t: FileChangeType) {
+    switch(t) {
+        case FileChangeType.Changed: return 'CHANGED'
+        case FileChangeType.Created: return 'CREATED'
+        case FileChangeType.Deleted: return 'DELETED'
+    }
+}
 export class BundleLoadManager {
 
-    private _didLoadToc = false
     private _didLoadOrphans = false
     private _didLoadFull = false
 
@@ -109,7 +123,7 @@ export class BundleLoadManager {
             await this.loadEnoughForToc()
             // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
             const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', {cwd: this.bundle.workspaceRoot, absolute: true})
-            files.forEach(absPath => expect(findTheNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+            files.forEach(absPath => expect(findOrCreateNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
             this._didLoadOrphans = true
         }
     }
@@ -117,33 +131,36 @@ export class BundleLoadManager {
     async processFilesystemChange(evt: FileEvent): Promise<number> {
         const {bundle} = this
         const {type, uri} = evt
-        const absPath = URI.parse(uri).fsPath
         
         // Could be adding an Image/Page/Book, or removing/adding a directory, or adding some other file
+        console.debug(`[FILESYSTEM_EVENT] Start ${toStringFileChangeType(evt.type)} ${uri}`)
         
         if (evt.type === FileChangeType.Created) {
             // Check if we are adding an Image/Page/Book
-            const node = findTheNode(bundle, absPath)
+            const node = findOrCreateNode(bundle, uri)
             if (node) {
+                console.debug(`[FILESYSTEM_EVENT] Adding item`)
                 await this.readAndLoad(node)
                 return 1
             } else {
                 // No, we are adding something unknown. Ignore
-                console.log('New file did not match anything we understand. Ignoring', absPath)
+                console.log('[FILESYSTEM_EVENT] New file did not match anything we understand. Ignoring', uri)
                 return 0
             }
         } else {
             // Check if we are updating/deleting a Image/Page/Book/Bundle
-            const item = bundle.absPath === absPath ? bundle : (
-                bundle.allBooks.getIfHas(absPath) ||
-                bundle.allPages.getIfHas(absPath) ||
-                bundle.allImages.getIfHas(absPath))
+            const item = findNode(bundle, uri)
     
-            if (item) { await this.processItem(type, item); return 1 }
+            if (item) {
+                console.debug(`[FILESYSTEM_EVENT] Found item`)
+                await this.processItem(type, item)
+                return 1
+            }
     
             // Now, we might be deleting a whole directory.
             // Remove anything inside that directory
-            const filePathDir = `${absPath}${PATH_SEP}`
+            console.debug(`[FILESYSTEM_EVENT] Removing everything in the directory`)
+            const filePathDir = `${uri}${PATH_SEP}`
             return bundle.allBooks.removeByPathPrefix(filePathDir) +
                 bundle.allPages.removeByPathPrefix(filePathDir) +
                 bundle.allImages.removeByPathPrefix(filePathDir)
@@ -211,6 +228,9 @@ export class BundleLoadManager {
     }
 
     async loadEnoughToSendDiagnostics(context: {workspace: WorkspaceFolder, doc: TextDocument}) {
+        // Skip if the file is already loaded
+        if (findNode(this.bundle, context.doc.uri)?.isLoaded()) return
+
         // load the books to see if this URI is a page in a book
         const jobs = [
             {type: 'FILEOPENED_LOAD_BUNDLE_DEP', context, fn: async () => await this.readAndLoad(this.bundle) },

@@ -12,7 +12,8 @@ import {
 } from 'vscode-languageserver-textdocument'
 
 import {
-  URI
+  URI,
+  Utils
 } from 'vscode-uri'
 
 import {
@@ -44,9 +45,14 @@ const connection = createConnection(ProposedFeatures.all)
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
 
+const pathHelper = {
+  join: (uri: string, ...relPaths: string[]) => Utils.joinPath(URI.parse(uri), ...relPaths).toString(),
+  dirname: (uri: string) => Utils.dirname(URI.parse(uri)).toString()
+}
+
 export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUri => {
   const filePath = workspaceUri
-  const b = new Bundle(filePath)
+  const b = new Bundle(pathHelper, filePath)
   return new BundleLoadManager(b, connection) 
 })
 
