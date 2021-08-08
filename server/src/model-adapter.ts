@@ -1,11 +1,10 @@
 import { glob } from 'glob';
 import path from 'path'
-import I from 'immutable'
 import { Connection, Range } from 'vscode-languageserver';
 import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from "vscode-languageserver-protocol";
 import { URI } from "vscode-uri";
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree';
-import { BookNode, Bundle, Fileish, PageNode, ModelError, Opt, TocNode, TocNodeType, ValidationResponse } from "./model";
+import { BookNode, Bundle, Fileish, PageNode, Opt, TocNode, TocNodeType, ValidationResponse } from "./model";
 import { expect, profileAsync } from './utils';
 
 // Note: `[^\/]+` means "All characters except slash"
@@ -24,11 +23,11 @@ function findTheNode(bundle: Bundle, absPath: string) {
 
 function pageToModuleId(page: PageNode) {
     // /path/to/modules/m123456/index.cnxml
-    return path.basename(path.dirname(page.filePath))
+    return path.basename(path.dirname(page.absPath))
 }
 
 export function nodeToUri(node: Fileish) {
-    return `file:${node.filePath}`
+    return `file:${node.absPath}`
 }
 
 export function pageAsTreeObject(page: PageNode): TocTreeModule {
@@ -120,7 +119,7 @@ export class BundleLoadManager {
             }
         } else {
             // Check if we are updating/deleting a Image/Page/Book/Bundle
-            const item = bundle.filePath === absPath ? bundle : (
+            const item = bundle.absPath === absPath ? bundle : (
                 bundle.allBooks.getIfHas(absPath) ||
                 bundle.allPages.getIfHas(absPath) ||
                 bundle.allImages.getIfHas(absPath))
@@ -227,7 +226,7 @@ class JobRunner {
             if (this._current) {
                 const [_, ms] = await profileAsync(async () => {
                     const c = expect(this._current, 'BUG: nothing should have changed in this time')
-                    console.log('Starting job', c.type, toString(c.context), this.stack.length, 'more pending jobs')
+                    console.log('Starting job', c.type, this.toString(c.context), this.stack.length, 'more pending jobs')
                     await c.fn()
                 })
                 console.log('Ending   job', this._current.type, 'took', ms, 'ms')
@@ -237,12 +236,11 @@ class JobRunner {
             if (this.stack.length > 0) this.tick()
         })
     }
-}
-
-function toString(nodeOrString: Opt<string | Fileish>) {
-    if (nodeOrString === null) return 'nullcontext'
-    if (typeof nodeOrString === 'string') { return nodeOrString }
-    else { return nodeOrString.filePath }
+    toString(nodeOrString: Opt<string | Fileish>) {
+        if (nodeOrString === null) return 'nullcontext'
+        if (typeof nodeOrString === 'string') { return nodeOrString }
+        else { return nodeOrString.filePath() }
+    }    
 }
 
 export const jobRunner = new JobRunner()

@@ -54,7 +54,7 @@ export class ParseError extends ModelError {
 export class WrappedParseError<T extends Error> extends ParseError {
     constructor(node: Fileish, originalError: T) {
         super(node, originalError.message, null, null)
-        console.error(node.filePath, originalError)
+        console.error(node.absPath, originalError)
     }
 }
 
@@ -91,14 +91,15 @@ export abstract class Fileish {
     protected parseXML: Opt<(doc: Document) => (ParseError | void)> = null // Subclasses define this
     protected childrenToLoad: Opt<() => I.Set<Fileish>> = null // Subclasses define this
 
-    constructor(private _bundle: Opt<Bundle>, public readonly filePath: string) { }
+    constructor(private _bundle: Opt<Bundle>, public readonly absPath: string) { }
 
     public abstract getValidationChecks(): ValidationCheck[]
     public isLoaded() { return this._isLoaded }
+    public filePath() { return path.relative(this.bundle().workspaceRoot, this.absPath) }
     protected setBundle(bundle: Bundle) { this._bundle = bundle /* avoid catch-22 */ }
     protected bundle() { return expect(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
     protected ensureLoaded<T>(field: Opt<T>) {
-        return expect(field, `${LOAD_ERROR} [${this.filePath}]`)
+        return expect(field, `${LOAD_ERROR} [${this.filePath()}]`)
     }
     public exists() { return this._exists }
     public async update(): Promise<void> {
@@ -127,7 +128,7 @@ export abstract class Fileish {
             }
             // console.info(this.filePath, 'parsing XML (done)')
         } else {
-            this._exists = await checkFileExists(this.filePath)
+            this._exists = await checkFileExists(this.absPath)
             this._isLoaded = true
         }
         // console.info(this.filePath, 'update done')
@@ -139,7 +140,7 @@ export abstract class Fileish {
         // console.info(this.filePath, 'load done')
     }
     private async readFile() {
-        return fs.promises.readFile(this.filePath, 'utf-8')
+        return fs.promises.readFile(this.absPath, 'utf-8')
     }
     private async readXML() {
         const locator = {lineNumber: 0, columnNumber: 0}
@@ -226,7 +227,7 @@ export class PageNode extends Fileish {
     public title() {
         // A quick way to get the title for the ToC
         if (this._title === null) {
-            const data = fs.readFileSync(this.filePath, 'utf-8')
+            const data = fs.readFileSync(this.absPath, 'utf-8')
             this._title = this.guessTitle(data)
         }
         return this._title?.v ?? 'UntitledFile'
@@ -271,7 +272,7 @@ export class PageNode extends Fileish {
         const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
         this._imageLinks = I.Set(imageNodes.map(attr => {
             const src = expect(attr.nodeValue, 'BUG: Attribute does not have a value')
-            const image = super.bundle().allImages.get(joiner(PathType.REL_TO_REL, this.filePath, src))
+            const image = super.bundle().allImages.get(joiner(PathType.REL_TO_REL, this.absPath, src))
             // Get the line/col position of the <image> tag
             const imageNode = expect(attr.ownerElement, 'BUG: attributes always have a parent element')
             const [startPos, endPos] = calculateElementPositions(imageNode)
@@ -285,7 +286,7 @@ export class PageNode extends Fileish {
             const toTargetId = linkNode.getAttribute('target-id') || null // xmldom never returns null, it reutnrs ''
             const toUrl = linkNode.getAttribute('url')
             return {
-                page: toDocument ? super.bundle().allPages.get(joiner(PathType.MODULE_TO_MODULEID, this.filePath, toDocument)) : (toTargetId ? this : null),
+                page: toDocument ? super.bundle().allPages.get(joiner(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId ? this : null),
                 url: toUrl,
                 targetElementId: toTargetId,
                 startPos, endPos
@@ -364,7 +365,7 @@ export class BookNode extends Fileish {
                     } as TocInner
                 case 'module':
                     const pageId = expect(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
-                    const page = super.bundle().allPages.get(joiner(PathType.COLLECTION_TO_MODULEID, this.filePath, pageId))
+                    const page = super.bundle().allPages.get(joiner(PathType.COLLECTION_TO_MODULEID, this.absPath, pageId))
                     return {
                         type: TocNodeType.Leaf,
                         page,
@@ -452,7 +453,7 @@ export class Bundle extends Fileish {
         this._books = I.Set(bookNodes.map(b => {
             const [startPos, endPos] = calculateElementPositions(b)
             const href = expect(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
-            const book = this.allBooks.get(joiner(PathType.REL_TO_REL, this.filePath, href))
+            const book = this.allBooks.get(joiner(PathType.REL_TO_REL, this.absPath, href))
             return {
                 v: book,
                 startPos,
