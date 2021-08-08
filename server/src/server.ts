@@ -118,10 +118,10 @@ documents.onDidOpen(event => {
     // const bundleValidator = expect(workspaceBookBundles.get(workspaceChanged.uri), 'already returned if key missing')[1]
     // bundleValidator.addRequest({ causeUri: event.document.uri })
 
-    jobRunner.enqueue(async () => {
+    jobRunner.enqueue({type: 'FILEOPENED_QUICKDOAGNOSTICS', context: event.document.uri, fn: async () => {
       const manager = bundleFactory.get(workspaceChanged.uri)
       await manager.loadEnoughToSendDiagnostics(event.document.uri)
-    })
+    }})
   }
   inner().catch(err => { throw err })
 })

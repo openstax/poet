@@ -13,7 +13,7 @@ function printToc(node: TocNode, depth: number = 1) {
     console.log('whole process took', (await profileAsync(async () => {
 
         const x = new Bundle(process.argv[2] || process.cwd())
-        console.log('ms to load the ToC:', (await profileAsync(async () => await x.load(false)))[1])
+        console.log('ms to load the ToC:', (await profileAsync(async () => await x.load()))[1])
 
         console.log('After cheap load there are this many:')
         console.log('  Books', (x.allBooks as any).size())
@@ -22,14 +22,11 @@ function printToc(node: TocNode, depth: number = 1) {
 
         console.log('Tocs:')
         for (const b of (x.allBooks as any)._map.values()) {
-            await b.load(false)
+            await b.load()
             console.log(b.title())
             b.toc().forEach((a: TocNode) => printToc(a))
             console.log('------------------------')
         }
-
-        console.log('loading....')
-        console.log('ms to load all the book data:', (await profileAsync(async () => await x.load(true)))[1])
 
         console.log('After expensive load there are this many:')
         console.log('  Books', (x.allBooks as any).size())

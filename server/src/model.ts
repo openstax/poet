@@ -13,7 +13,7 @@ const NS_METADATA = 'http://cnx.rice.edu/mdml'
 const NS_CONTAINER = 'https://openstax.org/namespaces/book-container'
 
 const NOWHERE_START: Position = {line: 0, character: 0}
-const NOWHERE_END: Position = {line: 0, character: Number.MAX_VALUE}
+const NOWHERE_END: Position = {line: 0, character: 0 /*Number.MAX_VALUE*/}
 
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA, bk: NS_CONTAINER })
 const selectOne = <T extends Node>(sel: string, doc: Node): T => {
@@ -58,81 +58,97 @@ export class WrappedParseError<T extends Error> extends ParseError {
     }
 }
 
+type ValidationCheck = {
+    message: string
+    nodesToLoad: I.Set<Fileish>
+    context?: Fileish // by default it's the object performing the check
+    fn: (loadedNodes?: I.Set<Fileish>) => I.Set<Source>
+}
+export class ValidationResponse {
+    constructor (public readonly errors: I.Set<ModelError> = I.Set(), public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
+
+    static loadMe(node: Fileish) { return new ValidationResponse(I.Set(), I.Set([node])) }
+    static continueOnlyIfLoaded(nodes: I.Set<Fileish>, next: (nodes: I.Set<Fileish>) => I.Set<ModelError>) {
+        const unloaded = nodes.filter(n => !n.isLoaded())
+        if (unloaded.size > 0) {
+            return new ValidationResponse(I.Set(), unloaded)
+        } else {
+            return new ValidationResponse(next(nodes))
+        }
+    }
+    static union(r1: ValidationResponse, r2: ValidationResponse) {
+        return new ValidationResponse(r1.errors.union(r2.errors), r1.nodesToLoad.union(r2.nodesToLoad))
+    }
+}
+
 // https://stackoverflow.com/a/35008327
 const checkFileExists = async (s: string): Promise<boolean> => new Promise(r=>fs.access(s, fs.constants.F_OK, e => r(!e)))
 
 export abstract class Fileish {
     private _isLoaded = false
     private _exists = false
+    private _parseError: Opt<ParseError> = null
     protected parseXML: Opt<(doc: Document) => (ParseError | void)> = null // Subclasses define this
     protected childrenToLoad: Opt<() => I.Set<Fileish>> = null // Subclasses define this
 
     constructor(private _bundle: Opt<Bundle>, public readonly filePath: string) { }
 
-    public abstract getAllValidationErrors(): I.Set<ModelError>
+    public abstract getValidationChecks(): ValidationCheck[]
+    public isLoaded() { return this._isLoaded }
     protected setBundle(bundle: Bundle) { this._bundle = bundle /* avoid catch-22 */ }
     protected bundle() { return expect(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
     protected ensureLoaded<T>(field: Opt<T>) {
         return expect(field, `${LOAD_ERROR} [${this.filePath}]`)
     }
     public exists() { return this._exists }
-    public async update(): Promise<Opt<ParseError>> {
+    public async update(): Promise<void> {
         // console.info(this.filePath, 'update() started')
         if (this.parseXML) {
             // console.info(this.filePath, 'parsing XML')
 
-            // Development branch throws errors instead of turning them into messages
-            if (process.env['NODE_ENV'] !== 'production') {
-                const {doc} = await this.readXML()
-                this.parseXML(doc)
+            // Development version throws errors instead of turning them into messages
+            const parseXML = this.parseXML
+            const fn = async () => {
+                const doc = await this.readXML()
+                if (this._parseError) return
+                this._parseError = parseXML(doc) || null
+                if (this._parseError) return
                 this._isLoaded = true
+                this._exists = true
+            }
+            if (process.env['NODE_ENV'] !== 'production') {
+                await fn()
             } else {
                 try {
-                    const {err, doc} = await this.readXML()
-                    if (err) return err
-                    const err2 = this.parseXML(doc)
-                    if (err2) return err2
-                    this._isLoaded = true
+                    await fn()
                 } catch (e) {
-                    console.error('Errored but continuing', e)
-                    return new WrappedParseError(this, e)
+                    this._parseError = new WrappedParseError(this, e)
                 }
             }
             // console.info(this.filePath, 'parsing XML (done)')
         } else {
+            this._exists = await checkFileExists(this.filePath)
             this._isLoaded = true
         }
-        this._exists = await checkFileExists(this.filePath)
         // console.info(this.filePath, 'update done')
-        return null
     }
-    // Update this Node, load all children (if recurse is true), and collect all Parse errors
-    public async load(recurse: boolean): Promise<I.Set<ParseError>> {
+    // Update this Node, and collect all Parse errors
+    public async load() {
         // console.info(this.filePath, 'load started')
-        const err = await this.update()
-        if (recurse && this._isLoaded && this.childrenToLoad) {
-            const children = this.childrenToLoad()
-            // console.info(this.filePath, 'loading children start', children.size)
-            let errs = I.Set(await Promise.all(children.map(c => c.load(true)))).flatMap(c => c)
-            if (err) { errs = errs.add(err) }
-            // console.info(this.filePath, 'loading children done', children.size)
-            return errs
-        }
+        await this.update()
         // console.info(this.filePath, 'load done')
-        return err ? I.Set<ParseError>().add(err) : I.Set<ParseError>()
     }
     private async readFile() {
         return fs.promises.readFile(this.filePath, 'utf-8')
     }
     private async readXML() {
-        let parseError: Opt<ParseError> = null
         const locator = {lineNumber: 0, columnNumber: 0}
         const cb = (msg: string) => {
             const pos = {
                 line: locator.lineNumber - 1,
                 character: locator.columnNumber - 1
             }
-            parseError = new ParseError(this, msg, pos, pos)
+            this._parseError = new ParseError(this, msg, pos, pos)
         }
         const p = new DOMParser({
             locator,
@@ -143,7 +159,19 @@ export abstract class Fileish {
             }
         })
         const doc = p.parseFromString(await this.readFile())
-        return {err: parseError, doc} as {err: Opt<ParseError>, doc: Document}
+        return doc
+    }
+    public getValidationErrors(): ValidationResponse {
+        if (this._parseError) {
+            return new ValidationResponse(I.Set([this._parseError]))
+        } else if (!this._isLoaded) {
+            return new ValidationResponse(I.Set(), I.Set([this]))
+        } else {
+            const responses = this.getValidationChecks().map(c => ValidationResponse.continueOnlyIfLoaded(c.nodesToLoad, () => toValidationErrors(c.context ?? this, c.message, c.fn(c.nodesToLoad))))
+            const nodesToLoad = I.Set(responses.map(r => r.nodesToLoad)).flatMap(x=>x)
+            const errors = I.Set(responses.map(r => r.errors)).flatMap(x=>x)
+            return new ValidationResponse(errors, nodesToLoad)
+        }
     }
 }
 
@@ -178,7 +206,7 @@ function textWithSource(el: Element, attr?: string): WithSource<string> {
 }
 
 export class ImageNode extends Fileish {
-    public getAllValidationErrors(): I.Set<ModelError> { return I.Set() }
+    public getValidationChecks() { return [] }
 }
 
 function convertToPos(str: string, cursor: number): Position {
@@ -276,41 +304,26 @@ export class PageNode extends Fileish {
         }
     }
 
-    // Cheap errors are ones that only require parsing link destinations at most, 
-    // not ones that require global state (e.g. uuid)
-    public async getCheapValidationErrors() {
-        await this.load(false)
-        // load the associated images & pages so we can tell if the links are broken
-        await Promise.all(filterNull(this.pageLinks().map(l => l.page))
-            .union(this.imageLinks()
-            .map(l => l.image))
-            .map(async n => n.load(false)))
-        return this._getCheapValidationErrors()
-    }
-    private _getCheapValidationErrors() {
-        return this.findBrokenImageLinks()
-        .union(this.findBrokenPageLinks())
-    }
-    public getAllValidationErrors() {
-        return this._getCheapValidationErrors()
-        .union(this.findDuplicateUuid())
-    }
-    private findBrokenImageLinks(): I.Set<ModelError> {
-        return toValidationErrors(this, 'Image not found', this.imageLinks().filter(img => !img.image.exists()))
-    }
-    private findBrokenPageLinks(): I.Set<ModelError> {
-        return toValidationErrors(this, 'Link target not found', this.pageLinks()
-        .filter(l => {
-            if (!l.page) return false // URL links are ok
-            if (!l.page.exists()) return true // link to non-existent page are bad
-            if (l.targetElementId === null) return false // linking to the whole page and it exists is ok
-            return !l.page.hasElementId(l.targetElementId)
-        }))
-    }
-    private findDuplicateUuid(): I.Set<ModelError> {
-        const uuid = this.ensureLoaded(this._uuid)
-        const dup = this.bundle().allDuplicatePageUuids().has(uuid.v) ? [uuid]: []
-        return toValidationErrors(this, 'Duplicate UUID detected', I.Set(dup))
+    public getValidationChecks(): ValidationCheck[] {
+        const imageLinks = this.imageLinks()
+        const pageLinks = this.pageLinks()
+        return [
+            {
+                message: 'Missing image',
+                nodesToLoad: imageLinks.map(l => l.image),
+                fn: () => imageLinks.filter(img => !img.image.exists())
+            },
+            {
+                message: 'Link target not found',
+                nodesToLoad: filterNull(pageLinks.map(l => l.page)),
+                fn: () => pageLinks.filter(l => {
+                    if (!l.page) return false // URL links are ok
+                    if (!l.page.exists()) return true // link to non-existent page are bad
+                    if (l.targetElementId === null) return false // linking to the whole page and it exists is ok
+                    return !l.page.hasElementId(l.targetElementId)
+                })
+            },
+        ]
     }
 }
 
@@ -396,24 +409,29 @@ export class BookNode extends Fileish {
         })
     }
 
-    public getAllValidationErrors() {
-        return this.missingPages()
-        .union(this.duplicateChapterTitles())
-        .union(this.duplicatePages())
-    }
-    private missingPages(): I.Set<ModelError> {
-        return toValidationErrors(this, 'Missing Page', I.Set(this.tocLeaves()).filter(p => !p.page.exists()))
-    }
-    private duplicateChapterTitles(): I.Set<ModelError> {
+    public getValidationChecks(): ValidationCheck[] {
+        const pages = this.pages()
         const nonPages = I.List<TocInner>().withMutations(acc => this.collectNonPages(this.toc(), acc))
         const duplicateTitles = I.Set(findDuplicates(nonPages.map(subcol => subcol.title)))
-        return toValidationErrors(this, 'Duplicate Chapter Title', I.Set(nonPages.filter(subcol => duplicateTitles.has(subcol.title))))
-    }
-    private duplicatePages(): I.Set<ModelError> {
-        const pages = this.pages()
         const pageLeaves = I.List<TocLeaf>().withMutations(acc => this.collectPages(this.toc(), acc))
-        const duplicates = I.Set(findDuplicates(pages))
-        return toValidationErrors(this, 'Duplicate Page in ToC', I.Set(pageLeaves.filter(p => duplicates.has(p.page))))
+        const duplicatePages = I.Set(findDuplicates(pages))
+        return [
+            {
+                message: 'Missing page',
+                nodesToLoad: I.Set(pages),
+                fn: () => I.Set(this.tocLeaves()).filter(p => !p.page.exists())
+            },
+            {
+                message: 'Duplicate chapter title',
+                nodesToLoad: I.Set(),
+                fn: () => I.Set(nonPages.filter(subcol => duplicateTitles.has(subcol.title)))
+            },
+            {
+                message: 'Duplicate page',
+                nodesToLoad: I.Set(),
+                fn: () => I.Set(pageLeaves.filter(p => duplicatePages.has(p.page)))
+            }
+        ]
     }
 }
 
@@ -454,15 +472,25 @@ export class Bundle extends Fileish {
         return this.ensureLoaded(this._books)
     }
 
-    public async loadEnoughForToc() {
-        const errs1 = await this.load(false)
-        const errs2 = I.Set(await Promise.all(this.books().map(b => b.load(false)))).flatMap(c=>c)
-        return errs1.union(errs2)
-    }
-
     private gc() {
         // Remove any objects that don't exist and are not pointed to by a book
         // This may need to run every time an object is deleted (or exists is set to false)
+    }
+
+    public getValidationChecks(): ValidationCheck[] {
+        const books = this.__books()
+        return [
+            {
+                message: 'Missing book',
+                nodesToLoad: this.books(),
+                fn: () => books.filter(b => !b.v.exists())
+            },
+            {
+                message: 'No books are defiend',
+                nodesToLoad: I.Set(),
+                fn: () => books.isEmpty() ? I.Set([{startPos: NOWHERE_START, endPos: NOWHERE_END}]) : I.Set()
+            },
+        ]
     }
 
     public allDuplicatePageUuids() {
@@ -470,20 +498,18 @@ export class Bundle extends Fileish {
         return I.Set(findDuplicates(uuids))
     }
 
-    public getAllValidationErrors() {
-        // Check that there is at least one book and that every book exists
-        return this.missingBooks().union(this.atLeastOneBook())
+    public validateUuid(page: PageNode, source: Source) {
+        const pages = this.allPages.all()
+        const meAndPages = I.Set<Fileish>(pages).add(this)
+        return ValidationResponse.continueOnlyIfLoaded(meAndPages, () => {
+            const duplicateUuids = I.Set(findDuplicates(I.List(pages.map(p => p.uuid()))))
+            if (duplicateUuids.has(page.uuid())) {
+                return toValidationErrors(page, 'Duplicate UUID', I.Set([source]))
+            } else {
+                return I.Set()
+            }
+        })
     }
-
-    private missingBooks(): I.Set<ModelError> {
-        return toValidationErrors(this, 'Missing Book', I.Set(this.__books()).filter(b => !b.v.exists()))
-    }
-    private atLeastOneBook(): I.Set<ModelError> {
-        if (this.books().size === 0) {
-            return I.Set([new ModelError(this, 'At least one book must be in the bundle', NOWHERE_START, NOWHERE_END)])
-        } else { return I.Set() }
-    }
-
 }
 
 export enum PathType {

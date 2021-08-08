@@ -5,8 +5,8 @@ import { Connection, Range } from 'vscode-languageserver';
 import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from "vscode-languageserver-protocol";
 import { URI } from "vscode-uri";
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree';
-import { BookNode, Bundle, Fileish, PageNode, ModelError, Opt, TocNode, TocNodeType } from "./model";
-import { expect } from './utils';
+import { BookNode, Bundle, Fileish, PageNode, ModelError, Opt, TocNode, TocNodeType, ValidationResponse } from "./model";
+import { expect, profileAsync } from './utils';
 
 // Note: `[^\/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^\/]+\.[^\.]+$/  
@@ -85,12 +85,10 @@ export class BundleLoadManager {
     }
 
     public async loadEnoughForToc() {
-        if (!this._didLoadToc) {
-            const errs = await this.bundle.loadEnoughForToc()
-            this.sendErrors(errs)
-            this._didLoadToc = true
-        }
-        await Promise.all(this.bundle.books().map(b => b.update()))
+        // The only reason this is not implemented as a Job is because we need to send a timely response to the client
+        // and there is no code for being notified when a Job completes
+        await this.bundle.load()
+        await Promise.all(this.bundle.books().map(async b => b.load()))
     }
     public async loadEnoughForOrphans() {
         if (!this._didLoadOrphans) {
@@ -100,12 +98,6 @@ export class BundleLoadManager {
             files.forEach(absPath => expect(findTheNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
             this._didLoadOrphans = true
         }
-    }
-    private async loadFull() {
-        if (this._didLoadFull) return
-        const errs = await this.bundle.load(true)
-        this.sendErrors(errs)
-        this._didLoadFull = true
     }
 
     async processFilesystemChange(evt: FileEvent): Promise<number> {
@@ -148,8 +140,8 @@ export class BundleLoadManager {
         switch(type) {
             case FileChangeType.Deleted:
             case FileChangeType.Changed:
-                const err = await item.update()
-                this.sendErrors(err ? I.Set<ModelError>().add(err) : I.Set())
+                await item.update()
+                this.sendErrors(item.getValidationErrors())
                 return
             case FileChangeType.Created:
             default:
@@ -157,32 +149,39 @@ export class BundleLoadManager {
         }
     }
 
-    private sendErrors(errs: I.Set<ModelError>) {
-        if (errs.isEmpty()) { return }
-        const grouped = errs.groupBy(err => err.node)
-        grouped.forEach((errs, node) => {
-            const uri = nodeToUri(node)
-            const diagnostics = errs.toSet().map(err => {
-                const start = err.startPos ?? { line: 0, character: 0 }
-                const end = err.endPos ?? start
-                const range = Range.create(start, end)
-                return Diagnostic.create(range, err.message, DiagnosticSeverity.Error)
-            }).toArray()
-            this.conn.sendDiagnostics({
-              uri,
-              diagnostics  
+    private sendErrors(resp: ValidationResponse) {
+        const { errors, nodesToLoad } = resp
+        if (nodesToLoad.isEmpty()) {
+            if (errors.isEmpty()) { return }
+            const grouped = errors.groupBy(err => err.node)
+            grouped.forEach((errs, node) => {
+                const uri = nodeToUri(node)
+                const diagnostics = errs.toSet().map(err => {
+                    const start = err.startPos ?? { line: 0, character: 0 }
+                    const end = err.endPos || start
+                    const range = Range.create(start, end)
+                    return Diagnostic.create(range, err.message, DiagnosticSeverity.Error)
+                }).toArray()
+                this.conn.sendDiagnostics({
+                  uri,
+                  diagnostics  
+                })
             })
-        })
+        } else {
+            // push this task back onto the job stack and then add loading jobs for each node that needs to load
+            console.log('Dependencies were not met yet. Enqueuing dependencies and then re-enqueueing this job', nodesToLoad.size)
+            jobRunner.reEnqueueCurrentJob()
+            nodesToLoad.filter(n => !n.isLoaded()).forEach(n => jobRunner.enqueue({type: 'LOAD_DEPENDENCY', context: n, fn: () => n.load()}))
+        }
     }
 
     async performInitialValidation() {
         const jobs = [
-            async () => this._didLoadFull || await this.bundle.load(false),
-            async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(f => f.load(false))),
-            async () => this._didLoadFull || await Promise.all(this.bundle.allPages.all().map(f => f.load(false))),
-            async () => this._didLoadFull || await Promise.all(this.bundle.allImages.all().map(f => f.load(false))),
-            async () => this._didLoadFull || this.bundle.allNodes().forEach(n => this.sendErrors(n.getAllValidationErrors())),
-            () => this._didLoadFull = true
+            {type: 'INITIAL_LOAD_bundle', context: this.bundle, fn: async () => this._didLoadFull || await this.bundle.load() },
+            {type: 'INITIAL_LOAD_books', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(f => f.load()))},
+            {type: 'INITIAL_LOAD_pages', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allPages.all().map(f => f.load()))},
+            {type: 'INITIAL_LOAD_images', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allImages.all().map(f => f.load()))},
+            {type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allNodes().map(f => this.sendErrors(f.getValidationErrors())))},
         ]
         jobs.reverse().forEach(j => jobRunner.enqueue(j))
     }
@@ -190,43 +189,60 @@ export class BundleLoadManager {
     async loadEnoughToSendDiagnostics(docUri: string) {
         // load the books to see if this URI is a page in a book
         const jobs = [
-            async () => this._didLoadFull || await this.bundle.load(false),
-            async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(f => f.load(false))),
-            async () => {
+            {type: 'LOAD_DEPENDENCY', context: this.bundle, fn: async () => this.bundle.load() },
+            {type: 'LOAD_BUNDLE_BOOKS', context: null, fn: async () => await Promise.all(this.bundle.books().map(f => f.load()))},
+            {type: 'LOAD_INITIAL_DIAGNOSTICS', context: null, fn: async () => {
                 const page = this.bundle.allPages.getIfHas(URI.parse(docUri).fsPath)
                 if (page) {
-                    if (this._didLoadFull) {
-                        this.sendErrors(page.getAllValidationErrors())
-                    } else {
-                        this.sendErrors(await page.getCheapValidationErrors())
-                    }
+                    this.sendErrors(page.getValidationErrors())
                 }
-            }
+            }}
         ]
         jobs.reverse().forEach(j => jobRunner.enqueue(j))
     }
 }
 
+type Job = {
+    type: string
+    context: Opt<Fileish|string>
+    fn: () => Promise<any>
+}
 
 class JobRunner {
-    private stack: (() => Promise<void>)[] = []
+    private _current: Opt<Job> = null
+    private stack: Job[] = []
     private timeout: Opt<NodeJS.Immediate> = null
 
-    public enqueue(job: () => any) {
+    public enqueue(job: Job) {
         this.stack.push(job)
         this.tick()
+    }
+    public reEnqueueCurrentJob() {
+        this.enqueue(expect(this._current, 'BUG: Tried to reenqueue the currently running task but no task is currently executing.'))
     }
     private tick() {
         if (this.timeout !== null) return // job is running
         this.timeout = setImmediate(async () => {
-            const fn = this.stack.pop()
-            if (fn) {
-                await fn()
+            this._current = this.stack.pop() ?? null
+            if (this._current) {
+                const [_, ms] = await profileAsync(async () => {
+                    const c = expect(this._current, 'BUG: nothing should have changed in this time')
+                    console.log('Starting job', c.type, toString(c.context), this.stack.length, 'more pending jobs')
+                    await c.fn()
+                })
+                console.log('Ending   job', this._current.type, 'took', ms, 'ms')
             }
+            this._current = null
             this.timeout = null
             if (this.stack.length > 0) this.tick()
         })
     }
+}
+
+function toString(nodeOrString: Opt<string | Fileish>) {
+    if (nodeOrString === null) return 'nullcontext'
+    if (typeof nodeOrString === 'string') { return nodeOrString }
+    else { return nodeOrString.filePath }
 }
 
 export const jobRunner = new JobRunner()
