@@ -1,8 +1,9 @@
+import fs from 'fs'
 import { Bundle, PageNode, TocNode, TocNodeType } from "./model"
 import { profileAsync } from "./utils"
 
 function printToc(node: TocNode, depth: number = 1) {
-    const title = (node.type === TocNodeType.Inner) ? node.title : node.page.title()
+    const title = (node.type === TocNodeType.Inner) ? node.title : node.page.title(() => fs.readFileSync(node.page.absPath, 'utf-8'))
     console.log(`${' '.repeat(depth * 4)} ${title}`)
     if (node.type === TocNodeType.Inner) {
         node.children.forEach(c => printToc(c, depth + 1))
@@ -13,7 +14,7 @@ function printToc(node: TocNode, depth: number = 1) {
     console.log('whole process took', (await profileAsync(async () => {
 
         const x = new Bundle(process.argv[2] || process.cwd())
-        console.log('ms to load the ToC:', (await profileAsync(async () => await x.load()))[1])
+        x.load(fs.readFileSync(x.absPath, 'utf-8'))
 
         console.log('After cheap load there are this many:')
         console.log('  Books', (x.allBooks as any).size())

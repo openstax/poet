@@ -1,4 +1,3 @@
-import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
 import * as xpath from 'xpath-ts'
@@ -81,9 +80,6 @@ export class ValidationResponse {
     }
 }
 
-// https://stackoverflow.com/a/35008327
-const checkFileExists = async (s: string): Promise<boolean> => new Promise(r=>fs.access(s, fs.constants.F_OK, e => r(!e)))
-
 export abstract class Fileish {
     private _isLoaded = false
     private _exists = false
@@ -102,15 +98,20 @@ export abstract class Fileish {
         return expect(field, `${LOAD_ERROR} [${this.filePath()}]`)
     }
     public exists() { return this._exists }
-    public async update(): Promise<void> {
+    public update(fileContent: Opt<string>): void {
         // console.info(this.filePath, 'update() started')
+        if (fileContent === null) {
+            this._exists = false
+            this._isLoaded = true
+            return
+        }
         if (this.parseXML) {
             // console.info(this.filePath, 'parsing XML')
 
             // Development version throws errors instead of turning them into messages
             const parseXML = this.parseXML
-            const fn = async () => {
-                const doc = await this.readXML()
+            const fn = () => {
+                const doc = this.readXML(fileContent)
                 if (this._parseError) return
                 this._parseError = parseXML(doc) || null
                 if (this._parseError) return
@@ -118,31 +119,28 @@ export abstract class Fileish {
                 this._exists = true
             }
             if (process.env['NODE_ENV'] !== 'production') {
-                await fn()
+                fn()
             } else {
                 try {
-                    await fn()
+                    fn()
                 } catch (e) {
                     this._parseError = new WrappedParseError(this, e)
                 }
             }
             // console.info(this.filePath, 'parsing XML (done)')
         } else {
-            this._exists = await checkFileExists(this.absPath)
+            this._exists = true
             this._isLoaded = true
         }
         // console.info(this.filePath, 'update done')
     }
     // Update this Node, and collect all Parse errors
-    public async load() {
+    public load(fileContent: Opt<string>) {
         // console.info(this.filePath, 'load started')
-        await this.update()
+        this.update(fileContent)
         // console.info(this.filePath, 'load done')
     }
-    private async readFile() {
-        return fs.promises.readFile(this.absPath, 'utf-8')
-    }
-    private async readXML() {
+    private readXML(fileContent: string) {
         const locator = {lineNumber: 0, columnNumber: 0}
         const cb = (msg: string) => {
             const pos = {
@@ -159,7 +157,7 @@ export abstract class Fileish {
                 fatalError: cb
             }
         })
-        const doc = p.parseFromString(await this.readFile())
+        const doc = p.parseFromString(fileContent)
         return doc
     }
     public getValidationErrors(): ValidationResponse {
@@ -224,10 +222,10 @@ export class PageNode extends Fileish {
     private _imageLinks: Opt<I.Set<ImageLink>> = null
     private _pageLinks: Opt<I.Set<PageLink>> = null
     public uuid() { return this.ensureLoaded(this._uuid).v }
-    public title() {
+    public title(fileReader: () => string) {
         // A quick way to get the title for the ToC
         if (this._title === null) {
-            const data = fs.readFileSync(this.absPath, 'utf-8')
+            const data = fileReader()
             this._title = this.guessTitle(data)
         }
         return this._title?.v ?? 'UntitledFile'
