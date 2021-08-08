@@ -95,7 +95,7 @@ describe('bundleTrees server request', function () {
     const invalidTitleUri = 'file:///bundle/collections/invalidtitle.xml'
     const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
     workspaceBookBundles.set('file:///bundle', [bundle, validationQueue])
-    const handler = bundleTreesHandler(workspaceBookBundles, connection as any)
+    const handler = bundleTreesHandler()
     const request = { workspaceUri: 'file:///bundle' }
     const bundleTreesResponse = await handler(request)
     const diagnostic = collectionDiagnostic()
@@ -117,7 +117,7 @@ describe('bundleTrees server request', function () {
     const invalidSlugUri = 'file:///bundle/collections/invalidslug.xml'
     const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
     workspaceBookBundles.set('file:///bundle', [bundle, validationQueue])
-    const handler = bundleTreesHandler(workspaceBookBundles, connection as any)
+    const handler = bundleTreesHandler()
     const request = { workspaceUri: 'file:///bundle' }
     const bundleTreesResponse = await handler(request)
     const diagnostic = collectionDiagnostic()
@@ -138,7 +138,7 @@ describe('bundleTrees server request', function () {
     const validationQueue = new BundleValidationQueue(bundle, connection as any)
     const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
     workspaceBookBundles.set('file:///bundle', [bundle, validationQueue])
-    const handler = bundleTreesHandler(workspaceBookBundles, connection as any)
+    const handler = bundleTreesHandler()
     const request = { workspaceUri: 'file:///bundle' }
     const bundleTreesResponse = await handler(request)
     assert(bundleTreesResponse)
@@ -1494,7 +1494,7 @@ describe('bundleEnsureIdsHandler server request', function () {
     const validationQueue = new BundleValidationQueue(bundle, connection as any)
     const workspaceBookBundles: Map<string, [BookBundle, BundleValidationQueue]> = new Map()
     workspaceBookBundles.set('file:///bundle', [bundle, validationQueue])
-    const handler = bundleEnsureIdsHandler(workspaceBookBundles, connection as any)
+    const handler = bundleEnsureIdsHandler()
     const request = { workspaceUri: 'file:///bundle' }
     await handler(request)
     // check mockfs file (file valid)
