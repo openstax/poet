@@ -2,11 +2,12 @@ import { glob } from 'glob';
 import fs from 'fs'
 import path from 'path'
 import { Connection, Range } from 'vscode-languageserver';
-import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from "vscode-languageserver-protocol";
+import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent, WorkspaceFolder } from "vscode-languageserver-protocol";
 import { URI } from "vscode-uri";
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree';
 import { BookNode, Bundle, Fileish, PageNode, Opt, TocNode, TocNodeType, ValidationResponse } from "./model";
 import { expect, profileAsync } from './utils';
+import { TextDocument } from 'vscode-languageserver-textdocument';
 
 // Note: `[^\/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^\/]+\.[^\.]+$/  
@@ -124,7 +125,7 @@ export class BundleLoadManager {
             // Check if we are adding an Image/Page/Book
             const node = findTheNode(bundle, absPath)
             if (node) {
-                await this.readAndUpdate(node)
+                await this.readAndLoad(node)
                 return 1
             } else {
                 // No, we are adding something unknown. Ignore
@@ -163,6 +164,7 @@ export class BundleLoadManager {
     }
 
     private async readAndLoad(node: Fileish) {
+        if (node.isLoaded()) { return }
         const fileContent = await readOrNull(node.absPath)
         node.load(fileContent)
     }
@@ -208,13 +210,13 @@ export class BundleLoadManager {
         jobs.reverse().forEach(j => jobRunner.enqueue(j))
     }
 
-    async loadEnoughToSendDiagnostics(docUri: string) {
+    async loadEnoughToSendDiagnostics(context: {workspace: WorkspaceFolder, doc: TextDocument}) {
         // load the books to see if this URI is a page in a book
         const jobs = [
-            {type: 'LOAD_DEPENDENCY', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
-            {type: 'LOAD_BUNDLE_BOOKS', context: null, fn: async () => await Promise.all(this.bundle.books().map(async f => await this.readAndLoad(f)))},
-            {type: 'LOAD_INITIAL_DIAGNOSTICS', context: null, fn: async () => {
-                const page = this.bundle.allPages.getIfHas(docUri)
+            {type: 'FILEOPENED_LOAD_BUNDLE_DEP', context, fn: async () => await this.readAndLoad(this.bundle) },
+            {type: 'FILEOPENED_LOAD_BOOKS_DEP', context, fn: async () => await Promise.all(this.bundle.books().map(async f => await this.readAndLoad(f)))},
+            {type: 'FILEOPENED_SEND_DIAGNOSTICS', context, fn: async () => {
+                const page = this.bundle.allPages.getIfHas(context.doc.uri)
                 if (page) {
                     this.sendErrors(page.getValidationErrors())
                 }
@@ -224,9 +226,10 @@ export class BundleLoadManager {
     }
 }
 
+type URIPair = { workspace: WorkspaceFolder, doc: TextDocument }
 type Job = {
     type: string
-    context: Opt<Fileish|string>
+    context: Fileish | URIPair
     fn: () => Promise<any>
 }
 
@@ -249,20 +252,24 @@ class JobRunner {
             if (this._current) {
                 const [_, ms] = await profileAsync(async () => {
                     const c = expect(this._current, 'BUG: nothing should have changed in this time')
-                    console.log('Starting job', c.type, this.toString(c.context), this.stack.length, 'more pending jobs')
+                    console.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context))
                     await c.fn()
                 })
-                console.log('Ending   job', this._current.type, 'took', ms, 'ms')
+                console.debug('[JOB_RUNNER] Finished job', this._current.type, this.toString(this._current.context), 'took', ms, 'ms')
+                if (this.stack.length === 0) {
+                    console.debug('[JOB_RUNNER] No more pending jobs. Taking a nap.')
+                } else {
+                    console.debug('[JOB_RUNNER] Remaining jobs', this.stack.length)
+                }
             }
             this._current = null
             this.timeout = null
             if (this.stack.length > 0) this.tick()
         })
     }
-    toString(nodeOrString: Opt<string | Fileish>) {
-        if (nodeOrString === null) return 'nullcontext'
-        if (typeof nodeOrString === 'string') { return nodeOrString }
-        else { return nodeOrString.filePath() }
+    toString(nodeOrString: Fileish | URIPair) {
+        if (nodeOrString instanceof Fileish) { return nodeOrString.filePath() }
+        else return path.relative(nodeOrString.workspace.uri, nodeOrString.doc.uri)
     }    
 }
 

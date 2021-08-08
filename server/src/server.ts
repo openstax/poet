@@ -4,8 +4,7 @@ import {
   ProposedFeatures,
   InitializeParams,
   TextDocumentSyncKind,
-  InitializeResult,
-  WorkspaceFolder
+  InitializeResult
 } from 'vscode-languageserver/node'
 
 import {
@@ -17,7 +16,7 @@ import {
 } from 'vscode-uri'
 
 import {
-  expect, profileAsync
+  expect
 } from './utils'
 
 import {
@@ -35,7 +34,7 @@ import {
 
 import * as sourcemaps from 'source-map-support'
 import { Bundle, Factory } from './model'
-import { pageAsTreeObject, BundleLoadManager, jobRunner } from './model-adapter'
+import { pageAsTreeObject, BundleLoadManager } from './model-adapter'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -90,10 +89,9 @@ documents.onDidOpen(event => {
     }
     const workspaceChanged = expect(workspaces.find((workspace) => event.document.uri.startsWith(workspace.uri)), `file ${eventUri.fsPath} must exist in workspace`)
 
-    jobRunner.enqueue({type: 'FILEOPENED_QUICKDOAGNOSTICS', context: event.document.uri, fn: async () => {
-      const manager = bundleFactory.get(workspaceChanged.uri)
-      await manager.loadEnoughToSendDiagnostics(event.document.uri)
-    }})
+    const context = {workspace: workspaceChanged, doc: event.document }
+    const manager = bundleFactory.get(workspaceChanged.uri)
+    await manager.loadEnoughToSendDiagnostics(context)
   }
   inner().catch(err => { throw err })
 })
