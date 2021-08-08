@@ -46,7 +46,7 @@ const connection = createConnection(ProposedFeatures.all)
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
 
 export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUri => {
-  const filePath = URI.parse(workspaceUri).fsPath
+  const filePath = workspaceUri
   const b = new Bundle(filePath)
   return new BundleLoadManager(b, connection) 
 })

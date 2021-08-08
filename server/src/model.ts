@@ -270,7 +270,7 @@ export class PageNode extends Fileish {
         const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
         this._imageLinks = I.Set(imageNodes.map(attr => {
             const src = expect(attr.nodeValue, 'BUG: Attribute does not have a value')
-            const image = super.bundle().allImages.get(joiner(PathType.REL_TO_REL, this.absPath, src))
+            const image = super.bundle().allImages.get(joiner(PathType.ABS_TO_REL, this.absPath, src))
             // Get the line/col position of the <image> tag
             const imageNode = expect(attr.ownerElement, 'BUG: attributes always have a parent element')
             const [startPos, endPos] = calculateElementPositions(imageNode)
@@ -451,7 +451,7 @@ export class Bundle extends Fileish {
         this._books = I.Set(bookNodes.map(b => {
             const [startPos, endPos] = calculateElementPositions(b)
             const href = expect(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
-            const book = this.allBooks.get(joiner(PathType.REL_TO_REL, this.absPath, href))
+            const book = this.allBooks.get(joiner(PathType.ABS_TO_REL, this.absPath, href))
             return {
                 v: book,
                 startPos,
@@ -512,7 +512,7 @@ export class Bundle extends Fileish {
 }
 
 export enum PathType {
-    REL_TO_REL = 'REL_TO_REL',
+    ABS_TO_REL = 'REL_TO_REL',
     COLLECTION_TO_MODULEID = 'COLLECTION_TO_MODULEID',
     MODULE_TO_MODULEID = 'MODULE_TO_MODULEID',
     MODULE_TO_IMAGE = 'MODULE_TO_IMAGE',
@@ -553,7 +553,7 @@ function joiner(type: PathType, parent: string, child: string) {
     let c = null
     switch (type) {
         case PathType.MODULE_TO_IMAGE:
-        case PathType.REL_TO_REL: p = path.dirname(parent); c = child; break
+        case PathType.ABS_TO_REL: p = path.dirname(parent); c = child; break
         case PathType.COLLECTION_TO_MODULEID: p = path.dirname(path.dirname(parent)); c = path.join('modules', child, 'index.cnxml'); break;
         case PathType.MODULE_TO_MODULEID: p = path.dirname(path.dirname(parent)); c = path.join(child, 'index.cnxml'); break
         case PathType.ABSOLUTE_JUST_ONE_FILE:
@@ -561,7 +561,7 @@ function joiner(type: PathType, parent: string, child: string) {
             return path.resolve(parent)
         default: throw new Error(`BUG: Unsupported path type '${type}'. Consider adding it`)
     }
-    return path.resolve(p, c)
+    return path.join(p, c)
 }
 
 

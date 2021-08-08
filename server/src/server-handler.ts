@@ -1,13 +1,5 @@
-import path from 'path'
 import fs from 'fs'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { BookBundle, BundleItem } from './book-bundle'
-import { BundleValidationQueue, collectionDiagnostic } from './bundle-validation'
-import { Connection } from 'vscode-languageserver/node'
-import { TocTreeCollection } from '../../common/src/toc-tree'
-import {
-  expect
-} from './utils'
 import {
   BundleTreesArgs,
   BundleTreesResponse,
@@ -15,7 +7,7 @@ import {
 } from '../../common/src/requests'
 import { fixDocument } from './fix-document-ids'
 import { bundleFactory } from './server'
-import { bookTocAsTreeCollection, nodeToUri } from './model-adapter'
+import { bookTocAsTreeCollection } from './model-adapter'
 import { PageNode } from './model'
 
 export function bundleTreesHandler(): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {

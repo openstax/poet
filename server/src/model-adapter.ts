@@ -27,10 +27,6 @@ function pageToModuleId(page: PageNode) {
     return path.basename(path.dirname(page.absPath))
 }
 
-export function nodeToUri(node: Fileish) {
-    return `file:${node.absPath}`
-}
-
 export function pageAsTreeObject(page: PageNode): TocTreeModule {
     return {
         type: TocTreeElementType.module,
@@ -70,14 +66,16 @@ function recTocConvert(node: TocNode): TocTreeElement {
 // https://stackoverflow.com/a/35008327
 const checkFileExists = async (s: string): Promise<boolean> => new Promise(r=>fs.access(s, fs.constants.F_OK, e => r(!e)))
 
-async function readOrNull(filePath: string): Promise<Opt<string>> {
-    if (await checkFileExists(filePath)) {
-        return fs.promises.readFile(filePath, 'utf-8')
+async function readOrNull(uri: string): Promise<Opt<string>> {
+    const {fsPath} = URI.parse(uri)
+    if (await checkFileExists(fsPath)) {
+        return fs.promises.readFile(fsPath, 'utf-8')
     }
     return null
 }
 function readSync(n: Fileish) {
-    return fs.readFileSync(n.absPath, 'utf-8')
+    const {fsPath} = URI.parse(n.absPath)
+    return fs.readFileSync(fsPath, 'utf-8')
 }
 
 export class BundleLoadManager {
@@ -179,7 +177,7 @@ export class BundleLoadManager {
             if (errors.isEmpty()) { return }
             const grouped = errors.groupBy(err => err.node)
             grouped.forEach((errs, node) => {
-                const uri = nodeToUri(node)
+                const uri = node.absPath
                 const diagnostics = errs.toSet().map(err => {
                     const start = err.startPos ?? { line: 0, character: 0 }
                     const end = err.endPos || start
@@ -201,10 +199,10 @@ export class BundleLoadManager {
 
     async performInitialValidation() {
         const jobs = [
-            {type: 'INITIAL_LOAD_bundle', context: this.bundle, fn: async () => this._didLoadFull || await this.readAndLoad(this.bundle) },
-            {type: 'INITIAL_LOAD_books', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(async f => this.readAndLoad(f)))},
-            {type: 'INITIAL_LOAD_pages', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allPages.all().map(async f => this.readAndLoad(f)))},
-            {type: 'INITIAL_LOAD_images', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allImages.all().map(async f => this.readAndLoad(f)))},
+            {type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => this._didLoadFull || await this.readAndLoad(this.bundle) },
+            {type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(async f => this.readAndLoad(f)))},
+            {type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allPages.all().map(async f => this.readAndLoad(f)))},
+            {type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allImages.all().map(async f => this.readAndLoad(f)))},
             {type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allNodes().map(f => this.sendErrors(f.getValidationErrors())))},
         ]
         jobs.reverse().forEach(j => jobRunner.enqueue(j))
@@ -216,7 +214,7 @@ export class BundleLoadManager {
             {type: 'LOAD_DEPENDENCY', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
             {type: 'LOAD_BUNDLE_BOOKS', context: null, fn: async () => await Promise.all(this.bundle.books().map(async f => await this.readAndLoad(f)))},
             {type: 'LOAD_INITIAL_DIAGNOSTICS', context: null, fn: async () => {
-                const page = this.bundle.allPages.getIfHas(URI.parse(docUri).fsPath)
+                const page = this.bundle.allPages.getIfHas(docUri)
                 if (page) {
                     this.sendErrors(page.getValidationErrors())
                 }
