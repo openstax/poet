@@ -106,6 +106,7 @@ export abstract class Fileish {
     public exists() { return this._exists }
     public update(fileContent: Opt<string>): void {
         // console.info(this.filePath, 'update() started')
+        this._parseError = null
         if (fileContent === null) {
             this._exists = false
             this._isLoaded = true
@@ -348,11 +349,20 @@ export class PageNode extends Fileish {
                 })
             },
             {
+                message: 'Malformed UUID',
+                nodesToLoad: I.Set(),
+                fn: () => {
+                    const re = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+                    const uuid = this.ensureLoaded(this._uuid)
+                    return re.test(uuid.v) ? I.Set() : I.Set([uuid])
+                }
+            },
+            {
                 message: 'Duplicate Page/Module UUID',
                 nodesToLoad: I.Set(),
                 fn: () => {
                     const uuid = this.ensureLoaded(this._uuid)
-                   if (this.bundle().isDuplicateUuid(uuid.v)) {
+                    if (this.bundle().isDuplicateUuid(uuid.v)) {
                         return I.Set([uuid])
                     } else {
                         return I.Set()
