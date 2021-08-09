@@ -218,25 +218,25 @@ export class BundleLoadManager {
         } else {
             // push this task back onto the job stack and then add loading jobs for each node that needs to load
             console.log('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', nodesToLoad.size)
-            jobRunner.reEnqueueCurrentJobIfRunning()
+            jobRunner.enqueue({type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => this.sendErrors(node) })
             nodesToLoad.filter(n => !n.isLoaded()).forEach(n => jobRunner.enqueue({type: 'LOAD_DEPENDENCY', context: n, fn: async () => this.readAndLoad(n)}))
         }
     }
 
     async performInitialValidation() {
         const jobs = [
-            {type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => this._didLoadFull || await this.readAndLoad(this.bundle) },
-            {type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(async f => this.readAndLoad(f)))},
-            {type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allPages.all().map(async f => this.readAndLoad(f)))},
-            {type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allImages.all().map(async f => this.readAndLoad(f)))},
-            {type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allNodes().map(f => this.sendErrors(f)))},
+            {slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => this._didLoadFull || await this.readAndLoad(this.bundle) },
+            {slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(async f => this.readAndLoad(f)))},
+            {slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allPages.all().map(async f => this.readAndLoad(f)))},
+            {slow: true, type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allImages.all().map(async f => this.readAndLoad(f)))},
+            {slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allNodes().map(f => this.sendErrors(f)))},
         ]
         jobs.reverse().forEach(j => jobRunner.enqueue(j))
     }
 
     async loadEnoughToSendDiagnostics(context: {workspace: string, doc: string}) {
         // Skip if the file is already loaded
-        if (findNode(this.bundle, context.doc)?.isLoaded()) return
+        // if (findNode(this.bundle, context.doc)?.isLoaded()) return
 
         // load the books to see if this URI is a page in a book
         const jobs = [
@@ -257,46 +257,47 @@ type URIPair = { workspace: string, doc: string }
 type Job = {
     type: string
     context: Fileish | URIPair
-    fn: () => Promise<any>
+    fn: () => Promise<any> | void
+    slow?: boolean
 }
 
 class JobRunner {
     private _current: Opt<Job> = null
-    private stack: Job[] = []
+    private fastStack: Job[] = []
+    private slowStack: Job[] = []
     private timeout: Opt<NodeJS.Immediate> = null
 
     public enqueue(job: Job) {
-        this.stack.push(job)
+        job.slow ? this.slowStack.push(job) : this.fastStack.push(job)
         this.tick()
     }
-    public reEnqueueCurrentJobIfRunning() {
-        if (this._current) {
-            console.debug('[JOB_RUNNER] Re-enqueueing current job')
-            this.enqueue(this._current)
-        } else {
-            console.debug('[JOB_RUNNER] No job running so nothing to re-enqueue')
-        }
+    public isJobRunning() { return !!this._current }
+    private length() {
+        return this.fastStack.length + this.slowStack.length
+    }
+    private pop(): Opt<Job> {
+        return this.fastStack.pop() || this.slowStack.pop() || null
     }
     private tick() {
         if (this.timeout !== null) return // job is running
         this.timeout = setImmediate(async () => {
-            this._current = this.stack.pop() ?? null
+            this._current = this.pop()
             if (this._current) {
                 const [_, ms] = await profileAsync(async () => {
                     const c = expect(this._current, 'BUG: nothing should have changed in this time')
-                    console.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context))
+                    console.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow? '(slow)' : '(fast)')
                     await c.fn()
                 })
                 console.debug('[JOB_RUNNER] Finished job', this._current.type, this.toString(this._current.context), 'took', ms, 'ms')
-                if (this.stack.length === 0) {
+                if (this.length() === 0) {
                     console.debug('[JOB_RUNNER] No more pending jobs. Taking a nap.')
                 } else {
-                    console.debug('[JOB_RUNNER] Remaining jobs', this.stack.length)
+                    console.debug('[JOB_RUNNER] Remaining jobs', this.length())
                 }
             }
             this._current = null
             this.timeout = null
-            if (this.stack.length > 0) this.tick()
+            if (this.length() > 0) this.tick()
         })
     }
     toString(nodeOrString: Fileish | URIPair) {
