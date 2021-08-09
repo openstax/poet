@@ -9,7 +9,6 @@
     "glob": "^7.1.6",
     "immutable": "^4.0.0-rc.14",
     "memoize-one": "^5.1.1",
-    "quarx": "^3.4.0",
     "source-map-support": "^0.5.19",
     "uuid": "^8.3.2",
     "vscode-languageserver": "^7.0.0",
