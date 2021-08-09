@@ -2,12 +2,11 @@ import { glob } from 'glob';
 import fs from 'fs'
 import path from 'path'
 import { Connection, Range } from 'vscode-languageserver';
-import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent, WorkspaceFolder } from "vscode-languageserver-protocol";
+import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from "vscode-languageserver-protocol";
 import { URI } from "vscode-uri";
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree';
-import { BookNode, Bundle, Fileish, PageNode, Opt, TocNode, TocNodeType, ValidationResponse } from "./model";
+import { BookNode, Bundle, Fileish, PageNode, Opt, TocNode, TocNodeType } from "./model";
 import { expect, profileAsync } from './utils';
-import { TextDocument } from 'vscode-languageserver-textdocument';
 
 // Note: `[^\/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^\/]+\.[^\.]+$/  
