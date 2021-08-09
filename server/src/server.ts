@@ -62,6 +62,9 @@ export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUr
 })
 
 connection.onInitialize(async (params: InitializeParams) => {
+  // https://microsoft.github.io/language-server-protocol/specification#workspace_workspaceFolders
+  params.workspaceFolders?.forEach(w => bundleFactory.get(w.uri)) // create bundles.
+
   const result: InitializeResult = {
     capabilities: {
       textDocumentSync: {
@@ -72,6 +75,7 @@ connection.onInitialize(async (params: InitializeParams) => {
       },
       workspace: {
         workspaceFolders: {
+          // changeNotification: true,
           supported: true
         }
       }
@@ -121,12 +125,6 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
     await connection.sendRequest('onDidChangeWatchedFiles')
   }
   inner().catch(err => { throw err })
-})
-
-connection.onRequest('onDidChangeWorkspaceFolders', async (event) => {
-  for (const workspace of event.removed) {
-    bundleFactory.remove(workspace.uri.external)
-  }
 })
 
 connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler())

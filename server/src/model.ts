@@ -241,6 +241,7 @@ function convertToPos(str: string, cursor: number): Position {
 function toValidationErrors(node: Fileish, message: string, sources: I.Set<Source>) {
     return sources.map(s => new ModelError(node, message, s.startPos, s.endPos))
 }
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export class PageNode extends Fileish {
     private _uuid: Opt<WithSource<string>> = null
     private _title: Opt<WithSource<string>> = null
@@ -352,9 +353,8 @@ export class PageNode extends Fileish {
                 message: 'Malformed UUID',
                 nodesToLoad: I.Set(),
                 fn: () => {
-                    const re = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
                     const uuid = this.ensureLoaded(this._uuid)
-                    return re.test(uuid.v) ? I.Set() : I.Set([uuid])
+                    return UUID_RE.test(uuid.v) ? I.Set() : I.Set([uuid])
                 }
             },
             {
