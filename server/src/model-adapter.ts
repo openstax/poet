@@ -234,16 +234,16 @@ export class BundleLoadManager {
         jobs.reverse().forEach(j => jobRunner.enqueue(j))
     }
 
-    async loadEnoughToSendDiagnostics(context: {workspace: WorkspaceFolder, doc: TextDocument}) {
+    async loadEnoughToSendDiagnostics(context: {workspace: string, doc: string}) {
         // Skip if the file is already loaded
-        if (findNode(this.bundle, context.doc.uri)?.isLoaded()) return
+        if (findNode(this.bundle, context.doc)?.isLoaded()) return
 
         // load the books to see if this URI is a page in a book
         const jobs = [
             {type: 'FILEOPENED_LOAD_BUNDLE_DEP', context, fn: async () => await this.readAndLoad(this.bundle) },
             {type: 'FILEOPENED_LOAD_BOOKS_DEP', context, fn: async () => await Promise.all(this.bundle.books().map(async f => await this.readAndLoad(f)))},
             {type: 'FILEOPENED_SEND_DIAGNOSTICS', context, fn: async () => {
-                const page = this.bundle.allPages.getIfHas(context.doc.uri)
+                const page = this.bundle.allPages.getIfHas(context.doc)
                 if (page) {
                     this.sendErrors(page)
                 }
@@ -253,7 +253,7 @@ export class BundleLoadManager {
     }
 }
 
-type URIPair = { workspace: WorkspaceFolder, doc: TextDocument }
+type URIPair = { workspace: string, doc: string }
 type Job = {
     type: string
     context: Fileish | URIPair
@@ -301,7 +301,7 @@ class JobRunner {
     }
     toString(nodeOrString: Fileish | URIPair) {
         if (nodeOrString instanceof Fileish) { return nodeOrString.filePath() }
-        else return path.relative(nodeOrString.workspace.uri, nodeOrString.doc.uri)
+        else return path.relative(nodeOrString.workspace, nodeOrString.doc)
     }    
 }
 
