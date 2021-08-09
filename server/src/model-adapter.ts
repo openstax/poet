@@ -172,7 +172,7 @@ export class BundleLoadManager {
             case FileChangeType.Deleted:
             case FileChangeType.Changed:
                 await this.readAndUpdate(item)
-                this.sendErrors(item.getValidationErrors())
+                this.sendErrors(item)
                 return
             case FileChangeType.Created:
             default:
@@ -190,23 +190,19 @@ export class BundleLoadManager {
         node.update(fileContent)
     }
 
-    private sendErrors(resp: ValidationResponse) {
-        const { errors, nodesToLoad } = resp
+    private sendErrors(node: Fileish) {
+        const { errors, nodesToLoad } = node.getValidationErrors()
         if (nodesToLoad.isEmpty()) {
-            if (errors.isEmpty()) { return }
-            const grouped = errors.groupBy(err => err.node)
-            grouped.forEach((errs, node) => {
-                const uri = node.absPath
-                const diagnostics = errs.toSet().map(err => {
-                    const start = err.startPos ?? { line: 0, character: 0 }
-                    const end = err.endPos || start
-                    const range = Range.create(start, end)
-                    return Diagnostic.create(range, err.message, DiagnosticSeverity.Error)
-                }).toArray()
-                this.conn.sendDiagnostics({
-                  uri,
-                  diagnostics  
-                })
+            const uri = node.absPath
+            const diagnostics = errors.toSet().map(err => {
+                const start = err.startPos ?? { line: 0, character: 0 }
+                const end = err.endPos || start
+                const range = Range.create(start, end)
+                return Diagnostic.create(range, err.message, DiagnosticSeverity.Error)
+            }).toArray()
+            this.conn.sendDiagnostics({
+              uri,
+              diagnostics  
             })
         } else {
             // push this task back onto the job stack and then add loading jobs for each node that needs to load
@@ -222,7 +218,7 @@ export class BundleLoadManager {
             {type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(async f => this.readAndLoad(f)))},
             {type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allPages.all().map(async f => this.readAndLoad(f)))},
             {type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allImages.all().map(async f => this.readAndLoad(f)))},
-            {type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allNodes().map(f => this.sendErrors(f.getValidationErrors())))},
+            {type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allNodes().map(f => this.sendErrors(f)))},
         ]
         jobs.reverse().forEach(j => jobRunner.enqueue(j))
     }
@@ -238,7 +234,7 @@ export class BundleLoadManager {
             {type: 'FILEOPENED_SEND_DIAGNOSTICS', context, fn: async () => {
                 const page = this.bundle.allPages.getIfHas(context.doc.uri)
                 if (page) {
-                    this.sendErrors(page.getValidationErrors())
+                    this.sendErrors(page)
                 }
             }}
         ]

@@ -345,6 +345,18 @@ export class PageNode extends Fileish {
                     return !l.page.hasElementId(l.targetElementId)
                 })
             },
+            {
+                message: 'Duplicate Page/Module UUID',
+                nodesToLoad: I.Set(),
+                fn: () => {
+                    const uuid = this.ensureLoaded(this._uuid)
+                   if (this.bundle().isDuplicateUuid(uuid.v)) {
+                        return I.Set([uuid])
+                    } else {
+                        return I.Set()
+                    }
+                }
+            }
         ]
     }
 }
@@ -515,22 +527,10 @@ export class Bundle extends Fileish {
         ]
     }
 
-    public allDuplicatePageUuids() {
-        const uuids = I.List(this.books().flatMap(b => b.pages())).map(p => p.uuid())
-        return I.Set(findDuplicates(uuids))
-    }
-
-    public validateUuid(page: PageNode, source: Source) {
+    public isDuplicateUuid(uuid: string) {
         const pages = this.allPages.all()
-        const meAndPages = I.Set<Fileish>(pages).add(this)
-        return ValidationResponse.continueOnlyIfLoaded(meAndPages, () => {
-            const duplicateUuids = I.Set(findDuplicates(I.List(pages.map(p => p.uuid()))))
-            if (duplicateUuids.has(page.uuid())) {
-                return toValidationErrors(page, 'Duplicate UUID', I.Set([source]))
-            } else {
-                return I.Set()
-            }
-        })
+        const duplicateUuids = I.Set(findDuplicates(I.List(pages).filter(p => p.isLoaded()).map(p => p.uuid())))
+        return duplicateUuids.has(uuid)
     }
 }
 
