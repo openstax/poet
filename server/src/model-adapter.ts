@@ -224,12 +224,14 @@ export class BundleLoadManager {
     }
 
     async performInitialValidation() {
+        const enqueueLoadJob = (node: Fileish) => jobRunner.enqueue({slow: true, type: 'INITIAL_LOAD_DEP', context: node, fn: async () => this.readAndLoad(node)})
         const jobs = [
-            {slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => this._didLoadFull || await this.readAndLoad(this.bundle) },
-            {slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allBooks.all().map(async f => this.readAndLoad(f)))},
-            {slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allPages.all().map(async f => this.readAndLoad(f)))},
-            {slow: true, type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allImages.all().map(async f => this.readAndLoad(f)))},
-            {slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this._didLoadFull || await Promise.all(this.bundle.allNodes().map(f => this.sendErrors(f)))},
+            {slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
+            {slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: () => this.bundle.allBooks.all().forEach(enqueueLoadJob)},
+            {slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all().forEach(this.sendErrors.bind(this))}},
+            {slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: () => this.bundle.allPages.all().forEach(enqueueLoadJob)},
+            {slow: true, type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: () => this.bundle.allImages.all().forEach(enqueueLoadJob)},
+            {slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes().map(f => this.sendErrors(f)))},
         ]
         jobs.reverse().forEach(j => jobRunner.enqueue(j))
     }
