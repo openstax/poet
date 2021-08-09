@@ -180,6 +180,17 @@ export class BundleLoadManager {
         }
     }
 
+    public updateFileContents(absPath: string, contents: string) {
+        const node = findOrCreateNode(this.bundle, absPath)
+        if (!node) {
+            console.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
+            return
+        }
+        console.debug('[DOC_UPDATER] Updating contents of', node.filePath())
+        node.update(contents)
+        this.sendErrors(node)
+    }
+
     private async readAndLoad(node: Fileish) {
         if (node.isLoaded()) { return }
         const fileContent = await readOrNull(node.absPath)
@@ -206,8 +217,8 @@ export class BundleLoadManager {
             })
         } else {
             // push this task back onto the job stack and then add loading jobs for each node that needs to load
-            console.log('Dependencies were not met yet. Enqueuing dependencies and then re-enqueueing this job', nodesToLoad.size)
-            jobRunner.reEnqueueCurrentJob()
+            console.log('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', nodesToLoad.size)
+            jobRunner.reEnqueueCurrentJobIfRunning()
             nodesToLoad.filter(n => !n.isLoaded()).forEach(n => jobRunner.enqueue({type: 'LOAD_DEPENDENCY', context: n, fn: async () => this.readAndLoad(n)}))
         }
     }
@@ -258,8 +269,13 @@ class JobRunner {
         this.stack.push(job)
         this.tick()
     }
-    public reEnqueueCurrentJob() {
-        this.enqueue(expect(this._current, 'BUG: Tried to reenqueue the currently running task but no task is currently executing.'))
+    public reEnqueueCurrentJobIfRunning() {
+        if (this._current) {
+            console.debug('[JOB_RUNNER] Re-enqueueing current job')
+            this.enqueue(this._current)
+        } else {
+            console.debug('[JOB_RUNNER] No job running so nothing to re-enqueue')
+        }
     }
     private tick() {
         if (this.timeout !== null) return // job is running

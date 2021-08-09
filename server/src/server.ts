@@ -102,6 +102,15 @@ documents.onDidOpen(event => {
   inner().catch(err => { throw err })
 })
 
+documents.onDidChangeContent(async ({document}) => {
+  const inner = async (): Promise<void> => {
+    const workspaces = expect(await connection.workspace.getWorkspaceFolders(), 'workspace must be open for event to occur')
+    const workspaceChanged = expect(workspaces.find((workspace) => document.uri.startsWith(workspace.uri)), `file ${document.uri} must exist in workspace`)
+    const manager = expect(bundleFactory.getIfHas(workspaceChanged.uri), 'BUG: Somehow we got here without loading the workspace')
+    manager.updateFileContents(document.uri, document.getText())
+  }
+  inner().catch(err => { throw err })
+})
 connection.onDidChangeWatchedFiles(({ changes }) => {
   const inner = async (): Promise<void> => {
     const workspaces = expect(await connection.workspace.getWorkspaceFolders(), 'workspace must be open for event to occur')

@@ -171,6 +171,8 @@ export abstract class Fileish {
             return new ValidationResponse(I.Set([this._parseError]))
         } else if (!this._isLoaded) {
             return new ValidationResponse(I.Set(), I.Set([this]))
+        } else if (!this._exists) {
+            return new ValidationResponse(I.Set(), I.Set())
         } else {
             const responses = this.getValidationChecks().map(c => ValidationResponse.continueOnlyIfLoaded(c.nodesToLoad, () => toValidationErrors(c.context ?? this, c.message, c.fn(c.nodesToLoad))))
             const nodesToLoad = I.Set(responses.map(r => r.nodesToLoad)).flatMap(x=>x)
@@ -529,7 +531,7 @@ export class Bundle extends Fileish {
 
     public isDuplicateUuid(uuid: string) {
         const pages = this.allPages.all()
-        const duplicateUuids = I.Set(findDuplicates(I.List(pages).filter(p => p.isLoaded()).map(p => p.uuid())))
+        const duplicateUuids = I.Set(findDuplicates(I.List(pages).filter(p => p.exists()).map(p => p.uuid())))
         return duplicateUuids.has(uuid)
     }
 }
