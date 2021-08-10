@@ -101,7 +101,7 @@ export abstract class Fileish {
     protected setBundle(bundle: Bundle) { this._bundle = bundle /* avoid catch-22 */ }
     protected bundle() { return expect(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
     protected ensureLoaded<T>(field: Opt<T>) {
-        return expect(field, `${LOAD_ERROR} [${this.filePath()}]`)
+        return expect(field, `${LOAD_ERROR} [${this.absPath}]`)
     }
     public exists() { return this._exists }
     public update(fileContent: Opt<string>): void {

@@ -125,7 +125,7 @@ const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscod
 
 const resetTestData = async (): Promise<void> => {
   await vscode.workspace.saveAll(true)
-  for (const subdir of ['collections', 'media', 'modules']) {
+  for (const subdir of ['META-INF', 'collections', 'media', 'modules']) {
     fs.rmdirSync(path.join(TEST_DATA_DIR, subdir), { recursive: true })
     fs.copySync(path.join(ORIGIN_DATA_DIR, subdir), path.join(TEST_DATA_DIR, subdir))
   }

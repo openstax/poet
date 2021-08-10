@@ -112,9 +112,11 @@ export class BundleLoadManager {
         // The only reason this is not implemented as a Job is because we need to send a timely response to the client
         // and there is no code for being notified when a Job completes
         await this.readAndLoad(this.bundle)
+        this.sendErrors(this.bundle)
         
         await Promise.all(this.bundle.books().map(async b => {
             await this.readAndLoad(b)
+            this.sendErrors(b)
         }))
     }
     public async loadEnoughForOrphans() {
