@@ -29,6 +29,11 @@
   <xsl:attribute name="data-{local-name()}"><xsl:value-of select="." /></xsl:attribute>
 </xsl:template>
 
+<xsl:template match="@xml:lang">
+  <xsl:copy/>
+  <xsl:attribute name="lang"><xsl:value-of select="." /></xsl:attribute>
+</xsl:template>
+
 <xsl:template match="c:div">
   <div>
     <xsl:call-template name="apply-template-no-selfclose">
@@ -1607,14 +1612,14 @@
 
 <xsl:template name="count-helper">
   <xsl:param name="count"/>
-  <xsl:param name="string"/>
+  <xsl:param name="node"/>
 
-  <xsl:value-of select="$string" disable-output-escaping="yes"/>
+  <xsl:copy-of select="$node"/>
 
   <xsl:if test="$count &gt; 1">
     <xsl:call-template name="count-helper">
       <xsl:with-param name="count" select="$count - 1"/>
-      <xsl:with-param name="string" select="$string"/>
+      <xsl:with-param name="node" select="$node"/>
     </xsl:call-template>
   </xsl:if>
 </xsl:template>
@@ -1625,20 +1630,20 @@
 
     <xsl:apply-templates select="@*"/>
 
-    <xsl:variable name="string">
+    <xsl:variable name="node">
       <xsl:choose>
         <xsl:when test="@effect = 'underline'">
-          <xsl:text>&lt;hr/&gt;</xsl:text>
+          <hr/>
         </xsl:when>
         <xsl:otherwise>
-          <xsl:text>&lt;br/&gt;</xsl:text>
+          <br/>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
 
     <xsl:call-template name="count-helper">
       <xsl:with-param name="count" select="@count" />
-      <xsl:with-param name="string" select="$string"/>
+      <xsl:with-param name="node" select="$node"/>
     </xsl:call-template>
   </span>
 </xsl:template>
@@ -1652,7 +1657,7 @@
 
     <xsl:call-template name="count-helper">
       <xsl:with-param name="count" select="@count"/>
-      <xsl:with-param name="string" select="' '"/>
+      <xsl:with-param name="node" select="' '"/>
     </xsl:call-template>
   </span>
 </xsl:template>
