@@ -11,3 +11,12 @@ body.vscode-dark {
 	background-color: white;
 	color: black;
 }
+
+/* From the webview styles H2 element */
+div[data-type="document-title"] {
+    font-size: 2rem;
+	font-weight: bold;
+	color: #333333
+}
+
+cnx-pi { display: none; }
