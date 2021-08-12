@@ -8,10 +8,10 @@ import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } 
 import { BookNode, Bundle, Fileish, PageNode, Opt, TocNode, TocNodeType } from './model'
 import { expect, profileAsync } from './utils'
 
-// Note: `[^\/]+` means "All characters except slash"
-const IMAGE_RE = /\/media\/[^\/]+\.[^\.]+$/
-const PAGE_RE = /\/modules\/[^\/]+\/index\.cnxml$/
-const BOOK_RE = /\/collections\/[^\/]+\.collection\.xml$/
+// Note: `[^/]+` means "All characters except slash"
+const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
+const PAGE_RE = /\/modules\/[^/]+\/index\.cnxml$/
+const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 
 const PATH_SEP = path.sep
 
@@ -23,8 +23,8 @@ function findNode(bundle: Bundle, absPath: string) {
   return bundle.absPath === absPath
     ? bundle
     : (
-        bundle.allBooks.getIfHas(absPath) ||
-        bundle.allPages.getIfHas(absPath) ||
+        bundle.allBooks.getIfHas(absPath) ??
+        bundle.allPages.getIfHas(absPath) ??
         bundle.allImages.getIfHas(absPath))
 }
 
@@ -70,7 +70,7 @@ function recTocConvert(node: TocNode): TocTreeElement {
 }
 
 // https://stackoverflow.com/a/35008327
-const checkFileExists = async (s: string): Promise<boolean> => await new Promise(r => fs.access(s, fs.constants.F_OK, e => r(!e)))
+const checkFileExists = async (s: string): Promise<boolean> => await new Promise(resolve => fs.access(s, fs.constants.F_OK, e => resolve(e === null)))
 
 async function readOrNull(uri: string): Promise<Opt<string>> {
   const { fsPath } = URI.parse(uri)
@@ -138,7 +138,7 @@ export class BundleLoadManager {
     if (evt.type === FileChangeType.Created) {
       // Check if we are adding an Image/Page/Book
       const node = findOrCreateNode(bundle, uri)
-      if (node) {
+      if (node !== null) {
         console.debug('[FILESYSTEM_EVENT] Adding item')
         await this.readAndLoad(node)
         return 1
@@ -151,7 +151,7 @@ export class BundleLoadManager {
       // Check if we are updating/deleting a Image/Page/Book/Bundle
       const item = findNode(bundle, uri)
 
-      if (item) {
+      if (item !== null) {
         console.debug('[FILESYSTEM_EVENT] Found item')
         await this.processItem(type, item)
         return 1
@@ -182,7 +182,7 @@ export class BundleLoadManager {
 
   public updateFileContents(absPath: string, contents: string) {
     const node = findOrCreateNode(this.bundle, absPath)
-    if (!node) {
+    if (node === null) {
       console.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
       return
     }
@@ -208,7 +208,7 @@ export class BundleLoadManager {
       const uri = node.absPath
       const diagnostics = errors.toSet().map(err => {
         const start = err.startPos ?? { line: 0, character: 0 }
-        const end = err.endPos || start
+        const end = err.endPos ?? start
         const range = Range.create(start, end)
         return Diagnostic.create(range, err.message, DiagnosticSeverity.Error)
       }).toArray()
@@ -250,7 +250,7 @@ export class BundleLoadManager {
         context,
         fn: async () => {
           const page = this.bundle.allPages.getIfHas(context.doc)
-          if (page) {
+          if (page !== null) {
             this.sendErrors(page)
           }
         }
@@ -275,27 +275,27 @@ class JobRunner {
   private timeout: Opt<NodeJS.Immediate> = null
 
   public enqueue(job: Job) {
-    job.slow ? this.slowStack.push(job) : this.fastStack.push(job)
+    job.slow === true ? this.slowStack.push(job) : this.fastStack.push(job)
     this.tick()
   }
 
-  public isJobRunning() { return !!this._current }
+  public isJobRunning() { return this._current !== null }
   private length() {
     return this.fastStack.length + this.slowStack.length
   }
 
   private pop(): Opt<Job> {
-    return this.fastStack.pop() || this.slowStack.pop() || null
+    return this.fastStack.pop() ?? this.slowStack.pop() ?? null
   }
 
   private tick() {
     if (this.timeout !== null) return // job is running
     this.timeout = setImmediate(async () => {
       this._current = this.pop()
-      if (this._current) {
-        const [_, ms] = await profileAsync(async () => {
+      if (this._current !== null) {
+        const [ms] = await profileAsync(async () => {
           const c = expect(this._current, 'BUG: nothing should have changed in this time')
-          console.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow ? '(slow)' : '(fast)')
+          console.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow === true ? '(slow)' : '(fast)')
           await c.fn()
         })
         console.debug('[JOB_RUNNER] Finished job', this._current.type, this.toString(this._current.context), 'took', ms, 'ms')

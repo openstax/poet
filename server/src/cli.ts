@@ -11,34 +11,34 @@ function printToc(node: TocNode, depth: number = 1) {
   }
 }
 
-const pathHelper = {
+const pathHelper: PathHelper<string> = {
   join: path.join,
   dirname: path.dirname
-} as PathHelper<string>
+}
 
-(async function () {
+;(async function () {
   console.log('whole process took', (await profileAsync(async () => {
-    const x = new Bundle(pathHelper, process.argv[2] || process.cwd())
+    const x = new Bundle(pathHelper, process.argv[2] ?? process.cwd())
     x.load(fs.readFileSync(x.absPath, 'utf-8'))
 
     console.log('After cheap load there are this many:')
-    console.log('  Books', (x.allBooks as any).size())
-    console.log('  Pages', (x.allPages as any).size())
-    console.log('  Images', (x.allImages as any).size())
+    console.log('  Books', x.allBooks.all().size)
+    console.log('  Pages', x.allPages.all().size)
+    console.log('  Images', x.allImages.all().size)
 
     console.log('Tocs:')
-    for (const b of (x.allBooks as any)._map.values()) {
-      await b.load()
+    for (const b of x.allBooks.all()) {
+      b.load(fs.readFileSync(b.absPath, 'utf-8'))
       console.log(b.title())
       b.toc().forEach((a: TocNode) => printToc(a))
       console.log('------------------------')
     }
 
     console.log('After expensive load there are this many:')
-    console.log('  Books', (x.allBooks as any).size())
-    console.log('  Pages', (x.allPages as any).size())
-    console.log('  Images', (x.allImages as any).size())
+    console.log('  Books', x.allBooks.all().size)
+    console.log('  Pages', x.allPages.all().size)
+    console.log('  Images', x.allImages.all().size)
 
     // console.log('Loaded Pages', x.allPages.all().filter(p => (p as any)._isLoaded).map(p => (p as any).filePath).toArray())
-  }))[1], 'ms')
+  }))[0], 'ms')
 })().then(null, (err) => { throw err })

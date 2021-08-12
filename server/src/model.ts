@@ -17,7 +17,7 @@ const NOWHERE_END: Position = { line: 0, character: 0 /* Number.MAX_VALUE */ }
 const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA, bk: NS_CONTAINER })
 const selectOne = <T extends Node>(sel: string, doc: Node): T => {
   const ret = select(sel, doc) as Node[]
-  expect(ret.length == 1 || null, `ERROR: Expected one but found ${ret.length} results that match '${sel}'`)
+  expect(ret.length === 1 || null, `ERROR: Expected one but found ${ret.length} results that match '${sel}'`)
   return ret[0] as T
 }
 
@@ -45,11 +45,7 @@ export class ModelError extends Error {
     this.name = this.constructor.name
   }
 }
-export class ParseError extends ModelError {
-  constructor(node: Fileish, message: string, startPos: Opt<Position>, endPos: Opt<Position>) {
-    super(node, message, startPos, endPos)
-  }
-}
+export class ParseError extends ModelError { }
 export class WrappedParseError<T extends Error> extends ParseError {
   constructor(node: Fileish, originalError: T) {
     super(node, originalError.message, null, null)
@@ -114,16 +110,16 @@ export abstract class Fileish {
       this._isLoaded = true
       return
     }
-    if (this.parseXML) {
+    if (this.parseXML !== null) {
       // console.info(this.filePath, 'parsing XML')
 
       // Development version throws errors instead of turning them into messages
       const parseXML = this.parseXML
       const fn = () => {
         const doc = this.readXML(fileContent)
-        if (this._parseError) return
+        if (this._parseError !== null) return
         this._parseError = parseXML(doc) || null
-        if (this._parseError) return
+        if (this._parseError !== null) return
         this._isLoaded = true
         this._exists = true
       }
@@ -173,7 +169,7 @@ export abstract class Fileish {
   }
 
   public getValidationErrors(): ValidationResponse {
-    if (this._parseError) {
+    if (this._parseError !== null) {
       return new ValidationResponse(I.Set([this._parseError]))
     } else if (!this._isLoaded) {
       return new ValidationResponse(I.Set(), I.Set([this]))
@@ -199,7 +195,6 @@ export abstract class Fileish {
       case PathType.ABSOLUTE_JUST_ONE_FILE:
         expect(child === '' || null, 'When using ABSOLUTE, there is no second argument to this function')
         return path.resolve(parent)
-      default: throw new Error(`BUG: Unsupported path type '${type}'. Consider adding it`)
     }
     return join(p, c)
   }
@@ -226,7 +221,7 @@ export interface PageLink extends Source {
 
 function textWithSource(el: Element, attr?: string): WithSource<string> {
   const [startPos, endPos] = calculateElementPositions(el)
-  const v = attr ? el.getAttribute(attr) : el.textContent
+  const v = attr !== undefined ? el.getAttribute(attr) : el.textContent
   return {
     v: expect(v, `BUG: Element/Attribute does not have a value. ${JSON.stringify(startPos)}`),
     startPos,
@@ -293,7 +288,7 @@ export class PageNode extends Fileish {
   }
 
   public hasElementId(id: string) {
-    return !!this.ensureLoaded(this._elementIds).toSeq().find(n => n.v === id)
+    return this.ensureLoaded(this._elementIds).toSeq().find(n => n.v === id) !== undefined
   }
 
   protected childrenToLoad = () => this.imageLinks().map(l => l.image)
@@ -313,13 +308,15 @@ export class PageNode extends Fileish {
     }))
 
     const linkNodes = select('//cnxml:link', doc) as Element[]
+    const changeEmptyToNull = (str: Opt<string>) => str === '' ? null : str
     this._pageLinks = I.Set(linkNodes.map(linkNode => {
       const [startPos, endPos] = calculateElementPositions(linkNode)
-      const toDocument = linkNode.getAttribute('document') || null
-      const toTargetId = linkNode.getAttribute('target-id') || null // xmldom never returns null, it reutnrs ''
+      // xmldom never returns null, it returns ''
+      const toDocument = changeEmptyToNull(linkNode.getAttribute('document'))
+      const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
       const toUrl = linkNode.getAttribute('url')
       return {
-        page: toDocument !== null ? super.bundle().allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId ? this : null),
+        page: toDocument !== null ? super.bundle().allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== null ? this : null),
         url: toUrl,
         targetElementId: toTargetId,
         startPos,

@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs'
 import * as path from 'path'
 import I from 'immutable'
-import { Bundle, Factory, Fileish, ImageNode, PageNode, PathHelper } from './model'
+import { Bundle, Factory, Fileish, PageNode, PathHelper } from './model'
 
 const REPO_ROOT = path.join(__dirname, '..', '..')
 const read = (filePath: string) => readFileSync(filePath, 'utf-8')

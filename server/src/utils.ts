@@ -102,8 +102,8 @@ export function profile<T>(fn: () => T): [T, number] {
   const ret = fn()
   return [ret, Date.now() - start]
 }
-export async function profileAsync<T>(fn: () => Promise<T>): Promise<[T, number]> {
+export async function profileAsync<T>(fn: () => Promise<T>) {
   const start = Date.now()
   const ret = await fn()
-  return [ret, Date.now() - start]
+  return [Date.now() - start, ret]
 }
