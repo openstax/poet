@@ -36,12 +36,12 @@ import fs from 'fs'
 
 const DIAGNOSTIC_SOURCE = 'cnxml'
 
-function expect<T>(value: T | null | undefined): T {
+function expectValue<T>(value: T | null | undefined): T {
   return expectOrig(value, 'test_assertion')
 }
 
 describe('bundleTrees server request', function () {
-  before(function () {
+  beforeAll(function () {
     mockfs({
       '/bundle/media/test.jpg': '',
       '/bundle/collections/invalidslug.xml': `
@@ -77,7 +77,7 @@ describe('bundleTrees server request', function () {
       `
     })
   })
-  after(function () {
+  afterAll(function () {
     mockfs.restore()
   })
   it('should handle collection parsing error for xml title', async () => {
@@ -147,14 +147,14 @@ describe('bundleTrees server request', function () {
 })
 
 describe('general bundle validation', function () {
-  before(function () {
+  beforeAll(function () {
     mockfs({
       '/bundle/collections': {},
       '/bundle/modules': {},
       '/bundle/media': {}
     })
   })
-  after(function () {
+  afterAll(function () {
     mockfs.restore()
   })
   it('returns null when a bundle item does not exist', async () => {
@@ -168,7 +168,7 @@ describe('general bundle validation', function () {
 })
 
 describe('validateCollectionModules', function () {
-  before(function () {
+  beforeAll(function () {
     mockfs({
       '/bundle/collections/valid.xml': `
         <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml">
@@ -196,23 +196,23 @@ describe('validateCollectionModules', function () {
       '/bundle/media': {}
     })
   })
-  after(function () {
+  afterAll(function () {
     mockfs.restore()
   })
   it('should return no diagnostics when collection is valid', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const diagnostics = expect(await validateCollectionModules(bundle, 'valid.xml'))
+    const diagnostics = expectValue(await validateCollectionModules(bundle, 'valid.xml'))
     assert.strictEqual(diagnostics.length, 0)
   })
   it('should return diagnostics when collection is invalid', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const diagnostics = expect(await validateCollectionModules(bundle, 'invalid.xml'))
+    const diagnostics = expectValue(await validateCollectionModules(bundle, 'invalid.xml'))
     assert.strictEqual(diagnostics.length, 1)
   })
 })
 
 describe('validateImagePaths', function () {
-  before(function () {
+  beforeAll(function () {
     mockfs({
       '/bundle/collections': {},
       '/bundle/media/empty.jpg': '',
@@ -267,7 +267,7 @@ describe('validateImagePaths', function () {
       `
     })
   })
-  after(function () {
+  afterAll(function () {
     mockfs.restore()
   })
   it('should return empty diagnostics when no images', async () => {
@@ -353,7 +353,7 @@ describe('validateImagePaths', function () {
 })
 
 describe('validateLinks', function () {
-  before(function () {
+  beforeAll(function () {
     mockfs({
       '/bundle/media': {},
       '/bundle/collections': {},
@@ -427,7 +427,7 @@ describe('validateLinks', function () {
       `
     })
   })
-  after(function () {
+  afterAll(function () {
     mockfs.restore()
   })
   it('should return empty diagnostics when no links', async () => {
@@ -544,7 +544,7 @@ describe('validateLinks', function () {
 
 describe('ValidationQueue', function () {
   const noConnection: any = {}
-  before(function () {
+  beforeAll(function () {
     mockfs({
       '/bundle/media/test.jpg': '',
       '/bundle/collections/valid.xml': `
@@ -583,7 +583,7 @@ describe('ValidationQueue', function () {
       `
     })
   })
-  after(function () {
+  afterAll(function () {
     mockfs.restore()
   })
   it('will error when validation is requested for an uri that is not in the bundle', async () => {
@@ -606,7 +606,7 @@ describe('ValidationQueue', function () {
     const validationQueue = new BundleValidationQueue(bundle, connection as any)
     sinon.stub(validationQueue, 'trigger' as any)
     const unvalidatable = 'file:///bundle/media/test.jpg'
-    const item = expect(bundle.bundleItemFromUri(unvalidatable));
+    const item = expectValue(bundle.bundleItemFromUri(unvalidatable));
     (validationQueue as any).queue.push(item)
     await (validationQueue as any).processQueue()
     assert(connection.console.error.calledOnceWith(`Ignoring unexpected item of type '${item.type}' and key ${item.key} in queue`))
@@ -638,7 +638,7 @@ describe('ValidationQueue', function () {
     assert.notStrictEqual(validationQueue.errorEncountered, undefined)
     assert(connection.console.error.calledOnce)
     clock.restore()
-  }).timeout(5000)
+  }, 5000)
   it('should queue all bundle items when a request is made', async () => {
     const bundle = await BookBundle.from('/bundle')
     const validationQueue = new BundleValidationQueue(bundle, noConnection)
@@ -835,7 +835,7 @@ describe('calculateElementPositions', function () {
   })
 })
 describe('BookBundle', () => {
-  before(function () {
+  beforeAll(function () {
     mockfs({
       '/bundle/media/empty.jpg': '',
       '/bundle/media/orphan.jpg': '',
@@ -934,7 +934,7 @@ describe('BookBundle', () => {
       `
     })
   })
-  after(function () {
+  afterAll(function () {
     mockfs.restore()
   })
   describe('BundleItem interface', function () {
@@ -1008,28 +1008,28 @@ describe('BookBundle', () => {
   })
   it('tracks and caches used images per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const images = expect(await bundle.moduleImages('m00001'))
+    const images = expectValue(await bundle.moduleImages('m00001'))
     assert.deepStrictEqual(Array.from(images.inner), ['empty.jpg'])
-    const cached = expect(await bundle.moduleImages('m00001'))
+    const cached = expectValue(await bundle.moduleImages('m00001'))
     assert(cacheEquals(images, cached))
     assert.strictEqual(await bundle.moduleImages('does-not-exist'), null)
   })
   it('tracks and caches declared ids per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const ids = expect(await bundle.moduleIds('m00001'))
+    const ids = expectValue(await bundle.moduleIds('m00001'))
     assert.deepStrictEqual(Array.from(ids.inner).sort(), ['para', 'para2'])
-    const cached = expect(await bundle.moduleIds('m00001'))
+    const cached = expectValue(await bundle.moduleIds('m00001'))
     assert(cacheEquals(ids, cached))
     assert.strictEqual(await bundle.moduleIds('does-not-exist'), null)
   })
   it('removes duplicates from tracked ids per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const ids = expect(await bundle.moduleIds('m00002'))
+    const ids = expectValue(await bundle.moduleIds('m00002'))
     assert.deepStrictEqual(Array.from(ids.inner), ['duplicate'])
   })
   it('tracks and caches declared links per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const links = expect(await bundle.moduleLinks('m00001'))
+    const links = expectValue(await bundle.moduleLinks('m00001'))
     const expected = [
       {
         moduleid: 'm00001',
@@ -1044,33 +1044,33 @@ describe('BookBundle', () => {
       assert.strictEqual(actual[i].moduleid, value.moduleid)
       assert.strictEqual(actual[i].targetid, value.targetid)
     })
-    const cached = expect(await bundle.moduleLinks('m00001'))
+    const cached = expectValue(await bundle.moduleLinks('m00001'))
     assert(cacheEquals(links, cached))
     assert.strictEqual(await bundle.moduleLinks('does-not-exist'), null)
   })
   it('tracks and caches titles per module', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const title = expect(await bundle.moduleTitle('m00001'))
+    const title = expectValue(await bundle.moduleTitle('m00001'))
     const expected: ModuleTitle = { title: 'Introduction', moduleid: 'm00001' }
     assert.deepStrictEqual(title.inner, expected)
-    const cached = expect(await bundle.moduleTitle('m00001'))
+    const cached = expectValue(await bundle.moduleTitle('m00001'))
     assert(cacheEquals(title, cached))
     assert.strictEqual(await bundle.moduleTitle('does-not-exist'), null)
   })
   it('Allows existant but empty module titles', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const title = expect(await bundle.moduleTitle('m00004'))
+    const title = expectValue(await bundle.moduleTitle('m00004'))
     const expected: ModuleTitle = { title: '', moduleid: 'm00004' }
     assert.deepStrictEqual(title.inner, expected)
-    const cached = expect(await bundle.moduleTitle('m00004'))
+    const cached = expectValue(await bundle.moduleTitle('m00004'))
     assert(cacheEquals(title, cached))
   })
   it('reports module as unnamed if no title exists', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const title = expect(await bundle.moduleTitle('m00005'))
+    const title = expectValue(await bundle.moduleTitle('m00005'))
     const expected: ModuleTitle = { title: 'Unnamed Module', moduleid: 'm00005' }
     assert.deepStrictEqual(title.inner, expected)
-    const cached = expect(await bundle.moduleTitle('m00005'))
+    const cached = expectValue(await bundle.moduleTitle('m00005'))
     assert(cacheEquals(title, cached))
   })
   it('tracks and caches orphaned modules', async () => {
@@ -1087,7 +1087,7 @@ describe('BookBundle', () => {
   })
   it('tracks and caches table of contents trees', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const tree = expect(await bundle.collectionTree('normal.collection.xml'))
+    const tree = expectValue(await bundle.collectionTree('normal.collection.xml'))
     const expected: TocTreeCollection = {
       type: TocTreeElementType.collection,
       title: 'normal',
@@ -1102,12 +1102,12 @@ describe('BookBundle', () => {
       ]
     }
     assert.deepStrictEqual(tree.inner, expected)
-    assert(cacheEquals(tree, expect(await bundle.collectionTree('normal.collection.xml'))))
+    assert(cacheEquals(tree, expectValue(await bundle.collectionTree('normal.collection.xml'))))
     assert.strictEqual(await bundle.collectionTree('does-not-exist'), null)
   })
   it('tracks and caches table of contents trees containing subcollections', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const tree = expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
+    const tree = expectValue(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
     const expected: TocTreeCollection = {
       type: TocTreeElementType.collection,
       title: 'normal-with-subcollection',
@@ -1129,7 +1129,7 @@ describe('BookBundle', () => {
       }]
     }
     assert.deepStrictEqual(tree.inner, expected)
-    const cacheExpected = expect(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
+    const cacheExpected = expectValue(await bundle.collectionTree('normal-with-subcollection.collection.xml'))
     assert(cacheEquals(tree, cacheExpected))
   })
   it('can provide modules directly as toc tree objects', async () => {
@@ -1173,14 +1173,14 @@ describe('BookBundle', () => {
   })
   it('busts caches when a module is changed', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const tree = expect(await bundle.collectionTree('normal.collection.xml'))
+    const tree = expectValue(await bundle.collectionTree('normal.collection.xml'))
     const orphanedImages = await bundle.orphanedImages()
-    const moduleTitle = expect(await bundle.moduleTitle('m00002'))
+    const moduleTitle = expectValue(await bundle.moduleTitle('m00002'))
 
     bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/modules/m00002/index.cnxml' })
 
-    const treeAgainNotContains = expect(await bundle.collectionTree('normal.collection.xml'))
-    const moduleTitleAgain = expect(await bundle.moduleTitle('m00002'))
+    const treeAgainNotContains = expectValue(await bundle.collectionTree('normal.collection.xml'))
+    const moduleTitleAgain = expectValue(await bundle.moduleTitle('m00002'))
     const orphanedImagesAgain = await bundle.orphanedImages()
 
     assert(!cacheEquals(moduleTitle, moduleTitleAgain))
@@ -1188,7 +1188,7 @@ describe('BookBundle', () => {
     assert(cacheEquals(tree, treeAgainNotContains))
 
     bundle.processChange({ type: FileChangeType.Changed, uri: '/bundle/modules/m00001/index.cnxml' })
-    const treeAgainContains = expect(await bundle.collectionTree('normal.collection.xml'))
+    const treeAgainContains = expectValue(await bundle.collectionTree('normal.collection.xml'))
     assert(!cacheEquals(tree, treeAgainContains))
   })
   it('busts caches when an image is created', async () => {
@@ -1226,12 +1226,12 @@ describe('BookBundle', () => {
   })
   it('busts image source cache when bundle media files are created / deleted', async () => {
     const bundle = await BookBundle.from('/bundle')
-    const beforeImageSources = expect(await bundle.moduleImageSources('m00001'))
-    const checkImageSources = expect(await bundle.moduleImageSources('m00001'))
+    const beforeImageSources = expectValue(await bundle.moduleImageSources('m00001'))
+    const checkImageSources = expectValue(await bundle.moduleImageSources('m00001'))
     assert(cacheEquals(beforeImageSources, checkImageSources))
     bundle.processChange({ type: FileChangeType.Deleted, uri: '/bundle/media/empty.jpg' })
     bundle.processChange({ type: FileChangeType.Created, uri: '/bundle/media/newempty.jpg' })
-    const afterImageSources = expect(await bundle.moduleImageSources('m00001'))
+    const afterImageSources = expectValue(await bundle.moduleImageSources('m00001'))
     assert(!cacheEquals(beforeImageSources, afterImageSources))
   })
   it('detects directory deletions correctly', async () => {
@@ -1551,7 +1551,7 @@ describe('Element ID creation', () => {
 })
 
 describe('bundleEnsureIdsHandler server request', function () {
-  before(function () {
+  beforeAll(function () {
     mockfs({
       '/bundle/media/test.jpg': '',
       '/bundle/collections/invalidslug.xml': `
@@ -1600,7 +1600,7 @@ describe('bundleEnsureIdsHandler server request', function () {
       `
     })
   })
-  after(function () {
+  afterAll(function () {
     mockfs.restore()
   })
   it('should create IDs for files on filesystem', async () => {
