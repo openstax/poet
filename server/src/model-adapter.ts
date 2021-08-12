@@ -162,9 +162,9 @@ export class BundleLoadManager {
             // Remove anything inside that directory
             console.debug(`[FILESYSTEM_EVENT] Removing everything in the directory`)
             const filePathDir = `${uri}${PATH_SEP}`
-            return bundle.allBooks.removeByPathPrefix(filePathDir) +
-                bundle.allPages.removeByPathPrefix(filePathDir) +
-                bundle.allImages.removeByPathPrefix(filePathDir)
+            return bundle.allBooks.removeByKeyPrefix(filePathDir) +
+                bundle.allPages.removeByKeyPrefix(filePathDir) +
+                bundle.allImages.removeByKeyPrefix(filePathDir)
         }
     }
 

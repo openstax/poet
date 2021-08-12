@@ -95,7 +95,7 @@ export abstract class Fileish {
 
     constructor(private _bundle: Opt<Bundle>, protected _pathHelper: PathHelper<string>, public readonly absPath: string) { }
 
-    public abstract getValidationChecks(): ValidationCheck[]
+    protected abstract getValidationChecks(): ValidationCheck[]
     public isLoaded() { return this._isLoaded }
     public filePath() { return path.relative(this.bundle().workspaceRoot, this.absPath) }
     protected setBundle(bundle: Bundle) { this._bundle = bundle /* avoid catch-22 */ }
@@ -253,7 +253,7 @@ export class PageNode extends Fileish {
         // A quick way to get the title for the ToC
         if (this._title === null) {
             const data = fileReader()
-            this._title = this.guessTitle(data)
+            return this.guessTitle(data)?.v ?? 'UntitledFile'
         }
         return this._title?.v ?? 'UntitledFile'
     }
@@ -574,7 +574,7 @@ export class Factory<T> {
         expect(this._map.has(filePath) || null, `ERROR: Attempting to remove a file that was never created: '${filePath}'`)
         this._map = this._map.delete(filePath)
     }
-    public removeByPathPrefix(pathPrefix: string) {
+    public removeByKeyPrefix(pathPrefix: string) {
         const size = this._map.size
         this._map = this._map.filter((_, key) => !key.startsWith(pathPrefix))
         return size - this._map.size
