@@ -15,13 +15,23 @@
 
 For debugging, open the webview developer tools by opening the command pallete and selecting `Developer: Open Webview Developer Tools`. This will allow you to inspect the webview contents. **Note:** It can only be opened when the webview is open.
 
-The tests for client and server require running the `npm run build` script beforehand. For example, the server tests can be run via command line as follows:
+### Running Tests
+
+The tests for client require running the `npm run build` script beforehand. The client tests can be run via command line as follows:
 
 ```bash
 $ npm install
 $ npm run build
-$ npm run test:server
 $ npm run test:client
+```
+
+The Language Server tests do not require building beforehand. To run them:
+
+```bash
+$ npm run test:server
+
+# To automatically re-build and re-run only the tests affected by the change
+$ npm run test:server:watch
 ```
 
 If you use the launch configuration to invoke the client tests from VS Code, the `build` will be run automatically.
