@@ -4,12 +4,6 @@ import I from 'immutable'
 import { Bundle, Factory, Fileish, PageNode, PathHelper } from './model'
 
 const REPO_ROOT = path.join(__dirname, '..', '..')
-const read = (filePath: string) => readFileSync(filePath, 'utf-8')
-
-const FS_PATH_HELPER: PathHelper<string> = {
-  join: path.join,
-  dirname: path.dirname
-}
 
 describe('Page', () => {
   let page = null as unknown as PageNode
@@ -136,15 +130,22 @@ describe('Bugfixes', () => {
   })
 })
 
-function first<T>(col: I.Set<T> | I.List<T>) {
+export const read = (filePath: string) => readFileSync(filePath, 'utf-8')
+
+export const FS_PATH_HELPER: PathHelper<string> = {
+  join: path.join,
+  dirname: path.dirname
+}
+
+export function first<T>(col: I.Set<T> | I.List<T>) {
   const f = col.toArray()[0]
   expect(f).toBeTruthy()
   return f
 }
 
-const makeBundle = () => new Bundle(FS_PATH_HELPER, REPO_ROOT)
+export const makeBundle = () => new Bundle(FS_PATH_HELPER, REPO_ROOT)
 
-function loadSuccess<T extends Fileish>(n: T) {
+export function loadSuccess<T extends Fileish>(n: T) {
   expect(n.isLoaded()).toBeFalsy()
   n.load(read(n.absPath))
   expect(n.isLoaded()).toBeTruthy()
@@ -153,7 +154,7 @@ function loadSuccess<T extends Fileish>(n: T) {
   return n // for daisy-chaining
 }
 
-function ignoreConsoleWarnings(fn: () => void) {
+export function ignoreConsoleWarnings(fn: () => void) {
   const warnSpy = jest.spyOn(console, 'warn').mockImplementation()
   fn()
   warnSpy.mockRestore()

@@ -16,7 +16,17 @@ const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 const PATH_SEP = path.sep
 
 function findOrCreateNode(bundle: Bundle, absPath: string) {
-  if (IMAGE_RE.test(absPath)) { return bundle.allImages.get(absPath) } else if (PAGE_RE.test(absPath)) { return bundle.allPages.get(absPath) } else if (BOOK_RE.test(absPath)) { return bundle.allBooks.get(absPath) } else { return null }
+  if (bundle.absPath === absPath) {
+    return bundle
+  } else if (IMAGE_RE.test(absPath)) {
+    return bundle.allImages.get(absPath)
+  } else if (PAGE_RE.test(absPath)) {
+    return bundle.allPages.get(absPath)
+  } else if (BOOK_RE.test(absPath)) {
+    return bundle.allBooks.get(absPath)
+  } else {
+    return null
+  }
 }
 
 function findNode(bundle: Bundle, absPath: string) {
@@ -93,7 +103,6 @@ function toStringFileChangeType(t: FileChangeType) {
 }
 export class BundleLoadManager {
   private _didLoadOrphans = false
-  private readonly _didLoadFull = false
 
   constructor(public bundle: Bundle, private readonly conn: Connection) {}
 
@@ -218,9 +227,10 @@ export class BundleLoadManager {
       })
     } else {
       // push this task back onto the job stack and then add loading jobs for each node that needs to load
-      console.log('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', nodesToLoad.size)
+      const unloadedNodes = nodesToLoad.filter(n => !n.isLoaded())
+      console.log('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
       jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => this.sendErrors(node) })
-      nodesToLoad.filter(n => !n.isLoaded()).forEach(n => jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => await this.readAndLoad(n) }))
+      unloadedNodes.forEach(n => jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => await this.readAndLoad(n) }))
     }
   }
 
@@ -261,14 +271,14 @@ export class BundleLoadManager {
 }
 
 interface URIPair { workspace: string, doc: string }
-interface Job {
+export interface Job {
   type: string
   context: Fileish | URIPair
   fn: () => Promise<any> | any
   slow?: boolean
 }
 
-class JobRunner {
+export class JobRunner {
   private _current: Opt<Job> = null
   private readonly fastStack: Job[] = []
   private readonly slowStack: Job[] = []
