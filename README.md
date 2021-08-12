@@ -17,6 +17,8 @@ For debugging, open the webview developer tools by opening the command pallete a
 
 ### Running Tests
 
+#### Client Tests
+
 The tests for client require running the `npm run build` script beforehand. The client tests can be run via command line as follows:
 
 ```bash
@@ -24,6 +26,10 @@ $ npm install
 $ npm run build
 $ npm run test:client
 ```
+
+If you use the launch configuration to invoke the client tests from VS Code, the `build` will be run automatically.
+
+#### Language Server Tests
 
 The Language Server tests do not require building beforehand. To run them:
 
@@ -34,7 +40,8 @@ $ npm run test:server
 $ npm run test:server:watch
 ```
 
-If you use the launch configuration to invoke the client tests from VS Code, the `build` will be run automatically.
+Additionally, you can step through the server tests by setting a breakpoint in VSCode and launching the ["Language Server Tests"](./launch.json) in the Debugging panel.
+
 
 ## Enabling the Code editor for Gitpod
 
