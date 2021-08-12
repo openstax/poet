@@ -87,7 +87,7 @@ export abstract class Fileish {
   private _isLoaded = false
   private _exists = false
   private _parseError: Opt<ParseError> = null
-  protected parseXML: Opt<(doc: Document) => (ParseError | void)> = null // Subclasses define this
+  protected parseXML: Opt<(doc: Document) => Opt<ParseError>> = null // Subclasses define this
   protected childrenToLoad: Opt<() => I.Set<Fileish>> = null // Subclasses define this
 
   constructor(private _bundle: Opt<Bundle>, protected _pathHelper: PathHelper<string>, public readonly absPath: string) { }
@@ -118,7 +118,7 @@ export abstract class Fileish {
       const fn = () => {
         const doc = this.readXML(fileContent)
         if (this._parseError !== null) return
-        this._parseError = parseXML(doc) || null
+        this._parseError = parseXML(doc)
         if (this._parseError !== null) return
         this._isLoaded = true
         this._exists = true
@@ -334,6 +334,7 @@ export class PageNode extends Fileish {
         endPos: NOWHERE_END
       }
     }
+    return null
   }
 
   public getValidationChecks(): ValidationCheck[] {
@@ -398,6 +399,7 @@ export class BookNode extends Fileish {
     this._slug = textWithSource(selectOne('/col:collection/col:metadata/md:slug', doc))
     const root: Element = selectOne('/col:collection/col:content', doc)
     this._toc = this.buildChildren(root)
+    return null
   }
 
   private buildChildren(root: Element): TocNode[] {
@@ -551,6 +553,7 @@ export class Bundle extends Fileish {
         endPos
       }
     }))
+    return null
   }
 
   public allNodes() {

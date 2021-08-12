@@ -264,7 +264,7 @@ interface URIPair { workspace: string, doc: string }
 interface Job {
   type: string
   context: Fileish | URIPair
-  fn: () => Promise<any> | void
+  fn: () => Promise<any> | any
   slow?: boolean
 }
 
@@ -290,25 +290,31 @@ class JobRunner {
 
   private tick() {
     if (this.timeout !== null) return // job is running
-    this.timeout = setImmediate(async () => {
-      this._current = this.pop()
-      if (this._current !== null) {
-        const [ms] = await profileAsync(async () => {
-          const c = expect(this._current, 'BUG: nothing should have changed in this time')
-          console.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow === true ? '(slow)' : '(fast)')
-          await c.fn()
-        })
-        console.debug('[JOB_RUNNER] Finished job', this._current.type, this.toString(this._current.context), 'took', ms, 'ms')
-        if (this.length() === 0) {
-          console.debug('[JOB_RUNNER] No more pending jobs. Taking a nap.')
-        } else {
-          console.debug('[JOB_RUNNER] Remaining jobs', this.length())
-        }
-      }
-      this._current = null
-      this.timeout = null
-      if (this.length() > 0) this.tick()
+    this.timeout = setImmediate(() => {
+      this.processItem().catch((err) => {
+        console.error('[JOB_RUNNER] Job failed', err)
+      })
     })
+  }
+
+  private async processItem() {
+    this._current = this.pop()
+    if (this._current !== null) {
+      const [ms] = await profileAsync(async () => {
+        const c = expect(this._current, 'BUG: nothing should have changed in this time')
+        console.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow === true ? '(slow)' : '(fast)')
+        await c.fn()
+      })
+      console.debug('[JOB_RUNNER] Finished job', this._current.type, this.toString(this._current.context), 'took', ms, 'ms')
+      if (this.length() === 0) {
+        console.debug('[JOB_RUNNER] No more pending jobs. Taking a nap.')
+      } else {
+        console.debug('[JOB_RUNNER] Remaining jobs', this.length())
+      }
+    }
+    this._current = null
+    this.timeout = null
+    if (this.length() > 0) this.tick()
   }
 
   toString(nodeOrString: Fileish | URIPair) {
