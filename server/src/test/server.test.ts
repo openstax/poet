@@ -1,22 +1,9 @@
-import {
-  calculateElementPositions,
-  expect as expectOrig
-} from './../utils'
+import { calculateElementPositions } from './../utils'
 import assert from 'assert'
-import mockfs from 'mock-fs'
-import sinon from 'sinon'
 import * as xpath from 'xpath-ts'
-import {
-  Position
-} from 'vscode-languageserver'
+import { Position } from 'vscode-languageserver'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { fixDocument, padLeft } from '../fix-document-ids'
-
-const DIAGNOSTIC_SOURCE = 'cnxml'
-
-function expect<T>(value: T | null | undefined): T {
-  return expectOrig(value, 'test_assertion')
-}
 
 describe('calculateElementPositions', function () {
   it('should return start and end positions using siblings when available', () => {

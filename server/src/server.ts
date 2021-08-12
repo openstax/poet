@@ -58,7 +58,7 @@ const pathHelper = {
 export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUri => {
   const filePath = workspaceUri
   const b = new Bundle(pathHelper, filePath)
-  return new BundleLoadManager(b, connection) 
+  return new BundleLoadManager(b, connection)
 })
 
 connection.onInitialize(async (params: InitializeParams) => {
@@ -86,7 +86,7 @@ connection.onInitialize(async (params: InitializeParams) => {
 
 connection.onInitialized(() => {
   const inner = async (): Promise<void> => {
-    const currentWorkspaces = (await connection.workspace.getWorkspaceFolders()) || []
+    const currentWorkspaces = (await connection.workspace.getWorkspaceFolders()) ?? []
     for (const workspace of currentWorkspaces) {
       const manager = bundleFactory.get(workspace.uri)
       await manager.performInitialValidation()
@@ -95,20 +95,20 @@ connection.onInitialized(() => {
   inner().catch(e => { throw e })
 })
 
-documents.onDidOpen(({document}) => {
+documents.onDidOpen(({ document }) => {
   const inner = async (): Promise<void> => {
     const eventUri = URI.parse(document.uri)
     if (eventUri.scheme !== 'file') {
       return
     }
     const manager = getBundleForUri(document.uri)
-    const context = {workspace: manager.bundle.workspaceRoot, doc: document.uri }
+    const context = { workspace: manager.bundle.workspaceRoot, doc: document.uri }
     await manager.loadEnoughToSendDiagnostics(context)
   }
   inner().catch(err => { throw err })
 })
 
-documents.onDidChangeContent(({document}) => {
+documents.onDidChangeContent(({ document }) => {
   const manager = getBundleForUri(document.uri)
   manager.updateFileContents(document.uri, document.getText())
 })
@@ -120,7 +120,7 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
         continue
       }
       const manager = getBundleForUri(change.uri)
-      manager.processFilesystemChange(change)
+      await manager.processFilesystemChange(change)
     }
     await connection.sendRequest('onDidChangeWatchedFiles')
   }

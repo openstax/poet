@@ -36,6 +36,6 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsArgs) => Prom
     const manager = bundleFactory.get(request.workspaceUri)
     // TODO: fix modules in parallel. Problem: Could be a memory hog.
     const pages = manager.bundle.allPages.all()
-    await Promise.all(pages.map(p => fixModule(p)))
+    await Promise.all(pages.map(async p => await fixModule(p)))
   }
 }

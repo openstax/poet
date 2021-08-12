@@ -1,47 +1,44 @@
 import fs from 'fs'
 import path from 'path'
-import { Bundle, PathHelper, TocNode, TocNodeType } from "./model"
-import { profileAsync } from "./utils"
+import { Bundle, PathHelper, TocNode, TocNodeType } from './model'
+import { profileAsync } from './utils'
 
 function printToc(node: TocNode, depth: number = 1) {
-    const title = (node.type === TocNodeType.Inner) ? node.title : node.page.title(() => fs.readFileSync(node.page.absPath, 'utf-8'))
-    console.log(`${' '.repeat(depth * 4)} ${title}`)
-    if (node.type === TocNodeType.Inner) {
-        node.children.forEach(c => printToc(c, depth + 1))
-    }
+  const title = (node.type === TocNodeType.Inner) ? node.title : node.page.title(() => fs.readFileSync(node.page.absPath, 'utf-8'))
+  console.log(`${' '.repeat(depth * 4)} ${title}`)
+  if (node.type === TocNodeType.Inner) {
+    node.children.forEach(c => printToc(c, depth + 1))
+  }
 }
 
 const pathHelper = {
-    join: path.join,
-    dirname: path.dirname
+  join: path.join,
+  dirname: path.dirname
 } as PathHelper<string>
 
 (async function () {
-    console.log('whole process took', (await profileAsync(async () => {
+  console.log('whole process took', (await profileAsync(async () => {
+    const x = new Bundle(pathHelper, process.argv[2] || process.cwd())
+    x.load(fs.readFileSync(x.absPath, 'utf-8'))
 
-        const x = new Bundle(pathHelper, process.argv[2] || process.cwd())
-        x.load(fs.readFileSync(x.absPath, 'utf-8'))
+    console.log('After cheap load there are this many:')
+    console.log('  Books', (x.allBooks as any).size())
+    console.log('  Pages', (x.allPages as any).size())
+    console.log('  Images', (x.allImages as any).size())
 
-        console.log('After cheap load there are this many:')
-        console.log('  Books', (x.allBooks as any).size())
-        console.log('  Pages', (x.allPages as any).size())
-        console.log('  Images', (x.allImages as any).size())
+    console.log('Tocs:')
+    for (const b of (x.allBooks as any)._map.values()) {
+      await b.load()
+      console.log(b.title())
+      b.toc().forEach((a: TocNode) => printToc(a))
+      console.log('------------------------')
+    }
 
-        console.log('Tocs:')
-        for (const b of (x.allBooks as any)._map.values()) {
-            await b.load()
-            console.log(b.title())
-            b.toc().forEach((a: TocNode) => printToc(a))
-            console.log('------------------------')
-        }
+    console.log('After expensive load there are this many:')
+    console.log('  Books', (x.allBooks as any).size())
+    console.log('  Pages', (x.allPages as any).size())
+    console.log('  Images', (x.allImages as any).size())
 
-        console.log('After expensive load there are this many:')
-        console.log('  Books', (x.allBooks as any).size())
-        console.log('  Pages', (x.allPages as any).size())
-        console.log('  Images', (x.allImages as any).size())
-
-        // console.log('Loaded Pages', x.allPages.all().filter(p => (p as any)._isLoaded).map(p => (p as any).filePath).toArray())
-
-    }))[1], 'ms')
-
+    // console.log('Loaded Pages', x.allPages.all().filter(p => (p as any)._isLoaded).map(p => (p as any).filePath).toArray())
+  }))[1], 'ms')
 })().then(null, (err) => { throw err })
