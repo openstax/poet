@@ -8,7 +8,7 @@ import { first, FS_PATH_HELPER, loadSuccess, makeBundle } from './model.test'
 
 BundleLoadManager.debug = () => {} // Turn off logging
 
-describe('Tree Translater', () => {
+describe('Tree Translator', () => {
   let book = null as unknown as BookNode
   beforeEach(() => {
     book = loadSuccess(first(loadSuccess(makeBundle()).books()))
@@ -32,14 +32,12 @@ describe('Bundle Manager', () => {
   const sinon = SinonRoot.createSandbox()
   let manager = null as unknown as BundleLoadManager
   let sendDiagnosticsStub = null as unknown as SinonRoot.SinonStub<[params: PublishDiagnosticsParams], void>
-  let enqueueStub = null as unknown as SinonRoot.SinonStub<[job: Job], void>
 
   beforeEach(() => {
     const bundle = makeBundle()
     const conn = createConnection(PROTOCOL_CONNECTION_FACTORY, WATCHDOG)
     manager = new BundleLoadManager(bundle, conn)
     sendDiagnosticsStub = sinon.stub(conn, 'sendDiagnostics')
-    enqueueStub = sinon.stub(jobRunner, 'enqueue')
   })
   afterEach(() => {
     sinon.restore()
@@ -65,6 +63,7 @@ describe('Bundle Manager', () => {
     expect(manager.orhpanedPages().first()).toBe(orphanedPage)
   })
   it('updateFileContents()', () => {
+    const enqueueStub = sinon.stub(jobRunner, 'enqueue')
     loadSuccess(manager.bundle)
     manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
@@ -76,6 +75,7 @@ describe('Bundle Manager', () => {
     expect(enqueueStub.callCount).toBe(0)
   })
   it('loadEnoughForToc()', async () => {
+    const enqueueStub = sinon.stub(jobRunner, 'enqueue')
     expect(enqueueStub.callCount).toBe(0)
     await manager.loadEnoughForToc()
     // Assumes the test data has 1 Book with 1 Page in it
@@ -87,13 +87,43 @@ describe('Bundle Manager', () => {
     expect(enqueueStub.callCount).toBe(4)
   })
   it('loadEnoughForOrphans()', async () => {
+    const enqueueStub = sinon.stub(jobRunner, 'enqueue')
     expect(enqueueStub.callCount).toBe(0)
     await manager.loadEnoughForOrphans()
     expect(enqueueStub.callCount).toBe(4)
     console.warn('This test does not actually answer the question of "How many Orphans are there?"')
   })
-  it.skip('performInitialValidation()', async () => {})
-  it.skip('loadEnoughToSendDiagnostics()', async () => {})
+  it('performInitialValidation()', async () => {
+    expect(manager.bundle.isLoaded()).toBe(false)
+    manager.performInitialValidation()
+    await jobRunner.done()
+
+    expect(manager.bundle.allNodes().size).toBe(1 + 1 + 1) // bundle + book + page
+    manager.bundle.allNodes().forEach(n => expect(n.isLoaded()).toBe(true))
+  })
+  it('loadEnoughToSendDiagnostics() sends diagnostics for a file we recognize', async () => {
+    manager.loadEnoughToSendDiagnostics({
+      workspace: manager.bundle.workspaceRoot,
+      doc: manager.bundle.absPath
+    })
+    await jobRunner.done()
+
+    expect(sendDiagnosticsStub.callCount).toBe(1)
+    expect(manager.bundle.getValidationErrors().nodesToLoad.size).toBe(0)
+
+    // Bundle needs to load all the books
+    const books = manager.bundle.books()
+    expect(books.size).toBe(1)
+    books.forEach(b => expect(b.isLoaded()).toBe(true))
+  })
+  it('loadEnoughToSendDiagnostics() does not send diagnostics for a file we do not recognize', async () => {
+    manager.loadEnoughToSendDiagnostics({
+      workspace: manager.bundle.workspaceRoot,
+      doc: '/path/t/non-existent/file'
+    })
+    await jobRunner.done()
+    expect(sendDiagnosticsStub.callCount).toBe(0)
+  })
 })
 
 describe('processFilesystemChange()', () => {
@@ -150,45 +180,54 @@ describe('processFilesystemChange()', () => {
   it('creates Images/Pages/Books', async () => {
     // Verify each type of object gets loaded
     expect(manager.bundle.isLoaded()).toBe(false)
-    expect(await fireChange(FileChangeType.Created, 'META-INF/books.xml')).toBe(1)
+    expect((await fireChange(FileChangeType.Created, 'META-INF/books.xml')).size).toBe(1)
     expect(manager.bundle.isLoaded()).toBe(true)
 
-    expect(await fireChange(FileChangeType.Created, 'collections/slug2.collection.xml')).toBe(1)
-    expect(await fireChange(FileChangeType.Created, 'modules/m1234/index.cnxml')).toBe(1)
-    expect(await fireChange(FileChangeType.Created, 'media/newpic.png')).toBe(1)
+    expect((await fireChange(FileChangeType.Created, 'collections/slug2.collection.xml')).size).toBe(1)
+    expect((await fireChange(FileChangeType.Created, 'modules/m1234/index.cnxml')).size).toBe(1)
+    expect((await fireChange(FileChangeType.Created, 'media/newpic.png')).size).toBe(1)
+  })
+  it('does not create things it does not understand', async () => {
+    expect((await fireChange(FileChangeType.Created, 'README.md')).size).toBe(0)
   })
   it('updates Images/Pages/Books', async () => {
-    expect(await fireChange(FileChangeType.Changed, 'META-INF/books.xml')).toBe(1)
+    expect((await fireChange(FileChangeType.Changed, 'META-INF/books.xml')).size).toBe(1)
     expect(sendDiagnosticsStub.callCount).toBe(0)
     expect(enqueueStub.callCount).toBe(2) // There is one book and 1 re-enqueue
 
-    expect(await fireChange(FileChangeType.Changed, 'collections/slug2.collection.xml')).toBe(1)
+    expect((await fireChange(FileChangeType.Changed, 'collections/slug2.collection.xml')).size).toBe(1)
     expect(sendDiagnosticsStub.callCount).toBe(0)
 
-    expect(await fireChange(FileChangeType.Changed, 'modules/m1234/index.cnxml')).toBe(1)
+    expect((await fireChange(FileChangeType.Changed, 'modules/m1234/index.cnxml')).size).toBe(1)
     expect(sendDiagnosticsStub.callCount).toBe(1)
 
-    expect(await fireChange(FileChangeType.Changed, 'media/newpic.png')).toBe(0) // Since the model was not aware of the file yet
+    expect((await fireChange(FileChangeType.Changed, 'media/newpic.png')).size).toBe(0) // Since the model was not aware of the file yet
   })
   it('deletes Files and directories', async () => {
     // Load the Bundle, Book, and Page
     loadSuccess(first(loadSuccess(first(loadSuccess(manager.bundle).books())).pages()))
 
     // Delete non-existent file
-    expect(await fireChange(FileChangeType.Deleted, 'media/newpic.png')).toBe(0)
-    expect(sendDiagnosticsStub.callCount).toBe(0)
-
+    expect((await fireChange(FileChangeType.Deleted, 'media/newpic.png')).size).toBe(0)
     // Delete a file
-    expect(await fireChange(FileChangeType.Deleted, 'modules/m1234/index.cnxml')).toBe(1)
-    expect(sendDiagnosticsStub.callCount).toBe(0)
-
+    expect((await fireChange(FileChangeType.Deleted, 'modules/m1234/index.cnxml')).size).toBe(1)
     // Delete a directory
-    expect(await fireChange(FileChangeType.Deleted, 'collections')).toBe(1)
+    expect((await fireChange(FileChangeType.Deleted, 'collections')).size).toBe(1)
     expect(sendDiagnosticsStub.callCount).toBe(0)
 
     // Delete everything (including the bundle)
-    expect(await fireChange(FileChangeType.Deleted, '')).toBe(1)
+    expect((await fireChange(FileChangeType.Deleted, '')).size).toBe(1)
     expect(manager.bundle.exists()).toBe(false)
+  })
+  it('deletes Image/Page/Book', async () => {
+    // Load the Bundle, Book, and Page
+    const bundle = loadSuccess(manager.bundle)
+    const book = loadSuccess(first(bundle.books()))
+    const page = loadSuccess(first(book.pages()))
+
+    expect((await fireChange(FileChangeType.Deleted, book.filePath())).size).toBe(1)
+    expect((await fireChange(FileChangeType.Deleted, page.filePath())).size).toBe(1)
+    expect((await fireChange(FileChangeType.Deleted, bundle.filePath())).size).toBe(1)
   })
 })
 
@@ -215,6 +254,9 @@ describe('Job Runner', () => {
     expect(appendLog).toEqual([])
     await jobRunner.done()
     expect(appendLog).toEqual(['Fast2', 'Fast1', 'Initial', 'Slow2', 'Slow1'])
+  })
+  it('done() waits even when there are no jobs running', async () => {
+    await jobRunner.done()
   })
 })
 

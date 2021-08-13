@@ -100,8 +100,6 @@ function toStringFileChangeType(t: FileChangeType) {
   }
 }
 export class BundleLoadManager {
-  private _didLoadOrphans = false
-
   public static debug: (...args: any[]) => void = console.debug
 
   constructor(public bundle: Bundle, private readonly conn: Connection) {}
@@ -128,42 +126,40 @@ export class BundleLoadManager {
   }
 
   public async loadEnoughForOrphans() {
-    if (!this._didLoadOrphans) {
-      await this.loadEnoughForToc()
-      // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-      const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: this.bundle.workspaceRoot, absolute: true })
-      files.forEach(absPath => expect(findOrCreateNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
-      this._didLoadOrphans = true
-    }
+    await this.loadEnoughForToc()
+    // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
+    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: this.bundle.workspaceRoot, absolute: true })
+    files.forEach(absPath => expect(findOrCreateNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
   }
 
-  async processFilesystemChange(evt: FileEvent): Promise<number> {
+  async processFilesystemChange(evt: FileEvent): Promise<I.Set<Fileish>> {
     const { bundle } = this
     const { type, uri } = evt
 
     // Could be adding an Image/Page/Book, or removing/adding a directory, or adding some other file
-    BundleLoadManager.debug(`[FILESYSTEM_EVENT] Start ${toStringFileChangeType(evt.type)} ${uri}`)
+    BundleLoadManager.debug(`[FILESYSTEM_EVENT] Start ${toStringFileChangeType(type)} ${uri}`)
 
-    if (evt.type === FileChangeType.Created) {
+    if (type === FileChangeType.Created) {
       // Check if we are adding an Image/Page/Book
       const node = findOrCreateNode(bundle, uri)
       if (node !== undefined) {
         BundleLoadManager.debug('[FILESYSTEM_EVENT] Adding item')
         await this.readAndLoad(node)
-        return 1
+        return I.Set([node])
       } else {
         // No, we are adding something unknown. Ignore
         BundleLoadManager.debug('[FILESYSTEM_EVENT] New file did not match anything we understand. Ignoring', uri)
-        return 0
+        return I.Set()
       }
-    } else if (evt.type === FileChangeType.Changed) {
+    } else if (type === FileChangeType.Changed) {
       const item = findNode(bundle, uri)
       if (item !== undefined) {
         BundleLoadManager.debug('[FILESYSTEM_EVENT] Found item')
-        await this.processItem(type, item)
-        return 1
+        await this.readAndUpdate(item)
+        this.sendFileDiagnostics(item)
+        return I.Set([item])
       } else {
-        return 0
+        return I.Set()
       }
     } else {
       // Now, we might be deleting a whole directory.
@@ -186,20 +182,7 @@ export class BundleLoadManager {
       })
       // Unload all removed nodes so users do not think the files still exist
       removedNodes.forEach(n => n.load(undefined))
-      return removedNodes.size
-    }
-  }
-
-  private async processItem(type: FileChangeType, item: Fileish) {
-    switch (type) {
-      case FileChangeType.Deleted:
-      case FileChangeType.Changed:
-        await this.readAndUpdate(item)
-        this.sendFileDiagnostics(item)
-        return
-      case FileChangeType.Created:
-      default:
-        throw new Error('BUG: We do not know how to handle created items yet')
+      return removedNodes
     }
   }
 
@@ -230,8 +213,8 @@ export class BundleLoadManager {
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
       const diagnostics = errors.toSet().map(err => {
-        const start = err.startPos ?? { line: 0, character: 0 }
-        const end = err.endPos ?? start
+        const start = err.startPos
+        const end = err.endPos
         const range = Range.create(start, end)
         return Diagnostic.create(range, err.message, DiagnosticSeverity.Error)
       }).toArray()
@@ -248,7 +231,7 @@ export class BundleLoadManager {
     }
   }
 
-  async performInitialValidation() {
+  performInitialValidation() {
     const enqueueLoadJob = (node: Fileish) => jobRunner.enqueue({ slow: true, type: 'INITIAL_LOAD_DEP', context: node, fn: async () => await this.readAndLoad(node) })
     const jobs = [
       { slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
@@ -261,10 +244,7 @@ export class BundleLoadManager {
     jobs.reverse().forEach(j => jobRunner.enqueue(j))
   }
 
-  async loadEnoughToSendDiagnostics(context: {workspace: string, doc: string}) {
-    // Skip if the file is already loaded
-    // if (findNode(this.bundle, context.doc)?.isLoaded()) return
-
+  loadEnoughToSendDiagnostics(context: {workspace: string, doc: string}) {
     // load the books to see if this URI is a page in a book
     const jobs = [
       { type: 'FILEOPENED_LOAD_BUNDLE_DEP', context, fn: async () => await this.readAndLoad(this.bundle) },
@@ -272,10 +252,10 @@ export class BundleLoadManager {
       {
         type: 'FILEOPENED_SEND_DIAGNOSTICS',
         context,
-        fn: async () => {
-          const page = this.bundle.allPages.getIfHas(context.doc)
-          if (page !== undefined) {
-            this.sendFileDiagnostics(page)
+        fn: () => {
+          const node = findNode(this.bundle, context.doc)
+          if (node !== undefined) {
+            this.sendFileDiagnostics(node)
           }
         }
       }
@@ -302,8 +282,6 @@ export class JobRunner {
     this.process()
   }
 
-  public isJobRunning() { return this._currentPromise !== undefined }
-
   public async done(): Promise<any> { return this._currentPromise === undefined ? await Promise.resolve() : await this._currentPromise }
 
   private length() {
@@ -316,37 +294,33 @@ export class JobRunner {
 
   private process() {
     if (this._currentPromise !== undefined) return // job is running
-    if (this.length() > 0) {
-      this._currentPromise = new Promise((resolve, reject) => {
-        setImmediate(() => this.tickWithCb(resolve, reject))
-      })
-    }
+    this._currentPromise = new Promise((resolve, reject) => {
+      setImmediate(() => this.tickWithCb(resolve, reject))
+    })
   }
 
   // In order to support `await this.done()` keep daisy-chaining the ticks
   private tickWithCb(resolve: () => void, reject: () => void) {
-    if (this.length() > 0) {
-      this.tick().then(() => this.tickWithCb(resolve, reject), reject)
+    const current = this.pop()
+    if (current !== undefined) {
+      this.tick(current).then(() => this.tickWithCb(resolve, reject), reject)
     } else {
       resolve()
       this._currentPromise = undefined
     }
   }
 
-  private async tick() {
-    const current = this.pop()
-    if (current !== undefined) {
-      const [ms] = await profileAsync(async () => {
-        const c = expect(current, 'BUG: nothing should have changed in this time')
-        BundleLoadManager.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow === true ? '(slow)' : '(fast)')
-        await c.fn()
-      })
-      BundleLoadManager.debug('[JOB_RUNNER] Finished job', current.type, this.toString(current.context), 'took', ms, 'ms')
-      if (this.length() === 0) {
-        BundleLoadManager.debug('[JOB_RUNNER] No more pending jobs. Taking a nap.')
-      } else {
-        BundleLoadManager.debug('[JOB_RUNNER] Remaining jobs', this.length())
-      }
+  private async tick(current: Job) {
+    const [ms] = await profileAsync(async () => {
+      const c = expect(current, 'BUG: nothing should have changed in this time')
+      BundleLoadManager.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow === true ? '(slow)' : '(fast)')
+      await c.fn()
+    })
+    BundleLoadManager.debug('[JOB_RUNNER] Finished job', current.type, this.toString(current.context), 'took', ms, 'ms')
+    if (this.length() === 0) {
+      BundleLoadManager.debug('[JOB_RUNNER] No more pending jobs. Taking a nap.')
+    } else {
+      BundleLoadManager.debug('[JOB_RUNNER] Remaining jobs', this.length())
     }
   }
 

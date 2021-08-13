@@ -40,7 +40,7 @@ export interface Position {
 }
 
 export class ModelError extends Error {
-  constructor(public readonly node: Fileish, message: string, public readonly startPos: Opt<Position>, public readonly endPos: Opt<Position>) {
+  constructor(public readonly node: Fileish, message: string, public readonly startPos: Position, public readonly endPos: Position) {
     super(message)
     this.name = this.constructor.name
   }
@@ -48,7 +48,7 @@ export class ModelError extends Error {
 export class ParseError extends ModelError { }
 export class WrappedParseError<T extends Error> extends ParseError {
   constructor(node: Fileish, originalError: T) {
-    super(node, originalError.message, undefined, undefined)
+    super(node, originalError.message, NOWHERE_START, NOWHERE_END)
     console.error(node.absPath, originalError)
   }
 }

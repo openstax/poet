@@ -89,7 +89,7 @@ connection.onInitialized(() => {
     const currentWorkspaces = (await connection.workspace.getWorkspaceFolders()) ?? []
     for (const workspace of currentWorkspaces) {
       const manager = bundleFactory.get(workspace.uri)
-      await manager.performInitialValidation()
+      manager.performInitialValidation()
     }
   }
   inner().catch(e => { throw e })
@@ -103,7 +103,7 @@ documents.onDidOpen(({ document }) => {
     }
     const manager = getBundleForUri(document.uri)
     const context = { workspace: manager.bundle.workspaceRoot, doc: document.uri }
-    await manager.loadEnoughToSendDiagnostics(context)
+    manager.loadEnoughToSendDiagnostics(context)
   }
   inner().catch(err => { throw err })
 })
