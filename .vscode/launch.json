@@ -1,6 +1,25 @@
 {
   "version": "0.2.0",
-  "configurations": [{
+  "configurations": [
+    {
+      "args": [
+        "--runInBand"
+      ],
+      // If you use nodenv you may need to create a symbolic link:
+      // sudo ln --symbolic ~/.nodenv/shims/node /usr/local/bin/node
+      //
+      // "runtimeExecutable": "/usr/local/bin/node",
+      "cwd": "${workspaceFolder}/server",
+      "internalConsoleOptions": "openOnSessionStart",
+      "name": "LanguageServer Unit Tests",
+      "program": "${workspaceFolder}/server/node_modules/jest/bin/jest.js",
+      "request": "launch",
+      "skipFiles": [
+        "<node_internals>/**", "node_modules"
+      ],
+      "type": "node"
+    },
+    {
     "name": "Run Extension",
     "type": "extensionHost",
     "request": "launch",

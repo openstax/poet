@@ -53,14 +53,14 @@ describe('Factory', () => {
   it('instantiates a new object when the key does not exist', () => {
     let counter = 0
     const f = new Factory(() => ({ thing: counter++ }))
-    expect(f.getIfHas('key1')).toBeNull()
+    expect(f.getIfHas('key1')).toBeUndefined()
     expect(f.get('key1').thing).toEqual(0)
-    expect(f.getIfHas('key1')).not.toBeNull()
+    expect(f.getIfHas('key1')).not.toBeUndefined()
     expect(f.get('key1').thing).toEqual(0)
 
-    expect(f.getIfHas('key2')).toBeNull()
+    expect(f.getIfHas('key2')).toBeUndefined()
     expect(f.get('key2').thing).toEqual(1)
-    expect(f.getIfHas('key2')).not.toBeNull()
+    expect(f.getIfHas('key2')).not.toBeUndefined()
   })
   it('removesByKeyPrefix works', () => {
     const f = new Factory((x) => ({ foo: x, bar: 'dummy-object' }))
@@ -107,7 +107,7 @@ describe('The abstract ancestor class', () => {
     const f = new MyNode(makeBundle(), FS_PATH_HELPER, '/to/nowhere/filename')
     expect(f.isLoaded()).toBe(false)
     expect(f.exists()).toBe(false)
-    f.load(null)
+    f.load(undefined)
     expect(f.isLoaded()).toBe(true)
     expect(f.exists()).toBe(false)
   })

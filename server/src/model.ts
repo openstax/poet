@@ -24,14 +24,14 @@ const selectOne = <T extends Node>(sel: string, doc: Node): T => {
 function filterNull<T>(set: I.Set<Opt<T>>): I.Set<T> {
   return I.Set<T>().withMutations(s => {
     set.forEach(s1 => {
-      if (s1 !== null) {
+      if (s1 !== undefined) {
         s.add(s1)
       }
     })
   })
 }
 
-export type Opt<T> = T | null
+export type Opt<T> = T | undefined
 
 // This matches the signature of vscode-languageserver-textdocument.Position without needing to import it
 export interface Position {
@@ -48,7 +48,7 @@ export class ModelError extends Error {
 export class ParseError extends ModelError { }
 export class WrappedParseError<T extends Error> extends ParseError {
   constructor(node: Fileish, originalError: T) {
-    super(node, originalError.message, null, null)
+    super(node, originalError.message, undefined, undefined)
     console.error(node.absPath, originalError)
   }
 }
@@ -86,9 +86,9 @@ export interface PathHelper<T> {
 export abstract class Fileish {
   private _isLoaded = false
   private _exists = false
-  private _parseError: Opt<ParseError> = null
-  protected parseXML: Opt<(doc: Document) => Opt<ParseError>> = null // Subclasses define this
-  protected childrenToLoad: Opt<() => I.Set<Fileish>> = null // Subclasses define this
+  private _parseError: Opt<ParseError>
+  protected parseXML: Opt<(doc: Document) => Opt<ParseError>> // Subclasses define this
+  protected childrenToLoad: Opt<() => I.Set<Fileish>> // Subclasses define this
 
   constructor(private _bundle: Opt<Bundle>, protected _pathHelper: PathHelper<string>, public readonly absPath: string) { }
 
@@ -104,22 +104,22 @@ export abstract class Fileish {
   public exists() { return this._exists }
   public update(fileContent: Opt<string>): void {
     // console.info(this.filePath, 'update() started')
-    this._parseError = null
-    if (fileContent === null) {
+    this._parseError = undefined
+    if (fileContent === undefined) {
       this._exists = false
       this._isLoaded = true
       return
     }
-    if (this.parseXML !== null) {
+    if (this.parseXML !== undefined) {
       // console.info(this.filePath, 'parsing XML')
 
       // Development version throws errors instead of turning them into messages
       const parseXML = this.parseXML
       const fn = () => {
         const doc = this.readXML(fileContent)
-        if (this._parseError !== null) return
+        if (this._parseError !== undefined) return
         this._parseError = parseXML(doc)
-        if (this._parseError !== null) return
+        if (this._parseError !== undefined) return
         this._isLoaded = true
         this._exists = true
       }
@@ -169,7 +169,7 @@ export abstract class Fileish {
   }
 
   public getValidationErrors(): ValidationResponse {
-    if (this._parseError !== null) {
+    if (this._parseError !== undefined) {
       return new ValidationResponse(I.Set([this._parseError]))
     } else if (!this._isLoaded) {
       return new ValidationResponse(I.Set(), I.Set([this]))
@@ -185,8 +185,8 @@ export abstract class Fileish {
 
   join(type: PathType, parent: string, child: string) {
     const { dirname, join } = this._pathHelper
-    let p = null
-    let c = null
+    let p
+    let c
     switch (type) {
       case PathType.MODULE_TO_IMAGE:
       case PathType.ABS_TO_REL: p = dirname(parent); c = child; break
@@ -242,35 +242,35 @@ function toValidationErrors(node: Fileish, message: string, sources: I.Set<Sourc
 }
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export class PageNode extends Fileish {
-  private _uuid: Opt<WithSource<string>> = null
-  private _title: Opt<WithSource<string>> = null
-  private _elementIds: Opt<I.Set<WithSource<string>>> = null
-  private _imageLinks: Opt<I.Set<ImageLink>> = null
-  private _pageLinks: Opt<I.Set<PageLink>> = null
+  private _uuid: Opt<WithSource<string>>
+  private _title: Opt<WithSource<string>>
+  private _elementIds: Opt<I.Set<WithSource<string>>>
+  private _imageLinks: Opt<I.Set<ImageLink>>
+  private _pageLinks: Opt<I.Set<PageLink>>
   public uuid() { return this.ensureLoaded(this._uuid).v }
   public title(fileReader: () => string) {
     // A quick way to get the title for the ToC
-    if (this._title === null) {
+    if (this._title === undefined) {
       const data = fileReader()
       return this.guessTitle(data)?.v ?? 'UntitledFile'
     }
     return this._title?.v ?? 'UntitledFile'
   }
 
-  private guessTitle(data: string): WithSource<string> | null {
+  private guessTitle(data: string): Opt<WithSource<string>> {
     const openTag = '<title>'
     const closeTag = '</title>'
     const titleTagStart = data.indexOf(openTag)
     const titleTagEnd = data.indexOf(closeTag)
     if (titleTagStart === -1 || titleTagEnd === -1) {
-      return null
+      return
     }
     const actualTitleStart = titleTagStart + openTag.length
     if (titleTagEnd - actualTitleStart > 280) {
       // If the title is so long you can't tweet it,
       // then something probably went wrong.
       /* istanbul ignore next */
-      return null
+      return
     }
     return {
       v: data.substring(actualTitleStart, titleTagEnd).trim(),
@@ -308,15 +308,15 @@ export class PageNode extends Fileish {
     }))
 
     const linkNodes = select('//cnxml:link', doc) as Element[]
-    const changeEmptyToNull = (str: Opt<string>) => str === '' ? null : str
+    const changeEmptyToNull = (str: string | null): Opt<string> => (str === '' || str === null) ? undefined : str
     this._pageLinks = I.Set(linkNodes.map(linkNode => {
       const [startPos, endPos] = calculateElementPositions(linkNode)
       // xmldom never returns null, it returns ''
       const toDocument = changeEmptyToNull(linkNode.getAttribute('document'))
       const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
-      const toUrl = linkNode.getAttribute('url')
+      const toUrl = changeEmptyToNull(linkNode.getAttribute('url'))
       return {
-        page: toDocument !== null ? super.bundle().allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== null ? this : null),
+        page: toDocument !== undefined ? super.bundle().allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== undefined ? this : undefined),
         url: toUrl,
         targetElementId: toTargetId,
         startPos,
@@ -334,7 +334,7 @@ export class PageNode extends Fileish {
         endPos: NOWHERE_END
       }
     }
-    return null
+    return undefined
   }
 
   public getValidationChecks(): ValidationCheck[] {
@@ -350,9 +350,9 @@ export class PageNode extends Fileish {
         message: 'Link target not found',
         nodesToLoad: filterNull(pageLinks.map(l => l.page)),
         fn: () => pageLinks.filter(l => {
-          if (l.page === null) return false // URL links are ok
+          if (l.page === undefined) return false // URL links are ok
           if (!l.page.exists()) return true // link to non-existent page are bad
-          if (l.targetElementId === null) return false // linking to the whole page and it exists is ok
+          if (l.targetElementId === undefined) return false // linking to the whole page and it exists is ok
           return !l.page.hasElementId(l.targetElementId)
         })
       },
@@ -389,9 +389,9 @@ interface TocInner extends Source { readonly type: TocNodeType.Inner, readonly t
 interface TocLeaf extends Source { readonly type: TocNodeType.Leaf, readonly page: PageNode }
 
 export class BookNode extends Fileish {
-  private _title: Opt<WithSource<string>> = null
-  private _slug: Opt<WithSource<string>> = null
-  private _toc: Opt<TocNode[]> = null
+  private _title: Opt<WithSource<string>>
+  private _slug: Opt<WithSource<string>>
+  private _toc: Opt<TocNode[]>
 
   protected childrenToLoad = () => I.Set(this.pages())
   protected parseXML = (doc: Document) => {
@@ -399,7 +399,7 @@ export class BookNode extends Fileish {
     this._slug = textWithSource(selectOne('/col:collection/col:metadata/md:slug', doc))
     const root: Element = selectOne('/col:collection/col:content', doc)
     this._toc = this.buildChildren(root)
-    return null
+    return undefined
   }
 
   private buildChildren(root: Element): TocNode[] {
@@ -500,7 +500,7 @@ export class Factory<T> {
   private _map = I.Map<string, T>()
   constructor(private readonly builder: (filePath: string) => T) { }
   getIfHas(filePath: string): Opt<T> {
-    return this._map.get(filePath) ?? null
+    return this._map.get(filePath)
   }
 
   get(absPath: string) {
@@ -534,10 +534,10 @@ export class Bundle extends Fileish {
   public readonly allImages = new Factory((absPath: string) => new ImageNode(this, this._pathHelper, absPath))
   public readonly allPages = new Factory((absPath: string) => new PageNode(this, this._pathHelper, absPath))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this._pathHelper, absPath))
-  private _books: Opt<I.Set<WithSource<BookNode>>> = null
+  private _books: Opt<I.Set<WithSource<BookNode>>>
 
   constructor(pathHelper: PathHelper<string>, public readonly workspaceRoot: string) {
-    super(null, pathHelper, pathHelper.join(workspaceRoot, 'META-INF/books.xml'))
+    super(undefined, pathHelper, pathHelper.join(workspaceRoot, 'META-INF/books.xml'))
     super.setBundle(this)
   }
 
@@ -554,7 +554,7 @@ export class Bundle extends Fileish {
         endPos
       }
     }))
-    return null
+    return undefined
   }
 
   public allNodes() {

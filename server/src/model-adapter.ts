@@ -24,8 +24,6 @@ function findOrCreateNode(bundle: Bundle, absPath: string) {
     return bundle.allPages.get(absPath)
   } else if (BOOK_RE.test(absPath)) {
     return bundle.allBooks.get(absPath)
-  } else {
-    return null
   }
 }
 
@@ -87,7 +85,6 @@ async function readOrNull(uri: string): Promise<Opt<string>> {
   if (await checkFileExists(fsPath)) {
     return await fs.promises.readFile(fsPath, 'utf-8')
   }
-  return null
 }
 function readSync(n: Fileish) {
   const { fsPath } = URI.parse(n.absPath)
@@ -149,7 +146,7 @@ export class BundleLoadManager {
     if (evt.type === FileChangeType.Created) {
       // Check if we are adding an Image/Page/Book
       const node = findOrCreateNode(bundle, uri)
-      if (node !== null) {
+      if (node !== undefined) {
         BundleLoadManager.debug('[FILESYSTEM_EVENT] Adding item')
         await this.readAndLoad(node)
         return 1
@@ -160,7 +157,7 @@ export class BundleLoadManager {
       }
     } else if (evt.type === FileChangeType.Changed) {
       const item = findNode(bundle, uri)
-      if (item !== null) {
+      if (item !== undefined) {
         BundleLoadManager.debug('[FILESYSTEM_EVENT] Found item')
         await this.processItem(type, item)
         return 1
@@ -172,7 +169,7 @@ export class BundleLoadManager {
       // Remove anything inside that directory
       BundleLoadManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
       // Unload if the user deleted the bundle directory
-      if (bundle.absPath.startsWith(uri)) bundle.load(null)
+      if (bundle.absPath.startsWith(uri)) bundle.load(undefined)
       // Remove if it was a file
       const fileCount = bundle.allBooks.remove(uri) +
                 bundle.allPages.remove(uri) +
@@ -200,7 +197,7 @@ export class BundleLoadManager {
 
   public updateFileContents(absPath: string, contents: string) {
     const node = findOrCreateNode(this.bundle, absPath)
-    if (node === null) {
+    if (node === undefined) {
       BundleLoadManager.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
       return
     }
@@ -269,7 +266,7 @@ export class BundleLoadManager {
         context,
         fn: async () => {
           const page = this.bundle.allPages.getIfHas(context.doc)
-          if (page !== null) {
+          if (page !== undefined) {
             this.sendFileDiagnostics(page)
           }
         }
@@ -288,7 +285,7 @@ export interface Job {
 }
 
 export class JobRunner {
-  private _currentPromise: Opt<Promise<void>> = null
+  private _currentPromise: Opt<Promise<void>>
   private readonly fastStack: Job[] = []
   private readonly slowStack: Job[] = []
 
@@ -297,20 +294,20 @@ export class JobRunner {
     this.process()
   }
 
-  public isJobRunning() { return this._currentPromise !== null }
+  public isJobRunning() { return this._currentPromise !== undefined }
 
-  public async done(): Promise<any> { return this._currentPromise === null ? await Promise.resolve() : await this._currentPromise }
+  public async done(): Promise<any> { return this._currentPromise === undefined ? await Promise.resolve() : await this._currentPromise }
 
   private length() {
     return this.fastStack.length + this.slowStack.length
   }
 
   private pop(): Opt<Job> {
-    return this.fastStack.pop() ?? this.slowStack.pop() ?? null
+    return this.fastStack.pop() ?? this.slowStack.pop()
   }
 
   private process() {
-    if (this._currentPromise !== null) return // job is running
+    if (this._currentPromise !== undefined) return // job is running
     if (this.length() > 0) {
       this._currentPromise = new Promise((resolve, reject) => {
         setImmediate(() => this.tickWithCb(resolve, reject))
@@ -324,13 +321,13 @@ export class JobRunner {
       this.tick().then(() => this.tickWithCb(resolve, reject), reject)
     } else {
       resolve()
-      this._currentPromise = null
+      this._currentPromise = undefined
     }
   }
 
   private async tick() {
     const current = this.pop()
-    if (current !== null) {
+    if (current !== undefined) {
       const [ms] = await profileAsync(async () => {
         const c = expect(current, 'BUG: nothing should have changed in this time')
         BundleLoadManager.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow === true ? '(slow)' : '(fast)')
