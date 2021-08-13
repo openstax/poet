@@ -35,7 +35,6 @@ describe('Bundle Manager', () => {
 
   beforeEach(() => {
     const bundle = makeBundle()
-    const conn = createConnection(PROTOCOL_CONNECTION_FACTORY, WATCHDOG)
     manager = new BundleLoadManager(bundle, conn)
     sendDiagnosticsStub = sinon.stub(conn, 'sendDiagnostics')
   })
@@ -86,13 +85,6 @@ describe('Bundle Manager', () => {
     // + 1 Re-validate the book
     expect(enqueueStub.callCount).toBe(4)
   })
-  it('loadEnoughForOrphans()', async () => {
-    const enqueueStub = sinon.stub(jobRunner, 'enqueue')
-    expect(enqueueStub.callCount).toBe(0)
-    await manager.loadEnoughForOrphans()
-    expect(enqueueStub.callCount).toBe(4)
-    console.warn('This test does not actually answer the question of "How many Orphans are there?"')
-  })
   it('performInitialValidation()', async () => {
     expect(manager.bundle.isLoaded()).toBe(false)
     manager.performInitialValidation()
@@ -123,6 +115,28 @@ describe('Bundle Manager', () => {
     })
     await jobRunner.done()
     expect(sendDiagnosticsStub.callCount).toBe(0)
+  })
+})
+
+describe('Find orphaned files', () => {
+  const sinon = SinonRoot.createSandbox()
+  beforeEach(() => {
+    mockfs({
+      'META-INF/books.xml': '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>',
+      'modules/m2468/index.cnxml': 'this does-not-have-to-be-valid-XML-because-we-do-not-actually-parse-it-yet',
+      'modules/m1357/index.cnxml': 'this does-not-have-to-be-valid-XML-because-we-do-not-actually-parse-it-yet'
+    })
+  })
+  afterEach(() => {
+    mockfs.restore()
+    sinon.restore()
+  })
+  it('finds orphaned Pages', async () => {
+    sinon.stub(conn, 'sendDiagnostics')
+    const manager = new BundleLoadManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
+    await manager.loadEnoughForOrphans()
+    await jobRunner.done()
+    expect(manager.orhpanedPages().size).toBe(2)
   })
 })
 
@@ -165,7 +179,6 @@ describe('processFilesystemChange()', () => {
                       </document>`
     })
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
-    const conn = createConnection(PROTOCOL_CONNECTION_FACTORY, WATCHDOG)
     manager = new BundleLoadManager(bundle, conn)
     sendDiagnosticsStub = sinon.stub(conn, 'sendDiagnostics')
     enqueueStub = sinon.stub(jobRunner, 'enqueue')
@@ -288,3 +301,4 @@ function PROTOCOL_CONNECTION_FACTORY(logger: Logger): ProtocolConnection {
 }
 PROTOCOL_CONNECTION_FACTORY.onClose = jest.fn()
 PROTOCOL_CONNECTION_FACTORY.onError = jest.fn()
+const conn = createConnection(PROTOCOL_CONNECTION_FACTORY, WATCHDOG)

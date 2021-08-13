@@ -92,6 +92,7 @@ export abstract class Fileish {
 
   constructor(private _bundle: Opt<Bundle>, protected _pathHelper: PathHelper<string>, public readonly absPath: string) { }
 
+  static debug = (...args: any[]) => {} // console.debug
   protected abstract getValidationChecks(): ValidationCheck[]
   public isLoaded() { return this._isLoaded }
   public filePath() { return path.relative(this.bundle().workspaceRoot, this.absPath) }
@@ -103,7 +104,7 @@ export abstract class Fileish {
 
   public exists() { return this._exists }
   public update(fileContent: Opt<string>): void {
-    // console.info(this.filePath, 'update() started')
+    Fileish.debug(this.filePath, 'update() started')
     this._parseError = undefined
     if (fileContent === undefined) {
       this._exists = false
@@ -111,7 +112,7 @@ export abstract class Fileish {
       return
     }
     if (this.parseXML !== undefined) {
-      // console.info(this.filePath, 'parsing XML')
+      Fileish.debug(this.filePath, 'parsing XML')
 
       // Development version throws errors instead of turning them into messages
       const parseXML = this.parseXML
@@ -132,19 +133,19 @@ export abstract class Fileish {
           this._parseError = new WrappedParseError(this, e)
         }
       }
-      // console.info(this.filePath, 'parsing XML (done)')
+      Fileish.debug(this.filePath, 'parsing XML (done)')
     } else {
       this._exists = true
       this._isLoaded = true
     }
-    // console.info(this.filePath, 'update done')
+    Fileish.debug(this.filePath, 'update done')
   }
 
   // Update this Node, and collect all Parse errors
   public load(fileContent: Opt<string>) {
-    // console.info(this.filePath, 'load started')
+    Fileish.debug(this.filePath, 'load started')
     this.update(fileContent)
-    // console.info(this.filePath, 'load done')
+    Fileish.debug(this.filePath, 'load done')
   }
 
   private readXML(fileContent: string) {
