@@ -121,11 +121,11 @@ export class BundleLoadManager {
     // The only reason this is not implemented as a Job is because we need to send a timely response to the client
     // and there is no code for being notified when a Job completes
     await this.readAndLoad(this.bundle)
-    this.sendErrors(this.bundle)
+    this.sendFileDiagnostics(this.bundle)
 
     await Promise.all(this.bundle.books().map(async b => {
       await this.readAndLoad(b)
-      this.sendErrors(b)
+      this.sendFileDiagnostics(b)
     }))
   }
 
@@ -158,21 +158,28 @@ export class BundleLoadManager {
         BundleLoadManager.debug('[FILESYSTEM_EVENT] New file did not match anything we understand. Ignoring', uri)
         return 0
       }
-    } else {
-      // Check if we are updating/deleting a Image/Page/Book/Bundle
+    } else if (evt.type === FileChangeType.Changed) {
       const item = findNode(bundle, uri)
-
       if (item !== null) {
         BundleLoadManager.debug('[FILESYSTEM_EVENT] Found item')
         await this.processItem(type, item)
         return 1
+      } else {
+        return 0
       }
-
+    } else {
       // Now, we might be deleting a whole directory.
       // Remove anything inside that directory
-      BundleLoadManager.debug('[FILESYSTEM_EVENT] Removing everything in the directory')
+      BundleLoadManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
+      // Unload if the user deleted the bundle directory
+      if (bundle.absPath.startsWith(uri)) bundle.load(null)
+      // Remove if it was a file
+      const fileCount = bundle.allBooks.remove(uri) +
+                bundle.allPages.remove(uri) +
+                bundle.allImages.remove(uri)
+      // Remove if it was a directory
       const filePathDir = `${uri}${PATH_SEP}`
-      return bundle.allBooks.removeByKeyPrefix(filePathDir) +
+      return fileCount + bundle.allBooks.removeByKeyPrefix(filePathDir) +
                 bundle.allPages.removeByKeyPrefix(filePathDir) +
                 bundle.allImages.removeByKeyPrefix(filePathDir)
     }
@@ -183,7 +190,7 @@ export class BundleLoadManager {
       case FileChangeType.Deleted:
       case FileChangeType.Changed:
         await this.readAndUpdate(item)
-        this.sendErrors(item)
+        this.sendFileDiagnostics(item)
         return
       case FileChangeType.Created:
       default:
@@ -199,7 +206,7 @@ export class BundleLoadManager {
     }
     BundleLoadManager.debug('[DOC_UPDATER] Updating contents of', node.filePath())
     node.update(contents)
-    this.sendErrors(node)
+    this.sendFileDiagnostics(node)
   }
 
   private async readAndLoad(node: Fileish) {
@@ -213,7 +220,7 @@ export class BundleLoadManager {
     node.update(fileContent)
   }
 
-  private sendErrors(node: Fileish) {
+  private sendFileDiagnostics(node: Fileish) {
     const { errors, nodesToLoad } = node.getValidationErrors()
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
@@ -231,7 +238,7 @@ export class BundleLoadManager {
       // push this task back onto the job stack and then add loading jobs for each node that needs to load
       const unloadedNodes = nodesToLoad.filter(n => !n.isLoaded())
       BundleLoadManager.debug('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
-      jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => this.sendErrors(node) })
+      jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => this.sendFileDiagnostics(node) })
       unloadedNodes.forEach(n => jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => await this.readAndLoad(n) }))
     }
   }
@@ -241,10 +248,10 @@ export class BundleLoadManager {
     const jobs = [
       { slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: () => this.bundle.allBooks.all().forEach(enqueueLoadJob) },
-      { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all().forEach(this.sendErrors.bind(this)) } },
+      { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all().forEach(this.sendFileDiagnostics.bind(this)) } },
       { slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: () => this.bundle.allPages.all().forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: () => this.bundle.allImages.all().forEach(enqueueLoadJob) },
-      { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes().map(f => this.sendErrors(f))) }
+      { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes().map(f => this.sendFileDiagnostics(f))) }
     ]
     jobs.reverse().forEach(j => jobRunner.enqueue(j))
   }
@@ -263,7 +270,7 @@ export class BundleLoadManager {
         fn: async () => {
           const page = this.bundle.allPages.getIfHas(context.doc)
           if (page !== null) {
-            this.sendErrors(page)
+            this.sendFileDiagnostics(page)
           }
         }
       }
@@ -306,7 +313,7 @@ export class JobRunner {
     if (this._currentPromise !== null) return // job is running
     if (this.length() > 0) {
       this._currentPromise = new Promise((resolve, reject) => {
-        this.tickWithCb(resolve, reject)
+        setImmediate(() => this.tickWithCb(resolve, reject))
       })
     }
   }

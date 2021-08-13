@@ -515,8 +515,9 @@ export class Factory<T> {
   }
 
   public remove(filePath: string) {
-    expect(this._map.has(filePath) || null, `ERROR: Attempting to remove a file that was never created: '${filePath}'`)
+    const found = this._map.has(filePath)
     this._map = this._map.delete(filePath)
+    return found ? 1 : 0
   }
 
   public removeByKeyPrefix(pathPrefix: string) {
