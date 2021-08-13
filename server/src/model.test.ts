@@ -70,7 +70,8 @@ describe('Factory', () => {
     f.get('not_a_keyPrefix')
 
     expect(f.all().size).toEqual(4)
-    f.removeByKeyPrefix('keyPrefix')
+    const removed = f.removeByKeyPrefix('keyPrefix')
+    expect(removed.size).toEqual(2)
     expect(f.all().size).toEqual(2)
   })
 })

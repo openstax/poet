@@ -187,7 +187,7 @@ describe('processFilesystemChange()', () => {
     expect(sendDiagnosticsStub.callCount).toBe(0)
 
     // Delete everything (including the bundle)
-    expect(await fireChange(FileChangeType.Deleted, '')).toBe(0) // we can't delete the bundle but it's all that's left
+    expect(await fireChange(FileChangeType.Deleted, '')).toBe(1)
     expect(manager.bundle.exists()).toBe(false)
   })
 })

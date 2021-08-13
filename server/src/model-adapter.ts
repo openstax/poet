@@ -1,6 +1,7 @@
 import { glob } from 'glob'
 import fs from 'fs'
 import path from 'path'
+import I from 'immutable'
 import { Connection, Range } from 'vscode-languageserver'
 import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
@@ -168,17 +169,24 @@ export class BundleLoadManager {
       // Now, we might be deleting a whole directory.
       // Remove anything inside that directory
       BundleLoadManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
-      // Unload if the user deleted the bundle directory
-      if (bundle.absPath.startsWith(uri)) bundle.load(undefined)
-      // Remove if it was a file
-      const fileCount = bundle.allBooks.remove(uri) +
-                bundle.allPages.remove(uri) +
-                bundle.allImages.remove(uri)
-      // Remove if it was a directory
-      const filePathDir = `${uri}${PATH_SEP}`
-      return fileCount + bundle.allBooks.removeByKeyPrefix(filePathDir) +
-                bundle.allPages.removeByKeyPrefix(filePathDir) +
-                bundle.allImages.removeByKeyPrefix(filePathDir)
+
+      const removedNodes = I.Set<Fileish>().withMutations(s => {
+        // Unload if the user deleted the bundle directory
+        if (bundle.absPath.startsWith(uri)) s.add(bundle)
+        // Remove if it was a file
+        const removedNode = bundle.allBooks.remove(uri) ??
+                  bundle.allPages.remove(uri) ??
+                  bundle.allImages.remove(uri)
+        if (removedNode !== undefined) s.add(bundle)
+        // Remove if it was a directory
+        const filePathDir = `${uri}${PATH_SEP}`
+        s.union(bundle.allBooks.removeByKeyPrefix(filePathDir))
+        s.union(bundle.allPages.removeByKeyPrefix(filePathDir))
+        s.union(bundle.allImages.removeByKeyPrefix(filePathDir))
+      })
+      // Unload all removed nodes so users do not think the files still exist
+      removedNodes.forEach(n => n.load(undefined))
+      return removedNodes.size
     }
   }
 

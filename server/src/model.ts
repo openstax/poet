@@ -515,15 +515,15 @@ export class Factory<T> {
   }
 
   public remove(filePath: string) {
-    const found = this._map.has(filePath)
+    const item = this._map.get(filePath)
     this._map = this._map.delete(filePath)
-    return found ? 1 : 0
+    return item
   }
 
   public removeByKeyPrefix(pathPrefix: string) {
-    const size = this._map.size
+    const removedItems = this._map.filter((_, key) => key.startsWith(pathPrefix))
     this._map = this._map.filter((_, key) => !key.startsWith(pathPrefix))
-    return size - this._map.size
+    return I.Set(removedItems.values())
   }
 
   private size() { return this._map.size }
