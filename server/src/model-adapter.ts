@@ -104,6 +104,8 @@ function toStringFileChangeType(t: FileChangeType) {
 export class BundleLoadManager {
   private _didLoadOrphans = false
 
+  public static debug: (...args: any[]) => void = console.debug
+
   constructor(public bundle: Bundle, private readonly conn: Connection) {}
 
   public allPages() {
@@ -142,18 +144,18 @@ export class BundleLoadManager {
     const { type, uri } = evt
 
     // Could be adding an Image/Page/Book, or removing/adding a directory, or adding some other file
-    console.debug(`[FILESYSTEM_EVENT] Start ${toStringFileChangeType(evt.type)} ${uri}`)
+    BundleLoadManager.debug(`[FILESYSTEM_EVENT] Start ${toStringFileChangeType(evt.type)} ${uri}`)
 
     if (evt.type === FileChangeType.Created) {
       // Check if we are adding an Image/Page/Book
       const node = findOrCreateNode(bundle, uri)
       if (node !== null) {
-        console.debug('[FILESYSTEM_EVENT] Adding item')
+        BundleLoadManager.debug('[FILESYSTEM_EVENT] Adding item')
         await this.readAndLoad(node)
         return 1
       } else {
         // No, we are adding something unknown. Ignore
-        console.log('[FILESYSTEM_EVENT] New file did not match anything we understand. Ignoring', uri)
+        BundleLoadManager.debug('[FILESYSTEM_EVENT] New file did not match anything we understand. Ignoring', uri)
         return 0
       }
     } else {
@@ -161,14 +163,14 @@ export class BundleLoadManager {
       const item = findNode(bundle, uri)
 
       if (item !== null) {
-        console.debug('[FILESYSTEM_EVENT] Found item')
+        BundleLoadManager.debug('[FILESYSTEM_EVENT] Found item')
         await this.processItem(type, item)
         return 1
       }
 
       // Now, we might be deleting a whole directory.
       // Remove anything inside that directory
-      console.debug('[FILESYSTEM_EVENT] Removing everything in the directory')
+      BundleLoadManager.debug('[FILESYSTEM_EVENT] Removing everything in the directory')
       const filePathDir = `${uri}${PATH_SEP}`
       return bundle.allBooks.removeByKeyPrefix(filePathDir) +
                 bundle.allPages.removeByKeyPrefix(filePathDir) +
@@ -192,10 +194,10 @@ export class BundleLoadManager {
   public updateFileContents(absPath: string, contents: string) {
     const node = findOrCreateNode(this.bundle, absPath)
     if (node === null) {
-      console.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
+      BundleLoadManager.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
       return
     }
-    console.debug('[DOC_UPDATER] Updating contents of', node.filePath())
+    BundleLoadManager.debug('[DOC_UPDATER] Updating contents of', node.filePath())
     node.update(contents)
     this.sendErrors(node)
   }
@@ -228,7 +230,7 @@ export class BundleLoadManager {
     } else {
       // push this task back onto the job stack and then add loading jobs for each node that needs to load
       const unloadedNodes = nodesToLoad.filter(n => !n.isLoaded())
-      console.log('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
+      BundleLoadManager.debug('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
       jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => this.sendErrors(node) })
       unloadedNodes.forEach(n => jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => await this.readAndLoad(n) }))
     }
@@ -270,7 +272,7 @@ export class BundleLoadManager {
   }
 }
 
-interface URIPair { workspace: string, doc: string }
+export interface URIPair { workspace: string, doc: string }
 export interface Job {
   type: string
   context: Fileish | URIPair
@@ -279,17 +281,19 @@ export interface Job {
 }
 
 export class JobRunner {
-  private _current: Opt<Job> = null
+  private _currentPromise: Opt<Promise<void>> = null
   private readonly fastStack: Job[] = []
   private readonly slowStack: Job[] = []
-  private timeout: Opt<NodeJS.Immediate> = null
 
   public enqueue(job: Job) {
     job.slow === true ? this.slowStack.push(job) : this.fastStack.push(job)
-    this.tick()
+    this.process()
   }
 
-  public isJobRunning() { return this._current !== null }
+  public isJobRunning() { return this._currentPromise !== null }
+
+  public async done(): Promise<any> { return this._currentPromise === null ? await Promise.resolve() : await this._currentPromise }
+
   private length() {
     return this.fastStack.length + this.slowStack.length
   }
@@ -298,33 +302,40 @@ export class JobRunner {
     return this.fastStack.pop() ?? this.slowStack.pop() ?? null
   }
 
-  private tick() {
-    if (this.timeout !== null) return // job is running
-    this.timeout = setImmediate(() => {
-      this.processItem().catch((err) => {
-        console.error('[JOB_RUNNER] Job failed', err)
+  private process() {
+    if (this._currentPromise !== null) return // job is running
+    if (this.length() > 0) {
+      this._currentPromise = new Promise((resolve, reject) => {
+        this.tickWithCb(resolve, reject)
       })
-    })
+    }
   }
 
-  private async processItem() {
-    this._current = this.pop()
-    if (this._current !== null) {
+  // In order to support `await this.done()` keep daisy-chaining the ticks
+  private tickWithCb(resolve: () => void, reject: () => void) {
+    if (this.length() > 0) {
+      this.tick().then(() => this.tickWithCb(resolve, reject), reject)
+    } else {
+      resolve()
+      this._currentPromise = null
+    }
+  }
+
+  private async tick() {
+    const current = this.pop()
+    if (current !== null) {
       const [ms] = await profileAsync(async () => {
-        const c = expect(this._current, 'BUG: nothing should have changed in this time')
-        console.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow === true ? '(slow)' : '(fast)')
+        const c = expect(current, 'BUG: nothing should have changed in this time')
+        BundleLoadManager.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow === true ? '(slow)' : '(fast)')
         await c.fn()
       })
-      console.debug('[JOB_RUNNER] Finished job', this._current.type, this.toString(this._current.context), 'took', ms, 'ms')
+      BundleLoadManager.debug('[JOB_RUNNER] Finished job', current.type, this.toString(current.context), 'took', ms, 'ms')
       if (this.length() === 0) {
-        console.debug('[JOB_RUNNER] No more pending jobs. Taking a nap.')
+        BundleLoadManager.debug('[JOB_RUNNER] No more pending jobs. Taking a nap.')
       } else {
-        console.debug('[JOB_RUNNER] Remaining jobs', this.length())
+        BundleLoadManager.debug('[JOB_RUNNER] Remaining jobs', this.length())
       }
     }
-    this._current = null
-    this.timeout = null
-    if (this.length() > 0) this.tick()
   }
 
   toString(nodeOrString: Fileish | URIPair) {
