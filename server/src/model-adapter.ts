@@ -6,8 +6,11 @@ import { Connection, Range } from 'vscode-languageserver'
 import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
-import { BookNode, Bundle, Fileish, PageNode, Opt, TocNode, TocNodeType } from './model'
-import { expect, profileAsync } from './utils'
+import { Opt, expect, profileAsync } from './model/utils'
+import { BookNode, TocNode, TocNodeType } from './model/book'
+import { Bundle } from './model/bundle'
+import { PageNode } from './model/page'
+import { Fileish } from './model/fileish'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/

@@ -1,8 +1,8 @@
-import { calculateElementPositions } from './../utils'
 import assert from 'assert'
 import * as xpath from 'xpath-ts'
 import { Position } from 'vscode-languageserver'
 import { DOMParser, XMLSerializer } from 'xmldom'
+import { calculateElementPositions } from '../model/utils'
 import { fixDocument, padLeft } from '../fix-document-ids'
 
 describe('calculateElementPositions', function () {

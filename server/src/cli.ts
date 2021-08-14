@@ -1,6 +1,8 @@
 import fs from 'fs'
 import path from 'path'
-import { Bundle, PathHelper, TocNode, TocNodeType } from './model'
+import { PathHelper } from './model/base'
+import { TocNode, TocNodeType } from './model/book'
+import { Bundle } from './model/bundle'
 import { profileAsync } from './utils'
 
 function printToc(node: TocNode, depth: number = 1) {

@@ -1,5 +1,5 @@
 import * as xpath from 'xpath-ts'
-import { expect } from './utils'
+import { expect } from './model/utils'
 
 const ID_PADDING_CHARS = 5
 const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
