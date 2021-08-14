@@ -49,7 +49,6 @@ export class ParseError extends ModelError { }
 export class WrappedParseError<T extends Error> extends ParseError {
   constructor(node: Fileish, originalError: T) {
     super(node, originalError.message, NOWHERE_START, NOWHERE_END)
-    console.error(node.absPath, originalError)
   }
 }
 
@@ -62,7 +61,6 @@ interface ValidationCheck {
 export class ValidationResponse {
   constructor(public readonly errors: I.Set<ModelError> = I.Set(), public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
 
-  static loadMe(node: Fileish) { return new ValidationResponse(I.Set(), I.Set([node])) }
   static continueOnlyIfLoaded(nodes: I.Set<Fileish>, next: (nodes: I.Set<Fileish>) => I.Set<ModelError>) {
     const unloaded = nodes.filter(n => !n.isLoaded())
     if (unloaded.size > 0) {
@@ -70,10 +68,6 @@ export class ValidationResponse {
     } else {
       return new ValidationResponse(next(nodes))
     }
-  }
-
-  static union(r1: ValidationResponse, r2: ValidationResponse) {
-    return new ValidationResponse(r1.errors.union(r2.errors), r1.nodesToLoad.union(r2.nodesToLoad))
   }
 }
 
@@ -193,9 +187,6 @@ export abstract class Fileish {
       case PathType.ABS_TO_REL: p = dirname(parent); c = child; break
       case PathType.COLLECTION_TO_MODULEID: p = dirname(dirname(parent)); c = /* relative_path */path.join('modules', child, 'index.cnxml'); break
       case PathType.MODULE_TO_MODULEID: p = dirname(dirname(parent)); c = /* relative_path */path.join(child, 'index.cnxml'); break
-      case PathType.ABSOLUTE_JUST_ONE_FILE:
-        expect(child === '' || null, 'When using ABSOLUTE, there is no second argument to this function')
-        return path.resolve(parent)
     }
     return join(p, c)
   }
@@ -231,6 +222,7 @@ function textWithSource(el: Element, attr?: string): WithSource<string> {
 }
 
 export class ImageNode extends Fileish {
+  /* istanbul ignore next */
   public getValidationChecks() { return [] }
 }
 
@@ -241,6 +233,15 @@ function convertToPos(str: string, cursor: number): Position {
 function toValidationErrors(node: Fileish, message: string, sources: I.Set<Source>) {
   return sources.map(s => new ModelError(node, message, s.startPos, s.endPos))
 }
+
+export enum PageValidationKind {
+  MISSING_IMAGE = 'Missing image',
+  MISSING_TARGET = 'Link target not found',
+  MALFORMED_UUID = 'Malformed UUID',
+  DUPLICATE_UUID = 'Duplicate Page/Module UUID',
+}
+export const UNTITLED_FILE = 'UntitledFile'
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export class PageNode extends Fileish {
   private _uuid: Opt<WithSource<string>>
@@ -253,9 +254,9 @@ export class PageNode extends Fileish {
     // A quick way to get the title for the ToC
     if (this._title === undefined) {
       const data = fileReader()
-      return this.guessTitle(data)?.v ?? 'UntitledFile'
+      return this.guessTitle(data)?.v ?? UNTITLED_FILE
     }
-    return this._title?.v ?? 'UntitledFile'
+    return this._title.v
   }
 
   private guessTitle(data: string): Opt<WithSource<string>> {
@@ -330,7 +331,7 @@ export class PageNode extends Fileish {
       this._title = textWithSource(titleNode[0])
     } else {
       this._title = {
-        v: 'Unnamed Module',
+        v: UNTITLED_FILE,
         startPos: NOWHERE_START,
         endPos: NOWHERE_END
       }
@@ -343,12 +344,12 @@ export class PageNode extends Fileish {
     const pageLinks = this.pageLinks()
     return [
       {
-        message: 'Missing image',
+        message: PageValidationKind.MISSING_IMAGE,
         nodesToLoad: imageLinks.map(l => l.image),
         fn: () => imageLinks.filter(img => !img.image.exists())
       },
       {
-        message: 'Link target not found',
+        message: PageValidationKind.MISSING_TARGET,
         nodesToLoad: filterNull(pageLinks.map(l => l.page)),
         fn: () => pageLinks.filter(l => {
           if (l.page === undefined) return false // URL links are ok
@@ -358,7 +359,7 @@ export class PageNode extends Fileish {
         })
       },
       {
-        message: 'Malformed UUID',
+        message: PageValidationKind.MALFORMED_UUID,
         nodesToLoad: I.Set(),
         fn: () => {
           const uuid = this.ensureLoaded(this._uuid)
@@ -366,7 +367,7 @@ export class PageNode extends Fileish {
         }
       },
       {
-        message: 'Duplicate Page/Module UUID',
+        message: PageValidationKind.DUPLICATE_UUID,
         nodesToLoad: I.Set(),
         fn: () => {
           const uuid = this.ensureLoaded(this._uuid)
@@ -429,6 +430,7 @@ export class BookNode extends Fileish {
           }
         }
         default:
+          /* istanbul ignore next */
           throw new Error('ERROR: Unknown element in the ToC')
       }
     })
@@ -527,7 +529,6 @@ export class Factory<T> {
     return I.Set(removedItems.values())
   }
 
-  private size() { return this._map.size }
   public all() { return I.Set(this._map.values()) }
 }
 
@@ -603,7 +604,6 @@ export enum PathType {
   COLLECTION_TO_MODULEID = 'COLLECTION_TO_MODULEID',
   MODULE_TO_MODULEID = 'MODULE_TO_MODULEID',
   MODULE_TO_IMAGE = 'MODULE_TO_IMAGE',
-  ABSOLUTE_JUST_ONE_FILE = 'ABSOLUTE',
 }
 
 function findDuplicates<T>(list: I.List<T>) {
