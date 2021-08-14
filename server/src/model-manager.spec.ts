@@ -4,10 +4,12 @@ import { createConnection, WatchDog } from 'vscode-languageserver'
 import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
 import { BookNode } from './model/book'
 import { Bundle } from './model/bundle'
-import { BundleLoadManager, jobRunner, Job, pageAsTreeObject, URIPair, bookTocAsTreeCollection } from './model-adapter'
+import { ModelManager, pageAsTreeObject, bookTocAsTreeCollection } from './model-manager'
 import { first, FS_PATH_HELPER, loadSuccess, makeBundle } from './model/util.spec'
+import { Job, JobRunner } from './job-runner'
 
-BundleLoadManager.debug = () => {} // Turn off logging
+ModelManager.debug = () => {} // Turn off logging
+JobRunner.debug = () => {} // Turn off logging
 
 describe('Tree Translator', () => {
   let book = null as unknown as BookNode
@@ -31,12 +33,12 @@ describe('Tree Translator', () => {
 
 describe('Bundle Manager', () => {
   const sinon = SinonRoot.createSandbox()
-  let manager = null as unknown as BundleLoadManager
+  let manager = null as unknown as ModelManager
   let sendDiagnosticsStub = null as unknown as SinonRoot.SinonStub<[params: PublishDiagnosticsParams], void>
 
   beforeEach(() => {
     const bundle = makeBundle()
-    manager = new BundleLoadManager(bundle, conn)
+    manager = new ModelManager(bundle, conn)
     sendDiagnosticsStub = sinon.stub(conn, 'sendDiagnostics')
   })
   afterEach(() => {
@@ -63,7 +65,7 @@ describe('Bundle Manager', () => {
     expect(manager.orhpanedPages().first()).toBe(orphanedPage)
   })
   it('updateFileContents()', () => {
-    const enqueueStub = sinon.stub(jobRunner, 'enqueue')
+    const enqueueStub = sinon.stub(manager.jobRunner, 'enqueue')
     loadSuccess(manager.bundle)
     manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
@@ -75,7 +77,7 @@ describe('Bundle Manager', () => {
     expect(enqueueStub.callCount).toBe(0)
   })
   it('loadEnoughForToc()', async () => {
-    const enqueueStub = sinon.stub(jobRunner, 'enqueue')
+    const enqueueStub = sinon.stub(manager.jobRunner, 'enqueue')
     expect(enqueueStub.callCount).toBe(0)
     await manager.loadEnoughForToc()
     // Assumes the test data has 1 Book with 1 Page in it
@@ -89,7 +91,7 @@ describe('Bundle Manager', () => {
   it('performInitialValidation()', async () => {
     expect(manager.bundle.isLoaded).toBe(false)
     manager.performInitialValidation()
-    await jobRunner.done()
+    await manager.jobRunner.done()
 
     expect(manager.bundle.allNodes.size).toBe(1 + 1 + 1) // bundle + book + page
     manager.bundle.allNodes.forEach(n => expect(n.isLoaded).toBe(true))
@@ -99,7 +101,7 @@ describe('Bundle Manager', () => {
       workspace: manager.bundle.workspaceRoot,
       doc: manager.bundle.absPath
     })
-    await jobRunner.done()
+    await manager.jobRunner.done()
 
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(manager.bundle.validationErrors.nodesToLoad.size).toBe(0)
@@ -114,7 +116,7 @@ describe('Bundle Manager', () => {
       workspace: manager.bundle.workspaceRoot,
       doc: '/path/t/non-existent/file'
     })
-    await jobRunner.done()
+    await manager.jobRunner.done()
     expect(sendDiagnosticsStub.callCount).toBe(0)
   })
 })
@@ -134,16 +136,16 @@ describe('Find orphaned files', () => {
   })
   it('finds orphaned Pages', async () => {
     sinon.stub(conn, 'sendDiagnostics')
-    const manager = new BundleLoadManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
+    const manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
     await manager.loadEnoughForOrphans()
-    await jobRunner.done()
+    await manager.jobRunner.done()
     expect(manager.orhpanedPages().size).toBe(2)
   })
 })
 
 describe('processFilesystemChange()', () => {
   const sinon = SinonRoot.createSandbox()
-  let manager = null as unknown as BundleLoadManager
+  let manager = null as unknown as ModelManager
   let sendDiagnosticsStub = null as unknown as SinonRoot.SinonStub<[params: PublishDiagnosticsParams], void>
   let enqueueStub = null as unknown as SinonRoot.SinonStub<[job: Job], void>
 
@@ -180,9 +182,9 @@ describe('processFilesystemChange()', () => {
                       </document>`
     })
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
-    manager = new BundleLoadManager(bundle, conn)
+    manager = new ModelManager(bundle, conn)
     sendDiagnosticsStub = sinon.stub(conn, 'sendDiagnostics')
-    enqueueStub = sinon.stub(jobRunner, 'enqueue')
+    enqueueStub = sinon.stub(manager.jobRunner, 'enqueue')
   })
   afterEach(() => {
     mockfs.restore()
@@ -242,35 +244,6 @@ describe('processFilesystemChange()', () => {
     expect((await fireChange(FileChangeType.Deleted, book.workspacePath)).size).toBe(1)
     expect((await fireChange(FileChangeType.Deleted, page.workspacePath)).size).toBe(1)
     expect((await fireChange(FileChangeType.Deleted, bundle.workspacePath)).size).toBe(1)
-  })
-})
-
-describe('Job Runner', () => {
-  const context: URIPair = { workspace: 'aaa', doc: 'bbb' }
-  it('runs newly added jobs first (stack)', async () => {
-    const appendLog: string[] = []
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Job1') })
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Job2') })
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Job3') })
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Job4') })
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Job5') })
-    expect(appendLog).toEqual([]) // Nothing immediately executes (otherwise jobs would keep restacking themselves)
-    await jobRunner.done()
-    expect(appendLog).toEqual(['Job5', 'Job4', 'Job3', 'Job2', 'Job1'])
-  })
-  it('prioritizes fast jobs', async () => {
-    const appendLog: string[] = []
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Initial') })
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Fast1') })
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Slow1'), slow: true })
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Fast2') })
-    jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Slow2'), slow: true })
-    expect(appendLog).toEqual([])
-    await jobRunner.done()
-    expect(appendLog).toEqual(['Fast2', 'Fast1', 'Initial', 'Slow2', 'Slow1'])
-  })
-  it('done() waits even when there are no jobs running', async () => {
-    await jobRunner.done()
   })
 })
 

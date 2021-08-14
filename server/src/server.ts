@@ -27,7 +27,7 @@ import {
 import * as sourcemaps from 'source-map-support'
 import { Bundle } from './model/bundle'
 import { Factory } from './model/factory'
-import { pageAsTreeObject, BundleLoadManager } from './model-adapter'
+import { pageAsTreeObject, ModelManager } from './model-manager'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -37,7 +37,7 @@ const connection = createConnection(ProposedFeatures.all)
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
 
-function getBundleForUri(uri: string): BundleLoadManager {
+function getBundleForUri(uri: string): ModelManager {
   const bundles = bundleFactory.all.filter(b => uri.startsWith(b.bundle.workspaceRoot))
   return expectValue(bundles.first(), 'BUG: Workspace should have loaded up an instance by now.')
 }
@@ -50,7 +50,7 @@ const pathHelper = {
 export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUri => {
   const filePath = workspaceUri
   const b = new Bundle(pathHelper, filePath)
-  return new BundleLoadManager(b, connection)
+  return new ModelManager(b, connection)
 })
 
 connection.onInitialize(async (params: InitializeParams) => {

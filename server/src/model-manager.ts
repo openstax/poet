@@ -6,11 +6,12 @@ import { Connection, Range } from 'vscode-languageserver'
 import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
-import { Opt, expectValue, profileAsync } from './model/utils'
+import { Opt, expectValue } from './model/utils'
 import { BookNode, TocNode, TocNodeType } from './model/book'
 import { Bundle } from './model/bundle'
 import { PageNode } from './model/page'
 import { Fileish } from './model/fileish'
+import { JobRunner } from './job-runner'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -102,8 +103,10 @@ function toStringFileChangeType(t: FileChangeType) {
     case FileChangeType.Deleted: return 'DELETED'
   }
 }
-export class BundleLoadManager {
+export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
+
+  public readonly jobRunner = new JobRunner()
 
   constructor(public bundle: Bundle, private readonly conn: Connection) {}
 
@@ -140,24 +143,24 @@ export class BundleLoadManager {
     const { type, uri } = evt
 
     // Could be adding an Image/Page/Book, or removing/adding a directory, or adding some other file
-    BundleLoadManager.debug(`[FILESYSTEM_EVENT] Start ${toStringFileChangeType(type)} ${uri}`)
+    ModelManager.debug(`[FILESYSTEM_EVENT] Start ${toStringFileChangeType(type)} ${uri}`)
 
     if (type === FileChangeType.Created) {
       // Check if we are adding an Image/Page/Book
       const node = findOrCreateNode(bundle, uri)
       if (node !== undefined) {
-        BundleLoadManager.debug('[FILESYSTEM_EVENT] Adding item')
+        ModelManager.debug('[FILESYSTEM_EVENT] Adding item')
         await this.readAndLoad(node)
         return I.Set([node])
       } else {
         // No, we are adding something unknown. Ignore
-        BundleLoadManager.debug('[FILESYSTEM_EVENT] New file did not match anything we understand. Ignoring', uri)
+        ModelManager.debug('[FILESYSTEM_EVENT] New file did not match anything we understand. Ignoring', uri)
         return I.Set()
       }
     } else if (type === FileChangeType.Changed) {
       const item = findNode(bundle, uri)
       if (item !== undefined) {
-        BundleLoadManager.debug('[FILESYSTEM_EVENT] Found item')
+        ModelManager.debug('[FILESYSTEM_EVENT] Found item')
         await this.readAndUpdate(item)
         this.sendFileDiagnostics(item)
         return I.Set([item])
@@ -167,7 +170,7 @@ export class BundleLoadManager {
     } else {
       // Now, we might be deleting a whole directory.
       // Remove anything inside that directory
-      BundleLoadManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
+      ModelManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
 
       const removedNodes = I.Set<Fileish>().withMutations(s => {
         // Unload if the user deleted the bundle directory
@@ -192,10 +195,10 @@ export class BundleLoadManager {
   public updateFileContents(absPath: string, contents: string) {
     const node = findOrCreateNode(this.bundle, absPath)
     if (node === undefined) {
-      BundleLoadManager.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
+      ModelManager.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
       return
     }
-    BundleLoadManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
+    ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
     node.load(contents)
     this.sendFileDiagnostics(node)
   }
@@ -228,14 +231,14 @@ export class BundleLoadManager {
     } else {
       // push this task back onto the job stack and then add loading jobs for each node that needs to load
       const unloadedNodes = nodesToLoad.filter(n => !n.isLoaded)
-      BundleLoadManager.debug('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
-      jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => this.sendFileDiagnostics(node) })
-      unloadedNodes.forEach(n => jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => await this.readAndLoad(n) }))
+      ModelManager.debug('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
+      this.jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => this.sendFileDiagnostics(node) })
+      unloadedNodes.forEach(n => this.jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => await this.readAndLoad(n) }))
     }
   }
 
   performInitialValidation() {
-    const enqueueLoadJob = (node: Fileish) => jobRunner.enqueue({ slow: true, type: 'INITIAL_LOAD_DEP', context: node, fn: async () => await this.readAndLoad(node) })
+    const enqueueLoadJob = (node: Fileish) => this.jobRunner.enqueue({ slow: true, type: 'INITIAL_LOAD_DEP', context: node, fn: async () => await this.readAndLoad(node) })
     const jobs = [
       { slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: () => this.bundle.allBooks.all.forEach(enqueueLoadJob) },
@@ -244,7 +247,7 @@ export class BundleLoadManager {
       { slow: true, type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: () => this.bundle.allImages.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes.map(f => this.sendFileDiagnostics(f))) }
     ]
-    jobs.reverse().forEach(j => jobRunner.enqueue(j))
+    jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
   }
 
   loadEnoughToSendDiagnostics(context: {workspace: string, doc: string}) {
@@ -263,73 +266,6 @@ export class BundleLoadManager {
         }
       }
     ]
-    jobs.reverse().forEach(j => jobRunner.enqueue(j))
+    jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
   }
 }
-
-export interface URIPair { workspace: string, doc: string }
-export interface Job {
-  type: string
-  context: Fileish | URIPair
-  fn: () => Promise<any> | any
-  slow?: boolean
-}
-
-export class JobRunner {
-  private _currentPromise: Opt<Promise<void>>
-  private readonly fastStack: Job[] = []
-  private readonly slowStack: Job[] = []
-
-  public enqueue(job: Job) {
-    job.slow === true ? this.slowStack.push(job) : this.fastStack.push(job)
-    this.process()
-  }
-
-  public async done(): Promise<any> { return this._currentPromise === undefined ? await Promise.resolve() : await this._currentPromise }
-
-  private length() {
-    return this.fastStack.length + this.slowStack.length
-  }
-
-  private pop(): Opt<Job> {
-    return this.fastStack.pop() ?? this.slowStack.pop()
-  }
-
-  private process() {
-    if (this._currentPromise !== undefined) return // job is running
-    this._currentPromise = new Promise((resolve, reject) => {
-      setImmediate(() => this.tickWithCb(resolve, reject))
-    })
-  }
-
-  // In order to support `await this.done()` keep daisy-chaining the ticks
-  private tickWithCb(resolve: () => void, reject: () => void) {
-    const current = this.pop()
-    if (current !== undefined) {
-      this.tick(current).then(() => this.tickWithCb(resolve, reject), reject)
-    } else {
-      resolve()
-      this._currentPromise = undefined
-    }
-  }
-
-  private async tick(current: Job) {
-    const [ms] = await profileAsync(async () => {
-      const c = expectValue(current, 'BUG: nothing should have changed in this time')
-      BundleLoadManager.debug('[JOB_RUNNER] Starting job', c.type, this.toString(c.context), c.slow === true ? '(slow)' : '(fast)')
-      await c.fn()
-    })
-    BundleLoadManager.debug('[JOB_RUNNER] Finished job', current.type, this.toString(current.context), 'took', ms, 'ms')
-    if (this.length() === 0) {
-      BundleLoadManager.debug('[JOB_RUNNER] No more pending jobs. Taking a nap.')
-    } else {
-      BundleLoadManager.debug('[JOB_RUNNER] Remaining jobs', this.length())
-    }
-  }
-
-  toString(nodeOrString: Fileish | URIPair) {
-    if (nodeOrString instanceof Fileish) { return nodeOrString.workspacePath } else return path.relative(nodeOrString.workspace, nodeOrString.doc)
-  }
-}
-
-export const jobRunner = new JobRunner()
