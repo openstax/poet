@@ -1,21 +1,41 @@
 # Implementation notes
 
-## Book bundle
+# High level organization
 
-The book bundle code incorporates data caching using [memoize-one](https://github.com/alexreardon/memoize-one). `Memoize-one` simply caches results for the most recent set of provided arguments. The implementation uses "`Cachified`" versions of objects that incorporate a UUID which can be used to easily determine when object arguments have changed. The following table summarizes class fields that use `memoize-one` caching along with the corresponding arguments and return types:
+- [model/](./src/model/) : The book model. Contains no VSCode, filesystem, or other editor dependencies. Just a model of the book
+- [model-adapter.ts](./src/model-adapter.ts) : VSCode-specific glue code between the model and the event handlers
+- Job Runner : A Stack of async jobs that need to run. These jobs have a slow/fast flag
+- [server.ts](./src/server.ts) : Just all the Language Server event handlers. Most logic is delegated to model-adapter.
 
-| Class | Field | Cache arguments | Return type |
-| - | - | - | - |
-| `ModuleInfo` | `_document` | moduleCNXML: `Cachified<FileData>` | `Cachified<Document>` |
-| `ModuleInfo` | `_idsDeclared` | moduleCNXML: `Cachified<Document>` | `Cachified<Map<string, Element[]>>` |
-| `ModuleInfo` | `_imageSources` | moduleCNXML: `Cachified<Document>`, bundleMedia: `Cachified<Set<string>>` | `Cachified<ImageSource[]>` |
-| `ModuleInfo` | `_imagesUsed` | moduleCNXML: `Cachified<Document>` | `Cachified<Set<string>>` |
-| `ModuleInfo` | `_linksDeclared` | moduleCNXML: `Cachified<Document>` | `Cachified<Link[]>` |
-| `ModuleInfo` | `_titleFromDocument` | moduleCNXML: `Cachified<Document>` | `Cachified<ModuleTitle>` |
-| `ModuleInfo` | `_guessFromFileData` | moduleCNXML: `Cachified<FileData>` | `Cachified<ModuleTitle>` |
-| `CollectionInfo ` | `_document` | collectionXML: `Cachified<FileData>` | `Cachified<Document>` |
-| `CollectionInfo ` | `_modulesUsed` | collectionXML: `Cachified<Document>` | `Cachified<ModuleLink[]>` |
-| `CollectionInfo ` | `_tree` | collectionXML: `Cachified<Document>`, usedModuleTitlesDefined: `Array<Cachified<ModuleTitle>>` | `Cachified<TocTreeCollection>` |
-| `BookBundle` | `_orphanedImages` | allImages: `Cachified<Set<string>>`, usedImagesPerModule: `Array<Cachified<Set<string>>>` | `Cachified<Set<string>>` |
-| `BookBundle` | `_orphanedModules` | allModules: `Cachified<Map<string, ModuleInfo>>`, usedModulesPerCollection: `Array<Cachified<ModuleLink[]>>` | `Cachified<Set<string>>` |
-| `BookBundle` | `_moduleIds` | moduleIdsAsMap: `Cachified<Map<string, Element[]>>` | `Cachified<Set<string>>` |
+
+# More detailed
+
+This model has the following features which allow it to be pulled out and used in other places like for validation:
+
+1. no filesystem
+1. no async
+1. DOM is discarded after being parsed
+1. source location is remembered
+
+Each file is corresponds to a node in the model ([Bundle](./model/bundle.ts), [Book](./model/book.ts), [Page](./model/page.ts), Image).
+
+The Bundle is the root instance of a repository.
+
+Nodes are instantiated by a Factoryies on the Bundle.
+
+Nodes are empty until the user loads data into them.
+
+After loading content into the node, validation errors can be found on the node.
+
+Validation responses can either be a set of Errors with source line information or a set of nodes that need to be loaded first before validation can complete.
+
+
+# Demo commandline validator
+
+To show/verify that the model works outside the language server, there is a CLI script that can validate a book repository.
+
+To run it:
+
+```bash
+npx ts-node@10.1.0 ./_cli.ts /path/to/book/repo /path/to/another/book/repo
+```

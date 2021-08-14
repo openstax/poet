@@ -20,9 +20,9 @@ describe('Factory', () => {
     f.get('anotherprefix')
     f.get('not_a_keyPrefix')
 
-    expect(f.all.size).toEqual(4)
+    expect(f.size).toEqual(4)
     const removed = f.removeByKeyPrefix('keyPrefix')
     expect(removed.size).toEqual(2)
-    expect(f.all.size).toEqual(2)
+    expect(f.size).toEqual(2)
   })
 })

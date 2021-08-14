@@ -30,5 +30,6 @@ export class Factory<T> {
     return I.Set(removedItems.values())
   }
 
+  public get size() { return this._map.size }
   public get all() { return I.Set(this._map.values()) }
 }
