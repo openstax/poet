@@ -7,40 +7,6 @@ import { Fileish } from './fileish'
 
 const REPO_ROOT = path.join(__dirname, '..', '..', '..')
 
-describe('Book validations', () => {
-  it.skip('Missing page', () => {})
-  it.skip('Duplicate chapter title', () => {})
-  it.skip('Duplicate page', () => {})
-})
-
-describe('Bundle validations', () => {
-  it.skip('Missing book', () => {})
-  it.skip('No books are defiend', () => {})
-})
-
-describe('Happy path', () => {
-  let bundle = null as unknown as Bundle
-
-  beforeEach(() => {
-    bundle = makeBundle()
-    bundle.load(read(bundle.absPath))
-  })
-  it('loads the book bundle', () => {
-    expect(bundle.exists).toBeTruthy()
-    expect(bundle.isLoaded).toBeTruthy()
-    expect(bundle.books.size).toBe(1)
-  })
-  it('loads the Book', () => {
-    const book = first(bundle.books)
-    loadSuccess(book)
-  })
-  it('loads a Page', () => {
-    const book = loadSuccess(first(bundle.books))
-    const page = first(book.pages)
-    loadSuccess(page)
-  })
-})
-
 describe('Bugfixes', () => {
   it('clears parse errors when the file parses correctly', () => {
     const bundle = makeBundle()
@@ -81,4 +47,10 @@ export function ignoreConsoleWarnings(fn: () => void) {
   const warnSpy = jest.spyOn(console, 'warn').mockImplementation()
   fn()
   warnSpy.mockRestore()
+}
+
+export function expectErrors<T extends Fileish>(node: T, messages: string[]) {
+  const v = node.validationErrors
+  expect(v.nodesToLoad.size).toBe(0) // Everything should have loaded
+  expect(v.errors.map(e => e.message).toArray().sort()).toEqual(messages.sort())
 }

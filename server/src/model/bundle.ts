@@ -43,25 +43,30 @@ export class Bundle extends Fileish implements Bundleish {
     return this.ensureLoaded(this._books)
   }
 
-  protected getValidationChecks(): ValidationCheck[] {
-    const books = this.__books()
-    return [
-      {
-        message: 'Missing book',
-        nodesToLoad: this.books,
-        fn: () => books.filter(b => !b.v.exists)
-      },
-      {
-        message: 'No books are defiend',
-        nodesToLoad: I.Set(),
-        fn: () => books.isEmpty() ? I.Set([{ startPos: NOWHERE_START, endPos: NOWHERE_END }]) : I.Set()
-      }
-    ]
-  }
-
   public isDuplicateUuid(uuid: string) {
     const pages = this.allPages.all
     const duplicateUuids = I.Set(findDuplicates(I.List(pages).filter(p => p.exists).map(p => p.uuid())))
     return duplicateUuids.has(uuid)
   }
+
+  protected getValidationChecks(): ValidationCheck[] {
+    const books = this.__books()
+    return [
+      {
+        message: BundleValidationKind.MISSING_BOOK,
+        nodesToLoad: this.books,
+        fn: () => books.filter(b => !b.v.exists)
+      },
+      {
+        message: BundleValidationKind.NO_BOOKS,
+        nodesToLoad: I.Set(),
+        fn: () => books.isEmpty() ? I.Set([{ startPos: NOWHERE_START, endPos: NOWHERE_END }]) : I.Set()
+      }
+    ]
+  }
+}
+
+export enum BundleValidationKind {
+  MISSING_BOOK = 'Missing book',
+  NO_BOOKS = 'No books defined'
 }

@@ -28,12 +28,6 @@ function filterNull<T>(set: I.Set<Opt<T>>): I.Set<T> {
   })
 }
 
-export enum PageValidationKind {
-  MISSING_IMAGE = 'Missing image',
-  MISSING_TARGET = 'Link target not found',
-  MALFORMED_UUID = 'Malformed UUID',
-  DUPLICATE_UUID = 'Duplicate Page/Module UUID',
-}
 export const UNTITLED_FILE = 'UntitledFile'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -173,4 +167,11 @@ export class PageNode extends Fileish {
       }
     ]
   }
+}
+
+export enum PageValidationKind {
+  MISSING_IMAGE = 'Missing image',
+  MISSING_TARGET = 'Link target not found',
+  MALFORMED_UUID = 'Malformed UUID',
+  DUPLICATE_UUID = 'Duplicate Page/Module UUID',
 }

@@ -101,20 +101,26 @@ export class BookNode extends Fileish {
     const duplicatePages = I.Set(findDuplicates(pages))
     return [
       {
-        message: 'Missing page',
+        message: BookValidationKind.MISSING_PAGE,
         nodesToLoad: I.Set(pages),
         fn: () => I.Set(this.tocLeaves()).filter(p => !p.page.exists)
       },
       {
-        message: 'Duplicate chapter title',
+        message: BookValidationKind.DUPLICATE_CHAPTER_TITLE,
         nodesToLoad: I.Set(),
         fn: () => I.Set(nonPages.filter(subcol => duplicateTitles.has(subcol.title)))
       },
       {
-        message: 'Duplicate page',
+        message: BookValidationKind.DUPLICATE_PAGE,
         nodesToLoad: I.Set(),
         fn: () => I.Set(pageLeaves.filter(p => duplicatePages.has(p.page)))
       }
     ]
   }
+}
+
+export enum BookValidationKind {
+  MISSING_PAGE = 'Missing Page',
+  DUPLICATE_CHAPTER_TITLE = 'Duplicate chapter title',
+  DUPLICATE_PAGE = 'Duplicate page',
 }

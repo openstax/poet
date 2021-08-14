@@ -1,6 +1,6 @@
 import * as path from 'path'
 import { PageNode, PageValidationKind, UNTITLED_FILE } from './page'
-import { first, FS_PATH_HELPER, makeBundle } from './util.spec'
+import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
 
 describe('Page', () => {
   let page = null as unknown as PageNode
@@ -35,13 +35,13 @@ describe('Page', () => {
   })
 })
 
-interface PageInfo {
+export interface PageInfo {
   uuid?: string
   title?: string | null // null means omit the whole element
   imageHrefs?: string[]
   pageLinks?: Array<{targetPage?: string, targetId?: string, url?: string}>
 }
-function pageMaker(info: PageInfo) {
+export function pageMaker(info: PageInfo) {
   const i = {
     title: info.title !== undefined ? info.title : 'TestTitle',
     uuid: info.uuid !== undefined ? info.uuid : '00000000-0000-4000-0000-000000000000',
@@ -129,14 +129,13 @@ describe('Page validations', () => {
     const info = { /* defaults */ }
     page1.load(pageMaker(info))
     page2.load(pageMaker(info))
-    expect(page1.validationErrors.errors.size).toBe(1)
-    expect(page2.validationErrors.errors.size).toBe(1)
-    expect(first(page1.validationErrors.errors).message).toBe(PageValidationKind.DUPLICATE_UUID)
+    expectErrors(page1, [PageValidationKind.DUPLICATE_UUID])
+    expectErrors(page2, [PageValidationKind.DUPLICATE_UUID])
   })
   it('Reports multiple validation errors', () => {
     const bundle = makeBundle()
     const page = bundle.allPages.get('somepage')
     page.load(pageMaker({ uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }] }))
-    expect(page.validationErrors.errors.map(e => e.message).toArray().sort()).toEqual([PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET].sort())
+    expectErrors(page, [PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET])
   })
 })

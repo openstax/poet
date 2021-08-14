@@ -3,8 +3,8 @@ import { Opt } from './utils'
 export class Factory<T> {
   private _map = I.Map<string, T>()
   constructor(private readonly builder: (filePath: string) => T) { }
-  getIfHas(filePath: string): Opt<T> {
-    return this._map.get(filePath)
+  getIfHas(absPath: string): Opt<T> {
+    return this._map.get(absPath)
   }
 
   get(absPath: string) {
@@ -18,9 +18,9 @@ export class Factory<T> {
     }
   }
 
-  public remove(filePath: string) {
-    const item = this._map.get(filePath)
-    this._map = this._map.delete(filePath)
+  public remove(absPath: string) {
+    const item = this._map.get(absPath)
+    this._map = this._map.delete(absPath)
     return item
   }
 
