@@ -1,27 +1,4 @@
-import {
-  Diagnostic,
-  DiagnosticSeverity,
-  Position
-} from 'vscode-languageserver/node'
-import fs from 'fs'
-
-const SOURCE = 'cnxml'
-
-export function generateDiagnostic(severity: DiagnosticSeverity,
-  startPosition: Position, endPosition: Position, message: string,
-  diagnosticCode: string): Diagnostic {
-  const diagnostic: Diagnostic = {
-    severity: severity,
-    range: {
-      start: startPosition,
-      end: endPosition
-    },
-    message: message,
-    source: SOURCE,
-    code: diagnosticCode
-  }
-  return diagnostic
-}
+import { Position } from 'vscode-languageserver/node'
 
 export function calculateElementPositions(element: any): [Position, Position] {
   // Calculate positions accounting for the zero-based convention used by
@@ -75,33 +52,6 @@ export function expect<T>(value: T | null | undefined, message: string): T {
   return value
 }
 
-export const fileExistsAt = async (filepath: string): Promise<boolean> => {
-  let exists = true
-  try {
-    const stat = await fs.promises.stat(filepath)
-    exists = stat.isFile()
-  } catch (err) {
-    exists = false
-  }
-  return exists
-}
-
-export const fileExistsAtSync = (filepath: string): boolean => {
-  let exists = true
-  try {
-    const stat = fs.statSync(filepath)
-    exists = stat.isFile()
-  } catch (err) {
-    exists = false
-  }
-  return exists
-}
-
-export function profile<T>(fn: () => T): [T, number] {
-  const start = Date.now()
-  const ret = fn()
-  return [ret, Date.now() - start]
-}
 export async function profileAsync<T>(fn: () => Promise<T>) {
   const start = Date.now()
   const ret = await fn()

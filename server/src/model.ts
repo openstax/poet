@@ -55,11 +55,10 @@ export class WrappedParseError<T extends Error> extends ParseError {
 interface ValidationCheck {
   message: string
   nodesToLoad: I.Set<Fileish>
-  context?: Fileish // by default it's the object performing the check
   fn: (loadedNodes?: I.Set<Fileish>) => I.Set<Source>
 }
 export class ValidationResponse {
-  constructor(public readonly errors: I.Set<ModelError> = I.Set(), public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
+  constructor(public readonly errors: I.Set<ModelError>, public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
 
   static continueOnlyIfLoaded(nodes: I.Set<Fileish>, next: (nodes: I.Set<Fileish>) => I.Set<ModelError>) {
     const unloaded = nodes.filter(n => !n.isLoaded())
@@ -81,7 +80,7 @@ export abstract class Fileish {
   private _isLoaded = false
   private _exists = false
   private _parseError: Opt<ParseError>
-  protected parseXML: Opt<(doc: Document) => Opt<ParseError>> // Subclasses define this
+  protected parseXML: Opt<(doc: Document) => void> // Subclasses define this
   protected childrenToLoad: Opt<() => I.Set<Fileish>> // Subclasses define this
 
   constructor(private _bundle: Opt<Bundle>, protected _pathHelper: PathHelper<string>, public readonly absPath: string) { }
@@ -113,8 +112,7 @@ export abstract class Fileish {
       const fn = () => {
         const doc = this.readXML(fileContent)
         if (this._parseError !== undefined) return
-        this._parseError = parseXML(doc)
-        if (this._parseError !== undefined) return
+        parseXML(doc)
         this._isLoaded = true
         this._exists = true
       }
@@ -171,7 +169,7 @@ export abstract class Fileish {
     } else if (!this._exists) {
       return new ValidationResponse(I.Set(), I.Set())
     } else {
-      const responses = this.getValidationChecks().map(c => ValidationResponse.continueOnlyIfLoaded(c.nodesToLoad, () => toValidationErrors(c.context ?? this, c.message, c.fn(c.nodesToLoad))))
+      const responses = this.getValidationChecks().map(c => ValidationResponse.continueOnlyIfLoaded(c.nodesToLoad, () => toValidationErrors(this, c.message, c.fn(c.nodesToLoad))))
       const nodesToLoad = I.Set(responses.map(r => r.nodesToLoad)).flatMap(x => x)
       const errors = I.Set(responses.map(r => r.errors)).flatMap(x => x)
       return new ValidationResponse(errors, nodesToLoad)
@@ -183,7 +181,6 @@ export abstract class Fileish {
     let p
     let c
     switch (type) {
-      case PathType.MODULE_TO_IMAGE:
       case PathType.ABS_TO_REL: p = dirname(parent); c = child; break
       case PathType.COLLECTION_TO_MODULEID: p = dirname(dirname(parent)); c = /* relative_path */path.join('modules', child, 'index.cnxml'); break
       case PathType.MODULE_TO_MODULEID: p = dirname(dirname(parent)); c = /* relative_path */path.join(child, 'index.cnxml'); break
@@ -268,6 +265,7 @@ export class PageNode extends Fileish {
       return
     }
     const actualTitleStart = titleTagStart + openTag.length
+    /* istanbul ignore if */
     if (titleTagEnd - actualTitleStart > 280) {
       // If the title is so long you can't tweet it,
       // then something probably went wrong.
@@ -336,7 +334,6 @@ export class PageNode extends Fileish {
         endPos: NOWHERE_END
       }
     }
-    return undefined
   }
 
   public getValidationChecks(): ValidationCheck[] {
@@ -401,7 +398,6 @@ export class BookNode extends Fileish {
     this._slug = textWithSource(selectOne('/col:collection/col:metadata/md:slug', doc))
     const root: Element = selectOne('/col:collection/col:content', doc)
     this._toc = this.buildChildren(root)
-    return undefined
   }
 
   private buildChildren(root: Element): TocNode[] {
@@ -429,9 +425,10 @@ export class BookNode extends Fileish {
             endPos
           }
         }
+        /* istanbul ignore next */
         default:
           /* istanbul ignore next */
-          throw new Error('ERROR: Unknown element in the ToC')
+          throw new Error(`ERROR: Unknown element in the ToC. '${childNode.localName}'`)
       }
     })
     return ret
@@ -556,7 +553,6 @@ export class Bundle extends Fileish {
         endPos
       }
     }))
-    return undefined
   }
 
   public allNodes() {
@@ -603,7 +599,6 @@ export enum PathType {
   ABS_TO_REL = 'REL_TO_REL',
   COLLECTION_TO_MODULEID = 'COLLECTION_TO_MODULEID',
   MODULE_TO_MODULEID = 'MODULE_TO_MODULEID',
-  MODULE_TO_IMAGE = 'MODULE_TO_IMAGE',
 }
 
 function findDuplicates<T>(list: I.List<T>) {
