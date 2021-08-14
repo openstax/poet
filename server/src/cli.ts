@@ -1,9 +1,8 @@
 import fs from 'fs'
 import path from 'path'
-import { PathHelper } from './model/base'
+import { PathHelper, profileAsync } from './model/utils'
 import { TocNode, TocNodeType } from './model/book'
 import { Bundle } from './model/bundle'
-import { profileAsync } from './utils'
 
 function printToc(node: TocNode, depth: number = 1) {
   const title = (node.type === TocNodeType.Inner) ? node.title : node.page.title(() => fs.readFileSync(node.page.absPath, 'utf-8'))

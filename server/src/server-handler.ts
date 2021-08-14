@@ -8,7 +8,7 @@ import {
 import { fixDocument } from './fix-document-ids'
 import { bundleFactory } from './server'
 import { bookTocAsTreeCollection } from './model-adapter'
-import { PageNode } from './model'
+import { PageNode } from './model/page'
 
 export function bundleTreesHandler(): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
   return async (request: BundleTreesArgs) => {

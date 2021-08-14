@@ -44,11 +44,6 @@ export class Bundle extends Fileish implements Bundleish {
     return this.ensureLoaded(this._books)
   }
 
-  private gc() {
-    // Remove any objects that don't exist and are not pointed to by a book
-    // This may need to run every time an object is deleted (or exists is set to false)
-  }
-
   public getValidationChecks(): ValidationCheck[] {
     const books = this.__books()
     return [

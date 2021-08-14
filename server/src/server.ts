@@ -7,18 +7,9 @@ import {
   InitializeResult
 } from 'vscode-languageserver/node'
 
-import {
-  TextDocument
-} from 'vscode-languageserver-textdocument'
-
-import {
-  URI,
-  Utils
-} from 'vscode-uri'
-
-import {
-  expect
-} from './utils'
+import { TextDocument } from 'vscode-languageserver-textdocument'
+import { URI, Utils } from 'vscode-uri'
+import { expect } from './model/utils'
 
 import {
   BundleModulesArgs,
@@ -34,7 +25,8 @@ import {
 } from './server-handler'
 
 import * as sourcemaps from 'source-map-support'
-import { Bundle, Factory } from './model'
+import { Bundle } from './model/bundle'
+import { Factory } from './model/factory'
 import { pageAsTreeObject, BundleLoadManager } from './model-adapter'
 sourcemaps.install()
 

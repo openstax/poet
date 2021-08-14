@@ -5,7 +5,7 @@ import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } 
 import { BookNode } from './model/book'
 import { Bundle } from './model/bundle'
 import { BundleLoadManager, jobRunner, Job, pageAsTreeObject, URIPair, bookTocAsTreeCollection } from './model-adapter'
-import { first, FS_PATH_HELPER, loadSuccess, makeBundle } from './model.test'
+import { first, FS_PATH_HELPER, loadSuccess, makeBundle } from './model/util.spec'
 
 BundleLoadManager.debug = () => {} // Turn off logging
 
