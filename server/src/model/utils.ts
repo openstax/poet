@@ -15,7 +15,7 @@ export const NOWHERE_END: Position = { line: 0, character: 0 /* Number.MAX_VALUE
 export const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA, bk: NS_CONTAINER })
 export const selectOne = <T extends Node>(sel: string, doc: Node): T => {
   const ret = select(sel, doc) as Node[]
-  expect(ret.length === 1 || null, `ERROR: Expected one but found ${ret.length} results that match '${sel}'`)
+  expectValue(ret.length === 1 || null, `ERROR: Expected one but found ${ret.length} results that match '${sel}'`)
   return ret[0] as T
 }
 
@@ -46,7 +46,7 @@ export function textWithSource(el: Element, attr?: string): WithSource<string> {
   const [startPos, endPos] = calculateElementPositions(el)
   const v = attr !== undefined ? el.getAttribute(attr) : el.textContent
   return {
-    v: expect(v, `BUG: Element/Attribute does not have a value. ${JSON.stringify(startPos)}`),
+    v: expectValue(v, `BUG: Element/Attribute does not have a value. ${JSON.stringify(startPos)}`),
     startPos,
     endPos
   }
@@ -114,7 +114,7 @@ export function calculateElementPositions(element: any): [Position, Position] {
 /**
  * Asserts a value of a nullable type is not null and returns the same value with a non-nullable type
  */
-export function expect<T>(value: T | null | undefined, message: string): T {
+export function expectValue<T>(value: T | null | undefined, message: string): T {
   if (value == null) {
     throw new Error(message)
   }

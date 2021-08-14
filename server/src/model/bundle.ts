@@ -1,5 +1,5 @@
 import I from 'immutable'
-import { Bundleish, findDuplicates, NOWHERE_END, NOWHERE_START, Opt, PathHelper, PathType, select, WithSource, calculateElementPositions, expect } from './utils'
+import { Bundleish, findDuplicates, NOWHERE_END, NOWHERE_START, Opt, PathHelper, PathType, select, WithSource, calculateElementPositions, expectValue } from './utils'
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
@@ -17,12 +17,11 @@ export class Bundle extends Fileish implements Bundleish {
     super.setBundle(this)
   }
 
-  protected childrenToLoad = () => this.books()
   protected parseXML = (doc: Document) => {
     const bookNodes = select('//bk:book', doc) as Element[]
     this._books = I.Set(bookNodes.map(b => {
       const [startPos, endPos] = calculateElementPositions(b)
-      const href = expect(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
+      const href = expectValue(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
       const book = this.allBooks.get(this.join(PathType.ABS_TO_REL, this.absPath, href))
       return {
         v: book,
@@ -32,11 +31,11 @@ export class Bundle extends Fileish implements Bundleish {
     }))
   }
 
-  public allNodes() {
-    return I.Set([this]).union(this.allBooks.all()).union(this.allPages.all()).union(this.allImages.all())
+  public get allNodes() {
+    return I.Set([this]).union(this.allBooks.all).union(this.allPages.all).union(this.allImages.all)
   }
 
-  public books() {
+  public get books() {
     return this.__books().map(b => b.v)
   }
 
@@ -44,13 +43,13 @@ export class Bundle extends Fileish implements Bundleish {
     return this.ensureLoaded(this._books)
   }
 
-  public getValidationChecks(): ValidationCheck[] {
+  protected getValidationChecks(): ValidationCheck[] {
     const books = this.__books()
     return [
       {
         message: 'Missing book',
-        nodesToLoad: this.books(),
-        fn: () => books.filter(b => !b.v.exists())
+        nodesToLoad: this.books,
+        fn: () => books.filter(b => !b.v.exists)
       },
       {
         message: 'No books are defiend',
@@ -61,8 +60,8 @@ export class Bundle extends Fileish implements Bundleish {
   }
 
   public isDuplicateUuid(uuid: string) {
-    const pages = this.allPages.all()
-    const duplicateUuids = I.Set(findDuplicates(I.List(pages).filter(p => p.exists()).map(p => p.uuid())))
+    const pages = this.allPages.all
+    const duplicateUuids = I.Set(findDuplicates(I.List(pages).filter(p => p.exists).map(p => p.uuid())))
     return duplicateUuids.has(uuid)
   }
 }

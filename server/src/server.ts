@@ -9,7 +9,7 @@ import {
 
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { URI, Utils } from 'vscode-uri'
-import { expect } from './model/utils'
+import { expectValue } from './model/utils'
 
 import {
   BundleModulesArgs,
@@ -38,8 +38,8 @@ const connection = createConnection(ProposedFeatures.all)
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
 
 function getBundleForUri(uri: string): BundleLoadManager {
-  const bundles = bundleFactory.all().filter(b => uri.startsWith(b.bundle.workspaceRoot))
-  return expect(bundles.first(), 'BUG: Workspace should have loaded up an instance by now.')
+  const bundles = bundleFactory.all.filter(b => uri.startsWith(b.bundle.workspaceRoot))
+  return expectValue(bundles.first(), 'BUG: Workspace should have loaded up an instance by now.')
 }
 
 const pathHelper = {

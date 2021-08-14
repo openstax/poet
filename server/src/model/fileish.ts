@@ -1,7 +1,7 @@
 import path from 'path'
 import I from 'immutable'
 import { DOMParser } from 'xmldom'
-import { Bundleish, Opt, PathHelper, NOWHERE_END, NOWHERE_START, Position, Source, PathType, expect } from './utils'
+import { Bundleish, Opt, PathHelper, NOWHERE_END, NOWHERE_START, Position, Source, PathType, expectValue } from './utils'
 
 const LOAD_ERROR = 'Object has not been loaded yet'
 
@@ -27,7 +27,7 @@ export class ValidationResponse {
   constructor(public readonly errors: I.Set<ModelError>, public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
 
   static continueOnlyIfLoaded(nodes: I.Set<Fileish>, next: (nodes: I.Set<Fileish>) => I.Set<ModelError>) {
-    const unloaded = nodes.filter(n => !n.isLoaded())
+    const unloaded = nodes.filter(n => !n.isLoaded)
     if (unloaded.size > 0) {
       return new ValidationResponse(I.Set(), unloaded)
     } else {
@@ -45,23 +45,23 @@ export abstract class Fileish {
   private _exists = false
   private _parseError: Opt<ParseError>
   protected parseXML: Opt<(doc: Document) => void> // Subclasses define this
-  protected childrenToLoad: Opt<() => I.Set<Fileish>> // Subclasses define this
 
   constructor(private _bundle: Opt<Bundleish>, protected _pathHelper: PathHelper<string>, public readonly absPath: string) { }
 
   static debug = (...args: any[]) => {} // console.debug
   protected abstract getValidationChecks(): ValidationCheck[]
-  public isLoaded() { return this._isLoaded }
-  public filePath() { return path.relative(this.bundle().workspaceRoot, this.absPath) }
+  public get isLoaded() { return this._isLoaded }
+  public get workspacePath() { return path.relative(this.bundle.workspaceRoot, this.absPath) }
   protected setBundle(bundle: Bundleish) { this._bundle = bundle /* avoid catch-22 */ }
-  protected bundle() { return expect(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
+  protected get bundle() { return expectValue(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
   protected ensureLoaded<T>(field: Opt<T>) {
-    return expect(field, `${LOAD_ERROR} [${this.absPath}]`)
+    return expectValue(field, `${LOAD_ERROR} [${this.absPath}]`)
   }
 
-  public exists() { return this._exists }
-  public update(fileContent: Opt<string>): void {
-    Fileish.debug(this.filePath, 'update() started')
+  public get exists() { return this._exists }
+  // Update this Node, and collect all Parse errors
+  public load(fileContent: Opt<string>): void {
+    Fileish.debug(this.workspacePath, 'update() started')
     this._parseError = undefined
     if (fileContent === undefined) {
       this._exists = false
@@ -69,7 +69,7 @@ export abstract class Fileish {
       return
     }
     if (this.parseXML !== undefined) {
-      Fileish.debug(this.filePath, 'parsing XML')
+      Fileish.debug(this.workspacePath, 'parsing XML')
 
       // Development version throws errors instead of turning them into messages
       const parseXML = this.parseXML
@@ -89,19 +89,12 @@ export abstract class Fileish {
           this._parseError = new WrappedParseError(this, e)
         }
       }
-      Fileish.debug(this.filePath, 'parsing XML (done)')
+      Fileish.debug(this.workspacePath, 'parsing XML (done)')
     } else {
       this._exists = true
       this._isLoaded = true
     }
-    Fileish.debug(this.filePath, 'update done')
-  }
-
-  // Update this Node, and collect all Parse errors
-  public load(fileContent: Opt<string>) {
-    Fileish.debug(this.filePath, 'load started')
-    this.update(fileContent)
-    Fileish.debug(this.filePath, 'load done')
+    Fileish.debug(this.workspacePath, 'update done')
   }
 
   private readXML(fileContent: string) {
@@ -125,7 +118,7 @@ export abstract class Fileish {
     return doc
   }
 
-  public getValidationErrors(): ValidationResponse {
+  public get validationErrors(): ValidationResponse {
     if (this._parseError !== undefined) {
       return new ValidationResponse(I.Set([this._parseError]))
     } else if (!this._isLoaded) {
@@ -140,7 +133,7 @@ export abstract class Fileish {
     }
   }
 
-  join(type: PathType, parent: string, child: string) {
+  protected join(type: PathType, parent: string, child: string) {
     const { dirname, join } = this._pathHelper
     let p
     let c

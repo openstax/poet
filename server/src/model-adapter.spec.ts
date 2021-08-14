@@ -12,11 +12,11 @@ BundleLoadManager.debug = () => {} // Turn off logging
 describe('Tree Translator', () => {
   let book = null as unknown as BookNode
   beforeEach(() => {
-    book = loadSuccess(first(loadSuccess(makeBundle()).books()))
+    book = loadSuccess(first(loadSuccess(makeBundle()).books))
   })
   it('pageAsTreeObject', () => {
-    const page = first(book.pages())
-    expect(page.isLoaded()).toBe(false)
+    const page = first(book.pages)
+    expect(page.isLoaded).toBe(false)
     const o = pageAsTreeObject(page)
     expect(o.moduleid).toEqual('m00001')
     expect(o.title).toBe('Introduction')
@@ -49,12 +49,12 @@ describe('Bundle Manager', () => {
     // Nothing loaded yet
     expect(manager.allPages().size).toBe(0)
     // Load the pages
-    const book = loadSuccess(first(loadSuccess(manager.bundle).books()))
-    loadSuccess(first(book.pages()))
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+    loadSuccess(first(book.pages))
     expect(manager.allPages().size).toBe(1)
   })
   it('orphanedPages()', () => {
-    loadSuccess(first(loadSuccess(manager.bundle).books()))
+    loadSuccess(first(loadSuccess(manager.bundle).books))
     expect(manager.allPages().size).toBe(1)
     expect(manager.orhpanedPages().size).toBe(0)
     const orphanedPage = manager.bundle.allPages.get('path/to/orphaned/page')
@@ -87,12 +87,12 @@ describe('Bundle Manager', () => {
     expect(enqueueStub.callCount).toBe(4)
   })
   it('performInitialValidation()', async () => {
-    expect(manager.bundle.isLoaded()).toBe(false)
+    expect(manager.bundle.isLoaded).toBe(false)
     manager.performInitialValidation()
     await jobRunner.done()
 
-    expect(manager.bundle.allNodes().size).toBe(1 + 1 + 1) // bundle + book + page
-    manager.bundle.allNodes().forEach(n => expect(n.isLoaded()).toBe(true))
+    expect(manager.bundle.allNodes.size).toBe(1 + 1 + 1) // bundle + book + page
+    manager.bundle.allNodes.forEach(n => expect(n.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() sends diagnostics for a file we recognize', async () => {
     manager.loadEnoughToSendDiagnostics({
@@ -102,12 +102,12 @@ describe('Bundle Manager', () => {
     await jobRunner.done()
 
     expect(sendDiagnosticsStub.callCount).toBe(1)
-    expect(manager.bundle.getValidationErrors().nodesToLoad.size).toBe(0)
+    expect(manager.bundle.validationErrors.nodesToLoad.size).toBe(0)
 
     // Bundle needs to load all the books
-    const books = manager.bundle.books()
+    const books = manager.bundle.books
     expect(books.size).toBe(1)
-    books.forEach(b => expect(b.isLoaded()).toBe(true))
+    books.forEach(b => expect(b.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() does not send diagnostics for a file we do not recognize', async () => {
     manager.loadEnoughToSendDiagnostics({
@@ -193,9 +193,9 @@ describe('processFilesystemChange()', () => {
   })
   it('creates Images/Pages/Books', async () => {
     // Verify each type of object gets loaded
-    expect(manager.bundle.isLoaded()).toBe(false)
+    expect(manager.bundle.isLoaded).toBe(false)
     expect((await fireChange(FileChangeType.Created, 'META-INF/books.xml')).size).toBe(1)
-    expect(manager.bundle.isLoaded()).toBe(true)
+    expect(manager.bundle.isLoaded).toBe(true)
 
     expect((await fireChange(FileChangeType.Created, 'collections/slug2.collection.xml')).size).toBe(1)
     expect((await fireChange(FileChangeType.Created, 'modules/m1234/index.cnxml')).size).toBe(1)
@@ -219,7 +219,7 @@ describe('processFilesystemChange()', () => {
   })
   it('deletes Files and directories', async () => {
     // Load the Bundle, Book, and Page
-    loadSuccess(first(loadSuccess(first(loadSuccess(manager.bundle).books())).pages()))
+    loadSuccess(first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages))
 
     // Delete non-existent file
     expect((await fireChange(FileChangeType.Deleted, 'media/newpic.png')).size).toBe(0)
@@ -231,17 +231,17 @@ describe('processFilesystemChange()', () => {
 
     // Delete everything (including the bundle)
     expect((await fireChange(FileChangeType.Deleted, '')).size).toBe(1)
-    expect(manager.bundle.exists()).toBe(false)
+    expect(manager.bundle.exists).toBe(false)
   })
   it('deletes Image/Page/Book', async () => {
     // Load the Bundle, Book, and Page
     const bundle = loadSuccess(manager.bundle)
-    const book = loadSuccess(first(bundle.books()))
-    const page = loadSuccess(first(book.pages()))
+    const book = loadSuccess(first(bundle.books))
+    const page = loadSuccess(first(book.pages))
 
-    expect((await fireChange(FileChangeType.Deleted, book.filePath())).size).toBe(1)
-    expect((await fireChange(FileChangeType.Deleted, page.filePath())).size).toBe(1)
-    expect((await fireChange(FileChangeType.Deleted, bundle.filePath())).size).toBe(1)
+    expect((await fireChange(FileChangeType.Deleted, book.workspacePath)).size).toBe(1)
+    expect((await fireChange(FileChangeType.Deleted, page.workspacePath)).size).toBe(1)
+    expect((await fireChange(FileChangeType.Deleted, bundle.workspacePath)).size).toBe(1)
   })
 })
 

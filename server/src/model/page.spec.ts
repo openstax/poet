@@ -9,21 +9,21 @@ describe('Page', () => {
   })
   it('can return a title before being loaded', () => {
     const quickTitle = 'quick title'
-    expect(page.isLoaded()).toBe(false)
+    expect(page.isLoaded).toBe(false)
     const title = page.title(() => `a regexp reads this string so it does not have to be XML <title>${quickTitle}</title>.`)
     expect(title).toBe(quickTitle)
-    expect(page.isLoaded()).toBe(false)
+    expect(page.isLoaded).toBe(false)
   })
   it('falls back if the quick-title did not find a title', () => {
     const quickTitle = 'quick title'
-    expect(page.isLoaded()).toBe(false)
+    expect(page.isLoaded).toBe(false)
     let title = page.title(() => 'no title element to be seen in this contents')
     expect(title).toBe(UNTITLED_FILE)
     title = page.title(() => `<title>${quickTitle}</title>`)
     expect(title).toBe(quickTitle)
     title = page.title(() => 'Just an opening <title>but no closing tag')
     expect(title).toBe(UNTITLED_FILE)
-    expect(page.isLoaded()).toBe(false)
+    expect(page.isLoaded).toBe(false)
   })
   it('sets Untitled when there is no title element in the CNXML', () => {
     page.load(pageMaker({ title: null }))
@@ -71,14 +71,14 @@ describe('Page validations', () => {
     const info = { imageHrefs: [path.relative(path.dirname(page.absPath), image.absPath)] }
     page.load(pageMaker(info))
     // Verify the image needs to be loaded
-    expect(image.isLoaded()).toBe(false)
-    expect(first(page.getValidationErrors().nodesToLoad)).toBe(image)
+    expect(image.isLoaded).toBe(false)
+    expect(first(page.validationErrors.nodesToLoad)).toBe(image)
     // At first the image does not exist:
     image.load(undefined)
-    expect(first(page.getValidationErrors().errors).message).toBe(PageValidationKind.MISSING_IMAGE)
+    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MISSING_IMAGE)
     // And then it does:
     image.load('somebits')
-    expect(page.getValidationErrors().errors.size).toBe(0)
+    expect(page.validationErrors.errors.size).toBe(0)
   })
   it(PageValidationKind.MISSING_TARGET, () => {
     const bundle = makeBundle()
@@ -87,40 +87,40 @@ describe('Page validations', () => {
 
     // Url (always ok)
     page.load(pageMaker({ pageLinks: [{ url: 'https://openstax.org' }] }))
-    expect(page.getValidationErrors().errors.size).toBe(0)
+    expect(page.validationErrors.errors.size).toBe(0)
 
     // Local id that does not exist
     page.load(pageMaker({ pageLinks: [{ targetId: 'nonexistentid' }] }))
-    expect(page.getValidationErrors().errors.size).toBe(1)
+    expect(page.validationErrors.errors.size).toBe(1)
 
     // Local id that does exist
     page.load(pageMaker({ pageLinks: [{ targetId: 'elementId1' }] }))
-    expect(page.getValidationErrors().errors.size).toBe(0)
+    expect(page.validationErrors.errors.size).toBe(0)
 
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234' }] }))
     // Verify the target needs to be loaded
-    expect(target.isLoaded()).toBe(false)
-    expect(first(page.getValidationErrors().nodesToLoad)).toBe(target)
+    expect(target.isLoaded).toBe(false)
+    expect(first(page.validationErrors.nodesToLoad)).toBe(target)
 
     // At first the target does not exist:
     target.load(undefined)
-    expect(first(page.getValidationErrors().errors).message).toBe(PageValidationKind.MISSING_TARGET)
+    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MISSING_TARGET)
     // And then it does:
     target.load(pageMaker({ uuid: '11111111-1111-4111-1111-111111111111' }))
-    expect(page.getValidationErrors().errors.size).toBe(0)
+    expect(page.validationErrors.errors.size).toBe(0)
 
     // Target with target-id
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'nonexistentId' }] }))
-    expect(page.getValidationErrors().errors.size).toBe(1)
+    expect(page.validationErrors.errors.size).toBe(1)
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'elementId1' }] }))
-    expect(page.getValidationErrors().errors.size).toBe(0)
+    expect(page.validationErrors.errors.size).toBe(0)
   })
   it(PageValidationKind.MALFORMED_UUID, () => {
     const bundle = makeBundle()
     const page = bundle.allPages.get('somepage/filename')
     const info = { uuid: 'invalid-uuid-value' }
     page.load(pageMaker(info))
-    expect(first(page.getValidationErrors().errors).message).toBe(PageValidationKind.MALFORMED_UUID)
+    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MALFORMED_UUID)
   })
   it(PageValidationKind.DUPLICATE_UUID, () => {
     const bundle = makeBundle()
@@ -129,14 +129,14 @@ describe('Page validations', () => {
     const info = { /* defaults */ }
     page1.load(pageMaker(info))
     page2.load(pageMaker(info))
-    expect(page1.getValidationErrors().errors.size).toBe(1)
-    expect(page2.getValidationErrors().errors.size).toBe(1)
-    expect(first(page1.getValidationErrors().errors).message).toBe(PageValidationKind.DUPLICATE_UUID)
+    expect(page1.validationErrors.errors.size).toBe(1)
+    expect(page2.validationErrors.errors.size).toBe(1)
+    expect(first(page1.validationErrors.errors).message).toBe(PageValidationKind.DUPLICATE_UUID)
   })
   it('Reports multiple validation errors', () => {
     const bundle = makeBundle()
     const page = bundle.allPages.get('somepage')
     page.load(pageMaker({ uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }] }))
-    expect(page.getValidationErrors().errors.map(e => e.message).toArray().sort()).toEqual([PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET].sort())
+    expect(page.validationErrors.errors.map(e => e.message).toArray().sort()).toEqual([PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET].sort())
   })
 })

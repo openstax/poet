@@ -1,5 +1,5 @@
 import I from 'immutable'
-import { NOWHERE_START, NOWHERE_END, Opt, Position, PathType, Source, WithSource, textWithSource, select, selectOne, calculateElementPositions, expect } from './utils'
+import { NOWHERE_START, NOWHERE_END, Opt, Position, PathType, Source, WithSource, textWithSource, select, selectOne, calculateElementPositions, expectValue } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 import { ImageNode } from './image'
 
@@ -76,11 +76,11 @@ export class PageNode extends Fileish {
     }
   }
 
-  public imageLinks() {
+  private get imageLinks() {
     return this.ensureLoaded(this._imageLinks)
   }
 
-  public pageLinks() {
+  private get pageLinks() {
     return this.ensureLoaded(this._pageLinks)
   }
 
@@ -88,7 +88,6 @@ export class PageNode extends Fileish {
     return this.ensureLoaded(this._elementIds).toSeq().find(n => n.v === id) !== undefined
   }
 
-  protected childrenToLoad = () => this.imageLinks().map(l => l.image)
   protected parseXML = (doc: Document) => {
     this._uuid = textWithSource(selectOne('//md:uuid', doc))
 
@@ -96,10 +95,10 @@ export class PageNode extends Fileish {
 
     const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
     this._imageLinks = I.Set(imageNodes.map(attr => {
-      const src = expect(attr.nodeValue, 'BUG: Attribute does not have a value')
-      const image = super.bundle().allImages.get(this.join(PathType.ABS_TO_REL, this.absPath, src))
+      const src = expectValue(attr.nodeValue, 'BUG: Attribute does not have a value')
+      const image = super.bundle.allImages.get(this.join(PathType.ABS_TO_REL, this.absPath, src))
       // Get the line/col position of the <image> tag
-      const imageNode = expect(attr.ownerElement, 'BUG: attributes always have a parent element')
+      const imageNode = expectValue(attr.ownerElement, 'BUG: attributes always have a parent element')
       const [startPos, endPos] = calculateElementPositions(imageNode)
       return { image, startPos, endPos }
     }))
@@ -113,7 +112,7 @@ export class PageNode extends Fileish {
       const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
       const toUrl = changeEmptyToNull(linkNode.getAttribute('url'))
       return {
-        page: toDocument !== undefined ? super.bundle().allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== undefined ? this : undefined),
+        page: toDocument !== undefined ? super.bundle.allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== undefined ? this : undefined),
         url: toUrl,
         targetElementId: toTargetId,
         startPos,
@@ -133,21 +132,21 @@ export class PageNode extends Fileish {
     }
   }
 
-  public getValidationChecks(): ValidationCheck[] {
-    const imageLinks = this.imageLinks()
-    const pageLinks = this.pageLinks()
+  protected getValidationChecks(): ValidationCheck[] {
+    const imageLinks = this.imageLinks
+    const pageLinks = this.pageLinks
     return [
       {
         message: PageValidationKind.MISSING_IMAGE,
         nodesToLoad: imageLinks.map(l => l.image),
-        fn: () => imageLinks.filter(img => !img.image.exists())
+        fn: () => imageLinks.filter(img => !img.image.exists)
       },
       {
         message: PageValidationKind.MISSING_TARGET,
         nodesToLoad: filterNull(pageLinks.map(l => l.page)),
         fn: () => pageLinks.filter(l => {
           if (l.page === undefined) return false // URL links are ok
-          if (!l.page.exists()) return true // link to non-existent page are bad
+          if (!l.page.exists) return true // link to non-existent page are bad
           if (l.targetElementId === undefined) return false // linking to the whole page and it exists is ok
           return !l.page.hasElementId(l.targetElementId)
         })
@@ -165,7 +164,7 @@ export class PageNode extends Fileish {
         nodesToLoad: I.Set(),
         fn: () => {
           const uuid = this.ensureLoaded(this._uuid)
-          if (this.bundle().isDuplicateUuid(uuid.v)) {
+          if (this.bundle.isDuplicateUuid(uuid.v)) {
             return I.Set([uuid])
           } else {
             return I.Set()

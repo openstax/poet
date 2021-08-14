@@ -1,6 +1,6 @@
 import I from 'immutable'
 import { PageNode } from './page'
-import { Opt, PathType, Source, WithSource, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expect } from './utils'
+import { Opt, PathType, Source, WithSource, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 
 export enum TocNodeType {
@@ -16,7 +16,6 @@ export class BookNode extends Fileish {
   private _slug: Opt<WithSource<string>>
   private _toc: Opt<TocNode[]>
 
-  protected childrenToLoad = () => I.Set(this.pages())
   protected parseXML = (doc: Document) => {
     this._title = textWithSource(selectOne('/col:collection/col:metadata/md:title', doc))
     this._slug = textWithSource(selectOne('/col:collection/col:metadata/md:slug', doc))
@@ -33,15 +32,15 @@ export class BookNode extends Fileish {
           const [startPos, endPos] = calculateElementPositions(titleNode)
           return {
             type: TocNodeType.Inner,
-            title: expect(titleNode.textContent, 'ERROR: Malformed or missing md:title element in Subcollection'),
+            title: expectValue(titleNode.textContent, 'ERROR: Malformed or missing md:title element in Subcollection'),
             children: this.buildChildren(selectOne('./col:content', childNode)),
             startPos,
             endPos
           }
         }
         case 'module': {
-          const pageId = expect(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
-          const page = super.bundle().allPages.get(this.join(PathType.COLLECTION_TO_MODULEID, this.absPath, pageId))
+          const pageId = expectValue(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
+          const page = super.bundle.allPages.get(this.join(PathType.COLLECTION_TO_MODULEID, this.absPath, pageId))
           return {
             type: TocNodeType.Leaf,
             page,
@@ -58,24 +57,24 @@ export class BookNode extends Fileish {
     return ret
   }
 
-  public toc() {
+  public get toc() {
     return this.ensureLoaded(this._toc)
   }
 
-  public title() {
+  public get title() {
     return this.ensureLoaded(this._title).v
   }
 
-  public slug() {
+  public get slug() {
     return this.ensureLoaded(this._slug).v
   }
 
-  public pages() {
+  public get pages() {
     return this.tocLeaves().map(l => l.page)
   }
 
   private tocLeaves() {
-    const toc = this.toc()
+    const toc = this.toc
     return I.List<TocLeaf>().withMutations(acc => this.collectPages(toc, acc))
   }
 
@@ -94,17 +93,17 @@ export class BookNode extends Fileish {
     })
   }
 
-  public getValidationChecks(): ValidationCheck[] {
-    const pages = this.pages()
-    const nonPages = I.List<TocInner>().withMutations(acc => this.collectNonPages(this.toc(), acc))
+  protected getValidationChecks(): ValidationCheck[] {
+    const pages = this.pages
+    const nonPages = I.List<TocInner>().withMutations(acc => this.collectNonPages(this.toc, acc))
     const duplicateTitles = I.Set(findDuplicates(nonPages.map(subcol => subcol.title)))
-    const pageLeaves = I.List<TocLeaf>().withMutations(acc => this.collectPages(this.toc(), acc))
+    const pageLeaves = I.List<TocLeaf>().withMutations(acc => this.collectPages(this.toc, acc))
     const duplicatePages = I.Set(findDuplicates(pages))
     return [
       {
         message: 'Missing page',
         nodesToLoad: I.Set(pages),
-        fn: () => I.Set(this.tocLeaves()).filter(p => !p.page.exists())
+        fn: () => I.Set(this.tocLeaves()).filter(p => !p.page.exists)
       },
       {
         message: 'Duplicate chapter title',

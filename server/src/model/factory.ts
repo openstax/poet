@@ -30,5 +30,5 @@ export class Factory<T> {
     return I.Set(removedItems.values())
   }
 
-  public all() { return I.Set(this._map.values()) }
+  public get all() { return I.Set(this._map.values()) }
 }

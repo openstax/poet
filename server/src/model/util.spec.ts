@@ -26,17 +26,17 @@ describe('Happy path', () => {
     bundle.load(read(bundle.absPath))
   })
   it('loads the book bundle', () => {
-    expect(bundle.exists()).toBeTruthy()
-    expect(bundle.isLoaded()).toBeTruthy()
-    expect(bundle.books().size).toBe(1)
+    expect(bundle.exists).toBeTruthy()
+    expect(bundle.isLoaded).toBeTruthy()
+    expect(bundle.books.size).toBe(1)
   })
   it('loads the Book', () => {
-    const book = first(bundle.books())
+    const book = first(bundle.books)
     loadSuccess(book)
   })
   it('loads a Page', () => {
-    const book = loadSuccess(first(bundle.books()))
-    const page = first(book.pages())
+    const book = loadSuccess(first(bundle.books))
+    const page = first(book.pages)
     loadSuccess(page)
   })
 })
@@ -47,9 +47,9 @@ describe('Bugfixes', () => {
     ignoreConsoleWarnings(() => {
       bundle.load('<invalid this-is-intentionally-invalid-XML content')
     })
-    expect(bundle.getValidationErrors().errors.size).toBe(1)
+    expect(bundle.validationErrors.errors.size).toBe(1)
     loadSuccess(bundle)
-    expect(bundle.getValidationErrors().errors.size).toBe(0)
+    expect(bundle.validationErrors.errors.size).toBe(0)
   })
 })
 
@@ -69,11 +69,11 @@ export function first<T>(col: I.Set<T> | I.List<T>) {
 export const makeBundle = () => new Bundle(FS_PATH_HELPER, REPO_ROOT)
 
 export function loadSuccess<T extends Fileish>(n: T) {
-  expect(n.isLoaded()).toBeFalsy()
+  expect(n.isLoaded).toBeFalsy()
   n.load(read(n.absPath))
-  expect(n.isLoaded()).toBeTruthy()
-  expect(n.exists()).toBeTruthy()
-  expect(n.getValidationErrors().errors.size).toBe(0)
+  expect(n.isLoaded).toBeTruthy()
+  expect(n.exists).toBeTruthy()
+  expect(n.validationErrors.errors.size).toBe(0)
   return n // for daisy-chaining
 }
 

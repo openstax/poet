@@ -23,23 +23,23 @@ const pathHelper: PathHelper<string> = {
     x.load(fs.readFileSync(x.absPath, 'utf-8'))
 
     console.log('After cheap load there are this many:')
-    console.log('  Books', x.allBooks.all().size)
-    console.log('  Pages', x.allPages.all().size)
-    console.log('  Images', x.allImages.all().size)
+    console.log('  Books', x.allBooks.all.size)
+    console.log('  Pages', x.allPages.all.size)
+    console.log('  Images', x.allImages.all.size)
 
     console.log('Tocs:')
-    for (const b of x.allBooks.all()) {
+    for (const b of x.allBooks.all) {
       b.load(fs.readFileSync(b.absPath, 'utf-8'))
-      console.log(b.title())
-      b.toc().forEach((a: TocNode) => printToc(a))
+      console.log(b.title)
+      b.toc.forEach((a: TocNode) => printToc(a))
       console.log('------------------------')
     }
 
     console.log('After expensive load there are this many:')
-    console.log('  Books', x.allBooks.all().size)
-    console.log('  Pages', x.allPages.all().size)
-    console.log('  Images', x.allImages.all().size)
+    console.log('  Books', x.allBooks.all.size)
+    console.log('  Pages', x.allPages.all.size)
+    console.log('  Images', x.allImages.all.size)
 
-    // console.log('Loaded Pages', x.allPages.all().filter(p => (p as any)._isLoaded).map(p => (p as any).filePath).toArray())
+    // console.log('Loaded Pages', x.allPages.all.filter(p => (p as any)._isLoaded).map(p => (p as any).filePath).toArray())
   }))[0], 'ms')
 })().then(null, (err) => { throw err })
