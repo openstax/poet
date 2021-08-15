@@ -1,11 +1,83 @@
 import { readFileSync } from 'fs'
 import * as path from 'path'
+import * as xpath from 'xpath-ts'
+import { DOMParser } from 'xmldom'
 import I from 'immutable'
-import { PathHelper } from './utils'
+import { PathHelper, Position, calculateElementPositions } from './utils'
 import { Bundle } from './bundle'
 import { Fileish } from './fileish'
 
 const REPO_ROOT = path.join(__dirname, '..', '..', '..')
+
+describe('calculateElementPositions', function () {
+  it('should return start and end positions using siblings when available', () => {
+    const xmlContent = `
+      <document>
+        <content>
+          <image src="" />
+        </content>
+      </document>
+    `
+    const xmlData = new DOMParser().parseFromString(xmlContent)
+    const elements = xpath.select('//image', xmlData) as Element[]
+    const imageElement = elements[0]
+    expect(imageElement.nextSibling).not.toBe(null)
+    const expectedStart: Position = {
+      line: 3,
+      character: 10
+    }
+    const expectedEnd: Position = {
+      line: 3,
+      character: 26
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    expect(result).toEqual([expectedStart, expectedEnd])
+  })
+  it('should return start and end positions based on attributes when no siblings', () => {
+    const xmlContent = `
+      <document>
+        <content><image src="value" /></content>
+      </document>
+    `
+    const xmlData = new DOMParser().parseFromString(xmlContent)
+    const elements = xpath.select('//image', xmlData) as Node[]
+    const imageElement = elements[0] as Element
+
+    expect(imageElement.nextSibling).toBe(null)
+    const expectedStart: Position = {
+      line: 2,
+      character: 17
+    }
+    const expectedEnd: Position = {
+      line: 2,
+      character: 35
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    expect(result).toEqual([expectedStart, expectedEnd])
+  })
+  it('should return start and end positions based on tag when no siblings or attributes', () => {
+    const xmlContent = `
+      <document>
+        <content><image /></content>
+      </document>
+    `
+    const xmlData = new DOMParser().parseFromString(xmlContent)
+    const elements = xpath.select('//image', xmlData) as Node[]
+    const imageElement = elements[0] as Element
+
+    expect(imageElement.nextSibling).toBe(null)
+    const expectedStart: Position = {
+      line: 2,
+      character: 17
+    }
+    const expectedEnd: Position = {
+      line: 2,
+      character: 23
+    }
+    const result: Position[] = calculateElementPositions(imageElement)
+    expect(result).toEqual([expectedStart, expectedEnd])
+  })
+})
 
 describe('Bugfixes', () => {
   it('clears parse errors when the file parses correctly', () => {
