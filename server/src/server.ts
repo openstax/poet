@@ -124,7 +124,7 @@ connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler())
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
   const manager = getBundleForUri(workspaceUri)
   await manager.loadEnoughForOrphans()
-  return manager.orhpanedPages().map(pageAsTreeObject).toArray()
+  return manager.orphanedPages().map(pageAsTreeObject).toArray()
 })
 
 connection.onRequest(ExtensionServerRequest.BundleModules, ({ workspaceUri }: BundleModulesArgs): BundleModulesResponse => {

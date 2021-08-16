@@ -58,11 +58,11 @@ describe('Bundle Manager', () => {
   it('orphanedPages()', () => {
     loadSuccess(first(loadSuccess(manager.bundle).books))
     expect(manager.allPages().size).toBe(1)
-    expect(manager.orhpanedPages().size).toBe(0)
+    expect(manager.orphanedPages().size).toBe(0)
     const orphanedPage = manager.bundle.allPages.get('path/to/orphaned/page')
     expect(manager.allPages().size).toBe(2)
-    expect(manager.orhpanedPages().size).toBe(1)
-    expect(manager.orhpanedPages().first()).toBe(orphanedPage)
+    expect(manager.orphanedPages().size).toBe(1)
+    expect(manager.orphanedPages().first()).toBe(orphanedPage)
   })
   it('updateFileContents()', () => {
     const enqueueStub = sinon.stub(manager.jobRunner, 'enqueue')
@@ -139,7 +139,7 @@ describe('Find orphaned files', () => {
     const manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
     await manager.loadEnoughForOrphans()
     await manager.jobRunner.done()
-    expect(manager.orhpanedPages().size).toBe(2)
+    expect(manager.orphanedPages().size).toBe(2)
   })
 })
 

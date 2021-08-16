@@ -114,7 +114,7 @@ export class ModelManager {
     return this.bundle.allPages.all
   }
 
-  public orhpanedPages() {
+  public orphanedPages() {
     const books = this.bundle.books
     return this.bundle.allPages.all.subtract(books.flatMap(b => b.pages))
   }
