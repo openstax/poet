@@ -1,6 +1,7 @@
 import path from 'path'
 import I from 'immutable'
 import { DOMParser } from 'xmldom'
+import * as Quarx from 'quarx'
 import { Bundleish, Opt, PathHelper, PathKind, expectValue, Range, HasRange, NOWHERE } from './utils'
 
 export class ModelError extends Error implements HasRange {
@@ -52,8 +53,8 @@ export abstract class Fileish {
   public get workspacePath() { return path.relative(this.bundle.workspaceRoot, this.absPath) }
   protected setBundle(bundle: Bundleish) { this._bundle = bundle /* avoid catch-22 */ }
   protected get bundle() { return expectValue(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
-  protected ensureLoaded<T>(field: Opt<T>) {
-    return expectValue(field, `Object has not been loaded yet [${this.absPath}]`)
+  protected ensureLoaded<T>(field: Quarx.Box<Opt<T>>) {
+    return expectValue(field.get(), `Object has not been loaded yet [${this.absPath}]`)
   }
 
   public get exists() { return this._exists }

@@ -1,4 +1,5 @@
 import I from 'immutable'
+import * as Quarx from 'quarx'
 import { PageNode } from './page'
 import { Opt, PathKind, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
@@ -12,15 +13,15 @@ interface TocInner extends HasRange { readonly type: TocNodeKind.Inner, readonly
 interface TocLeaf extends HasRange { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
 
 export class BookNode extends Fileish {
-  private _title: Opt<WithRange<string>>
-  private _slug: Opt<WithRange<string>>
-  private _toc: Opt<TocNode[]>
+  private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined)
+  private readonly _slug = Quarx.observable.box<Opt<WithRange<string>>>(undefined)
+  private readonly _toc = Quarx.observable.box<Opt<TocNode[]>>(undefined)
 
   protected parseXML = (doc: Document) => {
-    this._title = textWithSource(selectOne('/col:collection/col:metadata/md:title', doc))
-    this._slug = textWithSource(selectOne('/col:collection/col:metadata/md:slug', doc))
+    this._title.set(textWithSource(selectOne('/col:collection/col:metadata/md:title', doc)))
+    this._slug.set(textWithSource(selectOne('/col:collection/col:metadata/md:slug', doc)))
     const root: Element = selectOne('/col:collection/col:content', doc)
-    this._toc = this.buildChildren(root)
+    this._toc.set(this.buildChildren(root))
   }
 
   private buildChildren(root: Element): TocNode[] {

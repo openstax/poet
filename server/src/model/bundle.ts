@@ -1,4 +1,5 @@
 import I from 'immutable'
+import * as Quarx from 'quarx'
 import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange, calculateElementPositions, expectValue, NOWHERE } from './utils'
 import { Factory } from './factory'
 import { PageNode } from './page'
@@ -10,7 +11,7 @@ export class Bundle extends Fileish implements Bundleish {
   public readonly allImages: Factory<ImageNode> = new Factory((absPath: string) => new ImageNode(this, this._pathHelper, absPath))
   public readonly allPages: Factory<PageNode> = new Factory((absPath: string) => new PageNode(this, this._pathHelper, absPath))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this._pathHelper, absPath))
-  private _books: Opt<I.Set<WithRange<BookNode>>>
+  private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
 
   constructor(pathHelper: PathHelper<string>, public readonly workspaceRoot: string) {
     super(undefined, pathHelper, pathHelper.join(workspaceRoot, 'META-INF/books.xml'))
@@ -19,7 +20,7 @@ export class Bundle extends Fileish implements Bundleish {
 
   protected parseXML = (doc: Document) => {
     const bookNodes = select('//bk:book', doc) as Element[]
-    this._books = I.Set(bookNodes.map(b => {
+    this._books.set(I.Set(bookNodes.map(b => {
       const range = calculateElementPositions(b)
       const href = expectValue(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
       const book = this.allBooks.getOrAdd(this.join(PathKind.ABS_TO_REL, this.absPath, href))
@@ -27,7 +28,7 @@ export class Bundle extends Fileish implements Bundleish {
         v: book,
         range
       }
-    }))
+    })))
   }
 
   public get allNodes() {

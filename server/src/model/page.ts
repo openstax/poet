@@ -1,4 +1,5 @@
 import I from 'immutable'
+import * as Quarx from 'quarx'
 import { Opt, Position, PathKind, WithRange, textWithSource, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 import { ImageNode } from './image'
@@ -43,19 +44,20 @@ export const UNTITLED_FILE = 'UntitledFile'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export class PageNode extends Fileish {
-  private _uuid: Opt<WithRange<string>>
-  private _title: Opt<WithRange<string>>
-  private _elementIds: Opt<I.Set<WithRange<string>>>
-  private _imageLinks: Opt<I.Set<ImageLink>>
-  private _pageLinks: Opt<I.Set<PageLink>>
+  private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined)
+  private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined)
+  private readonly _elementIds = Quarx.observable.box<Opt<I.Set<WithRange<string>>>>(undefined)
+  private readonly _imageLinks = Quarx.observable.box<Opt<I.Set<ImageLink>>>(undefined)
+  private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
   public uuid() { return this.ensureLoaded(this._uuid).v }
   public title(fileReader: () => string) {
     // A quick way to get the title for the ToC
-    if (this._title === undefined) {
+    const v = this._title.get()
+    if (v === undefined) {
       const data = fileReader()
       return this.guessTitle(data)?.v ?? UNTITLED_FILE
     }
-    return this._title.v
+    return v.v
   }
 
   private guessTitle(data: string): Opt<WithRange<string>> {
@@ -101,23 +103,23 @@ export class PageNode extends Fileish {
   }
 
   protected parseXML = (doc: Document) => {
-    this._uuid = textWithSource(selectOne('//md:uuid', doc))
+    this._uuid.set(textWithSource(selectOne('//md:uuid', doc)))
 
-    this._elementIds = I.Set((select('//cnxml:*[@id]', doc) as Element[]).map(el => textWithSource(el, 'id')))
+    this._elementIds.set(I.Set((select('//cnxml:*[@id]', doc) as Element[]).map(el => textWithSource(el, 'id'))))
 
     const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
-    this._imageLinks = I.Set(imageNodes.map(attr => {
+    this._imageLinks.set(I.Set(imageNodes.map(attr => {
       const src = expectValue(attr.nodeValue, 'BUG: Attribute does not have a value')
       const image = super.bundle.allImages.getOrAdd(this.join(PathKind.ABS_TO_REL, this.absPath, src))
       // Get the line/col position of the <image> tag
       const imageNode = expectValue(attr.ownerElement, 'BUG: attributes always have a parent element')
       const range = calculateElementPositions(imageNode)
       return { image, range }
-    }))
+    })))
 
     const linkNodes = select('//cnxml:link', doc) as Element[]
     const changeEmptyToNull = (str: string | null): Opt<string> => (str === '' || str === null) ? undefined : str
-    this._pageLinks = I.Set(linkNodes.map(linkNode => {
+    this._pageLinks.set(I.Set(linkNodes.map(linkNode => {
       const range = calculateElementPositions(linkNode)
       // xmldom never returns null, it returns ''
       const toDocument = changeEmptyToNull(linkNode.getAttribute('document'))
@@ -137,16 +139,16 @@ export class PageNode extends Fileish {
       } else {
         return { range, type: PageLinkKind.PAGE, page: toPage }
       }
-    }))
+    })))
 
     const titleNode = select('//cnxml:title', doc) as Element[]
     if (titleNode.length > 0) {
-      this._title = textWithSource(titleNode[0])
+      this._title.set(textWithSource(titleNode[0]))
     } else {
-      this._title = {
+      this._title.set({
         v: UNTITLED_FILE,
         range: NOWHERE
-      }
+      })
     }
   }
 
