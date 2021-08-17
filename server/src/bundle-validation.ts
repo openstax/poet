@@ -62,6 +62,7 @@ export class BundleValidationQueue {
   }
 
   private trigger(): void {
+    /* istanbul ignore if */
     if (this.timer !== undefined || this.queue.length === 0) {
       // Either the queue is empty, or we're already set to process the next
       // entry
