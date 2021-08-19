@@ -1,6 +1,6 @@
 import I from 'immutable'
 import { PageNode } from './page'
-import { Opt, PathType, Source, WithSource, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue } from './utils'
+import { Opt, PathType, Range, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 
 export enum TocNodeType {
@@ -8,12 +8,12 @@ export enum TocNodeType {
   Leaf
 }
 export type TocNode = TocInner | TocLeaf
-interface TocInner extends Source { readonly type: TocNodeType.Inner, readonly title: string, readonly children: TocNode[] }
-interface TocLeaf extends Source { readonly type: TocNodeType.Leaf, readonly page: PageNode }
+interface TocInner extends Range { readonly type: TocNodeType.Inner, readonly title: string, readonly children: TocNode[] }
+interface TocLeaf extends Range { readonly type: TocNodeType.Leaf, readonly page: PageNode }
 
 export class BookNode extends Fileish {
-  private _title: Opt<WithSource<string>>
-  private _slug: Opt<WithSource<string>>
+  private _title: Opt<WithRange<string>>
+  private _slug: Opt<WithRange<string>>
   private _toc: Opt<TocNode[]>
 
   protected parseXML = (doc: Document) => {
@@ -25,17 +25,17 @@ export class BookNode extends Fileish {
 
   private buildChildren(root: Element): TocNode[] {
     const ret = (select('./col:*', root) as Element[]).map((childNode): TocNode => {
-      const [startPos, endPos] = calculateElementPositions(childNode)
+      const { start, end } = calculateElementPositions(childNode)
       switch (childNode.localName) {
         case 'subcollection': {
           const titleNode = selectOne('md:title', childNode)
-          const [startPos, endPos] = calculateElementPositions(titleNode)
+          const { start, end } = calculateElementPositions(titleNode)
           return {
             type: TocNodeType.Inner,
             title: expectValue(titleNode.textContent, 'ERROR: Malformed or missing md:title element in Subcollection'),
             children: this.buildChildren(selectOne('./col:content', childNode)),
-            startPos,
-            endPos
+            start,
+            end
           }
         }
         case 'module': {
@@ -44,8 +44,8 @@ export class BookNode extends Fileish {
           return {
             type: TocNodeType.Leaf,
             page,
-            startPos,
-            endPos
+            start,
+            end
           }
         }
         /* istanbul ignore next */

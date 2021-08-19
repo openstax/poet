@@ -1,5 +1,5 @@
 import I from 'immutable'
-import { Bundleish, findDuplicates, NOWHERE_END, NOWHERE_START, Opt, PathHelper, PathType, select, WithSource, calculateElementPositions, expectValue } from './utils'
+import { Bundleish, findDuplicates, NOWHERE_END, NOWHERE_START, Opt, PathHelper, PathType, select, WithRange, calculateElementPositions, expectValue } from './utils'
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
@@ -10,7 +10,7 @@ export class Bundle extends Fileish implements Bundleish {
   public readonly allImages: Factory<ImageNode> = new Factory((absPath: string) => new ImageNode(this, this._pathHelper, absPath))
   public readonly allPages: Factory<PageNode> = new Factory((absPath: string) => new PageNode(this, this._pathHelper, absPath))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this._pathHelper, absPath))
-  private _books: Opt<I.Set<WithSource<BookNode>>>
+  private _books: Opt<I.Set<WithRange<BookNode>>>
 
   constructor(pathHelper: PathHelper<string>, public readonly workspaceRoot: string) {
     super(undefined, pathHelper, pathHelper.join(workspaceRoot, 'META-INF/books.xml'))
@@ -20,13 +20,13 @@ export class Bundle extends Fileish implements Bundleish {
   protected parseXML = (doc: Document) => {
     const bookNodes = select('//bk:book', doc) as Element[]
     this._books = I.Set(bookNodes.map(b => {
-      const [startPos, endPos] = calculateElementPositions(b)
+      const { start, end } = calculateElementPositions(b)
       const href = expectValue(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
       const book = this.allBooks.get(this.join(PathType.ABS_TO_REL, this.absPath, href))
       return {
         v: book,
-        startPos,
-        endPos
+        start,
+        end
       }
     }))
   }
@@ -60,7 +60,7 @@ export class Bundle extends Fileish implements Bundleish {
       {
         message: BundleValidationKind.NO_BOOKS,
         nodesToLoad: I.Set(),
-        fn: () => books.isEmpty() ? I.Set([{ startPos: NOWHERE_START, endPos: NOWHERE_END }]) : I.Set()
+        fn: () => books.isEmpty() ? I.Set([{ start: NOWHERE_START, end: NOWHERE_END }]) : I.Set()
       }
     ]
   }

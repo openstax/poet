@@ -2,7 +2,7 @@ import { glob } from 'glob'
 import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
-import { Connection, Range } from 'vscode-languageserver'
+import { Connection } from 'vscode-languageserver'
 import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
@@ -219,10 +219,7 @@ export class ModelManager {
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
       const diagnostics = errors.toSet().map(err => {
-        const start = err.startPos
-        const end = err.endPos
-        const range = Range.create(start, end)
-        return Diagnostic.create(range, err.message, DiagnosticSeverity.Error)
+        return Diagnostic.create(err, err.message, DiagnosticSeverity.Error)
       }).toArray()
       this.conn.sendDiagnostics({
         uri,

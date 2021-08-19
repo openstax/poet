@@ -33,22 +33,22 @@ export interface PathHelper<T> {
   dirname: (p: T) => T
 }
 
-export interface Source {
-  startPos: Position
-  endPos: Position
+export interface Range {
+  readonly start: Position
+  readonly end: Position
 }
 
-export interface WithSource<T> extends Source {
+export interface WithRange<T> extends Range {
   v: T
 }
 
-export function textWithSource(el: Element, attr?: string): WithSource<string> {
-  const [startPos, endPos] = calculateElementPositions(el)
+export function textWithSource(el: Element, attr?: string): WithRange<string> {
+  const { start, end } = calculateElementPositions(el)
   const v = attr !== undefined ? el.getAttribute(attr) : el.textContent
   return {
-    v: expectValue(v, `BUG: Element/Attribute does not have a value. ${JSON.stringify(startPos)}`),
-    startPos,
-    endPos
+    v: expectValue(v, `BUG: Element/Attribute does not have a value. ${JSON.stringify(start)}`),
+    start: start,
+    end: end
   }
 }
 
@@ -69,21 +69,21 @@ export function findDuplicates<T>(list: I.List<T>) {
   return list.filter((item, index) => index !== list.indexOf(item))
 }
 
-export function calculateElementPositions(element: any): [Position, Position] {
+export function calculateElementPositions(element: any): Range {
   // Calculate positions accounting for the zero-based convention used by
   // vscode
-  const startPosition: Position = {
+  const start: Position = {
     line: element.lineNumber - 1,
     character: element.columnNumber - 1
   }
   const elementSibling = element.nextSibling
-  let endPosition: Position
+  let end: Position
 
   // Establish the end position using as much information as possible
   // based upon (in order of preference) 1) element sibling 2) final element
   // attribute 3) the tag
   if (elementSibling != null) {
-    endPosition = {
+    end = {
       line: element.nextSibling.lineNumber - 1,
       character: element.nextSibling.columnNumber - 1
     }
@@ -93,7 +93,7 @@ export function calculateElementPositions(element: any): [Position, Position] {
     const finalAttributeColumn: number = finalAttribute.columnNumber
     const finalAttributeLength: number = finalAttribute.value.length
 
-    endPosition = {
+    end = {
       line: finalAttribute.lineNumber - 1,
       character: finalAttributeColumn + finalAttributeLength + 1
     }
@@ -102,13 +102,13 @@ export function calculateElementPositions(element: any): [Position, Position] {
     const tagLength: number = elementTag.length
     const elementStartColumn: number = element.columnNumber
 
-    endPosition = {
+    end = {
       line: element.lineNumber - 1,
       character: elementStartColumn + tagLength
     }
   }
 
-  return [startPosition, endPosition]
+  return { start, end }
 }
 
 /**

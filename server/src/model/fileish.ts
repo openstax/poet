@@ -1,12 +1,12 @@
 import path from 'path'
 import I from 'immutable'
 import { DOMParser } from 'xmldom'
-import { Bundleish, Opt, PathHelper, NOWHERE_END, NOWHERE_START, Position, Source, PathType, expectValue } from './utils'
+import { Bundleish, Opt, PathHelper, NOWHERE_END, NOWHERE_START, Position, PathType, expectValue, Range } from './utils'
 
 const LOAD_ERROR = 'Object has not been loaded yet'
 
-export class ModelError extends Error {
-  constructor(public readonly node: Fileish, message: string, public readonly startPos: Position, public readonly endPos: Position) {
+export class ModelError extends Error implements Range {
+  constructor(public readonly node: Fileish, message: string, public readonly start: Position, public readonly end: Position) {
     super(message)
     this.name = this.constructor.name
   }
@@ -21,7 +21,7 @@ export class WrappedParseError<T extends Error> extends ParseError {
 export interface ValidationCheck {
   message: string
   nodesToLoad: I.Set<Fileish>
-  fn: (loadedNodes?: I.Set<Fileish>) => I.Set<Source>
+  fn: (loadedNodes?: I.Set<Fileish>) => I.Set<Range>
 }
 export class ValidationResponse {
   constructor(public readonly errors: I.Set<ModelError>, public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
@@ -36,8 +36,8 @@ export class ValidationResponse {
   }
 }
 
-function toValidationErrors(node: Fileish, message: string, sources: I.Set<Source>) {
-  return sources.map(s => new ModelError(node, message, s.startPos, s.endPos))
+function toValidationErrors(node: Fileish, message: string, sources: I.Set<Range>) {
+  return sources.map(s => new ModelError(node, message, s.start, s.end))
 }
 
 export abstract class Fileish {

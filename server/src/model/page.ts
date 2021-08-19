@@ -1,13 +1,13 @@
 import I from 'immutable'
-import { NOWHERE_START, NOWHERE_END, Opt, Position, PathType, Source, WithSource, textWithSource, select, selectOne, calculateElementPositions, expectValue } from './utils'
+import { NOWHERE_START, NOWHERE_END, Opt, Position, PathType, Range, WithRange, textWithSource, select, selectOne, calculateElementPositions, expectValue } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 import { ImageNode } from './image'
 
-export interface ImageLink extends Source {
+export interface ImageLink extends Range {
   image: ImageNode
 }
 
-export interface PageLink extends Source {
+export interface PageLink extends Range {
   page: Opt<PageNode>
   targetElementId: Opt<string>
   url: Opt<string>
@@ -32,9 +32,9 @@ export const UNTITLED_FILE = 'UntitledFile'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export class PageNode extends Fileish {
-  private _uuid: Opt<WithSource<string>>
-  private _title: Opt<WithSource<string>>
-  private _elementIds: Opt<I.Set<WithSource<string>>>
+  private _uuid: Opt<WithRange<string>>
+  private _title: Opt<WithRange<string>>
+  private _elementIds: Opt<I.Set<WithRange<string>>>
   private _imageLinks: Opt<I.Set<ImageLink>>
   private _pageLinks: Opt<I.Set<PageLink>>
   public uuid() { return this.ensureLoaded(this._uuid).v }
@@ -47,7 +47,7 @@ export class PageNode extends Fileish {
     return this._title.v
   }
 
-  private guessTitle(data: string): Opt<WithSource<string>> {
+  private guessTitle(data: string): Opt<WithRange<string>> {
     const openTag = '<title>'
     const closeTag = '</title>'
     const titleTagStart = data.indexOf(openTag)
@@ -65,8 +65,8 @@ export class PageNode extends Fileish {
     }
     return {
       v: data.substring(actualTitleStart, titleTagEnd).trim(),
-      startPos: convertToPos(data, actualTitleStart),
-      endPos: convertToPos(data, titleTagEnd)
+      start: convertToPos(data, actualTitleStart),
+      end: convertToPos(data, titleTagEnd)
     }
   }
 
@@ -93,14 +93,14 @@ export class PageNode extends Fileish {
       const image = super.bundle.allImages.get(this.join(PathType.ABS_TO_REL, this.absPath, src))
       // Get the line/col position of the <image> tag
       const imageNode = expectValue(attr.ownerElement, 'BUG: attributes always have a parent element')
-      const [startPos, endPos] = calculateElementPositions(imageNode)
-      return { image, startPos, endPos }
+      const { start, end } = calculateElementPositions(imageNode)
+      return { image, start, end }
     }))
 
     const linkNodes = select('//cnxml:link', doc) as Element[]
     const changeEmptyToNull = (str: string | null): Opt<string> => (str === '' || str === null) ? undefined : str
     this._pageLinks = I.Set(linkNodes.map(linkNode => {
-      const [startPos, endPos] = calculateElementPositions(linkNode)
+      const { start, end } = calculateElementPositions(linkNode)
       // xmldom never returns null, it returns ''
       const toDocument = changeEmptyToNull(linkNode.getAttribute('document'))
       const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
@@ -109,8 +109,8 @@ export class PageNode extends Fileish {
         page: toDocument !== undefined ? super.bundle.allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== undefined ? this : undefined),
         url: toUrl,
         targetElementId: toTargetId,
-        startPos,
-        endPos
+        start,
+        end
       }
     }))
 
@@ -120,8 +120,8 @@ export class PageNode extends Fileish {
     } else {
       this._title = {
         v: UNTITLED_FILE,
-        startPos: NOWHERE_START,
-        endPos: NOWHERE_END
+        start: NOWHERE_START,
+        end: NOWHERE_END
       }
     }
   }
