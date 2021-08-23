@@ -84,7 +84,11 @@ export class PageNode extends Fileish {
     }
   }
 
-  private get imageLinks() {
+  public get images() {
+    return this.imageLinks.map(l => l.image)
+  }
+
+  public get imageLinks() {
     return this.ensureLoaded(this._imageLinks)
   }
 

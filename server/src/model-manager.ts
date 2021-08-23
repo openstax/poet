@@ -119,6 +119,12 @@ export class ModelManager {
     return this.bundle.allPages.all.subtract(books.flatMap(b => b.pages))
   }
 
+  public get orphanedImages() {
+    const books = this.bundle.books
+    const pages = books.flatMap(b => b.pages)
+    return this.bundle.allImages.all.subtract(pages.flatMap(p => p.images))
+  }
+
   public async loadEnoughForToc() {
     // The only reason this is not implemented as a Job is because we need to send a timely response to the client
     // and there is no code for being notified when a Job completes

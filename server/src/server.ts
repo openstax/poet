@@ -4,12 +4,15 @@ import {
   ProposedFeatures,
   InitializeParams,
   TextDocumentSyncKind,
-  InitializeResult
+  InitializeResult,
+  TextDocumentPositionParams,
+  CompletionItem
 } from 'vscode-languageserver/node'
 
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { URI, Utils } from 'vscode-uri'
-import { expectValue } from './model/utils'
+import { expectValue, inRange } from './model/utils'
+import path from 'path'
 
 import {
   BundleModulesArgs,
@@ -65,6 +68,9 @@ connection.onInitialize(async (params: InitializeParams) => {
         openClose: true,
         change: TextDocumentSyncKind.Incremental
       },
+      completionProvider: {
+        resolveProvider: true
+      },      
       workspace: {
         workspaceFolders: {
           // changeNotification: true,
@@ -133,6 +139,28 @@ connection.onRequest(ExtensionServerRequest.BundleModules, ({ workspaceUri }: Bu
 })
 
 connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler())
+
+connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[]|null => {
+  const manager = getBundleForUri(_textDocumentPosition.textDocument.uri)
+  const cursor = _textDocumentPosition.position
+  const page = manager.bundle.allPages.getIfHas(_textDocumentPosition.textDocument.uri)
+  
+  if (page != undefined) {
+    const foundLinks = page.imageLinks.toArray().filter((l) => {
+      return inRange(l.startPos, l.endPos, cursor)
+    })
+
+    if (foundLinks.length === 0) { return null }
+
+    return manager.orphanedImages.toArray().map(i => {
+      const item = CompletionItem.create(path.basename(i.absPath))
+      item.insertText = path.relative(path.dirname(page.absPath), i.absPath)
+      return item
+    })
+  }
+
+  return []
+})
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
