@@ -145,7 +145,7 @@ function isBefore(a: Position, b: Position) {
   return a.line < b.line
 }
 
-export function inRange(start: Position, end: Position, current: Position) {
-  return (isAfter(current, start) && isBefore(current, end))
+export function inRange(range: Range, current: Position) {
+  return (isAfter(current, range.start) && isBefore(current, range.end))
 }
 

@@ -7,8 +7,14 @@ import {
 } from '../../common/src/requests'
 import { fixDocument } from './fix-document-ids'
 import { bundleFactory } from './server'
-import { bookTocAsTreeCollection } from './model-manager'
+import { bookTocAsTreeCollection, ModelManager } from './model-manager'
 import { PageNode } from './model/page'
+import {
+  CompletionItem,
+  TextDocumentPositionParams
+} from 'vscode-languageserver/node'
+import { inRange } from './model/utils'
+import path from 'path'
 
 export function bundleTreesHandler(): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
   return async (request: BundleTreesArgs) => {
@@ -38,4 +44,25 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsArgs) => Prom
     const pages = manager.bundle.allPages.all
     await Promise.all(pages.map(async p => await fixModule(p)))
   }
+}
+
+export function imageAutocompleteHandler(documentPosition: TextDocumentPositionParams, manager: ModelManager): CompletionItem[]|null {
+  const cursor = documentPosition.position
+  const page = manager.bundle.allPages.getIfHas(documentPosition.textDocument.uri)
+  
+  if (page != undefined) {
+    const foundLinks = page.imageLinks.toArray().filter((l) => {
+      return inRange(l, cursor)
+    })
+
+    if (foundLinks.length === 0) { return null }
+
+    return manager.orphanedImages.toArray().map(i => {
+      const item = CompletionItem.create(path.basename(i.absPath))
+      item.insertText = path.relative(path.dirname(page.absPath), i.absPath)
+      return item
+    })
+  }
+
+  return []
 }

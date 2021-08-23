@@ -6,13 +6,13 @@ import {
   TextDocumentSyncKind,
   InitializeResult,
   TextDocumentPositionParams,
-  CompletionItem
+  CompletionItem,
+  CancellationToken
 } from 'vscode-languageserver/node'
 
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { URI, Utils } from 'vscode-uri'
-import { expectValue, inRange } from './model/utils'
-import path from 'path'
+import { expectValue } from './model/utils'
 
 import {
   BundleModulesArgs,
@@ -24,7 +24,8 @@ import {
 
 import {
   bundleEnsureIdsHandler,
-  bundleTreesHandler
+  bundleTreesHandler,
+  imageAutocompleteHandler
 } from './server-handler'
 
 import * as sourcemaps from 'source-map-support'
@@ -140,26 +141,11 @@ connection.onRequest(ExtensionServerRequest.BundleModules, ({ workspaceUri }: Bu
 
 connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler())
 
-connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[]|null => {
+connection.onCompletionResolve((a: CompletionItem, token: CancellationToken): CompletionItem => a)
+
+connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] | null => {
   const manager = getBundleForUri(_textDocumentPosition.textDocument.uri)
-  const cursor = _textDocumentPosition.position
-  const page = manager.bundle.allPages.getIfHas(_textDocumentPosition.textDocument.uri)
-  
-  if (page != undefined) {
-    const foundLinks = page.imageLinks.toArray().filter((l) => {
-      return inRange(l.startPos, l.endPos, cursor)
-    })
-
-    if (foundLinks.length === 0) { return null }
-
-    return manager.orphanedImages.toArray().map(i => {
-      const item = CompletionItem.create(path.basename(i.absPath))
-      item.insertText = path.relative(path.dirname(page.absPath), i.absPath)
-      return item
-    })
-  }
-
-  return []
+  return imageAutocompleteHandler(_textDocumentPosition, manager)
 })
 
 // Make the text document manager listen on the connection
