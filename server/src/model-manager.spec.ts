@@ -5,7 +5,7 @@ import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } 
 import { BookNode } from './model/book'
 import { Bundle } from './model/bundle'
 import { ModelManager, pageAsTreeObject, bookTocAsTreeCollection } from './model-manager'
-import { first, FS_PATH_HELPER, loadSuccess, makeBundle } from './model/util.spec'
+import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/util.spec'
 import { Job, JobRunner } from './job-runner'
 
 ModelManager.debug = () => {} // Turn off logging
@@ -118,6 +118,14 @@ describe('Bundle Manager', () => {
     })
     await manager.jobRunner.done()
     expect(sendDiagnosticsStub.callCount).toBe(0)
+  })
+  it('calls sendDiagnostics with objects that can be serialized (no cycles)', () => {
+    ignoreConsoleWarnings(() => manager.updateFileContents(manager.bundle.absPath, '<notvalidXML'))
+    expect(sendDiagnosticsStub.callCount).toBe(1)
+    const diagnosticsObj = sendDiagnosticsStub.getCall(0).args[0]
+    expect(diagnosticsObj.uri).toBeTruthy()
+    expect(diagnosticsObj.diagnostics).toBeTruthy()
+    expect(() => JSON.stringify(diagnosticsObj)).not.toThrow()
   })
 })
 

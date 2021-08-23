@@ -170,8 +170,8 @@ export class PageNode extends Fileish {
 }
 
 export enum PageValidationKind {
-  MISSING_IMAGE = 'Missing image',
-  MISSING_TARGET = 'Link target not found',
+  MISSING_IMAGE = 'Image file does not exist',
+  MISSING_TARGET = 'Link target does not exist',
   MALFORMED_UUID = 'Malformed UUID',
   DUPLICATE_UUID = 'Duplicate Page/Module UUID',
 }
