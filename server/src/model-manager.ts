@@ -3,10 +3,10 @@ import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
 import { Connection } from 'vscode-languageserver'
-import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from 'vscode-languageserver-protocol'
+import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
-import { Opt, expectValue } from './model/utils'
+import { Opt, expectValue, Position, inRange, Range } from './model/utils'
 import { BookNode, TocNode, TocNodeKind } from './model/book'
 import { Bundle } from './model/bundle'
 import { PageNode } from './model/page'
@@ -88,7 +88,10 @@ const checkFileExists = async (s: string): Promise<boolean> => await new Promise
 async function readOrNull(uri: string): Promise<Opt<string>> {
   const { fsPath } = URI.parse(uri)
   if (await checkFileExists(fsPath)) {
-    return await fs.promises.readFile(fsPath, 'utf-8')
+    const stat = await fs.promises.stat(fsPath)
+    if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
+      return await fs.promises.readFile(fsPath, 'utf-8')
+    }
   }
 }
 function readSync(n: Fileish) {
@@ -107,6 +110,8 @@ export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
 
   public readonly jobRunner = new JobRunner()
+  private readonly openDocuments = new Map<string, string>()
+  private didLoadOrphans = false
 
   constructor(public bundle: Bundle, private readonly conn: Connection) {}
 
@@ -122,7 +127,7 @@ export class ModelManager {
   public get orphanedImages() {
     const books = this.bundle.books
     const pages = books.flatMap(b => b.pages)
-    return this.bundle.allImages.all.subtract(pages.flatMap(p => p.images))
+    return this.bundle.allImages.all.filter(i => i.isLoaded && i.exists).subtract(pages.flatMap(p => p.images))
   }
 
   public async loadEnoughForToc() {
@@ -138,10 +143,12 @@ export class ModelManager {
   }
 
   public async loadEnoughForOrphans() {
+    if (this.didLoadOrphans) return
     await this.loadEnoughForToc()
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: this.bundle.workspaceRoot, absolute: true })
-    files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRoot).fsPath, absolute: true })
+    files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    this.didLoadOrphans = true
   }
 
   async processFilesystemChange(evt: FileEvent): Promise<I.Set<Fileish>> {
@@ -207,6 +214,15 @@ export class ModelManager {
     ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
     node.load(contents)
     this.sendFileDiagnostics(node)
+    this.openDocuments.set(absPath, contents)
+  }
+
+  public closeDocument(absPath: string) {
+    this.openDocuments.delete(absPath)
+  }
+
+  public getOpenDocContents(absPath: string) {
+    return this.openDocuments.get(absPath)
   }
 
   private async readAndLoad(node: Fileish) {
@@ -253,7 +269,8 @@ export class ModelManager {
     jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
   }
 
-  loadEnoughToSendDiagnostics(context: {workspace: string, doc: string}) {
+  loadEnoughToSendDiagnostics(workspaceUri: string, uri: string, content?: string) {
+    const context = { workspace: workspaceUri, doc: uri }
     // load the books to see if this URI is a page in a book
     const jobs = [
       { type: 'FILEOPENED_LOAD_BUNDLE_DEP', context, fn: async () => await this.readAndLoad(this.bundle) },
@@ -262,13 +279,53 @@ export class ModelManager {
         type: 'FILEOPENED_SEND_DIAGNOSTICS',
         context,
         fn: () => {
-          const node = findNode(this.bundle, context.doc)
+          const node = findNode(this.bundle, uri)
           if (node !== undefined) {
-            this.sendFileDiagnostics(node)
+            if (content !== undefined) {
+              this.updateFileContents(uri, content)
+            } else {
+              this.sendFileDiagnostics(node)
+            }
           }
         }
       }
     ]
     jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
+  }
+
+  public autocompleteImages(page: PageNode, cursor: Position) {
+    const foundLinks = page.imageLinks.toArray().filter((l) => {
+      return inRange(l.range, cursor)
+    })
+
+    if (foundLinks.length === 0) { return [] }
+
+    // We're inside an <image> element.
+    // Now check and see if we are right at the src=" point
+    const content = expectValue(this.getOpenDocContents(page.absPath), 'BUG: This file should be open and have been sent from the vscode client').split('\n')
+    const beforeCursor = content[cursor.line].substring(0, cursor.character)
+    const afterCursor = content[cursor.line].substring(cursor.character)
+    const startQuoteOffset = beforeCursor.lastIndexOf('src="')
+    const endQuoteOffset = afterCursor.indexOf('"')
+    if (startQuoteOffset >= 0 && endQuoteOffset >= 0) {
+      const range: Range = {
+        start: { line: cursor.line, character: startQuoteOffset + 'src="'.length },
+        end: { line: cursor.line, character: endQuoteOffset + cursor.character }
+      }
+      expectValue(inRange(range, cursor) ? true : undefined, 'BUG: The cursor must be within the replacement range')
+      const tokens = beforeCursor.split(' ')
+      if (tokens[tokens.length - 1].startsWith('src="')) {
+        const ret = this.orphanedImages.toArray().map(i => {
+          const insertText = path.relative(path.dirname(page.absPath), i.absPath)
+          const item = CompletionItem.create(insertText)
+          item.textEdit = TextEdit.replace(range, insertText)
+          item.kind = CompletionItemKind.File
+          item.detail = 'Orphaned Image'
+          return item
+        })
+        return ret
+      }
+    }
+    return []
   }
 }

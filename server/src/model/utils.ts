@@ -1,3 +1,4 @@
+import path from 'path'
 import I from 'immutable'
 import * as xpath from 'xpath-ts'
 import { PageNode } from './page'
@@ -69,6 +70,18 @@ export enum PathKind {
   MODULE_TO_MODULEID = 'MODULE_TO_MODULEID',
 }
 
+export function join(helper: PathHelper<string>, type: PathKind, parent: string, child: string) {
+  const { dirname, join } = helper
+  let p
+  let c
+  switch (type) {
+    case PathKind.ABS_TO_REL: p = dirname(parent); c = child; break
+    case PathKind.COLLECTION_TO_MODULEID: p = dirname(dirname(parent)); c = /* relative_path */path.join('modules', child, 'index.cnxml'); break
+    case PathKind.MODULE_TO_MODULEID: p = dirname(dirname(parent)); c = /* relative_path */path.join(child, 'index.cnxml'); break
+  }
+  return join(p, c)
+}
+
 export function findDuplicates<T>(list: I.List<T>) {
   return list.filter((item, index) => index !== list.indexOf(item))
 }
@@ -129,7 +142,7 @@ export async function profileAsync<T>(fn: () => Promise<T>) {
   const start = Date.now()
   const ret = await fn()
   return [Date.now() - start, ret]
-} 
+}
 
 function isAfter(a: Position, b: Position) {
   if (a.line === b.line) {
@@ -138,14 +151,13 @@ function isAfter(a: Position, b: Position) {
   return a.line > b.line
 }
 
-function isBefore(a: Position, b: Position) {
+function isBeforeOrEqual(a: Position, b: Position) {
   if (a.line === b.line) {
-    return a.character < b.character
+    return a.character <= b.character
   }
   return a.line < b.line
 }
 
-export function inRange(start: Position, end: Position, current: Position) {
-  return (isAfter(current, start) && isBefore(current, end))
+export function inRange(range: Range, current: Position) {
+  return (isAfter(current, range.start) && isBeforeOrEqual(current, range.end))
 }
-

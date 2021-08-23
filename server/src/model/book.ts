@@ -1,6 +1,6 @@
 import I from 'immutable'
 import { PageNode } from './page'
-import { Opt, PathKind, Range, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue } from './utils'
+import { Opt, PathKind, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 
 export enum TocNodeKind {
@@ -8,8 +8,8 @@ export enum TocNodeKind {
   Leaf
 }
 export type TocNode = TocInner | TocLeaf
-interface TocInner extends Range { readonly type: TocNodeKind.Inner, readonly title: string, readonly children: TocNode[] }
-interface TocLeaf extends Range { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
+interface TocInner extends HasRange { readonly type: TocNodeKind.Inner, readonly title: string, readonly children: TocNode[] }
+interface TocLeaf extends HasRange { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
 
 export class BookNode extends Fileish {
   private _title: Opt<WithRange<string>>
@@ -25,27 +25,25 @@ export class BookNode extends Fileish {
 
   private buildChildren(root: Element): TocNode[] {
     const ret = (select('./col:*', root) as Element[]).map((childNode): TocNode => {
-      const { start, end } = calculateElementPositions(childNode)
+      const range = calculateElementPositions(childNode)
       switch (childNode.localName) {
         case 'subcollection': {
           const titleNode = selectOne('md:title', childNode)
-          const { start, end } = calculateElementPositions(titleNode)
+          const range = calculateElementPositions(titleNode)
           return {
             type: TocNodeKind.Inner,
             title: expectValue(titleNode.textContent, 'ERROR: Malformed or missing md:title element in Subcollection'),
             children: this.buildChildren(selectOne('./col:content', childNode)),
-            start,
-            end
+            range
           }
         }
         case 'module': {
           const pageId = expectValue(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
-          const page = super.bundle.allPages.getOrAdd(this.join(PathKind.COLLECTION_TO_MODULEID, this.absPath, pageId))
+          const page = super.bundle.allPages.getOrAdd(join(this._pathHelper, PathKind.COLLECTION_TO_MODULEID, this.absPath, pageId))
           return {
             type: TocNodeKind.Leaf,
             page,
-            start,
-            end
+            range
           }
         }
         /* istanbul ignore next */
@@ -103,17 +101,17 @@ export class BookNode extends Fileish {
       {
         message: BookValidationKind.MISSING_PAGE,
         nodesToLoad: I.Set(pages),
-        fn: () => I.Set(this.tocLeaves()).filter(p => !p.page.exists)
+        fn: () => I.Set(this.tocLeaves()).filter(p => !p.page.exists).map(l => l.range)
       },
       {
         message: BookValidationKind.DUPLICATE_CHAPTER_TITLE,
         nodesToLoad: I.Set(),
-        fn: () => I.Set(nonPages.filter(subcol => duplicateTitles.has(subcol.title)))
+        fn: () => I.Set(nonPages.filter(subcol => duplicateTitles.has(subcol.title)).map(l => l.range))
       },
       {
         message: BookValidationKind.DUPLICATE_PAGE,
         nodesToLoad: I.Set(),
-        fn: () => I.Set(pageLeaves.filter(p => duplicatePages.has(p.page)))
+        fn: () => I.Set(pageLeaves.filter(p => duplicatePages.has(p.page)).map(l => l.range))
       }
     ]
   }

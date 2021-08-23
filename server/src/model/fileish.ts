@@ -1,7 +1,7 @@
 import path from 'path'
 import I from 'immutable'
 import { DOMParser } from 'xmldom'
-import { Bundleish, Opt, PathHelper, PathKind, expectValue, Range, HasRange, NOWHERE } from './utils'
+import { Bundleish, Opt, PathHelper, expectValue, Range, HasRange, NOWHERE } from './utils'
 
 export class ModelError extends Error implements HasRange {
   constructor(public readonly node: Fileish, message: string, public readonly range: Range) {
@@ -129,17 +129,5 @@ export abstract class Fileish {
       const errors = I.Set(responses.map(r => r.errors)).flatMap(x => x)
       return new ValidationResponse(errors, nodesToLoad)
     }
-  }
-
-  protected join(type: PathKind, parent: string, child: string) {
-    const { dirname, join } = this._pathHelper
-    let p
-    let c
-    switch (type) {
-      case PathKind.ABS_TO_REL: p = dirname(parent); c = child; break
-      case PathKind.COLLECTION_TO_MODULEID: p = dirname(dirname(parent)); c = /* relative_path */path.join('modules', child, 'index.cnxml'); break
-      case PathKind.MODULE_TO_MODULEID: p = dirname(dirname(parent)); c = /* relative_path */path.join(child, 'index.cnxml'); break
-    }
-    return join(p, c)
   }
 }

@@ -55,8 +55,8 @@ export function pageMaker(info: PageInfo) {
     <md:uuid>${i.uuid}</md:uuid>
   </metadata>
   <content>
-    ${i.imageHrefs.map(href => `<image src="${href}"/>`).join('\n')}
-    ${i.pageLinks.map(({ targetPage, targetId, url }) => `<link document="${targetPage ?? ''}" target-id="${targetId ?? ''}" url="${url ?? ''}"/>`).join('\n')}
+${i.imageHrefs.map(href => `    <image src="${href}"/>`).join('\n')}
+${i.pageLinks.map(({ targetPage, targetId, url }) => `    <link document="${targetPage ?? ''}" target-id="${targetId ?? ''}" url="${url ?? ''}"/>`).join('\n')}
     <para id="elementId1"/>
     <para id="elementId2"/>
   </content>

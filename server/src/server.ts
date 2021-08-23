@@ -5,14 +5,14 @@ import {
   InitializeParams,
   TextDocumentSyncKind,
   InitializeResult,
-  TextDocumentPositionParams,
-  CompletionItem
+  CompletionItem,
+  CancellationToken,
+  CompletionParams
 } from 'vscode-languageserver/node'
 
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { URI, Utils } from 'vscode-uri'
-import { expectValue, inRange } from './model/utils'
-import path from 'path'
+import { expectValue } from './model/utils'
 
 import {
   BundleModulesArgs,
@@ -24,7 +24,8 @@ import {
 
 import {
   bundleEnsureIdsHandler,
-  bundleTreesHandler
+  bundleTreesHandler,
+  imageAutocompleteHandler
 } from './server-handler'
 
 import * as sourcemaps from 'source-map-support'
@@ -69,8 +70,9 @@ connection.onInitialize(async (params: InitializeParams) => {
         change: TextDocumentSyncKind.Incremental
       },
       completionProvider: {
-        resolveProvider: true
-      },      
+        resolveProvider: false,
+        triggerCharacters: ['.']
+      },
       workspace: {
         workspaceFolders: {
           // changeNotification: true,
@@ -100,10 +102,15 @@ documents.onDidOpen(({ document }) => {
       return
     }
     const manager = getBundleForUri(document.uri)
-    const context = { workspace: manager.bundle.workspaceRoot, doc: document.uri }
-    manager.loadEnoughToSendDiagnostics(context)
+    manager.performInitialValidation() // just-in-case. It seems to be missed sometimes
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, document.uri, document.getText())
   }
   inner().catch(err => { throw err })
+})
+
+documents.onDidClose(({ document }) => {
+  const manager = getBundleForUri(document.uri)
+  manager.closeDocument(document.uri)
 })
 
 documents.onDidChangeContent(({ document }) => {
@@ -140,26 +147,11 @@ connection.onRequest(ExtensionServerRequest.BundleModules, ({ workspaceUri }: Bu
 
 connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler())
 
-connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[]|null => {
-  const manager = getBundleForUri(_textDocumentPosition.textDocument.uri)
-  const cursor = _textDocumentPosition.position
-  const page = manager.bundle.allPages.getIfHas(_textDocumentPosition.textDocument.uri)
-  
-  if (page != undefined) {
-    const foundLinks = page.imageLinks.toArray().filter((l) => {
-      return inRange(l.startPos, l.endPos, cursor)
-    })
+connection.onCompletionResolve((a: CompletionItem, token: CancellationToken): CompletionItem => a)
 
-    if (foundLinks.length === 0) { return null }
-
-    return manager.orphanedImages.toArray().map(i => {
-      const item = CompletionItem.create(path.basename(i.absPath))
-      item.insertText = path.relative(path.dirname(page.absPath), i.absPath)
-      return item
-    })
-  }
-
-  return []
+connection.onCompletion(async (params: CompletionParams): Promise<CompletionItem[]> => {
+  const manager = getBundleForUri(params.textDocument.uri)
+  return await imageAutocompleteHandler(params, manager)
 })
 
 // Make the text document manager listen on the connection
