@@ -32,7 +32,7 @@ The Language Server tests do not require building beforehand. To run them:
 ```bash
 $ npm run test:server
 
-# To automatically re-build and re-run only the tests affected by the change
+# To automatically re-build and re-run only the tests affected by uncommitted changes
 $ npm run test:server:watch
 ```
 
