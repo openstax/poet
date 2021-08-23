@@ -21,7 +21,7 @@ Each file is corresponds to a node in the model ([Bundle](./model/bundle.ts), [B
 
 The Bundle is the root instance of a repository.
 
-Nodes are instantiated by a Factoryies on the Bundle.
+Nodes are instantiated by a Factory on the Bundle.
 
 Nodes are empty until the user loads data into them.
 
