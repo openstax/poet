@@ -7,7 +7,7 @@ import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from 'vscod
 import { URI } from 'vscode-uri'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
 import { Opt, expectValue } from './model/utils'
-import { BookNode, TocNode, TocNodeType } from './model/book'
+import { BookNode, TocNode, TocNodeKind } from './model/book'
 import { Bundle } from './model/bundle'
 import { PageNode } from './model/page'
 import { Fileish } from './model/fileish'
@@ -66,7 +66,7 @@ export function bookTocAsTreeCollection(book: BookNode): TocTreeCollection {
 }
 
 function recTocConvert(node: TocNode): TocTreeElement {
-  if (node.type === TocNodeType.Inner) {
+  if (node.type === TocNodeKind.Inner) {
     const children = node.children.map(recTocConvert)
     return {
       type: TocTreeElementType.subcollection,

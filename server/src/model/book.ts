@@ -1,15 +1,15 @@
 import I from 'immutable'
 import { PageNode } from './page'
-import { Opt, PathType, Range, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue } from './utils'
+import { Opt, PathKind, Range, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 
-export enum TocNodeType {
+export enum TocNodeKind {
   Inner,
   Leaf
 }
 export type TocNode = TocInner | TocLeaf
-interface TocInner extends Range { readonly type: TocNodeType.Inner, readonly title: string, readonly children: TocNode[] }
-interface TocLeaf extends Range { readonly type: TocNodeType.Leaf, readonly page: PageNode }
+interface TocInner extends Range { readonly type: TocNodeKind.Inner, readonly title: string, readonly children: TocNode[] }
+interface TocLeaf extends Range { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
 
 export class BookNode extends Fileish {
   private _title: Opt<WithRange<string>>
@@ -31,7 +31,7 @@ export class BookNode extends Fileish {
           const titleNode = selectOne('md:title', childNode)
           const { start, end } = calculateElementPositions(titleNode)
           return {
-            type: TocNodeType.Inner,
+            type: TocNodeKind.Inner,
             title: expectValue(titleNode.textContent, 'ERROR: Malformed or missing md:title element in Subcollection'),
             children: this.buildChildren(selectOne('./col:content', childNode)),
             start,
@@ -40,9 +40,9 @@ export class BookNode extends Fileish {
         }
         case 'module': {
           const pageId = expectValue(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
-          const page = super.bundle.allPages.get(this.join(PathType.COLLECTION_TO_MODULEID, this.absPath, pageId))
+          const page = super.bundle.allPages.get(this.join(PathKind.COLLECTION_TO_MODULEID, this.absPath, pageId))
           return {
-            type: TocNodeType.Leaf,
+            type: TocNodeKind.Leaf,
             page,
             start,
             end
@@ -80,13 +80,13 @@ export class BookNode extends Fileish {
 
   private collectPages(nodes: TocNode[], acc: I.List<TocLeaf>) {
     nodes.forEach(n => {
-      if (n.type === TocNodeType.Leaf) { acc.push(n) } else { this.collectPages(n.children, acc) }
+      if (n.type === TocNodeKind.Leaf) { acc.push(n) } else { this.collectPages(n.children, acc) }
     })
   }
 
   private collectNonPages(nodes: TocNode[], acc: I.List<TocInner>) {
     nodes.forEach(n => {
-      if (n.type !== TocNodeType.Leaf) {
+      if (n.type !== TocNodeKind.Leaf) {
         acc.push(n)
         this.collectNonPages(n.children, acc)
       }

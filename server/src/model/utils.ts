@@ -63,7 +63,7 @@ export interface Bundleish {
   isDuplicateUuid: (uuid: string) => boolean
 }
 
-export enum PathType {
+export enum PathKind {
   ABS_TO_REL = 'REL_TO_REL',
   COLLECTION_TO_MODULEID = 'COLLECTION_TO_MODULEID',
   MODULE_TO_MODULEID = 'MODULE_TO_MODULEID',

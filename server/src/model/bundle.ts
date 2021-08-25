@@ -1,5 +1,5 @@
 import I from 'immutable'
-import { Bundleish, findDuplicates, Opt, PathHelper, PathType, select, WithRange, calculateElementPositions, expectValue, NOWHERE } from './utils'
+import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange, calculateElementPositions, expectValue, NOWHERE } from './utils'
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
@@ -22,7 +22,7 @@ export class Bundle extends Fileish implements Bundleish {
     this._books = I.Set(bookNodes.map(b => {
       const range = calculateElementPositions(b)
       const href = expectValue(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
-      const book = this.allBooks.get(this.join(PathType.ABS_TO_REL, this.absPath, href))
+      const book = this.allBooks.get(this.join(PathKind.ABS_TO_REL, this.absPath, href))
       return {
         v: book,
         range

@@ -1,5 +1,5 @@
 import I from 'immutable'
-import { Opt, Position, PathType, WithRange, textWithSource, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE } from './utils'
+import { Opt, Position, PathKind, WithRange, textWithSource, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 import { ImageNode } from './image'
 
@@ -93,7 +93,7 @@ export class PageNode extends Fileish {
     const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
     this._imageLinks = I.Set(imageNodes.map(attr => {
       const src = expectValue(attr.nodeValue, 'BUG: Attribute does not have a value')
-      const image = super.bundle.allImages.get(this.join(PathType.ABS_TO_REL, this.absPath, src))
+      const image = super.bundle.allImages.get(this.join(PathKind.ABS_TO_REL, this.absPath, src))
       // Get the line/col position of the <image> tag
       const imageNode = expectValue(attr.ownerElement, 'BUG: attributes always have a parent element')
       const range = calculateElementPositions(imageNode)
@@ -109,7 +109,7 @@ export class PageNode extends Fileish {
       const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
       const toUrl = changeEmptyToNull(linkNode.getAttribute('url'))
       return {
-        page: toDocument !== undefined ? super.bundle.allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== undefined ? this : undefined),
+        page: toDocument !== undefined ? super.bundle.allPages.get(this.join(PathKind.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== undefined ? this : undefined),
         url: toUrl,
         targetElementId: toTargetId,
         range
