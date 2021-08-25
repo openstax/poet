@@ -22,7 +22,7 @@ export class Bundle extends Fileish implements Bundleish {
     this._books = I.Set(bookNodes.map(b => {
       const range = calculateElementPositions(b)
       const href = expectValue(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
-      const book = this.allBooks.get(this.join(PathKind.ABS_TO_REL, this.absPath, href))
+      const book = this.allBooks.getOrAdd(this.join(PathKind.ABS_TO_REL, this.absPath, href))
       return {
         v: book,
         range

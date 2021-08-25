@@ -59,7 +59,7 @@ describe('Bundle Manager', () => {
     loadSuccess(first(loadSuccess(manager.bundle).books))
     expect(manager.allPages.size).toBe(1)
     expect(manager.orphanedPages.size).toBe(0)
-    const orphanedPage = manager.bundle.allPages.get('path/to/orphaned/page')
+    const orphanedPage = manager.bundle.allPages.getOrAdd('path/to/orphaned/page')
     expect(manager.allPages.size).toBe(2)
     expect(manager.orphanedPages.size).toBe(1)
     expect(manager.orphanedPages.first()).toBe(orphanedPage)

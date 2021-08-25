@@ -12,7 +12,7 @@ import { PageNode } from './model/page'
 
 export function bundleTreesHandler(): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
   return async (request: BundleTreesArgs) => {
-    const manager = bundleFactory.get(request.workspaceUri)
+    const manager = bundleFactory.getOrAdd(request.workspaceUri)
     await manager.loadEnoughForToc() // Just enough to send the ToC and list orphans
     return manager.bundle.books.map(bookTocAsTreeCollection).toArray()
   }
@@ -33,7 +33,7 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsArgs) => Prom
       await fs.promises.writeFile(p.absPath, out, { encoding: 'utf-8' })
     }
 
-    const manager = bundleFactory.get(request.workspaceUri)
+    const manager = bundleFactory.getOrAdd(request.workspaceUri)
     // TODO: fix modules in parallel. Problem: Could be a memory hog.
     const pages = manager.bundle.allPages.all
     await Promise.all(pages.map(async p => await fixModule(p)))

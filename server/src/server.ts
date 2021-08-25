@@ -55,7 +55,7 @@ export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUr
 
 connection.onInitialize(async (params: InitializeParams) => {
   // https://microsoft.github.io/language-server-protocol/specification#workspace_workspaceFolders
-  params.workspaceFolders?.forEach(w => bundleFactory.get(w.uri)) // create bundles.
+  params.workspaceFolders?.forEach(w => bundleFactory.getOrAdd(w.uri)) // create bundles.
 
   const result: InitializeResult = {
     capabilities: {
@@ -80,7 +80,7 @@ connection.onInitialized(() => {
   const inner = async (): Promise<void> => {
     const currentWorkspaces = (await connection.workspace.getWorkspaceFolders()) ?? []
     for (const workspace of currentWorkspaces) {
-      const manager = bundleFactory.get(workspace.uri)
+      const manager = bundleFactory.getOrAdd(workspace.uri)
       manager.performInitialValidation()
     }
   }

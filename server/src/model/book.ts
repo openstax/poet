@@ -40,7 +40,7 @@ export class BookNode extends Fileish {
         }
         case 'module': {
           const pageId = expectValue(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
-          const page = super.bundle.allPages.get(this.join(PathKind.COLLECTION_TO_MODULEID, this.absPath, pageId))
+          const page = super.bundle.allPages.getOrAdd(this.join(PathKind.COLLECTION_TO_MODULEID, this.absPath, pageId))
           return {
             type: TocNodeKind.Leaf,
             page,

@@ -66,8 +66,8 @@ export function pageMaker(info: PageInfo) {
 describe('Page validations', () => {
   it(PageValidationKind.MISSING_IMAGE, () => {
     const bundle = makeBundle()
-    const page = bundle.allPages.get('somepage/filename')
-    const image = bundle.allImages.get('someimage')
+    const page = bundle.allPages.getOrAdd('somepage/filename')
+    const image = bundle.allImages.getOrAdd('someimage')
     const info = { imageHrefs: [path.relative(path.dirname(page.absPath), image.absPath)] }
     page.load(pageMaker(info))
     // Verify the image needs to be loaded
@@ -82,8 +82,8 @@ describe('Page validations', () => {
   })
   it(PageValidationKind.MISSING_TARGET, () => {
     const bundle = makeBundle()
-    const page = bundle.allPages.get('modules/m123/index.cnxml')
-    const target = bundle.allPages.get('modules/m234/index.cnxml')
+    const page = bundle.allPages.getOrAdd('modules/m123/index.cnxml')
+    const target = bundle.allPages.getOrAdd('modules/m234/index.cnxml')
 
     // Url (always ok)
     page.load(pageMaker({ pageLinks: [{ url: 'https://openstax.org' }] }))
@@ -117,15 +117,15 @@ describe('Page validations', () => {
   })
   it(PageValidationKind.MALFORMED_UUID, () => {
     const bundle = makeBundle()
-    const page = bundle.allPages.get('somepage/filename')
+    const page = bundle.allPages.getOrAdd('somepage/filename')
     const info = { uuid: 'invalid-uuid-value' }
     page.load(pageMaker(info))
     expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MALFORMED_UUID)
   })
   it(PageValidationKind.DUPLICATE_UUID, () => {
     const bundle = makeBundle()
-    const page1 = bundle.allPages.get('somepage/filename')
-    const page2 = bundle.allPages.get('somepage2/filename2')
+    const page1 = bundle.allPages.getOrAdd('somepage/filename')
+    const page2 = bundle.allPages.getOrAdd('somepage2/filename2')
     const info = { /* defaults */ }
     page1.load(pageMaker(info))
     page2.load(pageMaker(info))
@@ -134,7 +134,7 @@ describe('Page validations', () => {
   })
   it('Reports multiple validation errors', () => {
     const bundle = makeBundle()
-    const page = bundle.allPages.get('somepage')
+    const page = bundle.allPages.getOrAdd('somepage')
     page.load(pageMaker({ uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }] }))
     expectErrors(page, [PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET])
   })

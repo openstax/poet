@@ -3,11 +3,11 @@ import { Opt } from './utils'
 export class Factory<T> {
   private _map = I.Map<string, T>()
   constructor(private readonly builder: (filePath: string) => T) { }
-  getIfHas(absPath: string): Opt<T> {
+  get(absPath: string): Opt<T> {
     return this._map.get(absPath)
   }
 
-  get(absPath: string) {
+  getOrAdd(absPath: string) {
     const v = this._map.get(absPath)
     if (v !== undefined) {
       return v

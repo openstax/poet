@@ -24,11 +24,11 @@ function findOrCreateNode(bundle: Bundle, absPath: string) {
   if (bundle.absPath === absPath) {
     return bundle
   } else if (IMAGE_RE.test(absPath)) {
-    return bundle.allImages.get(absPath)
+    return bundle.allImages.getOrAdd(absPath)
   } else if (PAGE_RE.test(absPath)) {
-    return bundle.allPages.get(absPath)
+    return bundle.allPages.getOrAdd(absPath)
   } else if (BOOK_RE.test(absPath)) {
-    return bundle.allBooks.get(absPath)
+    return bundle.allBooks.getOrAdd(absPath)
   }
 }
 
@@ -36,9 +36,9 @@ function findNode(bundle: Bundle, absPath: string) {
   return bundle.absPath === absPath
     ? bundle
     : (
-        bundle.allBooks.getIfHas(absPath) ??
-        bundle.allPages.getIfHas(absPath) ??
-        bundle.allImages.getIfHas(absPath))
+        bundle.allBooks.get(absPath) ??
+        bundle.allPages.get(absPath) ??
+        bundle.allImages.get(absPath))
 }
 
 function pageToModuleId(page: PageNode) {
