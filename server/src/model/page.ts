@@ -7,11 +7,22 @@ export interface ImageLink extends HasRange {
   image: ImageNode
 }
 
-export interface PageLink extends HasRange {
-  page: Opt<PageNode>
-  targetElementId: Opt<string>
-  url: Opt<string>
+export enum PageLinkKind {
+  URL,
+  PAGE,
+  PAGE_ELEMENT
 }
+export type PageLink = HasRange & ({
+  type: PageLinkKind.URL
+  url: string
+} | {
+  type: PageLinkKind.PAGE
+  page: PageNode
+} | {
+  type: PageLinkKind.PAGE_ELEMENT
+  page: PageNode
+  targetElementId: string
+})
 
 function convertToPos(str: string, cursor: number): Position {
   const lines = str.substring(cursor).split('\n')
@@ -108,11 +119,19 @@ export class PageNode extends Fileish {
       const toDocument = changeEmptyToNull(linkNode.getAttribute('document'))
       const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
       const toUrl = changeEmptyToNull(linkNode.getAttribute('url'))
-      return {
-        page: toDocument !== undefined ? super.bundle.allPages.get(this.join(PathKind.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== undefined ? this : undefined),
-        url: toUrl,
-        targetElementId: toTargetId,
-        range
+      if (toUrl !== undefined) {
+        return { range, type: PageLinkKind.URL, url: toUrl }
+      }
+      const toPage = toDocument !== undefined ? super.bundle.allPages.get(this.join(PathKind.MODULE_TO_MODULEID, this.absPath, toDocument)) : this
+      if (toTargetId !== undefined) {
+        return {
+          range,
+          type: PageLinkKind.PAGE_ELEMENT,
+          page: toPage,
+          targetElementId: toTargetId
+        }
+      } else {
+        return { range, type: PageLinkKind.PAGE, page: toPage }
       }
     }))
 
@@ -138,11 +157,16 @@ export class PageNode extends Fileish {
       },
       {
         message: PageValidationKind.MISSING_TARGET,
-        nodesToLoad: filterNull(pageLinks.map(l => l.page)),
+        nodesToLoad: filterNull(pageLinks.map(l => {
+          if (l.type !== PageLinkKind.URL && l.page !== this) {
+            return l.page
+          }
+          return undefined
+        })),
         fn: () => pageLinks.filter(l => {
-          if (l.page === undefined) return false // URL links are ok
+          if (l.type === PageLinkKind.URL) return false // URL links are ok
           if (!l.page.exists) return true // link to non-existent page are bad
-          if (l.targetElementId === undefined) return false // linking to the whole page and it exists is ok
+          if (l.type === PageLinkKind.PAGE) return false // linking to the whole page and it exists is ok
           return !l.page.hasElementId(l.targetElementId)
         }).map(l => l.range)
       },
