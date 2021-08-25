@@ -48,11 +48,11 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsArgs) => Prom
 
 export function imageAutocompleteHandler(documentPosition: TextDocumentPositionParams, manager: ModelManager): CompletionItem[]|null {
   const cursor = documentPosition.position
-  const page = manager.bundle.allPages.getIfHas(documentPosition.textDocument.uri)
+  const page = manager.bundle.allPages.get(documentPosition.textDocument.uri)
   
   if (page != undefined) {
     const foundLinks = page.imageLinks.toArray().filter((l) => {
-      return inRange(l, cursor)
+      return inRange(l.range, cursor)
     })
 
     if (foundLinks.length === 0) { return null }
