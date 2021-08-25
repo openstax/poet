@@ -219,7 +219,7 @@ export class ModelManager {
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
       const diagnostics = errors.toSet().map(err => {
-        return Diagnostic.create({ start: err.start, end: err.end }, err.message, DiagnosticSeverity.Error)
+        return Diagnostic.create(err.range, err.message, DiagnosticSeverity.Error)
       }).toArray()
       this.conn.sendDiagnostics({
         uri,

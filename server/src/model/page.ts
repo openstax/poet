@@ -1,13 +1,13 @@
 import I from 'immutable'
-import { NOWHERE_START, NOWHERE_END, Opt, Position, PathType, Range, WithRange, textWithSource, select, selectOne, calculateElementPositions, expectValue } from './utils'
+import { Opt, Position, PathType, WithRange, textWithSource, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 import { ImageNode } from './image'
 
-export interface ImageLink extends Range {
+export interface ImageLink extends HasRange {
   image: ImageNode
 }
 
-export interface PageLink extends Range {
+export interface PageLink extends HasRange {
   page: Opt<PageNode>
   targetElementId: Opt<string>
   url: Opt<string>
@@ -63,10 +63,13 @@ export class PageNode extends Fileish {
       /* istanbul ignore next */
       return
     }
-    return {
-      v: data.substring(actualTitleStart, titleTagEnd).trim(),
+    const range = {
       start: convertToPos(data, actualTitleStart),
       end: convertToPos(data, titleTagEnd)
+    }
+    return {
+      v: data.substring(actualTitleStart, titleTagEnd).trim(),
+      range
     }
   }
 
@@ -93,14 +96,14 @@ export class PageNode extends Fileish {
       const image = super.bundle.allImages.get(this.join(PathType.ABS_TO_REL, this.absPath, src))
       // Get the line/col position of the <image> tag
       const imageNode = expectValue(attr.ownerElement, 'BUG: attributes always have a parent element')
-      const { start, end } = calculateElementPositions(imageNode)
-      return { image, start, end }
+      const range = calculateElementPositions(imageNode)
+      return { image, range }
     }))
 
     const linkNodes = select('//cnxml:link', doc) as Element[]
     const changeEmptyToNull = (str: string | null): Opt<string> => (str === '' || str === null) ? undefined : str
     this._pageLinks = I.Set(linkNodes.map(linkNode => {
-      const { start, end } = calculateElementPositions(linkNode)
+      const range = calculateElementPositions(linkNode)
       // xmldom never returns null, it returns ''
       const toDocument = changeEmptyToNull(linkNode.getAttribute('document'))
       const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
@@ -109,8 +112,7 @@ export class PageNode extends Fileish {
         page: toDocument !== undefined ? super.bundle.allPages.get(this.join(PathType.MODULE_TO_MODULEID, this.absPath, toDocument)) : (toTargetId !== undefined ? this : undefined),
         url: toUrl,
         targetElementId: toTargetId,
-        start,
-        end
+        range
       }
     }))
 
@@ -120,8 +122,7 @@ export class PageNode extends Fileish {
     } else {
       this._title = {
         v: UNTITLED_FILE,
-        start: NOWHERE_START,
-        end: NOWHERE_END
+        range: NOWHERE
       }
     }
   }
@@ -133,7 +134,7 @@ export class PageNode extends Fileish {
       {
         message: PageValidationKind.MISSING_IMAGE,
         nodesToLoad: imageLinks.map(l => l.image),
-        fn: () => imageLinks.filter(img => !img.image.exists)
+        fn: () => imageLinks.filter(img => !img.image.exists).map(l => l.range)
       },
       {
         message: PageValidationKind.MISSING_TARGET,
@@ -143,14 +144,14 @@ export class PageNode extends Fileish {
           if (!l.page.exists) return true // link to non-existent page are bad
           if (l.targetElementId === undefined) return false // linking to the whole page and it exists is ok
           return !l.page.hasElementId(l.targetElementId)
-        })
+        }).map(l => l.range)
       },
       {
         message: PageValidationKind.MALFORMED_UUID,
         nodesToLoad: I.Set(),
         fn: () => {
           const uuid = this.ensureLoaded(this._uuid)
-          return UUID_RE.test(uuid.v) ? I.Set() : I.Set([uuid])
+          return UUID_RE.test(uuid.v) ? I.Set() : I.Set([uuid.range])
         }
       },
       {
@@ -159,7 +160,7 @@ export class PageNode extends Fileish {
         fn: () => {
           const uuid = this.ensureLoaded(this._uuid)
           if (this.bundle.isDuplicateUuid(uuid.v)) {
-            return I.Set([uuid])
+            return I.Set([uuid.range])
           } else {
             return I.Set()
           }

@@ -49,7 +49,8 @@ const pathHelper: PathHelper<string> = {
     const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
     console.error('Validation Errors:', validationErrors.size)
     validationErrors.forEach(e => {
-      console.log(path.relative(process.cwd(), e.node.absPath), `${e.start.line}:${e.start.character}`, e.message)
+      const { range } = e
+      console.log(path.relative(process.cwd(), e.node.absPath), `${range.start.line}:${range.start.character}`, e.message)
     })
     console.error('')
     errorCount += validationErrors.size

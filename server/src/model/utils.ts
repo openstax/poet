@@ -9,8 +9,9 @@ const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 const NS_METADATA = 'http://cnx.rice.edu/mdml'
 const NS_CONTAINER = 'https://openstax.org/namespaces/book-container'
 
-export const NOWHERE_START: Position = { line: 0, character: 0 }
-export const NOWHERE_END: Position = { line: 0, character: 0 /* Number.MAX_VALUE */ }
+const NOWHERE_START: Position = { line: 0, character: 0 }
+const NOWHERE_END: Position = { line: 0, character: 0 /* Number.MAX_VALUE */ }
+export const NOWHERE: Range = { start: NOWHERE_START, end: NOWHERE_END }
 
 export const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA, bk: NS_CONTAINER })
 export const selectOne = <T extends Node>(sel: string, doc: Node): T => {
@@ -38,17 +39,20 @@ export interface Range {
   readonly end: Position
 }
 
-export interface WithRange<T> extends Range {
+export interface WithRange<T> extends HasRange {
   v: T
 }
 
+export interface HasRange {
+  range: Range
+}
+
 export function textWithSource(el: Element, attr?: string): WithRange<string> {
-  const { start, end } = calculateElementPositions(el)
+  const range = calculateElementPositions(el)
   const v = attr !== undefined ? el.getAttribute(attr) : el.textContent
   return {
-    v: expectValue(v, `BUG: Element/Attribute does not have a value. ${JSON.stringify(start)}`),
-    start: start,
-    end: end
+    v: expectValue(v, `BUG: Element/Attribute does not have a value. ${JSON.stringify(range.start)}`),
+    range
   }
 }
 

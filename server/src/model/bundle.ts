@@ -1,5 +1,5 @@
 import I from 'immutable'
-import { Bundleish, findDuplicates, NOWHERE_END, NOWHERE_START, Opt, PathHelper, PathType, select, WithRange, calculateElementPositions, expectValue } from './utils'
+import { Bundleish, findDuplicates, Opt, PathHelper, PathType, select, WithRange, calculateElementPositions, expectValue, NOWHERE } from './utils'
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
@@ -20,13 +20,12 @@ export class Bundle extends Fileish implements Bundleish {
   protected parseXML = (doc: Document) => {
     const bookNodes = select('//bk:book', doc) as Element[]
     this._books = I.Set(bookNodes.map(b => {
-      const { start, end } = calculateElementPositions(b)
+      const range = calculateElementPositions(b)
       const href = expectValue(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
       const book = this.allBooks.get(this.join(PathType.ABS_TO_REL, this.absPath, href))
       return {
         v: book,
-        start,
-        end
+        range
       }
     }))
   }
@@ -55,12 +54,12 @@ export class Bundle extends Fileish implements Bundleish {
       {
         message: BundleValidationKind.MISSING_BOOK,
         nodesToLoad: this.books,
-        fn: () => books.filter(b => !b.v.exists)
+        fn: () => books.filter(b => !b.v.exists).map(b => b.range)
       },
       {
         message: BundleValidationKind.NO_BOOKS,
         nodesToLoad: I.Set(),
-        fn: () => books.isEmpty() ? I.Set([{ start: NOWHERE_START, end: NOWHERE_END }]) : I.Set()
+        fn: () => books.isEmpty() ? I.Set([NOWHERE]) : I.Set()
       }
     ]
   }

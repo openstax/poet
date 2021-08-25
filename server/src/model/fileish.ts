@@ -1,12 +1,10 @@
 import path from 'path'
 import I from 'immutable'
 import { DOMParser } from 'xmldom'
-import { Bundleish, Opt, PathHelper, NOWHERE_END, NOWHERE_START, Position, PathType, expectValue, Range } from './utils'
+import { Bundleish, Opt, PathHelper, PathType, expectValue, Range, HasRange, NOWHERE } from './utils'
 
-const LOAD_ERROR = 'Object has not been loaded yet'
-
-export class ModelError extends Error implements Range {
-  constructor(public readonly node: Fileish, message: string, public readonly start: Position, public readonly end: Position) {
+export class ModelError extends Error implements HasRange {
+  constructor(public readonly node: Fileish, message: string, public readonly range: Range) {
     super(message)
     this.name = this.constructor.name
   }
@@ -14,7 +12,7 @@ export class ModelError extends Error implements Range {
 export class ParseError extends ModelError { }
 export class WrappedParseError<T extends Error> extends ParseError {
   constructor(node: Fileish, originalError: T) {
-    super(node, originalError.message, NOWHERE_START, NOWHERE_END)
+    super(node, originalError.message, NOWHERE)
   }
 }
 
@@ -37,7 +35,7 @@ export class ValidationResponse {
 }
 
 function toValidationErrors(node: Fileish, message: string, sources: I.Set<Range>) {
-  return sources.map(s => new ModelError(node, message, s.start, s.end))
+  return sources.map(s => new ModelError(node, message, s))
 }
 
 export abstract class Fileish {
@@ -55,7 +53,7 @@ export abstract class Fileish {
   protected setBundle(bundle: Bundleish) { this._bundle = bundle /* avoid catch-22 */ }
   protected get bundle() { return expectValue(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
   protected ensureLoaded<T>(field: Opt<T>) {
-    return expectValue(field, `${LOAD_ERROR} [${this.absPath}]`)
+    return expectValue(field, `Object has not been loaded yet [${this.absPath}]`)
   }
 
   public get exists() { return this._exists }
@@ -104,7 +102,7 @@ export abstract class Fileish {
         line: locator.lineNumber - 1,
         character: locator.columnNumber - 1
       }
-      this._parseError = new ParseError(this, msg, pos, pos)
+      this._parseError = new ParseError(this, msg, { start: pos, end: pos })
     }
     const p = new DOMParser({
       locator,
