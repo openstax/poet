@@ -1,0 +1,63 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Element ID creation fixDocument check if ids are created 1`] = `
+"<document id=\\"new\\" cnxml-version=\\"0.7\\" module-id=\\"\\" xmlns=\\"http://cnx.rice.edu/cnxml\\" class=\\"introduction\\">
+            <title>Introduction</title>
+            <metadata mdml-version=\\"0.5\\" xmlns:md=\\"http://cnx.rice.edu/mdml\\">
+              <md:title>Introduction</md:title>
+            </metadata>
+            <content>
+              <para id=\\"test\\">Test Introduction</para>
+              <para id=\\"para-00001\\">no id here</para>
+            </content>
+          </document>"
+`;
+
+exports[`Element ID creation fixDocument check if ids are generated with right (short) prefix 1`] = `
+"<document id=\\"new\\" cnxml-version=\\"0.7\\" module-id=\\"\\" xmlns=\\"http://cnx.rice.edu/cnxml\\" class=\\"introduction\\">
+            <title>Introduction</title>
+            <metadata mdml-version=\\"0.5\\" xmlns:md=\\"http://cnx.rice.edu/mdml\\">
+              <md:title>Introduction</md:title>
+            </metadata>
+            <content>
+              <para id=\\"para-00001\\">no id here</para>
+              <equation id=\\"eq-00001\\"/>
+              <list id=\\"list-00001\\"/>
+              <section id=\\"sect-00001\\"/>
+              <problem id=\\"prob-00001\\"/>
+              <solution id=\\"sol-00001\\"/>
+              <exercise id=\\"exer-00001\\"/>
+              <example id=\\"exam-00001\\"/>
+              <figure id=\\"fig-00001\\"/>
+              <definition id=\\"def-00001\\"/>
+              <para id=\\"para-00002\\">
+                <term id=\\"term-00001\\">hello</term>
+              </para>
+              <table id=\\"table-00001\\"/>
+              <quote id=\\"quote-00001\\"/>
+              <note id=\\"note-00001\\"/>
+              <footnote id=\\"foot-00001\\"/>
+              <cite id=\\"cite-00001\\"/>
+            </content>
+          </document>"
+`;
+
+exports[`Element ID creation fixDocument check if term in defintion does not get an id 1`] = `
+"<document id=\\"new\\" cnxml-version=\\"0.7\\" module-id=\\"\\" xmlns=\\"http://cnx.rice.edu/cnxml\\" class=\\"introduction\\">
+            <title>Introduction</title>
+            <metadata mdml-version=\\"0.5\\" xmlns:md=\\"http://cnx.rice.edu/mdml\\">
+              <md:title>Introduction</md:title>
+            </metadata>
+            <content>
+              <para id=\\"para-00001\\">
+                <term id=\\"term-00001\\">hello</term>
+              </para>
+              <definition id=\\"def-00001\\">
+                <term>I should not get an id</term>
+              </definition>
+              <para id=\\"para-00002\\">
+                <term id=\\"term-00002\\">need id</term>
+              </para>
+            </content>
+          </document>"
+`;

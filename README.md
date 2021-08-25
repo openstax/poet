@@ -27,6 +27,15 @@ $ npm run build
 $ npm run test:client
 ```
 
+The Language Server tests do not require building beforehand. To run them:
+
+```bash
+$ npm run test:server
+
+# To automatically re-build and re-run only the tests affected by uncommitted changes
+$ npm run test:server:watch
+```
+
 If you use the launch configuration to invoke the client tests from VS Code, the `build` will be run automatically.
 
 #### Language Server Tests
@@ -82,7 +91,7 @@ In a Theia editor, this file should be `.theia/settings.json` in your workspace,
 
 ## Developing / Debugging with the language server
 
-Our extension incorporates a language server which can be debugged using:
+Our extension incorporates a [language server](./server/) which can be debugged using:
 
 * Debug / console messages which get displayed in the editor after being passed to the extension over the language server protocol
 * Collecting and analyzing traces of the language server protocol communication between the extension and language server (refer to the [LSP specification](https://microsoft.github.io/language-server-protocol/specifications/specification-current/))

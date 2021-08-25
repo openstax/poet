@@ -1,5 +1,5 @@
 import * as xpath from 'xpath-ts'
-import { expect } from './utils'
+import { expectValue } from './model/utils'
 
 const ID_PADDING_CHARS = 5
 const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
@@ -34,7 +34,7 @@ export function padLeft(text: string, padChar: string, size: number): string {
 }
 
 function buildId(tag: string, counter: number): string {
-  const prefix = expect(ELEMENT_TO_PREFIX.get(tag), 'BUG: Element was not in the id-prefix map')
+  const prefix = expectValue(ELEMENT_TO_PREFIX.get(tag), 'BUG: Element was not in the id-prefix map')
   return `${prefix}-${padLeft(String(counter), '0', ID_PADDING_CHARS)}`
 }
 
@@ -60,10 +60,3 @@ export function fixDocument(doc: Document): void {
     el.setAttribute('id', buildId(tag, counter))
   }
 }
-
-// // $ npx ts-node server/src/fix-document-ids.ts
-// import { DOMParser, XMLSerializer } from 'xmldom'
-// const doc = new DOMParser().parseFromString('<document xmlns="http://cnx.rice.edu/cnxml"><term>normal</term><definition><term>no-id</term></definition></document>', 'text/xml')
-// fixDocument(doc)
-// const out = new XMLSerializer().serializeToString(doc)
-// console.log(out)

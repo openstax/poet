@@ -7,6 +7,7 @@
   "dependencies": {
     "@types/source-map-support": "^0.5.4",
     "glob": "^7.1.6",
+    "immutable": "^4.0.0-rc.14",
     "memoize-one": "^5.1.1",
     "source-map-support": "^0.5.19",
     "uuid": "^8.3.2",
