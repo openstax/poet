@@ -110,11 +110,11 @@ export class ModelManager {
 
   constructor(public bundle: Bundle, private readonly conn: Connection) {}
 
-  public allPages() {
+  public get allPages() {
     return this.bundle.allPages.all
   }
 
-  public orphanedPages() {
+  public get orphanedPages() {
     const books = this.bundle.books
     return this.bundle.allPages.all.subtract(books.flatMap(b => b.pages))
   }

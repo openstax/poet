@@ -49,20 +49,20 @@ describe('Bundle Manager', () => {
   })
   it('responds with all pages when the books have loaded', () => {
     // Nothing loaded yet
-    expect(manager.allPages().size).toBe(0)
+    expect(manager.allPages.size).toBe(0)
     // Load the pages
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     loadSuccess(first(book.pages))
-    expect(manager.allPages().size).toBe(1)
+    expect(manager.allPages.size).toBe(1)
   })
   it('orphanedPages()', () => {
     loadSuccess(first(loadSuccess(manager.bundle).books))
-    expect(manager.allPages().size).toBe(1)
-    expect(manager.orphanedPages().size).toBe(0)
+    expect(manager.allPages.size).toBe(1)
+    expect(manager.orphanedPages.size).toBe(0)
     const orphanedPage = manager.bundle.allPages.get('path/to/orphaned/page')
-    expect(manager.allPages().size).toBe(2)
-    expect(manager.orphanedPages().size).toBe(1)
-    expect(manager.orphanedPages().first()).toBe(orphanedPage)
+    expect(manager.allPages.size).toBe(2)
+    expect(manager.orphanedPages.size).toBe(1)
+    expect(manager.orphanedPages.first()).toBe(orphanedPage)
   })
   it('updateFileContents()', () => {
     const enqueueStub = sinon.stub(manager.jobRunner, 'enqueue')
@@ -147,7 +147,7 @@ describe('Find orphaned files', () => {
     const manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
     await manager.loadEnoughForOrphans()
     await manager.jobRunner.done()
-    expect(manager.orphanedPages().size).toBe(2)
+    expect(manager.orphanedPages.size).toBe(2)
   })
 })
 
