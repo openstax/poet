@@ -138,14 +138,14 @@ function isAfter(a: Position, b: Position) {
   return a.line > b.line
 }
 
-function isBefore(a: Position, b: Position) {
+function isBeforeOrEqual(a: Position, b: Position) {
   if (a.line === b.line) {
-    return a.character < b.character
+    return a.character <= b.character
   }
   return a.line < b.line
 }
 
 export function inRange(range: Range, current: Position) {
-  return (isAfter(current, range.start) && isBefore(current, range.end))
+  return (isAfter(current, range.start) && isBeforeOrEqual(current, range.end))
 }
 
