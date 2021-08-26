@@ -88,8 +88,11 @@ const checkFileExists = async (s: string): Promise<boolean> => await new Promise
 async function readOrNull(uri: string): Promise<Opt<string>> {
   const { fsPath } = URI.parse(uri)
   if (await checkFileExists(fsPath)) {
+    const stat = await fs.promises.stat(fsPath)
+    if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
     return await fs.promises.readFile(fsPath, 'utf-8')
   }
+}
 }
 function readSync(n: Fileish) {
   const { fsPath } = URI.parse(n.absPath)
