@@ -1,6 +1,6 @@
 import I from 'immutable'
 import { PageNode } from './page'
-import { Opt, PathKind, Range, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange } from './utils'
+import { Opt, PathKind, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 
 export enum TocNodeKind {

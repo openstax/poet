@@ -127,7 +127,7 @@ export class ModelManager {
   public get orphanedImages() {
     const books = this.bundle.books
     const pages = books.flatMap(b => b.pages)
-    return this.bundle.allImages.all.subtract(pages.flatMap(p => p.images))
+    return this.bundle.allImages.all.filter(i => i.isLoaded && i.exists).subtract(pages.flatMap(p => p.images))
   }
 
   public async loadEnoughForToc() {
