@@ -90,9 +90,9 @@ async function readOrNull(uri: string): Promise<Opt<string>> {
   if (await checkFileExists(fsPath)) {
     const stat = await fs.promises.stat(fsPath)
     if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
-    return await fs.promises.readFile(fsPath, 'utf-8')
+      return await fs.promises.readFile(fsPath, 'utf-8')
+    }
   }
-}
 }
 function readSync(n: Fileish) {
   const { fsPath } = URI.parse(n.absPath)
@@ -110,6 +110,7 @@ export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
 
   public readonly jobRunner = new JobRunner()
+  private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
 
   constructor(public bundle: Bundle, private readonly conn: Connection) {}
@@ -213,6 +214,15 @@ export class ModelManager {
     ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
     node.load(contents)
     this.sendFileDiagnostics(node)
+    this.openDocuments.set(absPath, contents)
+  }
+
+  public closeDocument(absPath: string) {
+    this.openDocuments.delete(absPath)
+  }
+
+  public getOpenDocContents(absPath: string) {
+    return this.openDocuments.get(absPath)
   }
 
   private async readAndLoad(node: Fileish) {

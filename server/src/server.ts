@@ -101,10 +101,16 @@ documents.onDidOpen(({ document }) => {
       return
     }
     const manager = getBundleForUri(document.uri)
+    manager.performInitialValidation() // just-in-case. It seems to be missed sometimes
     const context = { workspace: manager.bundle.workspaceRoot, doc: document.uri }
     manager.loadEnoughToSendDiagnostics(context)
   }
   inner().catch(err => { throw err })
+})
+
+documents.onDidClose(({document}) => {
+  const manager = getBundleForUri(document.uri)
+  manager.closeDocument(document.uri)
 })
 
 documents.onDidChangeContent(({ document }) => {
