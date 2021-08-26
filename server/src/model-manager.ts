@@ -110,6 +110,7 @@ export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
 
   public readonly jobRunner = new JobRunner()
+  private didLoadOrphans = false
 
   constructor(public bundle: Bundle, private readonly conn: Connection) {}
 
@@ -141,10 +142,12 @@ export class ModelManager {
   }
 
   public async loadEnoughForOrphans() {
+    if (this.didLoadOrphans) return
     await this.loadEnoughForToc()
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: this.bundle.workspaceRoot, absolute: true })
-    files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, absPath), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRoot).fsPath, absolute: true })
+    files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    this.didLoadOrphans = true
   }
 
   async processFilesystemChange(evt: FileEvent): Promise<I.Set<Fileish>> {
