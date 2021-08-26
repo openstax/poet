@@ -70,8 +70,9 @@ connection.onInitialize(async (params: InitializeParams) => {
         change: TextDocumentSyncKind.Incremental
       },
       completionProvider: {
-        resolveProvider: true
-      },      
+        resolveProvider: false,
+        triggerCharacters: ['.']
+      },
       workspace: {
         workspaceFolders: {
           // changeNotification: true,
@@ -108,7 +109,7 @@ documents.onDidOpen(({ document }) => {
   inner().catch(err => { throw err })
 })
 
-documents.onDidClose(({document}) => {
+documents.onDidClose(({ document }) => {
   const manager = getBundleForUri(document.uri)
   manager.closeDocument(document.uri)
 })
@@ -149,9 +150,9 @@ connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHand
 
 connection.onCompletionResolve((a: CompletionItem, token: CancellationToken): CompletionItem => a)
 
-connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] | null => {
+connection.onCompletion(async (_textDocumentPosition: TextDocumentPositionParams): Promise<CompletionItem[] | null> => {
   const manager = getBundleForUri(_textDocumentPosition.textDocument.uri)
-  return imageAutocompleteHandler(_textDocumentPosition, manager)
+  return await imageAutocompleteHandler(connection, _textDocumentPosition, manager)
 })
 
 // Make the text document manager listen on the connection

@@ -11,9 +11,12 @@ import { bookTocAsTreeCollection, ModelManager } from './model-manager'
 import { PageNode } from './model/page'
 import {
   CompletionItem,
-  TextDocumentPositionParams
+  CompletionItemKind,
+  Range,
+  TextDocumentPositionParams,
+  TextEdit
 } from 'vscode-languageserver/node'
-import { inRange } from './model/utils'
+import { expectValue, inRange } from './model/utils'
 import path from 'path'
 
 export function bundleTreesHandler(): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
@@ -46,22 +49,48 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsArgs) => Prom
   }
 }
 
-export function imageAutocompleteHandler(documentPosition: TextDocumentPositionParams, manager: ModelManager): CompletionItem[]|null {
+export async function imageAutocompleteHandler(connection: any, documentPosition: TextDocumentPositionParams, manager: ModelManager): Promise<CompletionItem[]|null> {
+  await manager.loadEnoughForOrphans()
   const cursor = documentPosition.position
   const page = manager.bundle.allPages.get(documentPosition.textDocument.uri)
-  
-  if (page != undefined) {
+
+  if (page !== undefined) {
     const foundLinks = page.imageLinks.toArray().filter((l) => {
       return inRange(l.range, cursor)
     })
 
     if (foundLinks.length === 0) { return null }
 
-    return manager.orphanedImages.toArray().map(i => {
-      const item = CompletionItem.create(path.basename(i.absPath))
-      item.insertText = path.relative(path.dirname(page.absPath), i.absPath)
-      return item
-    })
+    // We're inside an <image> element.
+    // Now check and see if we are right at the src=" point
+    const content = expectValue(manager.getOpenDocContents(page.absPath), 'BUG: This file should exist').split('\n')
+    // const triggerChar = content[cursor.line][cursor.character-1]
+    // if (triggerChar === '.') {
+    const beforeCursor = content[cursor.line].substring(0, cursor.character)
+    const afterCursor = content[cursor.line].substring(cursor.character)
+    const startQuoteOffset = beforeCursor.lastIndexOf('src="')
+    const endQuoteOffset = afterCursor.indexOf('"')
+    if (startQuoteOffset >= 0 && endQuoteOffset >= 0) {
+      const range: Range = {
+        start: { line: cursor.line, character: startQuoteOffset + 'src="'.length },
+        end: { line: cursor.line, character: endQuoteOffset + cursor.character }
+      }
+      expectValue(inRange(range, cursor) ? true : undefined, 'BUG: The cursor must be within the replacement range')
+      const tokens = beforeCursor.split(' ')
+      if (tokens[tokens.length - 1].startsWith('src="')) {
+        const ret = manager.orphanedImages.toArray().map(i => {
+          const insertText = path.relative(path.dirname(page.absPath), i.absPath)
+          // const item = CompletionItem.create(`.../${path.basename(i.absPath)}`) // we need the dot at the beginning because it is the trigger character
+          const item = CompletionItem.create(insertText)
+          item.textEdit = TextEdit.replace(range, insertText)
+          item.kind = CompletionItemKind.File
+          item.detail = 'Orphaned Image'
+          return item
+        })
+        return ret
+      }
+    }
+    // }
   }
 
   return []

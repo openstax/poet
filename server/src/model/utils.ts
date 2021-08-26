@@ -129,7 +129,7 @@ export async function profileAsync<T>(fn: () => Promise<T>) {
   const start = Date.now()
   const ret = await fn()
   return [Date.now() - start, ret]
-} 
+}
 
 function isAfter(a: Position, b: Position) {
   if (a.line === b.line) {
@@ -148,4 +148,3 @@ function isBeforeOrEqual(a: Position, b: Position) {
 export function inRange(range: Range, current: Position) {
   return (isAfter(current, range.start) && isBeforeOrEqual(current, range.end))
 }
-
