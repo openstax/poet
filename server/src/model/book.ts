@@ -1,8 +1,26 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
 import { PageNode } from './page'
-import { Opt, PathKind, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange } from './utils'
+import { Opt, Range, WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, HasRange } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
+
+const equalsTocNode = (n1: TocNode, n2: TocNode): boolean => {
+  /* istanbul ignore else */
+  if (n1.type === TocNodeKind.Inner) {
+    /* istanbul ignore next */
+    if (n2.type !== n1.type) return false
+    /* istanbul ignore next */
+    return equalsPos(n1.range.start, n2.range.start) && equalsPos(n1.range.end, n2.range.end) && n1.title === n2.title && equalsArrayToc(n1.children, n2.children)
+  } else {
+    /* istanbul ignore next */
+    if (n2.type !== n1.type) return false
+    /* istanbul ignore next */
+    return equalsPos(n1.range.start, n2.range.start) && equalsPos(n1.range.end, n2.range.end) && n1.page === n2.page
+  }
+}
+const equalsArrayToc = equalsArray(equalsTocNode)
+const equalsOptArrayToc = equalsOpt(equalsArrayToc)
+const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
 
 export enum TocNodeKind {
   Inner,
@@ -13,13 +31,13 @@ interface TocInner extends HasRange { readonly type: TocNodeKind.Inner, readonly
 interface TocLeaf extends HasRange { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
 
 export class BookNode extends Fileish {
-  private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined)
-  private readonly _slug = Quarx.observable.box<Opt<WithRange<string>>>(undefined)
-  private readonly _toc = Quarx.observable.box<Opt<TocNode[]>>(undefined)
+  private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _slug = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _toc = Quarx.observable.box<Opt<TocNode[]>>(undefined, { equals: equalsOptArrayToc })
 
   protected parseXML = (doc: Document) => {
-    this._title.set(textWithSource(selectOne('/col:collection/col:metadata/md:title', doc)))
-    this._slug.set(textWithSource(selectOne('/col:collection/col:metadata/md:slug', doc)))
+    this._title.set(textWithRange(selectOne('/col:collection/col:metadata/md:title', doc)))
+    this._slug.set(textWithRange(selectOne('/col:collection/col:metadata/md:slug', doc)))
     const root: Element = selectOne('/col:collection/col:content', doc)
     this._toc.set(this.buildChildren(root))
   }

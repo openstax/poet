@@ -1,6 +1,6 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { Opt, Position, PathKind, WithRange, textWithSource, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE } from './utils'
+import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, equalsOpt, equalsWithRange, tripleEq } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 import { ImageNode } from './image'
 
@@ -42,10 +42,12 @@ function filterNull<T>(set: I.Set<Opt<T>>): I.Set<T> {
 
 export const UNTITLED_FILE = 'UntitledFile'
 
+const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export class PageNode extends Fileish {
-  private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined)
-  private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined)
+  private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _elementIds = Quarx.observable.box<Opt<I.Set<WithRange<string>>>>(undefined)
   private readonly _imageLinks = Quarx.observable.box<Opt<I.Set<ImageLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
@@ -103,9 +105,9 @@ export class PageNode extends Fileish {
   }
 
   protected parseXML = (doc: Document) => {
-    this._uuid.set(textWithSource(selectOne('//md:uuid', doc)))
+    this._uuid.set(textWithRange(selectOne('//md:uuid', doc)))
 
-    this._elementIds.set(I.Set((select('//cnxml:*[@id]', doc) as Element[]).map(el => textWithSource(el, 'id'))))
+    this._elementIds.set(I.Set((select('//cnxml:*[@id]', doc) as Element[]).map(el => textWithRange(el, 'id'))))
 
     const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
     this._imageLinks.set(I.Set(imageNodes.map(attr => {
@@ -143,7 +145,7 @@ export class PageNode extends Fileish {
 
     const titleNode = select('//cnxml:title', doc) as Element[]
     if (titleNode.length > 0) {
-      this._title.set(textWithSource(titleNode[0]))
+      this._title.set(textWithRange(titleNode[0]))
     } else {
       this._title.set({
         v: UNTITLED_FILE,
