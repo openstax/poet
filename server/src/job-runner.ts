@@ -34,12 +34,17 @@ export class JobRunner {
   private process() {
     if (this._currentPromise !== undefined) return // job is running
     this._currentPromise = new Promise((resolve, reject) => {
-      setImmediate(() => this.tickWithCb(resolve, reject))
+      setImmediate(() => this.tickWithCb(resolve, err => {
+        JobRunner.debug(err)
+        this._currentPromise = undefined
+        reject(err)
+        if (!this.done()) this.process() // keep processing jobs if there are more
+      }))
     })
   }
 
   // In order to support `await this.done()` keep daisy-chaining the ticks
-  private tickWithCb(resolve: () => void, reject: () => void) {
+  private tickWithCb(resolve: () => void, reject: (err: any) => void) {
     const current = this.pop()
     if (current !== undefined) {
       this.tick(current).then(() => this.tickWithCb(resolve, reject), reject)
