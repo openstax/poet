@@ -97,10 +97,7 @@ describe('Bundle Manager', () => {
     manager.bundle.allNodes.forEach(n => expect(n.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() sends diagnostics for a file we recognize', async () => {
-    manager.loadEnoughToSendDiagnostics({
-      workspace: manager.bundle.workspaceRoot,
-      doc: manager.bundle.absPath
-    })
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, manager.bundle.absPath)
     await manager.jobRunner.done()
 
     expect(sendDiagnosticsStub.callCount).toBe(1)
@@ -112,12 +109,14 @@ describe('Bundle Manager', () => {
     books.forEach(b => expect(b.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() does not send diagnostics for a file we do not recognize', async () => {
-    manager.loadEnoughToSendDiagnostics({
-      workspace: manager.bundle.workspaceRoot,
-      doc: '/path/t/non-existent/file'
-    })
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, '/path/t/non-existent/file')
     await manager.jobRunner.done()
     expect(sendDiagnosticsStub.callCount).toBe(0)
+  })
+  it('loadEnoughToSendDiagnostics() loads the node with the contents of the file', async () => {
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, manager.bundle.absPath, '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>')
+    await manager.jobRunner.done()
+    expect(manager.bundle.books.size).toBe(0)
   })
   it('calls sendDiagnostics with objects that can be serialized (no cycles)', () => {
     ignoreConsoleWarnings(() => manager.updateFileContents(manager.bundle.absPath, '<notvalidXML'))
@@ -126,6 +125,27 @@ describe('Bundle Manager', () => {
     expect(diagnosticsObj.uri).toBeTruthy()
     expect(diagnosticsObj.diagnostics).toBeTruthy()
     expect(() => JSON.stringify(diagnosticsObj)).not.toThrow()
+  })
+})
+
+describe('Open Document contents cache', () => {
+  const sinon = SinonRoot.createSandbox()
+
+  beforeEach(() => {
+    sinon.stub(conn, 'sendDiagnostics')
+  })
+  afterEach(() => {
+    sinon.restore()
+  })
+
+  it('Updates the cached contents', () => {
+    const manager = new ModelManager(makeBundle(), conn)
+    manager.updateFileContents(manager.bundle.absPath, 'value_1')
+    expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_1')
+    manager.updateFileContents(manager.bundle.absPath, 'value_2')
+    expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_2')
+    manager.closeDocument(manager.bundle.absPath)
+    expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe(undefined)
   })
 })
 

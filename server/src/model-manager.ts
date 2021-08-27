@@ -269,7 +269,8 @@ export class ModelManager {
     jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
   }
 
-  loadEnoughToSendDiagnostics(context: {workspace: string, doc: string}) {
+  loadEnoughToSendDiagnostics(workspaceUri: string, uri: string, content?: string) {
+    const context = { workspace: workspaceUri, doc: uri }
     // load the books to see if this URI is a page in a book
     const jobs = [
       { type: 'FILEOPENED_LOAD_BUNDLE_DEP', context, fn: async () => await this.readAndLoad(this.bundle) },
@@ -278,9 +279,13 @@ export class ModelManager {
         type: 'FILEOPENED_SEND_DIAGNOSTICS',
         context,
         fn: () => {
-          const node = findNode(this.bundle, context.doc)
+          const node = findNode(this.bundle, uri)
           if (node !== undefined) {
-            this.sendFileDiagnostics(node)
+            if (content !== undefined) {
+              this.updateFileContents(uri, content)
+            } else {
+              this.sendFileDiagnostics(node)
+            }
           }
         }
       }

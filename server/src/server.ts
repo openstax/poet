@@ -103,8 +103,7 @@ documents.onDidOpen(({ document }) => {
     }
     const manager = getBundleForUri(document.uri)
     manager.performInitialValidation() // just-in-case. It seems to be missed sometimes
-    const context = { workspace: manager.bundle.workspaceRoot, doc: document.uri }
-    manager.loadEnoughToSendDiagnostics(context)
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, document.uri, document.getText())
   }
   inner().catch(err => { throw err })
 })
