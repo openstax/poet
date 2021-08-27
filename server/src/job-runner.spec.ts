@@ -37,7 +37,7 @@ describe('Job Runner', () => {
     const appendLog: string[] = []
     await expect(async () => {
       jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Initial') })
-      jobRunner.enqueue({ type: 'testcheck', context, fn: () => { throw new Error('intentional_error')} })
+      jobRunner.enqueue({ type: 'testcheck', context, fn: () => { throw new Error('intentional_error') } })
       jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Fast1') })
       expect(appendLog).toEqual([])
       await jobRunner.done()
