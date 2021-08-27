@@ -33,4 +33,16 @@ describe('Job Runner', () => {
   it('done() waits even when there are no jobs running', async () => {
     await jobRunner.done()
   })
+  it('continues jobs when one throws an error', async () => {
+    const appendLog: string[] = []
+    await expect(async () => {
+      jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Initial') })
+      jobRunner.enqueue({ type: 'testcheck', context, fn: () => { throw new Error('intentional_error')} })
+      jobRunner.enqueue({ type: 'testcheck', context, fn: () => appendLog.push('Fast1') })
+      expect(appendLog).toEqual([])
+      await jobRunner.done()
+    }).rejects.toThrow('intentional_error')
+    await jobRunner.done()
+    expect(appendLog).toEqual(['Fast1', 'Initial'])
+  })
 })

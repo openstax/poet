@@ -38,7 +38,7 @@ export class JobRunner {
         JobRunner.debug(err)
         this._currentPromise = undefined
         reject(err)
-        if (this.length() > 0) this.process() // keep processing jobs if there are more
+        this.process()
       }))
     })
   }
