@@ -128,6 +128,31 @@ describe('Bundle Manager', () => {
   })
 })
 
+describe('Unexpected files/directories', () => {
+  const sinon = SinonRoot.createSandbox()
+  let manager = null as unknown as ModelManager
+
+  beforeEach(() => {
+    mockfs({
+      'META-INF/books.xml/some-file': 'the file does not matter, ensuring books.xml is a directory does matter'
+    })
+    manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
+    sinon.stub(conn, 'sendDiagnostics')
+  })
+  afterEach(() => {
+    mockfs.restore()
+    sinon.restore()
+    sinon.reset()
+    sinon.resetBehavior()
+    sinon.resetHistory()
+  })
+
+  it('path is to a directory instead of a file', async () => {
+    await expect(async () => await manager.loadEnoughForToc()).rejects.toThrow(/^Object has not been loaded yet \[/)
+    expect(manager.bundle.exists).toBe(false)
+  })
+})
+
 describe('Open Document contents cache', () => {
   const sinon = SinonRoot.createSandbox()
 
