@@ -5,9 +5,9 @@ import {
   InitializeParams,
   TextDocumentSyncKind,
   InitializeResult,
-  TextDocumentPositionParams,
   CompletionItem,
-  CancellationToken
+  CancellationToken,
+  CompletionParams
 } from 'vscode-languageserver/node'
 
 import { TextDocument } from 'vscode-languageserver-textdocument'
@@ -149,9 +149,9 @@ connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHand
 
 connection.onCompletionResolve((a: CompletionItem, token: CancellationToken): CompletionItem => a)
 
-connection.onCompletion(async (_textDocumentPosition: TextDocumentPositionParams): Promise<CompletionItem[] | null> => {
-  const manager = getBundleForUri(_textDocumentPosition.textDocument.uri)
-  return await imageAutocompleteHandler(connection, _textDocumentPosition, manager)
+connection.onCompletion(async (params: CompletionParams): Promise<CompletionItem[]> => {
+  const manager = getBundleForUri(params.textDocument.uri)
+  return await imageAutocompleteHandler(params, manager)
 })
 
 // Make the text document manager listen on the connection

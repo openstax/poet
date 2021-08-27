@@ -13,8 +13,8 @@ import {
   CompletionItem,
   CompletionItemKind,
   Range,
-  TextDocumentPositionParams,
-  TextEdit
+  TextEdit,
+  CompletionParams
 } from 'vscode-languageserver/node'
 import { expectValue, inRange } from './model/utils'
 import path from 'path'
@@ -49,7 +49,7 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsArgs) => Prom
   }
 }
 
-export async function imageAutocompleteHandler(connection: any, documentPosition: TextDocumentPositionParams, manager: ModelManager): Promise<CompletionItem[]|null> {
+export async function imageAutocompleteHandler(documentPosition: CompletionParams, manager: ModelManager): Promise<CompletionItem[]> {
   await manager.loadEnoughForOrphans()
   const cursor = documentPosition.position
   const page = manager.bundle.allPages.get(documentPosition.textDocument.uri)
@@ -59,13 +59,11 @@ export async function imageAutocompleteHandler(connection: any, documentPosition
       return inRange(l.range, cursor)
     })
 
-    if (foundLinks.length === 0) { return null }
+    if (foundLinks.length === 0) { return [] }
 
     // We're inside an <image> element.
     // Now check and see if we are right at the src=" point
     const content = expectValue(manager.getOpenDocContents(page.absPath), 'BUG: This file should exist').split('\n')
-    // const triggerChar = content[cursor.line][cursor.character-1]
-    // if (triggerChar === '.') {
     const beforeCursor = content[cursor.line].substring(0, cursor.character)
     const afterCursor = content[cursor.line].substring(cursor.character)
     const startQuoteOffset = beforeCursor.lastIndexOf('src="')
@@ -90,7 +88,6 @@ export async function imageAutocompleteHandler(connection: any, documentPosition
         return ret
       }
     }
-    // }
   }
 
   return []
