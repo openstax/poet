@@ -190,7 +190,7 @@ describe('Find orphaned files', () => {
   it('finds orphaned Pages', async () => {
     sinon.stub(conn, 'sendDiagnostics')
     const manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
-    await manager.loadEnoughForOrphans()
+    await manager.loadEnoughForOrphanPages()
     await manager.jobRunner.done()
     expect(manager.orphanedPages.size).toBe(2)
   })

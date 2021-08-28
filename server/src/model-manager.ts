@@ -3,10 +3,10 @@ import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
 import { Connection } from 'vscode-languageserver'
-import { Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent } from 'vscode-languageserver-protocol'
+import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
-import { Opt, expectValue } from './model/utils'
+import { Opt, expectValue, Position, Range, inRange } from './model/utils'
 import { BookNode, TocNode, TocNodeKind } from './model/book'
 import { Bundle } from './model/bundle'
 import { PageNode } from './model/page'
@@ -142,7 +142,7 @@ export class ModelManager {
     }))
   }
 
-  public async loadEnoughForOrphans() {
+  public async loadEnoughForOrphanPages() {
     if (this.didLoadOrphans) return
     await this.loadEnoughForToc()
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
@@ -291,5 +291,42 @@ export class ModelManager {
       }
     ]
     jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
+  }
+
+  public getImageSuggestions(page: PageNode, cursor: Position) {
+    const foundLinks = page.imageLinks.toArray().filter((l) => {
+      return inRange(l.range, cursor)
+    })
+
+    if (foundLinks.length === 0) { return [] }
+
+    // We're inside an <image> element.
+    // Now check and see if we are right at the src=" point
+    const content = expectValue(this.getOpenDocContents(page.absPath), 'BUG: This file should exist').split('\n')
+    const beforeCursor = content[cursor.line].substring(0, cursor.character)
+    const afterCursor = content[cursor.line].substring(cursor.character)
+    const startQuoteOffset = beforeCursor.lastIndexOf('src="')
+    const endQuoteOffset = afterCursor.indexOf('"')
+    if (startQuoteOffset >= 0 && endQuoteOffset >= 0) {
+      const range: Range = {
+        start: { line: cursor.line, character: startQuoteOffset + 'src="'.length },
+        end: { line: cursor.line, character: endQuoteOffset + cursor.character }
+      }
+      expectValue(inRange(range, cursor) ? true : undefined, 'BUG: The cursor must be within the replacement range')
+      const tokens = beforeCursor.split(' ')
+      if (tokens[tokens.length - 1].startsWith('src="')) {
+        const ret = this.orphanedImages.toArray().map(i => {
+          const insertText = path.relative(path.dirname(page.absPath), i.absPath)
+          // const item = CompletionItem.create(`.../${path.basename(i.absPath)}`) // we need the dot at the beginning because it is the trigger character
+          const item = CompletionItem.create(insertText)
+          item.textEdit = TextEdit.replace(range, insertText)
+          item.kind = CompletionItemKind.File
+          item.detail = 'Orphaned Image'
+          return item
+        })
+        return ret
+      }
+    }
+    return []
   }
 }
