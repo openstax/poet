@@ -16,7 +16,11 @@ export enum ExtensionServerRequest {
   BundleTrees = 'bundle-trees',
   BundleModules = 'bundle-modules',
   BundleOrphanedModules = 'bundle-orphaned-modules',
-  BundleEnsureIds = 'bundle-ensure-ids'
+  BundleEnsureIds = 'bundle-ensure-ids',
+}
+
+export enum ExtensionServerNotification {
+  BundleOrphanedImages = 'bundle-orphaned-images',
 }
 export interface BundleTreesArgs {
   workspaceUri: string
@@ -34,6 +38,10 @@ export interface BundleModulesArgs {
 export type BundleModulesResponse = TocTreeModule[] | null
 export interface BundleEnsureIdsArgs {
   workspaceUri: string
+}
+
+export interface BundleOrphanedImagesArgs {
+  imageUris: string[]
 }
 
 export const requestBundleTrees = async (client: LanguageClient, args: BundleTreesArgs): Promise<BundleTreesResponse> => {

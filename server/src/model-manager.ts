@@ -2,16 +2,19 @@ import { glob } from 'glob'
 import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
+import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
-import { Opt, expectValue, Position, Range, inRange } from './model/utils'
+import { Opt, expectValue, Position, Range, inRange, equalsSet } from './model/utils'
 import { BookNode, TocNode, TocNodeKind } from './model/book'
 import { Bundle } from './model/bundle'
 import { PageNode } from './model/page'
 import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
+import { ImageNode } from './model/image'
+import { ExtensionServerNotification } from '../../common/src/requests'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -112,8 +115,18 @@ export class ModelManager {
   public readonly jobRunner = new JobRunner()
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
+  private _orphanedImages = Quarx.observable.box(I.Set<ImageNode>(), {equals: equalsSet})
 
-  constructor(public bundle: Bundle, private readonly conn: Connection) {}
+  constructor(public bundle: Bundle, private readonly conn: Connection) {
+    // Update the orphanedImages cached value
+    Quarx.autorun(() => {
+      this._orphanedImages.set(this.__orphanedImages)
+    })  
+    // Send a message whenever the cached value changes
+    Quarx.autorun(() => {
+      conn.sendNotification(ExtensionServerNotification.BundleOrphanedImages, this._orphanedImages.get().map(n => n.absPath).toArray())
+    })  
+  }
 
   public get allPages() {
     return this.bundle.allPages.all
@@ -125,8 +138,11 @@ export class ModelManager {
   }
 
   public get orphanedImages() {
+    return this._orphanedImages.get()
+  }
+  private get __orphanedImages() {
     const books = this.bundle.books
-    const pages = books.flatMap(b => b.pages)
+    const pages = books.filter(b => b.isLoaded && b.exists).flatMap(b => b.pages).filter(p => p.isLoaded && p.exists)
     return this.bundle.allImages.all.filter(i => i.isLoaded && i.exists).subtract(pages.flatMap(p => p.images))
   }
 
@@ -147,7 +163,9 @@ export class ModelManager {
     await this.loadEnoughForToc()
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
     const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRoot).fsPath, absolute: true })
-    files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    Quarx.batch(() => {
+      files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    })
     this.didLoadOrphans = true
   }
 

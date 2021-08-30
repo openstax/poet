@@ -1,3 +1,4 @@
+import Quarx from 'quarx'
 import {
   createConnection,
   TextDocuments,
@@ -19,7 +20,8 @@ import {
   BundleOrphanedModulesArgs,
   BundleModulesResponse,
   BundleOrphanedModulesResponse,
-  ExtensionServerRequest
+  ExtensionServerRequest,
+  ExtensionServerNotification
 } from '../../common/src/requests'
 
 import {
@@ -89,6 +91,7 @@ connection.onInitialized(() => {
     const currentWorkspaces = (await connection.workspace.getWorkspaceFolders()) ?? []
     for (const workspace of currentWorkspaces) {
       const manager = bundleFactory.getOrAdd(workspace.uri)
+      await manager.loadEnoughForOrphanPages() // Load all the files in collections/, modules/, media/ dirs
       manager.performInitialValidation()
     }
   }

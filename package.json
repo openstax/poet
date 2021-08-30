@@ -100,6 +100,10 @@
         {
           "id": "tocTrees",
           "name": "ToC Trees"
+        },
+        {
+          "id": "orphanImagesView",
+          "name": "Orphan Images"
         }
       ]
     },
