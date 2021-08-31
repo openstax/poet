@@ -1,8 +1,14 @@
-import vscode from 'vscode'
+import vscode, { ThemeIcon } from 'vscode'
 import { getRootPathUri, expect, constructCollectionUri, constructModuleUri } from './utils'
 import { BundleTreesResponse, requestBundleTrees } from '../../common/src/requests'
 import { TocTreeCollection, TocTreeElementType, TocTreeModule } from '../../common/src/toc-tree'
 import { ExtensionHostContext } from './panel'
+
+export const TocItemIcon = {
+  Page: ThemeIcon.File,
+  Book: new ThemeIcon('book'),
+  SubBook: ThemeIcon.Folder
+}
 
 export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
   private readonly _onDidChangeTreeData: vscode.EventEmitter<TocTreeItem | undefined> = new vscode.EventEmitter<TocTreeItem | undefined>()
@@ -25,6 +31,7 @@ export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
   getTreeItem(element: TocTreeItem): TocTreeItem {
     if (this.isFilterMode && (element.description != null)) {
       return new TocTreeItem(
+        element.iconPath,
         `${element.label} (${element.description})`,
         element.collapsibleState,
         element.children,
@@ -65,6 +72,7 @@ export class TocTreeItem extends vscode.TreeItem {
   parent: TocTreeItem | undefined = undefined
 
   constructor(
+    public readonly iconPath: ThemeIcon,
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly children: TocTreeItem[],
@@ -88,10 +96,11 @@ export class TocTreeItem extends vscode.TreeItem {
     })
 
     if ((treeCollection.type === TocTreeElementType.subcollection) || (treeCollection.slug == null)) {
-      return new TocTreeItem(treeCollection.title, collapsibleState, children)
+      return new TocTreeItem(TocItemIcon.SubBook, treeCollection.title, collapsibleState, children)
     }
 
     return new TocTreeItem(
+      TocItemIcon.Book,
       treeCollection.title,
       collapsibleState,
       children,
@@ -101,6 +110,7 @@ export class TocTreeItem extends vscode.TreeItem {
 
   static fromModule(treeModule: TocTreeModule, workspaceUri: vscode.Uri): TocTreeItem {
     return new TocTreeItem(
+      TocItemIcon.Page,
       treeModule.title,
       vscode.TreeItemCollapsibleState.None,
       [],

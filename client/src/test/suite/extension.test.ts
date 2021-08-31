@@ -29,7 +29,7 @@ import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../../../common/src/requests'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
-import { TocTreesProvider, TocTreeItem, toggleTocTreesFilteringHandler } from './../../toc-trees'
+import { TocTreesProvider, TocTreeItem, toggleTocTreesFilteringHandler, TocItemIcon } from './../../toc-trees'
 import * as utils from './../../utils' // Used for dependency mocking in tests
 
 const ROOT_DIR_REL = '../../../../../../'
@@ -970,6 +970,7 @@ suite('Extension Test Suite', function (this: Suite) {
     const fakeWorkspacePath = '/tmp/fakeworkspace'
     sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file(fakeWorkspacePath))
     const module1Item = new TocTreeItem(
+      TocItemIcon.Page,
       'Module1',
       vscode.TreeItemCollapsibleState.None,
       [],
@@ -981,6 +982,7 @@ suite('Extension Test Suite', function (this: Suite) {
       'm00001'
     )
     const module2Item = new TocTreeItem(
+      TocItemIcon.Page,
       'Module2',
       vscode.TreeItemCollapsibleState.None,
       [],
@@ -992,6 +994,7 @@ suite('Extension Test Suite', function (this: Suite) {
       'm00002'
     )
     const module3Item = new TocTreeItem(
+      TocItemIcon.Page,
       'Module3',
       vscode.TreeItemCollapsibleState.None,
       [],
@@ -1003,6 +1006,7 @@ suite('Extension Test Suite', function (this: Suite) {
       'm00003'
     )
     const module3ItemToggled = new TocTreeItem(
+      TocItemIcon.Page,
       'Module3 (m00003)',
       vscode.TreeItemCollapsibleState.None,
       [],
@@ -1014,11 +1018,13 @@ suite('Extension Test Suite', function (this: Suite) {
       undefined
     )
     const subcollectionItem = new TocTreeItem(
+      TocItemIcon.SubBook,
       'subcollection',
       vscode.TreeItemCollapsibleState.Collapsed,
       [module1Item, module2Item]
     )
     const collection1Item = new TocTreeItem(
+      TocItemIcon.Book,
       'Collection1',
       vscode.TreeItemCollapsibleState.Collapsed,
       [subcollectionItem],
@@ -1029,6 +1035,7 @@ suite('Extension Test Suite', function (this: Suite) {
       }
     )
     const collection2Item = new TocTreeItem(
+      TocItemIcon.Book,
       'Collection2',
       vscode.TreeItemCollapsibleState.Collapsed,
       [module3Item],
