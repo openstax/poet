@@ -7,6 +7,9 @@ import { Bundle } from './model/bundle'
 import { ModelManager, pageAsTreeObject, bookTocAsTreeCollection } from './model-manager'
 import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/util.spec'
 import { Job, JobRunner } from './job-runner'
+import { pageMaker } from './model/page.spec'
+import { join, PathKind } from './model/utils'
+import { PageNode } from './model/page'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
@@ -97,10 +100,7 @@ describe('Bundle Manager', () => {
     manager.bundle.allNodes.forEach(n => expect(n.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() sends diagnostics for a file we recognize', async () => {
-    manager.loadEnoughToSendDiagnostics({
-      workspace: manager.bundle.workspaceRoot,
-      doc: manager.bundle.absPath
-    })
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, manager.bundle.absPath)
     await manager.jobRunner.done()
 
     expect(sendDiagnosticsStub.callCount).toBe(1)
@@ -112,12 +112,14 @@ describe('Bundle Manager', () => {
     books.forEach(b => expect(b.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() does not send diagnostics for a file we do not recognize', async () => {
-    manager.loadEnoughToSendDiagnostics({
-      workspace: manager.bundle.workspaceRoot,
-      doc: '/path/t/non-existent/file'
-    })
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, '/path/t/non-existent/file')
     await manager.jobRunner.done()
     expect(sendDiagnosticsStub.callCount).toBe(0)
+  })
+  it('loadEnoughToSendDiagnostics() loads the node with the contents of the file', async () => {
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, manager.bundle.absPath, '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>')
+    await manager.jobRunner.done()
+    expect(manager.bundle.books.size).toBe(0)
   })
   it('calls sendDiagnostics with objects that can be serialized (no cycles)', () => {
     ignoreConsoleWarnings(() => manager.updateFileContents(manager.bundle.absPath, '<notvalidXML'))
@@ -126,6 +128,52 @@ describe('Bundle Manager', () => {
     expect(diagnosticsObj.uri).toBeTruthy()
     expect(diagnosticsObj.diagnostics).toBeTruthy()
     expect(() => JSON.stringify(diagnosticsObj)).not.toThrow()
+  })
+})
+
+describe('Unexpected files/directories', () => {
+  const sinon = SinonRoot.createSandbox()
+  let manager = null as unknown as ModelManager
+
+  beforeEach(() => {
+    mockfs({
+      'META-INF/books.xml/some-file': 'the file does not matter, ensuring books.xml is a directory does matter'
+    })
+    manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
+    sinon.stub(conn, 'sendDiagnostics')
+  })
+  afterEach(() => {
+    mockfs.restore()
+    sinon.restore()
+    sinon.reset()
+    sinon.resetBehavior()
+    sinon.resetHistory()
+  })
+
+  it('path is to a directory instead of a file', async () => {
+    await expect(async () => await manager.loadEnoughForToc()).rejects.toThrow(/^Object has not been loaded yet \[/)
+    expect(manager.bundle.exists).toBe(false)
+  })
+})
+
+describe('Open Document contents cache', () => {
+  const sinon = SinonRoot.createSandbox()
+
+  beforeEach(() => {
+    sinon.stub(conn, 'sendDiagnostics')
+  })
+  afterEach(() => {
+    sinon.restore()
+  })
+
+  it('Updates the cached contents', () => {
+    const manager = new ModelManager(makeBundle(), conn)
+    manager.updateFileContents(manager.bundle.absPath, 'value_1')
+    expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_1')
+    manager.updateFileContents(manager.bundle.absPath, 'value_2')
+    expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_2')
+    manager.closeDocument(manager.bundle.absPath)
+    expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe(undefined)
   })
 })
 
@@ -255,6 +303,89 @@ describe('processFilesystemChange()', () => {
   })
 })
 
+describe('Image Autocomplete', () => {
+  const sinon = SinonRoot.createSandbox()
+  let manager = null as unknown as ModelManager
+
+  function joinPath(page: PageNode, relPath: string) {
+    return join(FS_PATH_HELPER, PathKind.ABS_TO_REL, page.absPath, relPath)
+  }
+
+  beforeEach(() => {
+    const bundle = makeBundle()
+    manager = new ModelManager(bundle, conn)
+  })
+
+  afterEach(() => {
+    sinon.restore()
+  })
+
+  it('Returns only orphaned images', () => {
+    const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
+
+    const imagePath = '../../media/image.png'
+    const orphanedPath = '../../media/orphan.png'
+
+    const existingImage = manager.bundle.allImages.getOrAdd(joinPath(page, imagePath))
+    const orphanedImage = manager.bundle.allImages.getOrAdd(joinPath(page, orphanedPath))
+    existingImage.load('image-bits')
+    orphanedImage.load('image-bits')
+
+    manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
+    expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
+    expect(page.validationErrors.errors.toArray()).toEqual([])
+
+    expect(page.imageLinks.size).toBe(1)
+    const firstImageRef = first(page.imageLinks)
+    const results = manager.autocompleteImages(page, { line: firstImageRef.range.start.line, character: firstImageRef.range.start.character + '<image src="X'.length })
+    expect(results).not.toEqual([])
+    expect(results[0].label).toBe(orphanedPath)
+  })
+
+  it('Returns no results outside image tag', () => {
+    const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
+
+    const imagePath = '../../media/image.png'
+    const orphanedPath = '../../media/orphan.png'
+
+    const existingImage = manager.bundle.allImages.getOrAdd(joinPath(page, imagePath))
+    const orphanedImage = manager.bundle.allImages.getOrAdd(joinPath(page, orphanedPath))
+    existingImage.load('image-bits')
+    orphanedImage.load('image-bits')
+
+    manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
+    expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
+    expect(page.validationErrors.errors.toArray()).toEqual([])
+
+    const cursor = { line: 0, character: 0 }
+    const results = manager.autocompleteImages(page, cursor)
+    expect(results).toEqual([])
+  })
+
+  it('Returns no results outside replacement range', () => {
+    const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
+
+    const imagePath = '../../media/image.png'
+    const orphanedPath = '../../media/orphan.png'
+    const missingPath = ''
+
+    const existingImage = manager.bundle.allImages.getOrAdd(joinPath(page, imagePath))
+    const orphanedImage = manager.bundle.allImages.getOrAdd(joinPath(page, orphanedPath))
+    const missingImage = manager.bundle.allImages.getOrAdd(joinPath(page, missingPath))
+    existingImage.load('image-bits')
+    orphanedImage.load('image-bits')
+    missingImage.load('')
+
+    manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath, missingPath] }))
+    expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
+    expect(page.validationErrors.errors.toArray()).toEqual([])
+
+    const secondImageRef = page.imageLinks.toArray()[1]
+    const results = manager.autocompleteImages(page, { line: secondImageRef.range.start.line, character: secondImageRef.range.start.character + '<image'.length })
+    expect(results).toEqual([])
+  })
+})
+
 // ------------ Stubs ------------
 const WATCHDOG = new class StubWatchdog implements WatchDog {
   shutdownReceived = false
@@ -262,6 +393,7 @@ const WATCHDOG = new class StubWatchdog implements WatchDog {
   exit = jest.fn()
   onClose = jest.fn()
   onError = jest.fn()
+  write = jest.fn()
 }()
 function PROTOCOL_CONNECTION_FACTORY(logger: Logger): ProtocolConnection {
   return {

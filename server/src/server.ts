@@ -4,7 +4,10 @@ import {
   ProposedFeatures,
   InitializeParams,
   TextDocumentSyncKind,
-  InitializeResult
+  InitializeResult,
+  CompletionItem,
+  CancellationToken,
+  CompletionParams
 } from 'vscode-languageserver/node'
 
 import { TextDocument } from 'vscode-languageserver-textdocument'
@@ -21,7 +24,8 @@ import {
 
 import {
   bundleEnsureIdsHandler,
-  bundleTreesHandler
+  bundleTreesHandler,
+  imageAutocompleteHandler
 } from './server-handler'
 
 import * as sourcemaps from 'source-map-support'
@@ -65,6 +69,10 @@ connection.onInitialize(async (params: InitializeParams) => {
         openClose: true,
         change: TextDocumentSyncKind.Incremental
       },
+      completionProvider: {
+        resolveProvider: false,
+        triggerCharacters: ['.']
+      },
       workspace: {
         workspaceFolders: {
           // changeNotification: true,
@@ -94,10 +102,15 @@ documents.onDidOpen(({ document }) => {
       return
     }
     const manager = getBundleForUri(document.uri)
-    const context = { workspace: manager.bundle.workspaceRoot, doc: document.uri }
-    manager.loadEnoughToSendDiagnostics(context)
+    manager.performInitialValidation() // just-in-case. It seems to be missed sometimes
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, document.uri, document.getText())
   }
   inner().catch(err => { throw err })
+})
+
+documents.onDidClose(({ document }) => {
+  const manager = getBundleForUri(document.uri)
+  manager.closeDocument(document.uri)
 })
 
 documents.onDidChangeContent(({ document }) => {
@@ -133,6 +146,13 @@ connection.onRequest(ExtensionServerRequest.BundleModules, ({ workspaceUri }: Bu
 })
 
 connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler())
+
+connection.onCompletionResolve((a: CompletionItem, token: CancellationToken): CompletionItem => a)
+
+connection.onCompletion(async (params: CompletionParams): Promise<CompletionItem[]> => {
+  const manager = getBundleForUri(params.textDocument.uri)
+  return await imageAutocompleteHandler(params, manager)
+})
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

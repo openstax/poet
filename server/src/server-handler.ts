@@ -7,8 +7,9 @@ import {
 } from '../../common/src/requests'
 import { fixDocument } from './fix-document-ids'
 import { bundleFactory } from './server'
-import { bookTocAsTreeCollection } from './model-manager'
+import { bookTocAsTreeCollection, ModelManager } from './model-manager'
 import { PageNode } from './model/page'
+import { CompletionItem, CompletionParams } from 'vscode-languageserver/node'
 
 export function bundleTreesHandler(): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
   return async (request: BundleTreesArgs) => {
@@ -38,4 +39,15 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsArgs) => Prom
     const pages = manager.bundle.allPages.all
     await Promise.all(pages.map(async p => await fixModule(p)))
   }
+}
+
+export async function imageAutocompleteHandler(documentPosition: CompletionParams, manager: ModelManager): Promise<CompletionItem[]> {
+  await manager.loadEnoughForOrphans()
+  const cursor = documentPosition.position
+  const page = manager.bundle.allPages.get(documentPosition.textDocument.uri)
+
+  if (page !== undefined) {
+    return manager.autocompleteImages(page, cursor)
+  }
+  return []
 }
