@@ -92,8 +92,12 @@ export class PageNode extends Fileish {
     return this.ensureLoaded(this._imageLinks)
   }
 
-  private get pageLinks() {
+  public get pageLinks() {
     return this.ensureLoaded(this._pageLinks)
+  }
+
+  public get elementIds() {
+    return I.Map(this.ensureLoaded(this._elementIds).map(v => [v.v, v]))
   }
 
   public hasElementId(id: string) {

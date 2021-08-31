@@ -1,14 +1,16 @@
+import path from 'path'
 import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
 import { createConnection, WatchDog } from 'vscode-languageserver'
 import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
+import { expectValue, Opt, join, PathKind } from './model/utils'
 import { BookNode } from './model/book'
 import { Bundle } from './model/bundle'
 import { ModelManager, pageAsTreeObject, bookTocAsTreeCollection } from './model-manager'
 import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/util.spec'
 import { Job, JobRunner } from './job-runner'
-import { pageMaker } from './model/page.spec'
-import { join, PathKind } from './model/utils'
+import { PageInfo, pageMaker } from './model/page.spec'
+
 import { PageNode } from './model/page'
 
 ModelManager.debug = () => {} // Turn off logging
@@ -193,6 +195,9 @@ describe('Find orphaned files', () => {
   it('finds orphaned Pages', async () => {
     sinon.stub(conn, 'sendDiagnostics')
     const manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
+    await manager.loadEnoughForOrphans()
+    await manager.jobRunner.done()
+    // Run again to verify we do not perform the expensive fetch again (via code coverage)
     await manager.loadEnoughForOrphans()
     await manager.jobRunner.done()
     expect(manager.orphanedPages.size).toBe(2)
@@ -383,6 +388,57 @@ describe('Image Autocomplete', () => {
     const secondImageRef = page.imageLinks.toArray()[1]
     const results = manager.autocompleteImages(page, { line: secondImageRef.range.start.line, character: secondImageRef.range.start.character + '<image'.length })
     expect(results).toEqual([])
+  })
+})
+
+describe('documentLinks()', () => {
+  let manager = null as unknown as ModelManager
+
+  beforeEach(() => {
+    const bundle = makeBundle()
+    manager = new ModelManager(bundle, conn)
+  })
+  it('returns url, page, and page-with-target links', async () => {
+    const bundle = makeBundle()
+    manager = new ModelManager(bundle, conn)
+
+    const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
+    const otherId = 'm2468'
+    const nonexistentButLoadedId = 'mDoesNotExist'
+    const otherPagePath = FS_PATH_HELPER.join(FS_PATH_HELPER.dirname(FS_PATH_HELPER.dirname(page.absPath)), otherId, 'index.cnxml')
+    const nonexistentButLoadedPath = FS_PATH_HELPER.join(FS_PATH_HELPER.dirname(FS_PATH_HELPER.dirname(page.absPath)), nonexistentButLoadedId, 'index.cnxml')
+    const otherPage = manager.bundle.allPages.getOrAdd(otherPagePath)
+    const nonexistentButLoadedPage = manager.bundle.allPages.getOrAdd(nonexistentButLoadedPath)
+
+    otherPage.load(pageMaker({
+      elementIds: ['other-el-id']
+    }))
+    nonexistentButLoadedPage.load(undefined)
+
+    function rel(target: string | undefined) {
+      const t = expectValue(target, 'BUG')
+      if (t.startsWith('https://')) { return t }
+      return path.relative(manager.bundle.workspaceRoot, t)
+    }
+
+    async function testPageLink(info: PageInfo, target: Opt<string>) {
+      page.load(pageMaker(info))
+      const links = await manager.getDocumentLinks(page)
+      if (target === undefined) {
+        expect(links).toEqual([])
+      } else {
+        expect(rel(links[0].target)).toBe(target)
+      }
+    }
+
+    await testPageLink({ pageLinks: [{ url: 'https://openstax.org/somepage' }] }, 'https://openstax.org/somepage')
+    // line number will change when pageMaker changes
+    await testPageLink({ elementIds: ['my-el-id'], pageLinks: [{ targetId: 'my-el-id' }] }, 'modules/m00001/index.cnxml#9:0')
+    await testPageLink({ pageLinks: [{ targetPage: 'm_doesnotexist' }] }, 'modules/m_doesnotexist/index.cnxml')
+    await testPageLink({ pageLinks: [{ targetPage: otherId }] }, `modules/${otherId}/index.cnxml`)
+    await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'nonexistent-id' }] }, `modules/${otherId}/index.cnxml`)
+    await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'other-el-id' }] }, `modules/${otherId}/index.cnxml#9:0`)
+    await testPageLink({ pageLinks: [{ targetPage: nonexistentButLoadedId }] }, undefined)
   })
 })
 
