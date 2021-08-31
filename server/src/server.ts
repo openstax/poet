@@ -32,6 +32,7 @@ import * as sourcemaps from 'source-map-support'
 import { Bundle } from './model/bundle'
 import { Factory } from './model/factory'
 import { pageAsTreeObject, ModelManager } from './model-manager'
+import { JobRunner } from './job-runner'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -57,6 +58,14 @@ export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUr
   return new ModelManager(b, connection)
 })
 
+const consoleDebug = (...args: any[]) => {
+  console.debug(...args)
+  // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+  connection.console.log(args.map(a => `${a}`).join(', '))
+}
+ModelManager.debug = consoleDebug
+JobRunner.debug = consoleDebug
+
 connection.onInitialize(async (params: InitializeParams) => {
   // https://microsoft.github.io/language-server-protocol/specification#workspace_workspaceFolders
   params.workspaceFolders?.forEach(w => bundleFactory.getOrAdd(w.uri)) // create bundles.
@@ -72,6 +81,9 @@ connection.onInitialize(async (params: InitializeParams) => {
       completionProvider: {
         resolveProvider: false,
         triggerCharacters: ['.']
+      },
+      documentLinkProvider: {
+        resolveProvider: false
       },
       workspace: {
         workspaceFolders: {
@@ -152,6 +164,16 @@ connection.onCompletionResolve((a: CompletionItem, token: CancellationToken): Co
 connection.onCompletion(async (params: CompletionParams): Promise<CompletionItem[]> => {
   const manager = getBundleForUri(params.textDocument.uri)
   return await imageAutocompleteHandler(params, manager)
+})
+connection.onDocumentLinks(async ({ textDocument }) => {
+  const { uri } = textDocument
+  const manager = getBundleForUri(uri)
+  const page = manager.bundle.allPages.get(uri)
+  if (page !== undefined) {
+    return await manager.getDocumentLinks(page)
+  } else {
+    return []
+  }
 })
 
 // Make the text document manager listen on the connection

@@ -38,6 +38,7 @@ describe('Page', () => {
 export interface PageInfo {
   uuid?: string
   title?: string | null // null means omit the whole element
+  elementIds?: string[]
   imageHrefs?: string[]
   pageLinks?: Array<{targetPage?: string, targetId?: string, url?: string}>
 }
@@ -45,6 +46,7 @@ export function pageMaker(info: PageInfo) {
   const i = {
     title: info.title !== undefined ? info.title : 'TestTitle',
     uuid: info.uuid !== undefined ? info.uuid : '00000000-0000-4000-0000-000000000000',
+    elementIds: info.elementIds !== undefined ? info.elementIds : [],
     imageHrefs: info.imageHrefs !== undefined ? info.imageHrefs : [],
     pageLinks: info.pageLinks !== undefined ? info.pageLinks.map(({ targetPage, targetId, url }) => ({ targetPage, targetId, url })) : []
   }
@@ -57,8 +59,7 @@ export function pageMaker(info: PageInfo) {
   <content>
 ${i.imageHrefs.map(href => `    <image src="${href}"/>`).join('\n')}
 ${i.pageLinks.map(({ targetPage, targetId, url }) => `    <link document="${targetPage ?? ''}" target-id="${targetId ?? ''}" url="${url ?? ''}"/>`).join('\n')}
-    <para id="elementId1"/>
-    <para id="elementId2"/>
+${i.elementIds.map(id => `<para id="${id}"/>`).join('\n')}
   </content>
 </document>`
 }
@@ -94,7 +95,7 @@ describe('Page validations', () => {
     expect(page.validationErrors.errors.size).toBe(1)
 
     // Local id that does exist
-    page.load(pageMaker({ pageLinks: [{ targetId: 'elementId1' }] }))
+    page.load(pageMaker({ elementIds: ['elementId1'], pageLinks: [{ targetId: 'elementId1' }] }))
     expect(page.validationErrors.errors.size).toBe(0)
 
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234' }] }))
@@ -110,6 +111,7 @@ describe('Page validations', () => {
     expect(page.validationErrors.errors.size).toBe(0)
 
     // Target with target-id
+    target.load(pageMaker({ uuid: '11111111-1111-4111-1111-111111111111', elementIds: ['elementId1'] }))
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'nonexistentId' }] }))
     expect(page.validationErrors.errors.size).toBe(1)
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'elementId1' }] }))

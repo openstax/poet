@@ -3,13 +3,13 @@ import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
 import { Connection } from 'vscode-languageserver'
-import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
+import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
 import { Opt, expectValue, Position, inRange, Range } from './model/utils'
 import { BookNode, TocNode, TocNodeKind } from './model/book'
 import { Bundle } from './model/bundle'
-import { PageNode } from './model/page'
+import { PageLinkKind, PageNode } from './model/page'
 import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
 
@@ -41,7 +41,7 @@ function findNode(bundle: Bundle, absPath: string) {
         bundle.allImages.get(absPath))
 }
 
-function pageToModuleId(page: PageNode) {
+export function pageToModuleId(page: PageNode) {
   // /path/to/modules/m123456/index.cnxml
   return path.basename(path.dirname(page.absPath))
 }
@@ -312,20 +312,41 @@ export class ModelManager {
         start: { line: cursor.line, character: startQuoteOffset + 'src="'.length },
         end: { line: cursor.line, character: endQuoteOffset + cursor.character }
       }
-      expectValue(inRange(range, cursor) ? true : undefined, 'BUG: The cursor must be within the replacement range')
-      const tokens = beforeCursor.split(' ')
-      if (tokens[tokens.length - 1].startsWith('src="')) {
-        const ret = this.orphanedImages.toArray().map(i => {
-          const insertText = path.relative(path.dirname(page.absPath), i.absPath)
-          const item = CompletionItem.create(insertText)
-          item.textEdit = TextEdit.replace(range, insertText)
-          item.kind = CompletionItemKind.File
-          item.detail = 'Orphaned Image'
-          return item
-        })
-        return ret
-      }
+      const ret = this.orphanedImages.toArray().map(i => {
+        const insertText = path.relative(path.dirname(page.absPath), i.absPath)
+        const item = CompletionItem.create(insertText)
+        item.textEdit = TextEdit.replace(range, insertText)
+        item.kind = CompletionItemKind.File
+        item.detail = 'Orphaned Image'
+        return item
+      })
+      return ret
     }
     return []
+  }
+
+  async getDocumentLinks(page: PageNode) {
+    await this.readAndLoad(page)
+    const ret: DocumentLink[] = []
+    for (const pageLink of page.pageLinks) {
+      if (pageLink.type === PageLinkKind.URL) {
+        ret.push(DocumentLink.create(pageLink.range, pageLink.url))
+      } else {
+        const targetPage = pageLink.page
+        if (targetPage.isLoaded && !targetPage.exists) {
+          continue
+        }
+        let target = targetPage.absPath
+        if (pageLink.type === PageLinkKind.PAGE_ELEMENT) {
+          await this.readAndLoad(targetPage)
+          const loc = targetPage.elementIds.get(pageLink.targetElementId)
+          if (loc !== undefined) {
+            target = `${target}#${loc.range.start.line + 1}:${loc.range.start.character}`
+          }
+        }
+        ret.push(DocumentLink.create(pageLink.range, target))
+      }
+    }
+    return ret
   }
 }
