@@ -17,3 +17,20 @@ export interface TocTreeCollection {
   children: TocTreeElement[]
 }
 export type TocTreeElement = TocTreeModule | TocTreeCollection
+
+export enum TocNodeKind {
+  Inner,
+  Leaf
+}
+export type TocNode<T> = TocInner<T> | TocLeaf<T>
+export interface TocInner<T> { type: TocNodeKind.Inner, readonly title: string, readonly children: Array<TocNode<T>> }
+export interface TocLeaf<T> { type: TocNodeKind.Leaf, readonly page: T }
+
+export interface BookToc {
+  readonly uuid: string
+  readonly title: string
+  readonly slug: string
+  readonly language: string
+  readonly licenseUrl: string
+  readonly tree: Array<TocNode<string>>
+}

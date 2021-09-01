@@ -5,9 +5,9 @@ import { PageNode } from './page'
 import { Factory } from './factory'
 import { ImageNode } from './image'
 
-const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
+export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
-const NS_METADATA = 'http://cnx.rice.edu/mdml'
+export const NS_METADATA = 'http://cnx.rice.edu/mdml'
 const NS_CONTAINER = 'https://openstax.org/namespaces/book-container'
 
 const NOWHERE_START: Position = { line: 0, character: 0 }
@@ -55,6 +55,15 @@ export function textWithRange(el: Element, attr?: string): WithRange<string> {
     range
   }
 }
+
+// This also exists in ../common/
+export enum TocNodeKind {
+  Inner,
+  Leaf
+}
+export type TocNode<T> = TocInner<T> | TocLeaf<T>
+export interface TocInner<T> { type: TocNodeKind.Inner, readonly title: string, readonly children: Array<TocNode<T>> }
+export interface TocLeaf<T> { type: TocNodeKind.Leaf, readonly page: T }
 
 export interface Bundleish {
   allPages: Factory<PageNode>

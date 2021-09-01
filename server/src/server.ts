@@ -64,7 +64,7 @@ const consoleDebug = (...args: any[]) => {
   connection.console.log(args.map(a => `${a}`).join(', '))
 }
 ModelManager.debug = consoleDebug
-JobRunner.debug = consoleDebug
+JobRunner.debug = () => {}
 
 connection.onInitialize(async (params: InitializeParams) => {
   // https://microsoft.github.io/language-server-protocol/specification#workspace_workspaceFolders

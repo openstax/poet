@@ -1,7 +1,8 @@
 import * as Quarx from 'quarx'
-import { TocNode, TocNodeKind } from './book'
+import { TocNode, TocNodeKind } from './utils'
 import { first, loadSuccess, makeBundle, read } from './util.spec'
 import { bookMaker } from './book.spec'
+import { PageNode } from './page'
 
 describe('Quarx.autorun code', () => {
   it('Triggers a ToC autorun when the Page title changes', () => {
@@ -55,7 +56,7 @@ describe('Quarx.autorun code', () => {
   })
 })
 
-function tocToString(n: TocNode): string {
+function tocToString(n: TocNode<PageNode>): string {
   if (n.type === TocNodeKind.Inner) {
     return n.children.map(tocToString).join(' ')
   } else {

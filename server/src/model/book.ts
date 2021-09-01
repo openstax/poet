@@ -1,10 +1,10 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
 import { PageNode } from './page'
-import { Opt, WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind } from './utils'
+import { Opt, WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, TocNodeKind } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 
-const equalsTocNode = (n1: TocNodeWithRange, n2: TocNodeWithRange): boolean => {
+const equalsTocNodeWithRange = (n1: TocNodeWithRange, n2: TocNodeWithRange): boolean => {
   /* istanbul ignore else */
   if (n1.type === TocNodeKind.Inner) {
     /* istanbul ignore next */
@@ -18,31 +18,28 @@ const equalsTocNode = (n1: TocNodeWithRange, n2: TocNodeWithRange): boolean => {
     return equalsPos(n1.range.start, n2.range.start) && equalsPos(n1.range.end, n2.range.end) && n1.page === n2.page
   }
 }
-const equalsArrayToc = equalsArray(equalsTocNode)
+const equalsArrayToc = equalsArray(equalsTocNodeWithRange)
 const equalsOptArrayToc = equalsOpt(equalsArrayToc)
 const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
 
-export enum TocNodeKind {
-  Inner,
-  Leaf
-}
-
-export type TocNode = TocInner | TocLeaf
-export interface TocInner { readonly type: TocNodeKind.Inner, readonly title: string, readonly children: TocNodeWithRange[] }
-export interface TocLeaf { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
-
-type TocNodeWithRange = TocLeafWithRange | TocInnerWithRange
-type TocLeafWithRange = TocLeaf & HasRange
-type TocInnerWithRange = TocInner & HasRange
+export type TocNodeWithRange = TocLeafWithRange | TocInnerWithRange
+export type TocInnerWithRange = HasRange & { type: TocNodeKind.Inner, readonly title: string, readonly children: TocNodeWithRange[] }
+export type TocLeafWithRange = HasRange & { type: TocNodeKind.Leaf, readonly page: PageNode }
 
 export class BookNode extends Fileish {
+  private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _slug = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _language = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _licenseUrl = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _toc = Quarx.observable.box<Opt<TocNodeWithRange[]>>(undefined, { equals: equalsOptArrayToc })
 
   protected parseXML = (doc: Document) => {
+    this._uuid.set(textWithRange(selectOne('/col:collection/col:metadata/md:uuid', doc)))
     this._title.set(textWithRange(selectOne('/col:collection/col:metadata/md:title', doc)))
     this._slug.set(textWithRange(selectOne('/col:collection/col:metadata/md:slug', doc)))
+    this._language.set(textWithRange(selectOne('/col:collection/col:metadata/md:language', doc)))
+    this._licenseUrl.set(textWithRange(selectOne('/col:collection/col:metadata/md:license', doc), 'url'))
     const root: Element = selectOne('/col:collection/col:content', doc)
     this._toc.set(this.buildChildren(root))
   }
@@ -82,8 +79,13 @@ export class BookNode extends Fileish {
   private get __toc() {
     return this.ensureLoaded(this._toc)
   }
-  public get toc(): TocNode[] {
+
+  public get toc(): TocNodeWithRange[] {
     return this.__toc
+  }
+
+  public get uuid() {
+    return this.ensureLoaded(this._uuid).v
   }
 
   public get title() {
@@ -92,6 +94,14 @@ export class BookNode extends Fileish {
 
   public get slug() {
     return this.ensureLoaded(this._slug).v
+  }
+
+  public get language() {
+    return this.ensureLoaded(this._language).v
+  }
+
+  public get licenseUrl() {
+    return this.ensureLoaded(this._licenseUrl).v
   }
 
   public get pages() {

@@ -1,4 +1,4 @@
-import { TocTreeModule, TocTreeCollection } from './toc-tree'
+import { TocTreeModule, TocTreeCollection, BookToc } from './toc-tree'
 
 export enum DiagnosticSource {
   xml = 'xml',
@@ -23,6 +23,16 @@ export enum ExtensionServerRequest {
   BundleOrphanedModules = 'bundle-orphaned-modules',
   BundleEnsureIds = 'bundle-ensure-ids'
 }
+
+export enum ExtensionServerNotification {
+  BookTocs = 'book-tocs'
+}
+
+export interface BookTocsArgs {
+  version: number
+  books: BookToc[]
+}
+
 export interface BundleTreesArgs {
   workspaceUri: string
 }

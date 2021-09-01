@@ -2,17 +2,19 @@ import { glob } from 'glob'
 import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
+import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
-import { DiagnosticSource } from '../../common/src/requests'
-import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
-import { Opt, expectValue, Position, inRange, Range } from './model/utils'
-import { BookNode, TocNode, TocNodeKind } from './model/book'
+import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType, BookToc } from '../../common/src/toc-tree'
+import { Opt, expectValue, Position, inRange, Range, TocNode, TocNodeKind, equalsArray } from './model/utils'
+import { BookNode } from './model/book'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
 import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
+import { equalsBookToc, fromBook } from './book-toc-utils'
+import { BookTocsArgs, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -20,6 +22,10 @@ const PAGE_RE = /\/modules\/[^/]+\/index\.cnxml$/
 const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 
 const PATH_SEP = path.sep
+
+function loadedAndExists(n: Fileish) {
+  return n.isLoaded && n.exists
+}
 
 function findOrCreateNode(bundle: Bundle, absPath: string) {
   if (bundle.absPath === absPath) {
@@ -66,7 +72,7 @@ export function bookTocAsTreeCollection(book: BookNode): TocTreeCollection {
   }
 }
 
-function recTocConvert(node: TocNode): TocTreeElement {
+function recTocConvert(node: TocNode<PageNode>): TocTreeElement {
   if (node.type === TocNodeKind.Inner) {
     const children = node.children.map(recTocConvert)
     return {
@@ -107,14 +113,54 @@ function toStringFileChangeType(t: FileChangeType) {
     case FileChangeType.Deleted: return 'DELETED'
   }
 }
+
+// In Quarx, whenever the inputs change autorun is executed.
+// But: sometimes the inputs change in ways that do not affect the resulting objects (like the column number of an <image> tag)
+//
+// This splits the sideEffect from the re-compute function so that sideEffectFn only runs when the input to the sideEffectFn changes
+function memoizeTempValue<T>(equalsFn: (a: T, b: T) => boolean, computeFn: () => T, sideEffectFn: (arg: T) => void) {
+  const temp = Quarx.observable.box<Opt<{matryoshka: T}>>(undefined, { equals: matryoshkaEquals(equalsFn) })
+  Quarx.autorun(() => {
+    temp.set({ matryoshka: computeFn() })
+  })
+  Quarx.autorun(() => {
+    const m = temp.get()
+    if (m !== undefined) {
+      sideEffectFn(m.matryoshka)
+    }
+  })
+}
+const matryoshkaEquals = <T>(eq: (n1: T, n2: T) => boolean) => (n1: Opt<{matryoshka: T}>, n2: Opt<{matryoshka: T}>) => {
+  if (n1 === undefined && n2 === undefined) return true
+  if (n1 !== undefined && n2 !== undefined) {
+    return eq(n1.matryoshka, n2.matryoshka)
+  } return false
+}
 export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
 
   public readonly jobRunner = new JobRunner()
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
+  private counter = 0
 
-  constructor(public bundle: Bundle, private readonly conn: Connection) {}
+  constructor(public bundle: Bundle, private readonly conn: Connection) {
+    const computeFn = () => {
+      if (loadedAndExists(this.bundle)) {
+        return this.bundle.books.filter(loadedAndExists).toArray().map(b => fromBook(b))
+      }
+      return []
+    }
+    const sideEffectFn = (v: BookToc[]) => {
+      const params: BookTocsArgs = {
+        version: ++this.counter,
+        books: v
+      }
+      ModelManager.debug('[MODEL_MANAGER] Sending Book TOC Updated', params)
+      conn.sendNotification(ExtensionServerNotification.BookTocs, params)
+    }
+    memoizeTempValue(equalsArray(equalsBookToc), computeFn, sideEffectFn)
+  }
 
   public get allPages() {
     return this.bundle.allPages.all
@@ -148,7 +194,9 @@ export class ModelManager {
     await this.loadEnoughForToc()
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
     const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRoot).fsPath, absolute: true })
-    files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    Quarx.batch(() => {
+      files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    })
     this.didLoadOrphans = true
   }
 

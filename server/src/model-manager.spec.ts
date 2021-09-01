@@ -231,6 +231,9 @@ describe('processFilesystemChange()', () => {
                               <col:metadata>
                                 <md:title>test collection</md:title>
                                 <md:slug>test1</md:slug>
+                                <md:uuid>00000000-0000-4000-0000-000000000000</md:uuid>
+                                <md:language>xxyyzz</md:language>
+                                <md:license url="http://creativecommons.org/licenses/by/4.0/"/>
                               </col:metadata>
                               <col:content>
                                 <col:subcollection>

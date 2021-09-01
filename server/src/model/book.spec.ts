@@ -48,6 +48,8 @@ export function bookMaker(toc: TocNode[]) {
       <md:title>${title}</md:title>
       <md:slug>${slug}</md:slug>
       <md:uuid>${uuid}</md:uuid>
+      <md:language>xxyyzz</md:language>
+      <md:license/>
     </col:metadata>
     <col:content>
         ${toc.map(tocToString).join('\n')}

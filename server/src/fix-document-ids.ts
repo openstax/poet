@@ -3,13 +3,9 @@ import { DOMParser, XMLSerializer } from 'xmldom'
 import { URI } from 'vscode-uri'
 import * as xpath from 'xpath-ts'
 import { PageNode } from './model/page'
-import { expectValue } from './model/utils'
+import { expectValue, select } from './model/utils'
 
 const ID_PADDING_CHARS = 5
-const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
-const NS_CNXML = 'http://cnx.rice.edu/cnxml'
-const NS_METADATA = 'http://cnx.rice.edu/mdml'
-const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA })
 
 const ELEMENT_TO_PREFIX = new Map<string, string>()
 ELEMENT_TO_PREFIX.set('para', 'para')
