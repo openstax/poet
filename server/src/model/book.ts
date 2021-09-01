@@ -4,7 +4,7 @@ import { PageNode } from './page'
 import { Opt, WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 
-const equalsTocNode = (n1: TocNode, n2: TocNode): boolean => {
+const equalsTocNode = (n1: TocNodeWithRange, n2: TocNodeWithRange): boolean => {
   /* istanbul ignore else */
   if (n1.type === TocNodeKind.Inner) {
     /* istanbul ignore next */
@@ -26,14 +26,19 @@ export enum TocNodeKind {
   Inner,
   Leaf
 }
+
 export type TocNode = TocInner | TocLeaf
-interface TocInner extends HasRange { readonly type: TocNodeKind.Inner, readonly title: string, readonly children: TocNode[] }
-interface TocLeaf extends HasRange { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
+export interface TocInner { readonly type: TocNodeKind.Inner, readonly title: string, readonly children: TocNodeWithRange[] }
+export interface TocLeaf { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
+
+type TocNodeWithRange = TocLeafWithRange | TocInnerWithRange
+type TocLeafWithRange = TocLeaf & HasRange
+type TocInnerWithRange = TocInner & HasRange
 
 export class BookNode extends Fileish {
   private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _slug = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
-  private readonly _toc = Quarx.observable.box<Opt<TocNode[]>>(undefined, { equals: equalsOptArrayToc })
+  private readonly _toc = Quarx.observable.box<Opt<TocNodeWithRange[]>>(undefined, { equals: equalsOptArrayToc })
 
   protected parseXML = (doc: Document) => {
     this._title.set(textWithRange(selectOne('/col:collection/col:metadata/md:title', doc)))
@@ -42,8 +47,8 @@ export class BookNode extends Fileish {
     this._toc.set(this.buildChildren(root))
   }
 
-  private buildChildren(root: Element): TocNode[] {
-    const ret = (select('./col:*', root) as Element[]).map((childNode): TocNode => {
+  private buildChildren(root: Element): TocNodeWithRange[] {
+    const ret = (select('./col:*', root) as Element[]).map((childNode): TocNodeWithRange => {
       const range = calculateElementPositions(childNode)
       switch (childNode.localName) {
         case 'subcollection': {
@@ -74,8 +79,11 @@ export class BookNode extends Fileish {
     return ret
   }
 
-  public get toc() {
+  private get __toc() {
     return this.ensureLoaded(this._toc)
+  }
+  public get toc(): TocNode[] {
+    return this.__toc
   }
 
   public get title() {
@@ -91,17 +99,16 @@ export class BookNode extends Fileish {
   }
 
   private tocLeaves() {
-    const toc = this.toc
-    return I.List<TocLeaf>().withMutations(acc => this.collectPages(toc, acc))
+    return I.List<TocLeafWithRange>().withMutations(acc => this.collectPages(this.__toc, acc))
   }
 
-  private collectPages(nodes: TocNode[], acc: I.List<TocLeaf>) {
+  private collectPages(nodes: TocNodeWithRange[], acc: I.List<TocLeafWithRange>) {
     nodes.forEach(n => {
       if (n.type === TocNodeKind.Leaf) { acc.push(n) } else { this.collectPages(n.children, acc) }
     })
   }
 
-  private collectNonPages(nodes: TocNode[], acc: I.List<TocInner>) {
+  private collectNonPages(nodes: TocNodeWithRange[], acc: I.List<TocInnerWithRange>) {
     nodes.forEach(n => {
       if (n.type !== TocNodeKind.Leaf) {
         acc.push(n)
@@ -112,9 +119,9 @@ export class BookNode extends Fileish {
 
   protected getValidationChecks(): ValidationCheck[] {
     const pages = this.pages
-    const nonPages = I.List<TocInner>().withMutations(acc => this.collectNonPages(this.toc, acc))
+    const nonPages = I.List<TocInnerWithRange>().withMutations(acc => this.collectNonPages(this.__toc, acc))
     const duplicateTitles = I.Set(findDuplicates(nonPages.map(subcol => subcol.title)))
-    const pageLeaves = I.List<TocLeaf>().withMutations(acc => this.collectPages(this.toc, acc))
+    const pageLeaves = I.List<TocLeafWithRange>().withMutations(acc => this.collectPages(this.__toc, acc))
     const duplicatePages = I.Set(findDuplicates(pages))
     return [
       {
