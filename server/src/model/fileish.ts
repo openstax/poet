@@ -1,6 +1,7 @@
 import path from 'path'
 import I from 'immutable'
 import { DOMParser } from 'xmldom'
+import * as Quarx from 'quarx'
 import { Bundleish, Opt, PathHelper, expectValue, Range, HasRange, NOWHERE } from './utils'
 
 export class ModelError extends Error implements HasRange {
@@ -39,31 +40,31 @@ function toValidationErrors(node: Fileish, message: string, sources: I.Set<Range
 }
 
 export abstract class Fileish {
-  private _isLoaded = false
-  private _exists = false
-  private _parseError: Opt<ParseError>
+  private readonly _isLoaded = Quarx.observable.box(false)
+  private readonly _exists = Quarx.observable.box(false)
+  private readonly _parseError = Quarx.observable.box<Opt<ParseError>>(undefined)
   protected parseXML: Opt<(doc: Document) => void> // Subclasses define this
 
   constructor(private _bundle: Opt<Bundleish>, protected _pathHelper: PathHelper<string>, public readonly absPath: string) { }
 
   static debug = (...args: any[]) => {} // console.debug
   protected abstract getValidationChecks(): ValidationCheck[]
-  public get isLoaded() { return this._isLoaded }
+  public get isLoaded() { return this._isLoaded.get() }
   public get workspacePath() { return path.relative(this.bundle.workspaceRoot, this.absPath) }
   protected setBundle(bundle: Bundleish) { this._bundle = bundle /* avoid catch-22 */ }
   protected get bundle() { return expectValue(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
-  protected ensureLoaded<T>(field: Opt<T>) {
-    return expectValue(field, `Object has not been loaded yet [${this.absPath}]`)
+  protected ensureLoaded<T>(field: Quarx.Box<Opt<T>>) {
+    return expectValue(field.get(), `Object has not been loaded yet [${this.absPath}]`)
   }
 
-  public get exists() { return this._exists }
+  public get exists() { return this._exists.get() }
   // Update this Node, and collect all Parse errors
   public load(fileContent: Opt<string>): void {
     Fileish.debug(this.workspacePath, 'update() started')
-    this._parseError = undefined
+    this._parseError.set(undefined)
     if (fileContent === undefined) {
-      this._exists = false
-      this._isLoaded = true
+      this._exists.set(false)
+      this._isLoaded.set(true)
       return
     }
     if (this.parseXML !== undefined) {
@@ -73,10 +74,10 @@ export abstract class Fileish {
       const parseXML = this.parseXML
       const fn = () => {
         const doc = this.readXML(fileContent)
-        if (this._parseError !== undefined) return
+        if (this._parseError.get() !== undefined) return
         parseXML(doc)
-        this._isLoaded = true
-        this._exists = true
+        this._isLoaded.set(true)
+        this._exists.set(true)
       }
       if (process.env.NODE_ENV !== 'production') {
         fn()
@@ -84,13 +85,13 @@ export abstract class Fileish {
         try {
           fn()
         } catch (e) {
-          this._parseError = new WrappedParseError(this, e)
+          this._parseError.set(new WrappedParseError(this, e))
         }
       }
       Fileish.debug(this.workspacePath, 'parsing XML (done)')
     } else {
-      this._exists = true
-      this._isLoaded = true
+      this._exists.set(true)
+      this._isLoaded.set(true)
     }
     Fileish.debug(this.workspacePath, 'update done')
   }
@@ -102,7 +103,7 @@ export abstract class Fileish {
         line: locator.lineNumber - 1,
         character: locator.columnNumber - 1
       }
-      this._parseError = new ParseError(this, msg, { start: pos, end: pos })
+      this._parseError.set(new ParseError(this, msg, { start: pos, end: pos }))
     }
     const p = new DOMParser({
       locator,
@@ -117,11 +118,12 @@ export abstract class Fileish {
   }
 
   public get validationErrors(): ValidationResponse {
-    if (this._parseError !== undefined) {
-      return new ValidationResponse(I.Set([this._parseError]))
-    } else if (!this._isLoaded) {
+    const parseError = this._parseError.get()
+    if (parseError !== undefined) {
+      return new ValidationResponse(I.Set([parseError]))
+    } else if (!this._isLoaded.get()) {
       return new ValidationResponse(I.Set(), I.Set([this]))
-    } else if (!this._exists) {
+    } else if (!this._exists.get()) {
       return new ValidationResponse(I.Set(), I.Set())
     } else {
       const responses = this.getValidationChecks().map(c => ValidationResponse.continueOnlyIfLoaded(c.nodesToLoad, () => toValidationErrors(this, c.message, c.fn(c.nodesToLoad))))
