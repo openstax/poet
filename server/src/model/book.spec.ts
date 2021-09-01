@@ -39,7 +39,7 @@ type TocNode = {
   title: string
   children: TocNode[]
 } | string
-function bookMaker(toc: TocNode[]) {
+export function bookMaker(toc: TocNode[]) {
   const title = 'test collection'
   const slug = 'slug1'
   const uuid = '00000000-0000-4000-0000-000000000000'

@@ -43,12 +43,11 @@ export interface Range {
 export interface WithRange<T> extends HasRange {
   v: T
 }
-
 export interface HasRange {
   range: Range
 }
 
-export function textWithSource(el: Element, attr?: string): WithRange<string> {
+export function textWithRange(el: Element, attr?: string): WithRange<string> {
   const range = calculateElementPositions(el)
   const v = attr !== undefined ? el.getAttribute(attr) : el.textContent
   return {
@@ -160,4 +159,32 @@ function isBeforeOrEqual(a: Position, b: Position) {
 
 export function inRange(range: Range, current: Position) {
   return (isAfter(current, range.start) && isBeforeOrEqual(current, range.end))
+}
+export const equalsOpt = <T>(eq: (n1: T, n2: T) => boolean) => (n1: Opt<T>, n2: Opt<T>) => {
+  /* istanbul ignore next */
+  return n1 === undefined ? n2 === undefined : n2 === undefined ? false : eq(n1, n2)
+}
+export const equalsWithRange = <T>(eq: (n1: T, n2: T) => boolean) => (n1: WithRange<T>, n2: WithRange<T>) => {
+  return equalsPos(n1.range.start, n2.range.start) && equalsPos(n1.range.end, n2.range.end) && eq(n1.v, n2.v)
+}
+export const equalsArray = <T>(eq: (n1: T, n2: T) => boolean) => (n1: T[], n2: T[]) => {
+  /* istanbul ignore else */
+  if (n1.length === n2.length) {
+    for (let i = 0; i < n1.length; i++) {
+      /* istanbul ignore else */
+      if (!eq(n1[i], n2[i])) {
+        return false
+      }
+    }
+    /* istanbul ignore next */
+    return true
+  }
+  /* istanbul ignore next */
+  return false
+}
+export const tripleEq = <T>(n1: T, n2: T) => {
+  return n1 === n2
+}
+export const equalsPos = (n1: Position, n2: Position) => {
+  return n1.line === n2.line && n1.character === n2.character
 }
