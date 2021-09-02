@@ -1,20 +1,8 @@
-import {
-  BundleTreesArgs,
-  BundleTreesResponse,
-  BundleEnsureIdsArgs
-} from '../../common/src/requests'
-import { bundleFactory } from './server'
-import { bookTocAsTreeCollection, ModelManager } from './model-manager'
-import { CompletionItem, CompletionParams } from 'vscode-languageserver/node'
+import { BundleEnsureIdsArgs } from '../../common/src/requests'
 import { fixModule } from './fix-document-ids'
-
-export function bundleTreesHandler(): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
-  return async (request: BundleTreesArgs) => {
-    const manager = bundleFactory.getOrAdd(request.workspaceUri)
-    await manager.loadEnoughForToc() // Just enough to send the ToC and list orphans
-    return manager.bundle.books.map(bookTocAsTreeCollection).toArray()
-  }
-}
+import { bundleFactory } from './server'
+import { ModelManager } from './model-manager'
+import { CompletionItem, CompletionParams } from 'vscode-languageserver/node'
 
 export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsArgs) => Promise<void> {
   return async (request: BundleEnsureIdsArgs) => {

@@ -6,15 +6,15 @@ import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
-import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType, BookToc } from '../../common/src/toc-tree'
-import { Opt, expectValue, Position, inRange, Range, TocNode, TocNodeKind, equalsArray } from './model/utils'
-import { BookNode } from './model/book'
+import { TocTreeModule, TocTreeElementType, BookToc, ClientTocNode, TocModification, TocModificationKind } from '../../common/src/toc-tree'
+import { Opt, expectValue, Position, inRange, Range, equalsArray } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
 import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
-import { equalsBookToc, fromBook } from './book-toc-utils'
-import { BookTocsArgs, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
+import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
+import { BooksAndOrphans, BookTocsArgs, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
+import { TocInnerWithRange } from './model/book'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -22,6 +22,10 @@ const PAGE_RE = /\/modules\/[^/]+\/index\.cnxml$/
 const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 
 const PATH_SEP = path.sep
+
+type BooksAndOrphansAndIdMap = BooksAndOrphans & {
+  tocIdMap: IdMap<string, TocInnerWithRange|PageNode>
+}
 
 function loadedAndExists(n: Fileish) {
   return n.isLoaded && n.exists
@@ -62,37 +66,11 @@ export function pageAsTreeObject(page: PageNode): TocTreeModule {
   }
 }
 
-export function bookTocAsTreeCollection(book: BookNode): TocTreeCollection {
-  const children = book.toc.map(recTocConvert)
-  return {
-    type: TocTreeElementType.collection,
-    title: book.title,
-    slug: book.slug,
-    children
-  }
-}
-
-function recTocConvert(node: TocNode<PageNode>): TocTreeElement {
-  if (node.type === TocNodeKind.Inner) {
-    const children = node.children.map(recTocConvert)
-    return {
-      type: TocTreeElementType.subcollection,
-      title: node.title,
-      children
-    }
-  } else {
-    return {
-      type: TocTreeElementType.module,
-      title: node.page.title(() => readSync(node.page)),
-      moduleid: pageToModuleId(node.page)
-    }
-  }
-}
-
 // https://stackoverflow.com/a/35008327
 const checkFileExists = async (s: string): Promise<boolean> => await new Promise(resolve => fs.access(s, fs.constants.F_OK, e => resolve(e === null)))
 
-async function readOrNull(uri: string): Promise<Opt<string>> {
+async function readOrNull(node: Fileish): Promise<Opt<string>> {
+  const uri = node.absPath
   const { fsPath } = URI.parse(uri)
   if (await checkFileExists(fsPath)) {
     const stat = await fs.promises.stat(fsPath)
@@ -136,6 +114,10 @@ const matryoshkaEquals = <T>(eq: (n1: T, n2: T) => boolean) => (n1: Opt<{matryos
     return eq(n1.matryoshka, n2.matryoshka)
   } return false
 }
+const equalsBookTocArray = equalsArray(equalsBookToc)
+const equalsBooksAndOrphans = (n1: BooksAndOrphans, n2: BooksAndOrphans) => {
+  return equalsBookTocArray(n1.books, n2.books) && equalsClientPageishArray(n1.orphans, n2.orphans)
+}
 export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
 
@@ -143,23 +125,41 @@ export class ModelManager {
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
   private counter = 0
+  private tocIdMap: Opt<IdMap<string, TocInnerWithRange|PageNode>>
+  private bookTocs: BookToc[] = []
 
   constructor(public bundle: Bundle, private readonly conn: Connection) {
+    // BookTocs
     const computeFn = () => {
+      let idCounter = 0
+      const tocIdMap = new IdMap<string, TocInnerWithRange|PageNode>((v) => {
+        if (v instanceof PageNode) {
+          return `servertoken:page:${v.absPath}`
+        } else {
+          return `servertoken:inner:${idCounter++}:${v.title}`
+        }
+      })
       if (loadedAndExists(this.bundle)) {
-        return this.bundle.books.filter(loadedAndExists).toArray().map(b => fromBook(b))
+        return {
+          tocIdMap: tocIdMap,
+          books: this.bundle.books.filter(loadedAndExists).toArray().map(b => fromBook(tocIdMap, b)),
+          orphans: this.orphanedPages.filter(loadedAndExists).toArray().map(p => fromPage(tocIdMap, p).value)
+        }
       }
-      return []
+      return { tocIdMap, books: [], orphans: [] }
     }
-    const sideEffectFn = (v: BookToc[]) => {
+    const sideEffectFn = (v: BooksAndOrphansAndIdMap) => {
+      this.tocIdMap = v.tocIdMap
+      this.bookTocs = v.books
       const params: BookTocsArgs = {
         version: ++this.counter,
-        books: v
+        books: v.books,
+        orphans: v.orphans
       }
       ModelManager.debug('[MODEL_MANAGER] Sending Book TOC Updated', params)
       conn.sendNotification(ExtensionServerNotification.BookTocs, params)
     }
-    memoizeTempValue(equalsArray(equalsBookToc), computeFn, sideEffectFn)
+    memoizeTempValue(equalsBooksAndOrphans, computeFn, sideEffectFn)
   }
 
   public get allPages() {
@@ -276,12 +276,12 @@ export class ModelManager {
 
   private async readAndLoad(node: Fileish) {
     if (node.isLoaded) { return }
-    const fileContent = await readOrNull(node.absPath)
+    const fileContent = await readOrNull(node)
     node.load(fileContent)
   }
 
   private async readAndUpdate(node: Fileish) {
-    const fileContent = await readOrNull(node.absPath)
+    const fileContent = await readOrNull(node)
     node.load(fileContent)
   }
 
@@ -397,5 +397,46 @@ export class ModelManager {
       }
     }
     return ret
+  }
+
+  async modifyToc(evt: TocModification<ClientTocNode>) {
+    ModelManager.debug('[MODIFY_TOC]', evt)
+
+    const bookToc = this.bookTocs[evt.bookIndex]
+    const bookXmlStr = toString({ ...bookToc, tree: evt.newToc })
+
+    const node = this.lookupToken(evt.nodeToken)
+
+    if (evt.type === TocModificationKind.PageRename) {
+      if (node instanceof PageNode) {
+        const fsPath = URI.parse(node.absPath).fsPath
+        const oldXml = expectValue(await readOrNull(node), 'BUG? This file should exist right?')
+        const newXml = renameTitle(evt.newTitle, oldXml)
+        node.load(newXml) // Just speed up the process. Maybe we should wait until the file is written and the client sends a filesystem event, and we re-read the file??? That seems like a lot of steps.
+        await fs.promises.writeFile(fsPath, newXml)
+      } else {
+        throw new Error('BUG! This if statement should be hidden away')
+      }
+    } else {
+      const fsPath = URI.parse(bookToc.absPath).fsPath
+      const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
+      book.load(bookXmlStr) // Just speed up the process. Maybe we should wait until the file is written and the client sends a filesystem event, and we re-read the file??? That seems like a lot of steps.
+      await fs.promises.writeFile(fsPath, bookXmlStr)
+      // const node = this.lookupToken(evt.nodeToken)
+      // if (evt.type === TocModificationKind.Move) {
+      //   if (evt.newParentToken) {
+      //     const newParent = this.lookupToken(evt.newParentToken)
+      //     if (newParent instanceof PageNode) {
+      //       throw new Error('BUG: Should have found a non-leaf node')
+      //     } else {
+      //       console.log('node&newParent&childcount&newChildIndex:', node, newParent, newParent.children.length, evt.newChildIndex)
+      //     }
+      //   }
+      // }
+    }
+  }
+
+  private lookupToken(token: string) {
+    return expectValue(expectValue(this.tocIdMap, 'BUG: It should be impossible to modify the ToC before it has been loaded').getValue(token), `BUG: Could not find ToC item using token='${token}'`)
   }
 }

@@ -58,8 +58,8 @@ export function textWithRange(el: Element, attr?: string): WithRange<string> {
 
 // This also exists in ../common/
 export enum TocNodeKind {
-  Inner,
-  Leaf
+  Inner = 'TocNodeKind.Inner',
+  Leaf = 'TocNodeKind.Leaf'
 }
 export type TocNode<T> = TocInner<T> | TocLeaf<T>
 export interface TocInner<T> { type: TocNodeKind.Inner, readonly title: string, readonly children: Array<TocNode<T>> }
@@ -190,6 +190,9 @@ export const equalsArray = <T>(eq: (n1: T, n2: T) => boolean) => (n1: T[], n2: T
   }
   /* istanbul ignore next */
   return false
+}
+export const equalsSet = <T>(s1: I.Set<T>, s2: I.Set<T>) => {
+  return s1.equals(s2)
 }
 export const tripleEq = <T>(n1: T, n2: T) => {
   return n1 === n2

@@ -22,17 +22,14 @@ import {
   ExtensionServerRequest
 } from '../../common/src/requests'
 
-import {
-  bundleEnsureIdsHandler,
-  bundleTreesHandler,
-  imageAutocompleteHandler
-} from './server-handler'
+import { bundleEnsureIdsHandler, imageAutocompleteHandler } from './server-handler'
 
 import * as sourcemaps from 'source-map-support'
 import { Bundle } from './model/bundle'
 import { Factory } from './model/factory'
 import { pageAsTreeObject, ModelManager } from './model-manager'
 import { JobRunner } from './job-runner'
+import { TocModificationParams } from '../../common/src/toc-tree'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -144,7 +141,10 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
   inner().catch(err => { throw err })
 })
 
-connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler())
+connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocModificationParams) => {
+  const manager = getBundleForUri(params.workspaceUri)
+  await manager.modifyToc(params)
+})
 
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
   const manager = getBundleForUri(workspaceUri)

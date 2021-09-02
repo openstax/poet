@@ -6,7 +6,7 @@ import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } 
 import { expectValue, Opt, join, PathKind } from './model/utils'
 import { BookNode } from './model/book'
 import { Bundle } from './model/bundle'
-import { ModelManager, pageAsTreeObject, bookTocAsTreeCollection } from './model-manager'
+import { ModelManager, pageAsTreeObject } from './model-manager'
 import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/util.spec'
 import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
@@ -28,12 +28,6 @@ describe('Tree Translator', () => {
     const o = pageAsTreeObject(page)
     expect(o.moduleid).toEqual('m00001')
     expect(o.title).toBe('Introduction')
-  })
-  it('bookTocAsTreeCollection', () => {
-    const o = bookTocAsTreeCollection(book)
-    expect(o.slug).toBe('test')
-    expect(o.title).toBe('test collection')
-    expect(o.children.length).toBe(1)
   })
 })
 

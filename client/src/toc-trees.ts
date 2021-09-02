@@ -1,7 +1,7 @@
 import vscode, { ThemeIcon } from 'vscode'
-import { getRootPathUri, expect, constructCollectionUri, constructModuleUri } from './utils'
-import { BundleTreesResponse, requestBundleTrees } from '../../common/src/requests'
-import { BookRootNode, ClientTocNode, TocNodeKind, TocTreeCollection, TocTreeElementType, TocTreeModule } from '../../common/src/toc-tree'
+import { constructModuleUri } from './utils'
+// import { BundleTreesResponse, requestBundleTrees } from '../../common/src/requests'
+import { BookRootNode, ClientTocNode, TocNodeKind, TocTreeModule } from '../../common/src/toc-tree'
 import { TocsTreeProvider, BookOrTocNode } from './book-tocs'
 import { ExtensionHostContext } from './panel'
 
@@ -48,20 +48,20 @@ export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
       return element.children
     }
 
-    const uri = expect(getRootPathUri(), 'No workspace root for ToC trees')
-    const bundleTrees: BundleTreesResponse = await requestBundleTrees(
-      this.context.client,
-      { workspaceUri: uri.toString() }
-    )
-    if (bundleTrees == null) {
-      return []
-    }
+    // const uri = expect(getRootPathUri(), 'No workspace root for ToC trees')
+    // const bundleTrees: BundleTreesResponse = await requestBundleTrees(
+    //   this.context.client,
+    //   { workspaceUri: uri.toString() }
+    // )
+    // if (bundleTrees == null) {
+    return []
+    // }
 
-    const children: TocTreeItem[] = []
-    bundleTrees.forEach(collection => {
-      children.push(TocTreeItem.fromCollection(collection, uri))
-    })
-    return children
+    // const children: TocTreeItem[] = []
+    // bundleTrees.forEach(collection => {
+    //   children.push(TocTreeItem.fromCollection(collection, uri))
+    // })
+    // return children
   }
 
   getParent(element: TocTreeItem): vscode.ProviderResult<TocTreeItem> {
@@ -84,30 +84,30 @@ export class TocTreeItem extends vscode.TreeItem {
     this.children.forEach(child => { child.parent = this })
   }
 
-  static fromCollection(treeCollection: TocTreeCollection, workspaceUri: vscode.Uri): TocTreeItem {
-    const collapsibleState = vscode.TreeItemCollapsibleState.Collapsed
-    const children: TocTreeItem[] = []
+  // static fromCollection(treeCollection: TocTreeCollection, workspaceUri: vscode.Uri): TocTreeItem {
+  //   const collapsibleState = vscode.TreeItemCollapsibleState.Collapsed
+  //   const children: TocTreeItem[] = []
 
-    treeCollection.children.forEach(element => {
-      if (element.type === TocTreeElementType.module) {
-        children.push(TocTreeItem.fromModule(element, workspaceUri))
-      } else {
-        children.push(TocTreeItem.fromCollection(element, workspaceUri))
-      }
-    })
+  //   treeCollection.children.forEach(element => {
+  //     if (element.type === TocTreeElementType.module) {
+  //       children.push(TocTreeItem.fromModule(element, workspaceUri))
+  //     } else {
+  //       children.push(TocTreeItem.fromCollection(element, workspaceUri))
+  //     }
+  //   })
 
-    if ((treeCollection.type === TocTreeElementType.subcollection) || (treeCollection.slug == null)) {
-      return new TocTreeItem(TocItemIcon.SubBook, treeCollection.title, collapsibleState, children)
-    }
+  //   if ((treeCollection.type === TocTreeElementType.subcollection) || (treeCollection.slug == null)) {
+  //     return new TocTreeItem(TocItemIcon.SubBook, treeCollection.title, collapsibleState, children)
+  //   }
 
-    return new TocTreeItem(
-      TocItemIcon.Book,
-      treeCollection.title,
-      collapsibleState,
-      children,
-      { title: 'open', command: 'vscode.open', arguments: [constructCollectionUri(workspaceUri, treeCollection.slug)] }
-    )
-  }
+  //   return new TocTreeItem(
+  //     TocItemIcon.Book,
+  //     treeCollection.title,
+  //     collapsibleState,
+  //     children,
+  //     { title: 'open', command: 'vscode.open', arguments: [constructCollectionUri(workspaceUri, treeCollection.slug)] }
+  //   )
+  // }
 
   static fromModule(treeModule: TocTreeModule, workspaceUri: vscode.Uri): TocTreeItem {
     return new TocTreeItem(

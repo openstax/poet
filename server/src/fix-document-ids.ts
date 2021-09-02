@@ -1,7 +1,6 @@
 import fs from 'fs'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { URI } from 'vscode-uri'
-import * as xpath from 'xpath-ts'
 import { PageNode } from './model/page'
 import { expectValue, select } from './model/utils'
 

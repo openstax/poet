@@ -1,6 +1,5 @@
 import { EventEmitter, TreeItemCollapsibleState, Uri, TreeDataProvider } from 'vscode'
 
-import { BookTocsArgs } from '../../common/src/requests'
 import { BookToc, ClientTocNode, BookRootNode, TocNodeKind } from '../../common/src/toc-tree'
 import { TocItemIcon } from './toc-trees'
 
@@ -11,11 +10,11 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event
 
   public includeFileIdsForFilter = false
-  private bookTocs: BookTocsArgs
+  private bookTocs: BookToc[]
   private readonly parentsMap = new Map<BookOrTocNode, BookOrTocNode>()
 
   constructor() {
-    this.bookTocs = { version: -1, books: [] }
+    this.bookTocs = []
   }
 
   public toggleFilterMode() {
@@ -23,10 +22,10 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
     this._onDidChangeTreeData.fire()
   }
 
-  public update(n: BookTocsArgs) {
+  public update(n: BookToc[]) {
     this.bookTocs = n
     this.parentsMap.clear()
-    this.bookTocs.books.forEach(n => this.recAddParent(n))
+    this.bookTocs.forEach(n => this.recAddParent(n))
     this._onDidChangeTreeData.fire()
   }
 
@@ -50,8 +49,8 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
         command: { title: 'open', command: 'vscode.open', arguments: [uri] }
       }
     } else if (node.type === TocNodeKind.Leaf) {
-      const uri = Uri.parse(node.page.absPath)
-      const ret = this.includeFileIdsForFilter ? { label: `${node.page.title ?? 'Loading...'} (${node.page.fileId})` } : { label: node.page.title, description: node.page.fileId }
+      const uri = Uri.parse(node.value.absPath)
+      const ret = this.includeFileIdsForFilter ? { label: `${node.value.title ?? 'Loading...'} (${node.value.fileId})` } : { label: node.value.title, description: node.value.fileId }
       return {
         ...ret,
         iconPath: TocItemIcon.Page,
@@ -63,7 +62,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
       return {
         iconPath: TocItemIcon.SubBook,
         collapsibleState: TreeItemCollapsibleState.Collapsed,
-        label: node.title
+        label: node.value.title
       }
     }
   }
@@ -71,7 +70,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
   public getChildren(node?: BookOrTocNode) {
     let kids: BookOrTocNode[] = []
     if (node === undefined) {
-      return this.bookTocs.books
+      return this.bookTocs
     } else if (node.type === BookRootNode.Singleton) {
       kids = node.tree
     } else if (node.type === TocNodeKind.Leaf) {

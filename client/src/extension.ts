@@ -10,7 +10,7 @@ import { ExtensionHostContext, Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
 import { toggleTocTreesFilteringHandler } from './toc-trees'
 import { BookOrTocNode, TocsTreeProvider } from './book-tocs'
-import { BookTocsArgs, ExtensionServerNotification } from '../../common/src/requests'
+import { BookTocsArgs, DEFAULT_BOOK_TOCS_ARGS, ExtensionServerNotification } from '../../common/src/requests'
 
 const resourceRootDir = path.join(__dirname) // extension is running in dist/
 let tocTreesView: vscode.TreeView<BookOrTocNode>
@@ -41,7 +41,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
     client, // FIXME: only pass in client.sendRequest, so as to disallow anything from calling onRequest
     events: {
       onDidChangeWatchedFiles
-    }
+    },
+    bookTocs: DEFAULT_BOOK_TOCS_ARGS
   }
   const tocPanelManager = new PanelManager(hostContext, TocEditorPanel)
   const cnxmlPreviewPanelManager = new PanelManager(hostContext, CnxmlPreviewPanel)
@@ -49,7 +50,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
 
   tocTreesProvider = new TocsTreeProvider()
   client.onNotification(ExtensionServerNotification.BookTocs, (params: BookTocsArgs) => {
-    tocTreesProvider.update(params)
+    hostContext.bookTocs = params // When a panel opens, make sure it has the latest bookTocs
+    tocTreesProvider.update(params.books)
+    void tocPanelManager.panel()?.update(params)
   })
 
   vscode.workspace.onDidChangeWorkspaceFolders(ensureCatch(forwardOnDidChangeWorkspaceFolders(client)))

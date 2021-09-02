@@ -1,6 +1,7 @@
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { ensureCatchPromise, genNonce } from './utils'
+import { BookTocsArgs } from '../../common/src/requests'
+import { ensureCatchPromise, genNonce, injectCspNonce } from './utils'
 
 // Modified from https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/src/util/dispose.ts
 /**
@@ -118,6 +119,7 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
       (() => {
         let fireInjectedEvents = () => {
           let messages=${JSON.stringify(messages)};
+          console.debug('[ENSURED_MESSAGE_DEBUG] sending messages:', messages);
           messages.forEach(message => {
             let event = new CustomEvent('message');
             event.data = message;
@@ -128,7 +130,9 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
         window.addEventListener('load', fireInjectedEvents);
       })()
     </script>`
-    return html.replace('</body>', `</body>${injection}`)
+    html = html.replace('</body>', `</body>${injection}`)
+    html = injectCspNonce(html, this.nonce)
+    return html
   }
 
   readonly reveal: Panel<InMessage, OutMessage>['panel']['reveal'] = (...args) => {
@@ -223,6 +227,7 @@ export interface ExtensionHostContext {
   resourceRootDir: string
   client: LanguageClient
   events: ExtensionEvents
+  bookTocs: BookTocsArgs
 }
 
 /**
