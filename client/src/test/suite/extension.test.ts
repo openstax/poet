@@ -31,6 +31,7 @@ import { DiagnosticSource, ExtensionServerRequest } from '../../../../common/src
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
 import { TocTreesProvider, TocTreeItem, toggleTocTreesFilteringHandler, TocItemIcon } from './../../toc-trees'
 import * as utils from './../../utils' // Used for dependency mocking in tests
+import { BookOrTocNode, TocsTreeProvider } from '../../book-tocs'
 
 const ROOT_DIR_REL = '../../../../../../'
 const ROOT_DIR_ABS = path.resolve(__dirname, ROOT_DIR_REL)
@@ -1070,14 +1071,14 @@ suite('Extension Test Suite', function (this: Suite) {
     const getChildrenStub = sinon.stub()
     const refreshStub = sinon.stub()
 
-    const view: vscode.TreeView<TocTreeItem> = {
+    const view: vscode.TreeView<BookOrTocNode> = {
       reveal: revealStub
-    } as unknown as vscode.TreeView<TocTreeItem>
-    const provider: TocTreesProvider = {
+    } as unknown as vscode.TreeView<BookOrTocNode>
+    const provider: TocsTreeProvider = {
       toggleFilterMode: toggleFilterStub,
       getChildren: getChildrenStub,
       refresh: refreshStub
-    } as unknown as TocTreesProvider
+    } as unknown as TocsTreeProvider
     const fakeChildren = [
       { label: 'col1', children: [{ label: 'subcol', children: [{ label: 'm2', children: [] }] }] },
       { label: 'col2', children: [{ label: 'm1', children: [] }] }
@@ -1103,13 +1104,13 @@ suite('Extension Test Suite', function (this: Suite) {
     ]
     getChildrenStub.resolves(fakeChildren)
 
-    const view: vscode.TreeView<TocTreeItem> = {
+    const view: vscode.TreeView<BookOrTocNode> = {
       reveal: revealStub
-    } as unknown as vscode.TreeView<TocTreeItem>
-    const provider: TocTreesProvider = {
+    } as unknown as vscode.TreeView<BookOrTocNode>
+    const provider: TocsTreeProvider = {
       toggleFilterMode: toggleFilterStub,
       getChildren: getChildrenStub
-    } as unknown as TocTreesProvider
+    } as unknown as TocsTreeProvider
 
     const handler = toggleTocTreesFilteringHandler(view, provider)
     // Invoke the handler the first time reveal is called to simulate a parallel
@@ -1122,10 +1123,10 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('toggleTocTreesFilteringHandler doesn\'t lock itself on errors', async () => {
     const toggleFilterStub = sinon.stub().throws()
-    const view: vscode.TreeView<TocTreeItem> = {} as unknown as vscode.TreeView<TocTreeItem>
-    const provider: TocTreesProvider = {
+    const view: vscode.TreeView<BookOrTocNode> = {} as unknown as vscode.TreeView<BookOrTocNode>
+    const provider: TocsTreeProvider = {
       toggleFilterMode: toggleFilterStub
-    } as unknown as TocTreesProvider
+    } as unknown as TocsTreeProvider
 
     const handler = toggleTocTreesFilteringHandler(view, provider)
     try { await handler() } catch { }

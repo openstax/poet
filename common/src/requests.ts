@@ -5,6 +5,8 @@ export enum DiagnosticSource {
   cnxml = 'cnxml'
 }
 
+export type Opt<T> = T | undefined
+
 // Mock out the basic need of the LanguageClient for common,
 // since we can't import the client lib.
 interface LanguageClient {

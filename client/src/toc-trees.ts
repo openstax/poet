@@ -1,7 +1,8 @@
 import vscode, { ThemeIcon } from 'vscode'
 import { getRootPathUri, expect, constructCollectionUri, constructModuleUri } from './utils'
 import { BundleTreesResponse, requestBundleTrees } from '../../common/src/requests'
-import { TocTreeCollection, TocTreeElementType, TocTreeModule } from '../../common/src/toc-tree'
+import { BookRootNode, ClientTocNode, TocNodeKind, TocTreeCollection, TocTreeElementType, TocTreeModule } from '../../common/src/toc-tree'
+import { TocsTreeProvider, BookOrTocNode } from './book-tocs'
 import { ExtensionHostContext } from './panel'
 
 export const TocItemIcon = {
@@ -120,19 +121,21 @@ export class TocTreeItem extends vscode.TreeItem {
   }
 }
 
-export function toggleTocTreesFilteringHandler(view: vscode.TreeView<TocTreeItem>, provider: TocTreesProvider): () => Promise<void> {
+export function toggleTocTreesFilteringHandler(view: vscode.TreeView<BookOrTocNode>, provider: TocsTreeProvider): () => Promise<void> {
   let revealing: boolean = false
 
   // We call the view.reveal API for all nodes with children to ensure the tree
   // is fully expanded. This approach is used since attempting to simply call
   // reveal on root notes with the max expand value of 3 doesn't seem to always
   // fully expose leaf nodes for large trees.
-
-  async function revealer(elements: TocTreeItem[]): Promise<void> {
+  function leafFinder(acc: ClientTocNode[], elements: BookOrTocNode[]) {
     for (const el of elements) {
-      if (el.children.length !== 0) {
-        await view.reveal(el, { expand: true })
-        await revealer(el.children)
+      if (el.type === BookRootNode.Singleton) {
+        leafFinder(acc, el.tree)
+      } else if (el.type === TocNodeKind.Inner) {
+        leafFinder(acc, el.children)
+      } else {
+        acc.push(el)
       }
     }
   }
@@ -143,12 +146,22 @@ export function toggleTocTreesFilteringHandler(view: vscode.TreeView<TocTreeItem
     if (revealing) { return }
     revealing = true
 
+    // Toggle data provider filter mode and reveal all children so the
+    // tree expands if it hasn't already
+    provider.toggleFilterMode()
+    const leaves: ClientTocNode[] = []
+    leafFinder(leaves, provider.getChildren())
+    const nodes3Up = new Set<BookOrTocNode>() // VSCode allows expanding up to 3 levels down
+    leaves.forEach(l => {
+      const p1 = provider.getParent(l)
+      const p2 = p1 === undefined ? undefined : provider.getParent(p1)
+      const p3 = p2 === undefined ? undefined : provider.getParent(p2)
+      nodes3Up.add(p3 ?? p2 ?? p1 ?? l)
+    })
     try {
-      // Toggle data provider filter mode and reveal all children so the
-      // tree expands if it hasn't already
-      provider.toggleFilterMode()
-      const children = await provider.getChildren()
-      await revealer(children)
+      for (const node of Array.from(nodes3Up).reverse()) {
+        await view.reveal(node, { expand: 3 })
+      }
     } finally {
       revealing = false
     }

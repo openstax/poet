@@ -52,6 +52,11 @@ export class PageNode extends Fileish {
   private readonly _imageLinks = Quarx.observable.box<Opt<I.Set<ImageLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
   public uuid() { return this.ensureLoaded(this._uuid).v }
+  public get optTitle() {
+    const t = this._title.get()
+    return t?.v
+  }
+
   public title(fileReader: () => string) {
     // A quick way to get the title for the ToC
     const v = this._title.get()

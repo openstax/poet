@@ -1,9 +1,10 @@
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { BookToc } from '../../common/src/toc-tree'
+import { BookRootNode, BookToc, ClientTocNode } from '../../common/src/toc-tree'
+import { pageToModuleId } from './model-manager'
 import { BookNode, TocNodeWithRange } from './model/book'
-import { selectOne, NS_COLLECTION, NS_METADATA, TocNode, TocNodeKind, equalsArray } from './model/utils'
+import { selectOne, NS_COLLECTION, NS_METADATA, TocNodeKind, equalsArray } from './model/utils'
 
-const equalsTocNode = (n1: TocNode<string>, n2: TocNode<string>): boolean => {
+const equalsTocNode = (n1: ClientTocNode, n2: ClientTocNode): boolean => {
   /* istanbul ignore else */
   if (n1.type === TocNodeKind.Inner) {
     /* istanbul ignore next */
@@ -40,6 +41,8 @@ const BOOK_XML_TEMPLATE = `<col:collection xmlns:col="http://cnx.rice.edu/collxm
 
 export function fromBook(book: BookNode): BookToc {
   return {
+    type: BookRootNode.Singleton,
+    absPath: book.absPath,
     uuid: book.uuid,
     title: book.title,
     slug: book.slug,
@@ -56,26 +59,26 @@ export function toString(t: BookToc) {
   selectOne('/col:collection/col:metadata/md:slug', doc).textContent = t.slug
   selectOne('/col:collection/col:metadata/md:language', doc).textContent = t.language
   selectOne('/col:collection/col:metadata/md:uuid', doc).textContent = t.uuid
-  const license = selectOne('//license', doc) as Element
+  const license = selectOne('/col:collection/col:metadata/md:license', doc)
   license.setAttribute('url', t.licenseUrl)
 
-  const treeRoot = selectOne('//col:content', doc) as Element
+  const treeRoot = selectOne('/col:collection/col:content', doc)
   treeRoot.append(...t.tree.map(t => recBuild(doc, t)))
   return new XMLSerializer().serializeToString(doc)
 }
 
-function recTree(n: TocNodeWithRange): TocNode<string> {
+function recTree(n: TocNodeWithRange): ClientTocNode {
   if (n.type === TocNodeKind.Leaf) {
-    return { ...n, page: n.page.absPath }
+    return { ...n, page: { title: n.page.optTitle, absPath: n.page.absPath, fileId: pageToModuleId(n.page) } }
   } else {
     return { ...n, children: n.children.map(recTree) }
   }
 }
 
-function recBuild(doc: Document, node: TocNode<string>): Element {
+function recBuild(doc: Document, node: ClientTocNode): Element {
   if (node.type === TocNodeKind.Leaf) {
     const ret = doc.createElementNS(NS_COLLECTION, 'module')
-    ret.setAttribute('document', node.page)
+    ret.setAttribute('document', node.page.fileId)
     return ret
   } else {
     const ret = doc.createElementNS(NS_COLLECTION, 'subcollection')

@@ -15,10 +15,10 @@ const NOWHERE_END: Position = { line: 0, character: 0 /* Number.MAX_VALUE */ }
 export const NOWHERE: Range = { start: NOWHERE_START, end: NOWHERE_END }
 
 export const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA, bk: NS_CONTAINER })
-export const selectOne = <T extends Node>(sel: string, doc: Node): T => {
+export const selectOne = (sel: string, doc: Node): Element => {
   const ret = select(sel, doc) as Node[]
   expectValue(ret.length === 1 || null, `ERROR: Expected one but found ${ret.length} results that match '${sel}'`)
-  return ret[0] as T
+  return ret[0] as Element
 }
 
 export type Opt<T> = T | undefined
