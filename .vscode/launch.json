@@ -2,6 +2,28 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/client/dist/**/*.js"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach to Language Server",
+      "port": 6009,
+      "restart": true,
+      "outFiles": [
+        "${workspaceRoot}/server/dist/**/*.js"
+      ]
+    },
+    {
       "args": [
         "--runInBand"
       ],
@@ -15,50 +37,37 @@
       "program": "${workspaceFolder}/server/node_modules/jest/bin/jest.js",
       "request": "launch",
       "skipFiles": [
-        "<node_internals>/**", "node_modules"
+        "<node_internals>/**",
+        "node_modules"
       ],
       "type": "node"
     },
     {
-    "name": "Run Extension",
-    "type": "extensionHost",
-    "request": "launch",
-    "runtimeExecutable": "${execPath}",
-    "args": [
-      "--extensionDevelopmentPath=${workspaceFolder}"
-    ],
-    "outFiles": [
-      "${workspaceFolder}/client/dist/**/*.js"
-    ]
-  }, {
-    "name": "Extension Tests",
-    "type": "extensionHost",
-    "request": "launch",
-    "runtimeExecutable": "${execPath}",
-    "args": [
-      "${workspaceFolder}/client/out/client/src/test/data/test-repo",
-      "--disable-extensions",
-      "--extensionDevelopmentPath=${workspaceFolder}",
-      "--extensionTestsPath=${workspaceFolder}/client/out/client/src/test/suite/index"
-    ],
-    "outFiles": ["${workspaceFolder}/client/out/client/src/test/**/*.js"],
-    "preLaunchTask": "npm: build"
-  }, {
-    "name": "Run Extension <gitpod>. Make sure .vscode-test/ exists by running the client tests. Open port 6080 to see the app inside vnc",
-    "type": "node",
-    "request": "launch",
-    "runtimeExecutable": "${workspaceFolder}/.vscode-test/vscode-linux-x64-1.56.2/VSCode-linux-x64/code",
-    "args": [
-      "${workspaceFolder}/out/test/data/test-repo",
-      "--no-sandbox",
-      "--extensionDevelopmentPath=${workspaceFolder}"
-    ]
-  }, {
-    "type": "node",
-    "request": "attach",
-    "name": "Attach to Language Server",
-    "port": 6009,
-    "restart": true,
-    "outFiles": ["${workspaceRoot}/server/dist/**/*.js"]
-  }]
+      "name": "Extension Tests",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "${workspaceFolder}/client/out/client/src/test/data/test-repo",
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/client/out/client/src/test/suite/index"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/client/out/client/src/test/**/*.js"
+      ],
+      "preLaunchTask": "npm: build"
+    },
+    {
+      "name": "Run Extension <gitpod>. Make sure .vscode-test/ exists by running the client tests. Open port 6080 to see the app inside vnc",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "${workspaceFolder}/.vscode-test/vscode-linux-x64-1.56.2/VSCode-linux-x64/code",
+      "args": [
+        "${workspaceFolder}/out/test/data/test-repo",
+        "--no-sandbox",
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ]
+    }
+  ]
 }

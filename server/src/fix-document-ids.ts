@@ -1,4 +1,8 @@
+import fs from 'fs'
+import { DOMParser, XMLSerializer } from 'xmldom'
+import { URI } from 'vscode-uri'
 import * as xpath from 'xpath-ts'
+import { PageNode } from './model/page'
 import { expectValue } from './model/utils'
 
 const ID_PADDING_CHARS = 5
@@ -59,4 +63,18 @@ export function fixDocument(doc: Document): void {
     cacheHighId[tag] = counter // cache new highest counter
     el.setAttribute('id', buildId(tag, counter))
   }
+}
+
+export async function fixModule(p: PageNode): Promise<void> {
+  const fsPath = URI.parse(p.absPath).fsPath
+  // 3 steps necessary for element id creation: check, fix, save
+  // == check xml ==
+  // TODO: use cached book-bundle doc data in future for performance increase?
+  const data = await fs.promises.readFile(fsPath, { encoding: 'utf-8' })
+  const doc = new DOMParser().parseFromString(data)
+  // == fix xml ==
+  fixDocument(doc)
+  // == save xml ==
+  const out = new XMLSerializer().serializeToString(doc)
+  await fs.promises.writeFile(fsPath, out, { encoding: 'utf-8' })
 }

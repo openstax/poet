@@ -41,6 +41,7 @@ export interface PageInfo {
   elementIds?: string[]
   imageHrefs?: string[]
   pageLinks?: Array<{targetPage?: string, targetId?: string, url?: string}>
+  extraCnxml?: string
 }
 export function pageMaker(info: PageInfo) {
   const i = {
@@ -48,7 +49,8 @@ export function pageMaker(info: PageInfo) {
     uuid: info.uuid !== undefined ? info.uuid : '00000000-0000-4000-0000-000000000000',
     elementIds: info.elementIds !== undefined ? info.elementIds : [],
     imageHrefs: info.imageHrefs !== undefined ? info.imageHrefs : [],
-    pageLinks: info.pageLinks !== undefined ? info.pageLinks.map(({ targetPage, targetId, url }) => ({ targetPage, targetId, url })) : []
+    pageLinks: info.pageLinks !== undefined ? info.pageLinks.map(({ targetPage, targetId, url }) => ({ targetPage, targetId, url })) : [],
+    extraCnxml: info.extraCnxml !== undefined ? info.extraCnxml : ''
   }
   const titleElement = i.title === null ? '' : `<title>${i.title}</title>`
   return `<document xmlns="http://cnx.rice.edu/cnxml">
@@ -60,6 +62,7 @@ export function pageMaker(info: PageInfo) {
 ${i.imageHrefs.map(href => `    <image src="${href}"/>`).join('\n')}
 ${i.pageLinks.map(({ targetPage, targetId, url }) => `    <link document="${targetPage ?? ''}" target-id="${targetId ?? ''}" url="${url ?? ''}"/>`).join('\n')}
 ${i.elementIds.map(id => `<para id="${id}"/>`).join('\n')}
+${i.extraCnxml}
   </content>
 </document>`
 }

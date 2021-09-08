@@ -94,8 +94,8 @@ export function first<T>(col: I.Set<T> | I.List<T>) {
 
 export const makeBundle = () => new Bundle(FS_PATH_HELPER, REPO_ROOT)
 
-export function loadSuccess<T extends Fileish>(n: T) {
-  expect(n.isLoaded).toBeFalsy()
+export function loadSuccess<T extends Fileish>(n: T, skipInitialLoadedCheck = false) {
+  if (!skipInitialLoadedCheck) expect(n.isLoaded).toBeFalsy()
   n.load(read(n.absPath))
   expect(n.isLoaded).toBeTruthy()
   expect(n.exists).toBeTruthy()
