@@ -1,5 +1,10 @@
 import { TocTreeModule, TocTreeCollection } from './toc-tree'
 
+export enum DiagnosticSource {
+  xml = 'xml',
+  cnxml = 'cnxml'
+}
+
 // Mock out the basic need of the LanguageClient for common,
 // since we can't import the client lib.
 interface LanguageClient {

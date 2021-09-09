@@ -27,7 +27,7 @@ import { DOMParser, XMLSerializer } from 'xmldom'
 import * as xpath from 'xpath-ts'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { ExtensionServerRequest } from '../../../../common/src/requests'
+import { DiagnosticSource, ExtensionServerRequest } from '../../../../common/src/requests'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
 import { TocTreesProvider, TocTreeItem, toggleTocTreesFilteringHandler, TocItemIcon } from './../../toc-trees'
 import * as utils from './../../utils' // Used for dependency mocking in tests
@@ -886,11 +886,11 @@ suite('Extension Test Suite', function (this: Suite) {
     const fileUri = { path: '/test.cnxml', scheme: 'file' } as any as vscode.Uri
     const cnxmlError = {
       severity: vscode.DiagnosticSeverity.Error,
-      source: pushContent.DiagnosticSource.cnxml
+      source: DiagnosticSource.cnxml
     } as any as vscode.Diagnostic
     const xmlError = {
       severity: vscode.DiagnosticSeverity.Error,
-      source: pushContent.DiagnosticSource.xml
+      source: DiagnosticSource.xml
     } as any as vscode.Diagnostic
     const errorsBySource = new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>()
     const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
@@ -899,15 +899,15 @@ suite('Extension Test Suite', function (this: Suite) {
     assert(await pushContent.canPush(errorsBySource))
 
     // CNXML errors
-    errorsBySource.set(pushContent.DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
     assert(!(await pushContent.canPush(errorsBySource)))
     assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true }))
 
     // Both CNXML and XML errors
     errorsBySource.clear()
     showErrorMsgStub.reset()
-    errorsBySource.set(pushContent.DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
-    errorsBySource.set(pushContent.DiagnosticSource.xml, [[fileUri, xmlError]])
+    errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
     assert(!(await pushContent.canPush(errorsBySource)))
     assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true }))
 
@@ -915,7 +915,7 @@ suite('Extension Test Suite', function (this: Suite) {
     errorsBySource.clear()
     showErrorMsgStub.reset()
     showErrorMsgStub.returns(Promise.resolve(undefined))
-    errorsBySource.set(pushContent.DiagnosticSource.xml, [[fileUri, xmlError]])
+    errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
     assert(!(await pushContent.canPush(errorsBySource)))
     assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
 
@@ -923,7 +923,7 @@ suite('Extension Test Suite', function (this: Suite) {
     errorsBySource.clear()
     showErrorMsgStub.reset()
     showErrorMsgStub.returns(Promise.resolve(pushContent.PushValidationModal.xmlErrorIgnoreItem as any as vscode.MessageItem))
-    errorsBySource.set(pushContent.DiagnosticSource.xml, [[fileUri, xmlError]])
+    errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
     assert(await pushContent.canPush(errorsBySource))
     assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
   })
