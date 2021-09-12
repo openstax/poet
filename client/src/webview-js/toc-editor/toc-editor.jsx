@@ -163,7 +163,7 @@ const ContentTree = (props) => {
       'TocNodeKind.Leaf': (value) => {
         if (node.title !== value) {
           node.title = value
-          vscode.postMessage({ type: 'PAGE_RENAME', newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree })
+          vscode.postMessage({ type: 'PAGE_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree } })
         }
       },
       // We can change the title by just force rewriting the collection tree with the modified title
@@ -172,7 +172,7 @@ const ContentTree = (props) => {
       'TocNodeKind.Inner': (value) => {
         if (node.title !== value) {
           node.title = value
-          vscode.postMessage({ type: 'SUBBOOK_RENAME', newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree })
+          vscode.postMessage({ type: 'SUBBOOK_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree } })
         }
       }
     }

@@ -43,8 +43,10 @@ export enum TocModificationKind {
   PageRename = 'TocModificationKind.PageRename',
   SubbookRename = 'TocModificationKind.SubbookRename',
 }
-export interface WithWorkspaceUri { workspaceUri: string }
-export type TocModificationParams = TocModification<ClientTocNode> & WithWorkspaceUri
+export interface TocModificationParams {
+  event: TocModification<ClientTocNode>
+  workspaceUri: string
+}
 export type TocModification<T> = (TocMoveEvent<T> | TocRemoveEvent<T> | PageRenameEvent<T> | SubbookRenameEvent<T>)
 export interface TocMoveEvent<T> {
   readonly type: TocModificationKind.Move

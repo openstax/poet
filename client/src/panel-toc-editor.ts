@@ -4,10 +4,10 @@ import vscode from 'vscode'
 
 import { TreeItem as TreeItemUI } from 'react-sortable-tree'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
-import { BookToc, ClientPageish, ClientTocNode, TocNodeKind, TocMoveEvent, TocRemoveEvent, TocModificationKind, TocModificationParams, Token } from '../../common/src/toc-tree'
+import { BookToc, ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, TocModification, TocModificationKind } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { BookTocsArgs, DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest } from '../../common/src/requests'
+import { BookTocsArgs, DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest, Opt } from '../../common/src/requests'
 import { ExtensionHostContext, Panel } from './panel'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
@@ -51,21 +51,11 @@ export interface TocRemoveSignal {
 }
 export interface PageRenameSignal {
   type: 'PAGE_RENAME'
-  // TODO: Move all of this into an Event
-  newTitle: string
-  nodeToken: Token
-  bookIndex: number
-  node: TreeItemWithToken
-  newToc: TreeItemWithToken[]
+  event: PageRenameEvent<TreeItemWithToken>
 }
 export interface SubbookRenameSignal {
   type: 'SUBBOOK_RENAME'
-  // TODO: Move all of this into an Event
-  newTitle: string
-  nodeToken: Token
-  bookIndex: number
-  node: TreeItemWithToken
-  newToc: TreeItemWithToken[]
+  event: SubbookRenameEvent<TreeItemWithToken>
 }
 // export interface WebviewStartedSignal {
 //   type: 'WEBVIEW_STARTED'
@@ -342,23 +332,23 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
   // readonly handleMessage = handleMessageFromWebviewPanel(this.panel, this.context.client)
   readonly handleMessage = async (m: PanelIncomingMessage) => {
     const workspaceUri = expect(getRootPathUri(), 'No root path in which to generate a module').toString()
+    let event: Opt<TocModification<ClientTocNode>>
     if (m.type === 'TOC_MOVE') {
-      const params: TocModificationParams = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), workspaceUri, type: TocModificationKind.Move }
-      await this.context.client.sendRequest(ExtensionServerRequest.TocModification, params)
+      event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), type: TocModificationKind.Move }
     } else if (m.type === 'TOC_REMOVE') {
-      const params: TocModificationParams = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), workspaceUri, type: TocModificationKind.Remove }
-      await this.context.client.sendRequest(ExtensionServerRequest.TocModification, params)
+      event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), type: TocModificationKind.Remove }
     } else if (m.type === 'PAGE_RENAME') {
-      const params: TocModificationParams = { ...m, newToc: m.newToc.map(fromTreeItem), node: fromTreeItem(m.node), workspaceUri, type: TocModificationKind.PageRename }
-      await this.context.client.sendRequest(ExtensionServerRequest.TocModification, params)
+      event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), node: fromTreeItem(m.event.node), type: TocModificationKind.PageRename }
     } else if (m.type === 'SUBBOOK_RENAME') {
-      const params: TocModificationParams = { ...m, newToc: m.newToc.map(fromTreeItem), node: fromTreeItem(m.node), workspaceUri, type: TocModificationKind.SubbookRename }
-      await this.context.client.sendRequest(ExtensionServerRequest.TocModification, params)
+      event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), node: fromTreeItem(m.event.node), type: TocModificationKind.SubbookRename }
     // } else if (m.type === 'WEBVIEW_LOADED') {
     // } else if (m.type === 'DEBUG') {
     //   console.log('DEBUG', m.message)
     } else {
       throw new Error(`Unknown Message type: ${m.type}`)
+    }
+    if (event !== undefined) {
+      await this.context.client.sendRequest(ExtensionServerRequest.TocModification, { workspaceUri, event })
     }
   }
 

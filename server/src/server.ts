@@ -143,7 +143,7 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
 
 connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocModificationParams) => {
   const manager = getBundleForUri(params.workspaceUri)
-  await manager.modifyToc(params)
+  await manager.modifyToc(params.event)
 })
 
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
