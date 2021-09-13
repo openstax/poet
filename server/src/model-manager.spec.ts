@@ -49,7 +49,7 @@ describe('Bundle Manager', () => {
   })
   it('responds with all pages when the books have loaded', () => {
     // Nothing loaded yet
-    expect(manager.allPages.size).toBe(0)
+    expect(manager.allPages.toArray()).toEqual([])
     // Load the pages
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     loadSuccess(first(book.pages))
@@ -58,9 +58,11 @@ describe('Bundle Manager', () => {
   it('orphanedPages()', () => {
     loadSuccess(first(loadSuccess(manager.bundle).books))
     expect(manager.allPages.size).toBe(1)
-    expect(manager.orphanedPages.size).toBe(0)
+    expect(manager.orphanedPages.toArray()).toEqual([])
     const orphanedPage = manager.bundle.allPages.getOrAdd('path/to/orphaned/page')
     expect(manager.allPages.size).toBe(2)
+    expect(manager.orphanedPages.toArray()).toEqual([]) // We did not load the file yet
+    orphanedPage.load(pageMaker({}))
     expect(manager.orphanedPages.size).toBe(1)
     expect(manager.orphanedPages.first()).toBe(orphanedPage)
   })
@@ -101,7 +103,7 @@ describe('Bundle Manager', () => {
     await manager.jobRunner.done()
 
     expect(sendDiagnosticsStub.callCount).toBe(1)
-    expect(manager.bundle.validationErrors.nodesToLoad.size).toBe(0)
+    expect(manager.bundle.validationErrors.nodesToLoad.toArray()).toEqual([])
 
     // Bundle needs to load all the books
     const books = manager.bundle.books
@@ -116,7 +118,7 @@ describe('Bundle Manager', () => {
   it('loadEnoughToSendDiagnostics() loads the node with the contents of the file', async () => {
     manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, manager.bundle.absPath, '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>')
     await manager.jobRunner.done()
-    expect(manager.bundle.books.size).toBe(0)
+    expect(manager.bundle.books.toArray()).toEqual([])
   })
   it('calls sendDiagnostics with objects that can be serialized (no cycles)', () => {
     ignoreConsoleWarnings(() => manager.updateFileContents(manager.bundle.absPath, '<notvalidXML'))
@@ -185,8 +187,8 @@ describe('Find orphaned files', () => {
   beforeEach(() => {
     mockfs({
       'META-INF/books.xml': '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>',
-      'modules/m2468/index.cnxml': 'this does-not-have-to-be-valid-XML-because-we-do-not-actually-parse-it-yet',
-      'modules/m1357/index.cnxml': 'this does-not-have-to-be-valid-XML-because-we-do-not-actually-parse-it-yet'
+      'modules/m2468/index.cnxml': pageMaker({}),
+      'modules/m1357/index.cnxml': pageMaker({})
     })
   })
   afterEach(() => {
@@ -197,10 +199,8 @@ describe('Find orphaned files', () => {
     sinon.stub(conn, 'sendDiagnostics')
     const manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
     await manager.loadEnoughForOrphans()
-    await manager.jobRunner.done()
     // Run again to verify we do not perform the expensive fetch again (via code coverage)
     await manager.loadEnoughForOrphans()
-    await manager.jobRunner.done()
     expect(manager.orphanedPages.size).toBe(2)
   })
 })
@@ -269,7 +269,7 @@ describe('processFilesystemChange()', () => {
     expect((await fireChange(FileChangeType.Created, 'media/newpic.png')).size).toBe(1)
   })
   it('does not create things it does not understand', async () => {
-    expect((await fireChange(FileChangeType.Created, 'README.md')).size).toBe(0)
+    expect((await fireChange(FileChangeType.Created, 'README.md')).toArray()).toEqual([])
   })
   it('updates Images/Pages/Books', async () => {
     expect((await fireChange(FileChangeType.Changed, 'META-INF/books.xml')).size).toBe(1)
@@ -282,14 +282,14 @@ describe('processFilesystemChange()', () => {
     expect((await fireChange(FileChangeType.Changed, 'modules/m1234/index.cnxml')).size).toBe(1)
     expect(sendDiagnosticsStub.callCount).toBe(1)
 
-    expect((await fireChange(FileChangeType.Changed, 'media/newpic.png')).size).toBe(0) // Since the model was not aware of the file yet
+    expect((await fireChange(FileChangeType.Changed, 'media/newpic.png')).toArray()).toEqual([]) // Since the model was not aware of the file yet
   })
   it('deletes Files and directories', async () => {
     // Load the Bundle, Book, and Page
     loadSuccess(first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages))
 
     // Delete non-existent file
-    expect((await fireChange(FileChangeType.Deleted, 'media/newpic.png')).size).toBe(0)
+    expect((await fireChange(FileChangeType.Deleted, 'media/newpic.png')).toArray()).toEqual([])
     // Delete a file
     const deletedModules = await fireChange(FileChangeType.Deleted, 'modules/m1234/index.cnxml')
     expect(deletedModules.size).toBe(1)

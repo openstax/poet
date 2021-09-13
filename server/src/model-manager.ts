@@ -8,7 +8,7 @@ import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
 import { TocTreeModule, TocTreeElementType, BookToc, ClientTocNode, TocModification, TocModificationKind, TocInner, ClientSubBookish, ClientPageish, TocNodeKind } from '../../common/src/toc-tree'
-import { Opt, expectValue, Position, inRange, Range, equalsArray } from './model/utils'
+import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
 import { Fileish } from './model/fileish'
@@ -17,6 +17,7 @@ import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, ren
 import { BooksAndOrphans, BookTocsArgs, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
 import { TocInnerWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
+import { XMLSerializer } from 'xmldom'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -170,14 +171,14 @@ export class ModelManager {
   }
 
   public get orphanedPages() {
-    const books = this.bundle.books
-    return this.bundle.allPages.all.subtract(books.flatMap(b => b.pages))
+    const books = this.bundle.books.filter(loadedAndExists)
+    return this.bundle.allPages.all.filter(loadedAndExists).subtract(books.flatMap(b => b.pages))
   }
 
   public get orphanedImages() {
-    const books = this.bundle.books
+    const books = this.bundle.books.filter(loadedAndExists)
     const pages = books.flatMap(b => b.pages)
-    return this.bundle.allImages.all.filter(i => i.isLoaded && i.exists).subtract(pages.flatMap(p => p.images))
+    return this.bundle.allImages.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.images))
   }
 
   public async loadEnoughForToc() {
@@ -200,6 +201,9 @@ export class ModelManager {
     Quarx.batch(() => {
       files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
     })
+    // Load everything before we can know where the orphans are
+    this.performInitialValidation()
+    await this.jobRunner.done()
     this.didLoadOrphans = true
   }
 
@@ -438,14 +442,14 @@ export class ModelManager {
   }
 
   public async newPage(bookIndex: number, title: string) {
-    const template = (newPageId: string): string => {
+    const template = (): string => {
       return `
 <document xmlns="http://cnx.rice.edu/cnxml">
-  <title>${title}</title>
+  <title/>
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
-    <md:title>${title}</md:title>
-    <md:content-id>${newPageId}</md:content-id>
-    <md:uuid>${uuid4()}</md:uuid>
+    <md:title/>
+    <md:content-id/>
+    <md:uuid/>
   </metadata>
   <content>
   </content>
@@ -464,10 +468,17 @@ export class ModelManager {
       }
       const pageUri = Utils.joinPath(pageDirUri, newModuleId, 'index.cnxml')
       const page = this.bundle.allPages.getOrAdd(pageUri.toString())
-      const xml = template(newModuleId)
-      page.load(xml)
+
+      const doc = new DOMParser().parseFromString(template(), 'text/xml')
+      selectOne('/cnxml:document/cnxml:title', doc).textContent = title
+      selectOne('/cnxml:document/cnxml:metadata/md:title', doc).textContent = title
+      selectOne('/cnxml:document/cnxml:metadata/md:content-id', doc).textContent = newModuleId
+      selectOne('/cnxml:document/cnxml:metadata/md:uuid', doc).textContent = uuid4()
+      const xmlStr = new XMLSerializer().serializeToString(doc)
+
+      page.load(xmlStr)
       await mkdirp(Utils.joinPath(pageDirUri, newModuleId).fsPath)
-      await fs.promises.writeFile(pageUri.fsPath, xml)
+      await fs.promises.writeFile(pageUri.fsPath, xmlStr)
       ModelManager.debug(`[NEW_PAGE] Created: ${pageUri.fsPath}`)
 
       const bookToc = this.bookTocs[bookIndex]
