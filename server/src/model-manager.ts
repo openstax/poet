@@ -7,7 +7,7 @@ import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
-import { TocTreeModule, TocTreeElementType, BookToc, ClientTocNode, TocModification, TocModificationKind } from '../../common/src/toc-tree'
+import { TocTreeModule, TocTreeElementType, BookToc, ClientTocNode, TocModification, TocModificationKind, TocInner, ClientSubBookish, ClientPageish, TocNodeKind } from '../../common/src/toc-tree'
 import { Opt, expectValue, Position, inRange, Range, equalsArray } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
@@ -148,6 +148,7 @@ export class ModelManager {
           orphans: this.orphanedPages.filter(loadedAndExists).toArray().map(p => fromPage(tocIdMap, p).value)
         }
       }
+      ModelManager.debug('[MODEL_MANAGER] bundle file is not loaded yet or does not exist')
       return { tocIdMap, books: [], orphans: [] }
     }
     const sideEffectFn = (v: BooksAndOrphansAndIdMap) => {
@@ -404,8 +405,8 @@ export class ModelManager {
   async modifyToc(evt: TocModification<ClientTocNode>) {
     ModelManager.debug('[MODIFY_TOC]', evt)
 
-    const bookToc = this.bookTocs[evt.bookIndex]
-    const bookXmlStr = toString({ ...bookToc, tree: evt.newToc })
+    const oldBookToc = this.bookTocs[evt.bookIndex]
+    const newBookToc = { ...oldBookToc, tree: evt.newToc }
 
     const node = this.lookupToken(evt.nodeToken)
 
@@ -420,18 +421,23 @@ export class ModelManager {
         throw new Error('BUG! This if statement should be hidden away')
       }
     } else {
-      const fsPath = URI.parse(bookToc.absPath).fsPath
-      const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
-      await fs.promises.writeFile(fsPath, bookXmlStr)
-      book.load(bookXmlStr) // Just speed up the process
+      await this.writeBookToc(newBookToc)
     }
+  }
+
+  private async writeBookToc(bookToc: BookToc) {
+    const bookXmlStr = toString(bookToc)
+    const fsPath = URI.parse(bookToc.absPath).fsPath
+    const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
+    await fs.promises.writeFile(fsPath, bookXmlStr)
+    book.load(bookXmlStr) // Just speed up the process
   }
 
   private lookupToken(token: string) {
     return expectValue(expectValue(this.tocIdMap, 'BUG: It should be impossible to modify the ToC before it has been loaded').getValue(token), `BUG: Could not find ToC item using token='${token}'`)
   }
 
-  public async newPage(title: string) {
+  public async newPage(bookIndex: number, title: string) {
     const template = (newPageId: string): string => {
       return `
 <document xmlns="http://cnx.rice.edu/cnxml">
@@ -463,8 +469,29 @@ export class ModelManager {
       await mkdirp(Utils.joinPath(pageDirUri, newModuleId).fsPath)
       await fs.promises.writeFile(pageUri.fsPath, xml)
       ModelManager.debug(`[NEW_PAGE] Created: ${pageUri.fsPath}`)
+
+      const bookToc = this.bookTocs[bookIndex]
+      bookToc.tree.unshift({
+        type: TocNodeKind.Leaf,
+        value: { token: 'unused-when-writing', title: undefined, fileId: newModuleId, absPath: page.absPath }
+      })
+      await this.writeBookToc(bookToc)
+      ModelManager.debug(`[NEW_PAGE] Prepended to Book: ${pageUri.fsPath}`)
       return newModuleId
     }
     throw new Error('Error: Too many page directories already exist')
+  }
+
+  public async newSubbook(bookIndex: number, title: string) {
+    ModelManager.debug(`[NEW_SUBBOOK] Creating: ${title}`)
+    const bookToc = this.bookTocs[bookIndex]
+    const tocNode: TocInner<ClientSubBookish, ClientPageish> = {
+      type: TocNodeKind.Inner,
+      value: { title, token: 'unused-when-writing' },
+      children: []
+    }
+    // Prepend new Subbook to top of Book so it is visible to the user
+    bookToc.tree.unshift(tocNode)
+    await this.writeBookToc(bookToc)
   }
 }

@@ -278,12 +278,12 @@ const EditorPanel = (props) => {
     setSearchFocusIndex((searchFocusIndex + searchFoundCount + 1) % searchFoundCount)
   }
 
-  const handleAddModule = (event) => {
-    vscode.postMessage({ type: 'PAGE_CREATE' })
+  const handleAddPage = (event) => {
+    vscode.postMessage({ type: 'PAGE_CREATE', bookIndex: props.selectionIndex })
   }
 
-  const handleAddSubcollection = (event) => {
-    vscode.postMessage({ type: 'subcollection-create', slug: selectedTree.slug })
+  const handleAddSubbook = (event) => {
+    vscode.postMessage({ type: 'SUBBOOK_CREATE', slug: selectedTree.slug, bookIndex: props.selectionIndex })
   }
 
   const handleSelect = (event) => {
@@ -327,12 +327,12 @@ const EditorPanel = (props) => {
               <div style={{ display: 'flex' }}>
                 {
                   props.canAddModules
-                    ? <button className='PAGE_CREATE' onClick={handleAddModule}>Add Module</button>
+                    ? <button className='PAGE_CREATE' onClick={handleAddPage}>Add Module</button>
                     : <></>
                 }
                 {
                   props.canAddSubcollections
-                    ? <button className='subcollection-create' onClick={handleAddSubcollection}>Add Subcollection</button>
+                    ? <button className='subcollection-create' onClick={handleAddSubbook}>Add Subcollection</button>
                     : <></>
                 }
               </div>
@@ -393,13 +393,13 @@ const App = (props) => (
       selectionIndex={props.selectionIndices.editable}
       editable={true}
       canAddSubcollections
+      canAddModules
     />
     <EditorPanel
       modifiesStateName={'uneditable'}
       treesData={props.treesData.uneditable}
       selectionIndex={props.selectionIndices.uneditable}
       editable={false}
-      canAddModules
     />
   </div>
 )

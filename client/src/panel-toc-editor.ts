@@ -7,7 +7,7 @@ import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, 
 import { ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, TocModification, TocModificationKind } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { BookTocsArgs, DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest, Opt } from '../../common/src/requests'
+import { BookTocsArgs, DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest, NewPageParams, NewSubbookParams, Opt } from '../../common/src/requests'
 import { ExtensionHostContext, Panel } from './panel'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
@@ -22,12 +22,14 @@ export interface ErrorSignal {
   type: 'error'
   message: string
 }
-export interface SubcollectionCreateSignal {
-  type: 'subcollection-create'
+export interface SubbookCreateSignal {
+  type: 'SUBBOOK_CREATE'
   slug: string
+  bookIndex: number
 }
 export interface PageCreateSignal {
   type: 'PAGE_CREATE'
+  bookIndex: number
 }
 export interface TocMoveSignal {
   type: 'TOC_MOVE'
@@ -56,7 +58,7 @@ export type PanelIncomingMessage = (
   | SubbookRenameSignal
   // | WebviewStartedSignal
   | ErrorSignal
-  | SubcollectionCreateSignal
+  | SubbookCreateSignal
   | PageCreateSignal
 )
 
@@ -327,8 +329,19 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
     } else if (m.type === 'SUBBOOK_RENAME') {
       event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), node: fromTreeItem(m.event.node), type: TocModificationKind.SubbookRename }
     } else if (m.type === 'PAGE_CREATE') {
-      await this.context.client.sendRequest(ExtensionServerRequest.NewPage, { workspaceUri })
-      return
+      const title = await vscode.window.showInputBox({ prompt: 'Title of new Page' })
+      if (title !== undefined) {
+        const params: NewPageParams = { workspaceUri, title, bookIndex: m.bookIndex }
+        await this.context.client.sendRequest(ExtensionServerRequest.NewPage, params)
+        return
+      }
+    } else if (m.type === 'SUBBOOK_CREATE') {
+      const title = await vscode.window.showInputBox({ prompt: 'Title of new Book Section' })
+      if (title !== undefined) {
+        const params: NewSubbookParams = { workspaceUri, title, bookIndex: m.bookIndex, slug: m.slug }
+        await this.context.client.sendRequest(ExtensionServerRequest.NewSubbook, params)
+        return
+      }
     // } else if (m.type === 'WEBVIEW_LOADED') {
     // } else if (m.type === 'DEBUG') {
     //   console.log('DEBUG', m.message)

@@ -24,7 +24,8 @@ export enum ExtensionServerRequest {
   BundleOrphanedModules = 'bundle-orphaned-modules',
   BundleEnsureIds = 'bundle-ensure-ids',
   TocModification = 'toc-modification',
-  NewPage = 'new-page'
+  NewPage = 'new-page',
+  NewSubbook = 'new-subbook'
 }
 
 export enum ExtensionServerNotification {
@@ -49,6 +50,15 @@ export interface BundleTreesArgs {
 
 export interface NewPageParams {
   workspaceUri: string
+  title: string
+  bookIndex: number
+}
+
+export interface NewSubbookParams {
+  workspaceUri: string
+  title: string
+  bookIndex: number
+  slug: string
 }
 
 export interface BundleOrphanedModulesArgs {

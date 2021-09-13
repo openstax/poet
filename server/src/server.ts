@@ -20,7 +20,8 @@ import {
   BundleModulesResponse,
   BundleOrphanedModulesResponse,
   ExtensionServerRequest,
-  NewPageParams
+  NewPageParams,
+  NewSubbookParams
 } from '../../common/src/requests'
 
 import { bundleEnsureIdsHandler, imageAutocompleteHandler } from './server-handler'
@@ -149,7 +150,12 @@ connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocM
 
 connection.onRequest(ExtensionServerRequest.NewPage, async (params: NewPageParams) => {
   const manager = getBundleForUri(params.workspaceUri)
-  await manager.newPage('New Page')
+  await manager.newPage(params.bookIndex, params.title)
+})
+
+connection.onRequest(ExtensionServerRequest.NewSubbook, async (params: NewSubbookParams) => {
+  const manager = getBundleForUri(params.workspaceUri)
+  await manager.newSubbook(params.bookIndex, params.title)
 })
 
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
