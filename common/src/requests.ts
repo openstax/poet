@@ -23,7 +23,8 @@ export enum ExtensionServerRequest {
   BundleModules = 'bundle-modules',
   BundleOrphanedModules = 'bundle-orphaned-modules',
   BundleEnsureIds = 'bundle-ensure-ids',
-  TocModification = 'toc-modification'
+  TocModification = 'toc-modification',
+  NewPage = 'new-page'
 }
 
 export enum ExtensionServerNotification {
@@ -43,6 +44,10 @@ export type BookTocsArgs = BooksAndOrphans & { version: number }
 export const DEFAULT_BOOK_TOCS_ARGS: BookTocsArgs = { version: -1, books: [], orphans: [] }
 
 export interface BundleTreesArgs {
+  workspaceUri: string
+}
+
+export interface NewPageParams {
   workspaceUri: string
 }
 

@@ -97,7 +97,7 @@ describe('Bundle Manager', () => {
     manager.bundle.allNodes.forEach(n => expect(n.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() sends diagnostics for a file we recognize', async () => {
-    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, manager.bundle.absPath)
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, manager.bundle.absPath)
     await manager.jobRunner.done()
 
     expect(sendDiagnosticsStub.callCount).toBe(1)
@@ -109,12 +109,12 @@ describe('Bundle Manager', () => {
     books.forEach(b => expect(b.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() does not send diagnostics for a file we do not recognize', async () => {
-    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, '/path/t/non-existent/file')
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, '/path/t/non-existent/file')
     await manager.jobRunner.done()
     expect(sendDiagnosticsStub.callCount).toBe(0)
   })
   it('loadEnoughToSendDiagnostics() loads the node with the contents of the file', async () => {
-    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, manager.bundle.absPath, '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>')
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, manager.bundle.absPath, '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>')
     await manager.jobRunner.done()
     expect(manager.bundle.books.size).toBe(0)
   })
@@ -424,7 +424,7 @@ describe('documentLinks()', () => {
     function rel(target: string | undefined) {
       const t = expectValue(target, 'BUG')
       if (t.startsWith('https://')) { return t }
-      return path.relative(manager.bundle.workspaceRoot, t)
+      return path.relative(manager.bundle.workspaceRootUri, t)
     }
 
     async function testPageLink(info: PageInfo, target: Opt<string>) {

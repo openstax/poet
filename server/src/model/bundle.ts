@@ -13,8 +13,8 @@ export class Bundle extends Fileish implements Bundleish {
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this._pathHelper, absPath))
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
 
-  constructor(pathHelper: PathHelper<string>, public readonly workspaceRoot: string) {
-    super(undefined, pathHelper, pathHelper.join(workspaceRoot, 'META-INF/books.xml'))
+  constructor(pathHelper: PathHelper<string>, public readonly workspaceRootUri: string) {
+    super(undefined, pathHelper, pathHelper.join(workspaceRootUri, 'META-INF/books.xml'))
     super.setBundle(this)
   }
 

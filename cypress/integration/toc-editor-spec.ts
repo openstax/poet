@@ -588,7 +588,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(2)
           expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect(messagesFromWidget[1]).to.deep.equal({ type: 'module-create' })
+          expect(messagesFromWidget[1]).to.deep.equal({ type: 'PAGE_CREATE' })
         })
       })
       it('can tell the extension to create subcollection', () => {

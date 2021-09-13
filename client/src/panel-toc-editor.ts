@@ -34,7 +34,7 @@ export interface SubcollectionCreateSignal {
   slug: string
 }
 export interface ModuleCreateSignal {
-  type: 'module-create'
+  type: 'PAGE_CREATE'
 }
 export interface ModuleRenameSignal {
   type: 'module-rename'
@@ -192,7 +192,7 @@ export interface PanelOutgoingMessage {
 //     // For debugging purposes only
 //     /* istanbul ignore next */
 //     console.debug(message.item)
-//   } else if (message.type === 'module-create') {
+//   } else if (message.type === 'PAGE_CREATE') {
 //     await createBlankModule()
 //   } else if (message.type === 'subcollection-create') {
 //     await createSubcollection(message.slug)
@@ -341,6 +341,9 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
       event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), node: fromTreeItem(m.event.node), type: TocModificationKind.PageRename }
     } else if (m.type === 'SUBBOOK_RENAME') {
       event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), node: fromTreeItem(m.event.node), type: TocModificationKind.SubbookRename }
+    } else if (m.type === 'PAGE_CREATE') {
+      await this.context.client.sendRequest(ExtensionServerRequest.NewPage, { workspaceUri })
+      return
     // } else if (m.type === 'WEBVIEW_LOADED') {
     // } else if (m.type === 'DEBUG') {
     //   console.log('DEBUG', m.message)

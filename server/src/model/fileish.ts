@@ -50,7 +50,7 @@ export abstract class Fileish {
   static debug = (...args: any[]) => {} // console.debug
   protected abstract getValidationChecks(): ValidationCheck[]
   public get isLoaded() { return this._isLoaded.get() }
-  public get workspacePath() { return path.relative(this.bundle.workspaceRoot, this.absPath) }
+  public get workspacePath() { return path.relative(this.bundle.workspaceRootUri, this.absPath) }
   protected setBundle(bundle: Bundleish) { this._bundle = bundle /* avoid catch-22 */ }
   protected get bundle() { return expectValue(this._bundle, 'BUG: This object was not instantiated with a Bundle. The only case that should occur is when this is a Bundle object') }
   protected ensureLoaded<T>(field: Quarx.Box<Opt<T>>) {

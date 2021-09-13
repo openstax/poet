@@ -19,7 +19,8 @@ import {
   BundleOrphanedModulesArgs,
   BundleModulesResponse,
   BundleOrphanedModulesResponse,
-  ExtensionServerRequest
+  ExtensionServerRequest,
+  NewPageParams
 } from '../../common/src/requests'
 
 import { bundleEnsureIdsHandler, imageAutocompleteHandler } from './server-handler'
@@ -40,7 +41,7 @@ const connection = createConnection(ProposedFeatures.all)
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
 
 function getBundleForUri(uri: string): ModelManager {
-  const bundles = bundleFactory.all.filter(b => uri.startsWith(b.bundle.workspaceRoot))
+  const bundles = bundleFactory.all.filter(b => uri.startsWith(b.bundle.workspaceRootUri))
   return expectValue(bundles.first(), 'BUG: Workspace should have loaded up an instance by now.')
 }
 
@@ -112,7 +113,7 @@ documents.onDidOpen(({ document }) => {
     }
     const manager = getBundleForUri(document.uri)
     manager.performInitialValidation() // just-in-case. It seems to be missed sometimes
-    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, document.uri, document.getText())
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, document.uri, document.getText())
   }
   inner().catch(err => { throw err })
 })
@@ -144,6 +145,11 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
 connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocModificationParams) => {
   const manager = getBundleForUri(params.workspaceUri)
   await manager.modifyToc(params.event)
+})
+
+connection.onRequest(ExtensionServerRequest.NewPage, async (params: NewPageParams) => {
+  const manager = getBundleForUri(params.workspaceUri)
+  await manager.newPage('New Page')
 })
 
 connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {

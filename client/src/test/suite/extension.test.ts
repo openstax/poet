@@ -411,7 +411,7 @@ suite('Extension Test Suite', function (this: Suite) {
   //   test('toc editor handle module create', async () => {
   //     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
   //       const handler = tocEditorHandleMessage(panel, createMockClient())
-  //       await handler({ type: 'module-create' })
+  //       await handler({ type: 'PAGE_CREATE' })
   //     })
   //     const uri = expect(getRootPathUri())
   //     const modulePath = path.join(uri.fsPath, 'modules', 'm00004', 'index.cnxml')

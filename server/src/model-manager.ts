@@ -1,3 +1,4 @@
+import { v4 as uuid4 } from 'uuid'
 import { glob } from 'glob'
 import fs from 'fs'
 import path from 'path'
@@ -5,7 +6,7 @@ import I from 'immutable'
 import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
-import { URI } from 'vscode-uri'
+import { URI, Utils } from 'vscode-uri'
 import { TocTreeModule, TocTreeElementType, BookToc, ClientTocNode, TocModification, TocModificationKind } from '../../common/src/toc-tree'
 import { Opt, expectValue, Position, inRange, Range, equalsArray } from './model/utils'
 import { Bundle } from './model/bundle'
@@ -15,6 +16,7 @@ import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
 import { BooksAndOrphans, BookTocsArgs, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
 import { TocInnerWithRange } from './model/book'
+import { mkdirp } from 'fs-extra'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -193,7 +195,7 @@ export class ModelManager {
     if (this.didLoadOrphans) return
     await this.loadEnoughForToc()
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRoot).fsPath, absolute: true })
+    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
     Quarx.batch(() => {
       files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
     })
@@ -412,31 +414,57 @@ export class ModelManager {
         const fsPath = URI.parse(node.absPath).fsPath
         const oldXml = expectValue(await readOrNull(node), 'BUG? This file should exist right?')
         const newXml = renameTitle(evt.newTitle, oldXml)
-        node.load(newXml) // Just speed up the process. Maybe we should wait until the file is written and the client sends a filesystem event, and we re-read the file??? That seems like a lot of steps.
         await fs.promises.writeFile(fsPath, newXml)
+        node.load(newXml) // Just speed up the process
       } else {
         throw new Error('BUG! This if statement should be hidden away')
       }
     } else {
       const fsPath = URI.parse(bookToc.absPath).fsPath
       const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
-      book.load(bookXmlStr) // Just speed up the process. Maybe we should wait until the file is written and the client sends a filesystem event, and we re-read the file??? That seems like a lot of steps.
       await fs.promises.writeFile(fsPath, bookXmlStr)
-      // const node = this.lookupToken(evt.nodeToken)
-      // if (evt.type === TocModificationKind.Move) {
-      //   if (evt.newParentToken) {
-      //     const newParent = this.lookupToken(evt.newParentToken)
-      //     if (newParent instanceof PageNode) {
-      //       throw new Error('BUG: Should have found a non-leaf node')
-      //     } else {
-      //       console.log('node&newParent&childcount&newChildIndex:', node, newParent, newParent.children.length, evt.newChildIndex)
-      //     }
-      //   }
-      // }
+      book.load(bookXmlStr) // Just speed up the process
     }
   }
 
   private lookupToken(token: string) {
     return expectValue(expectValue(this.tocIdMap, 'BUG: It should be impossible to modify the ToC before it has been loaded').getValue(token), `BUG: Could not find ToC item using token='${token}'`)
+  }
+
+  public async newPage(title: string) {
+    const template = (newPageId: string): string => {
+      return `
+<document xmlns="http://cnx.rice.edu/cnxml">
+  <title>${title}</title>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:title>${title}</md:title>
+    <md:content-id>${newPageId}</md:content-id>
+    <md:uuid>${uuid4()}</md:uuid>
+  </metadata>
+  <content>
+  </content>
+</document>`.trim()
+    }
+    const workspaceRootUri = URI.parse(this.bundle.workspaceRootUri)
+    const pageDirUri = Utils.joinPath(workspaceRootUri, 'modules')
+    let moduleNumber = 0
+    const moduleDirs = new Set(await fs.promises.readdir(pageDirUri.fsPath))
+    while (moduleNumber < 1000) {
+      moduleNumber += 1
+      const newModuleId = `m${moduleNumber.toString().padStart(5, '0')}`
+      if (moduleDirs.has(newModuleId)) {
+        // File exists already, try again
+        continue
+      }
+      const pageUri = Utils.joinPath(pageDirUri, newModuleId, 'index.cnxml')
+      const page = this.bundle.allPages.getOrAdd(pageUri.toString())
+      const xml = template(newModuleId)
+      page.load(xml)
+      await mkdirp(Utils.joinPath(pageDirUri, newModuleId).fsPath)
+      await fs.promises.writeFile(pageUri.fsPath, xml)
+      ModelManager.debug(`[NEW_PAGE] Created: ${pageUri.fsPath}`)
+      return newModuleId
+    }
+    throw new Error('Error: Too many page directories already exist')
   }
 }

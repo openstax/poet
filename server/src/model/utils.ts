@@ -68,7 +68,7 @@ export interface TocLeaf<T> { type: TocNodeKind.Leaf, readonly page: T }
 export interface Bundleish {
   allPages: Factory<PageNode>
   allImages: Factory<ImageNode>
-  workspaceRoot: string
+  workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
 }
 

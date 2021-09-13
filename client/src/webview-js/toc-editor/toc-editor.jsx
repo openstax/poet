@@ -279,7 +279,7 @@ const EditorPanel = (props) => {
   }
 
   const handleAddModule = (event) => {
-    vscode.postMessage({ type: 'module-create' })
+    vscode.postMessage({ type: 'PAGE_CREATE' })
   }
 
   const handleAddSubcollection = (event) => {
@@ -327,7 +327,7 @@ const EditorPanel = (props) => {
               <div style={{ display: 'flex' }}>
                 {
                   props.canAddModules
-                    ? <button className='module-create' onClick={handleAddModule}>Add Module</button>
+                    ? <button className='PAGE_CREATE' onClick={handleAddModule}>Add Module</button>
                     : <></>
                 }
                 {
