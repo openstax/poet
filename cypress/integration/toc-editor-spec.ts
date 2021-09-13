@@ -652,7 +652,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(2)
           expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect((messagesFromWidget[1] as WriteTreeSignal).treeData.children[0].title).to.equal('subcollectionabc')
+          expect((messagesFromWidget[1] as WriteTreeSignal).treeData.tree[0].value.title).to.equal('subcollectionabc')
         })
       })
     })

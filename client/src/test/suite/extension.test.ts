@@ -287,26 +287,26 @@ suite('Extension Test Suite', function (this: Suite) {
       assert.notStrictEqual(html.indexOf('html'), -1)
     })
   }).timeout(5000)
-  test('toc editor refresh makes proper language server requests', async () => {
-    const mockClient = createMockClient()
-    const panel = new TocEditorPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: mockClient, events: createMockEvents().events })
-    await panel.handleMessage({ type: 'refresh' })
-    const expectedCalls = [
-      [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
-      [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
-    ]
-    assert.strictEqual((mockClient.sendRequest as SinonRoot.SinonStub).getCalls().length, 3)
-    for (const args of expectedCalls) {
-      assert((mockClient.sendRequest as SinonRoot.SinonStub).calledWith(...args))
-    }
-  }).timeout(5000)
-  test('toc editor refresh makes no request when disposed', async () => {
-    const mockClient = createMockClient()
-    const panel = new TocEditorPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: mockClient, events: createMockEvents().events })
-    panel.dispose()
-    await panel.handleMessage({ type: 'refresh' })
-    assert((mockClient.sendRequest as SinonRoot.SinonStub).notCalled)
-  })
+  // test('toc editor refresh makes proper language server requests', async () => {
+  //   const mockClient = createMockClient()
+  //   const panel = new TocEditorPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: mockClient, events: createMockEvents().events })
+  //   await panel.handleMessage({ type: 'refresh' })
+  //   const expectedCalls = [
+  //     [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
+  //     [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
+  //   ]
+  //   assert.strictEqual((mockClient.sendRequest as SinonRoot.SinonStub).getCalls().length, 3)
+  //   for (const args of expectedCalls) {
+  //     assert((mockClient.sendRequest as SinonRoot.SinonStub).calledWith(...args))
+  //   }
+  // }).timeout(5000)
+  // test('toc editor refresh makes no request when disposed', async () => {
+  //   const mockClient = createMockClient()
+  //   const panel = new TocEditorPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: mockClient, events: createMockEvents().events })
+  //   panel.dispose()
+  //   await panel.handleMessage({ type: 'refresh' })
+  //   assert((mockClient.sendRequest as SinonRoot.SinonStub).notCalled)
+  // })
 
   // const mockEditAddModule: BookToc = {
   //   type: BookRootNode.Singleton,

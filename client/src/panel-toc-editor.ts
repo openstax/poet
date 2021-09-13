@@ -4,7 +4,7 @@ import vscode from 'vscode'
 
 import { TreeItem as TreeItemUI } from 'react-sortable-tree'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
-import { BookToc, ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, TocModification, TocModificationKind } from '../../common/src/toc-tree'
+import { ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, TocModification, TocModificationKind } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { BookTocsArgs, DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest, Opt } from '../../common/src/requests'
@@ -18,28 +18,16 @@ export interface DebugSignal {
   type: 'DEBUG'
   message: any
 }
-export interface RefreshSignal {
-  type: 'refresh'
-}
 export interface ErrorSignal {
   type: 'error'
   message: string
-}
-export interface WriteTreeSignal {
-  type: 'write-tree'
-  treeData: BookToc
 }
 export interface SubcollectionCreateSignal {
   type: 'subcollection-create'
   slug: string
 }
-export interface ModuleCreateSignal {
+export interface PageCreateSignal {
   type: 'PAGE_CREATE'
-}
-export interface ModuleRenameSignal {
-  type: 'module-rename'
-  moduleid: string
-  newName: string
 }
 export interface TocMoveSignal {
   type: 'TOC_MOVE'
@@ -67,12 +55,9 @@ export type PanelIncomingMessage = (
   | PageRenameSignal
   | SubbookRenameSignal
   // | WebviewStartedSignal
-  | RefreshSignal
   | ErrorSignal
-  | WriteTreeSignal
   | SubcollectionCreateSignal
-  | ModuleCreateSignal
-  | ModuleRenameSignal
+  | PageCreateSignal
 )
 
 type TreeItemWithToken = TreeItemUI & ({
