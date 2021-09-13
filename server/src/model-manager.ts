@@ -193,7 +193,7 @@ export class ModelManager {
         const removedNode = bundle.allBooks.remove(uri) ??
                   bundle.allPages.remove(uri) ??
                   bundle.allImages.remove(uri)
-        if (removedNode !== undefined) s.add(bundle)
+        if (removedNode !== undefined) s.add(removedNode)
         // Remove if it was a directory
         const filePathDir = `${uri}${PATH_SEP}`
         s.union(bundle.allBooks.removeByKeyPrefix(filePathDir))

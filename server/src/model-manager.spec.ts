@@ -294,7 +294,9 @@ describe('processFilesystemChange()', () => {
     // Delete non-existent file
     expect((await fireChange(FileChangeType.Deleted, 'media/newpic.png')).size).toBe(0)
     // Delete a file
-    expect((await fireChange(FileChangeType.Deleted, 'modules/m1234/index.cnxml')).size).toBe(1)
+    const deletedModules = await fireChange(FileChangeType.Deleted, 'modules/m1234/index.cnxml')
+    expect(deletedModules.size).toBe(1)
+    expect(first(deletedModules)).toBeInstanceOf(PageNode)
     // Delete a directory
     expect((await fireChange(FileChangeType.Deleted, 'collections')).size).toBe(1)
     expect(sendDiagnosticsStub.callCount).toBe(0)
