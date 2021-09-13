@@ -3,6 +3,7 @@ import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
 import { createConnection, WatchDog } from 'vscode-languageserver'
 import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
+import xmlFormat from 'xml-formatter'
 import { expectValue, Opt, join, PathKind } from './model/utils'
 import { BookNode } from './model/book'
 import { Bundle } from './model/bundle'
@@ -12,10 +13,17 @@ import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
 
 import { PageNode } from './model/page'
-import { DiagnosticSource } from '../../common/src/requests'
+import { ClientTocNode, TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc-tree'
+import { BookTocsArgs, DiagnosticSource } from '../../common/src/requests'
+import { bookMaker } from './model/book.spec'
+import { bundleMaker } from './model/bundle.spec'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
+
+// xml-formatter calls require('xml-parser-xo') _inside_ the format function
+// so we need require to cache it before we start up mock-fs
+xmlFormat('<root/>')
 
 describe('Tree Translator', () => {
   let book = null as unknown as BookNode
@@ -116,7 +124,7 @@ describe('Bundle Manager', () => {
     expect(sendDiagnosticsStub.callCount).toBe(0)
   })
   it('loadEnoughToSendDiagnostics() loads the node with the contents of the file', async () => {
-    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, manager.bundle.absPath, '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>')
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, manager.bundle.absPath, bundleMaker({}))
     await manager.jobRunner.done()
     expect(manager.bundle.books.toArray()).toEqual([])
   })
@@ -186,7 +194,7 @@ describe('Find orphaned files', () => {
   const sinon = SinonRoot.createSandbox()
   beforeEach(() => {
     mockfs({
-      'META-INF/books.xml': '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>',
+      'META-INF/books.xml': bundleMaker({}),
       'modules/m2468/index.cnxml': pageMaker({}),
       'modules/m1357/index.cnxml': pageMaker({})
     })
@@ -217,34 +225,12 @@ describe('processFilesystemChange()', () => {
   }
 
   beforeEach(() => {
+    const bookSlug = 'slug2'
+    const pageId = 'm1234'
     mockfs({
-      'META-INF/books.xml': `<container xmlns="https://openstax.org/namespaces/book-container" version="1">
-                                <book slug="slug1" href="../collections/slug2.collection.xml" />
-                            </container>`,
-      'collections/slug2.collection.xml': `<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns="http://cnx.rice.edu/collxml">
-                              <col:metadata>
-                                <md:title>test collection</md:title>
-                                <md:slug>test1</md:slug>
-                                <md:uuid>00000000-0000-4000-0000-000000000000</md:uuid>
-                                <md:language>xxyyzz</md:language>
-                                <md:license url="http://creativecommons.org/licenses/by/4.0/"/>
-                              </col:metadata>
-                              <col:content>
-                                <col:subcollection>
-                                  <md:title>subcollection</md:title>
-                                  <col:content>
-                                    <col:module document="m1234" />
-                                  </col:content>
-                                </col:subcollection>
-                              </col:content>
-                            </col:collection>`,
-      'modules/m1234/index.cnxml': `<document xmlns="http://cnx.rice.edu/cnxml">
-                        <title>Module Title</title>
-                        <metadata xmlns:md="http://cnx.rice.edu/mdml">
-                          <md:uuid>00000000-0000-4000-0000-000000000000</md:uuid>
-                        </metadata>
-                        <content/>
-                      </document>`
+      'META-INF/books.xml': bundleMaker({books: [bookSlug]}),
+      'collections/slug2.collection.xml': bookMaker({slug: bookSlug, toc: [{title: 'subcollection', children: [pageId]}]}),
+      'modules/m1234/index.cnxml': pageMaker({})
     })
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
     manager = new ModelManager(bundle, conn)
@@ -311,6 +297,17 @@ describe('processFilesystemChange()', () => {
     expect((await fireChange(FileChangeType.Deleted, book.workspacePath)).size).toBe(1)
     expect((await fireChange(FileChangeType.Deleted, page.workspacePath)).size).toBe(1)
     expect((await fireChange(FileChangeType.Deleted, bundle.workspacePath)).size).toBe(1)
+  })
+  it('Uses the unsaved content even when a filesystem change event occurs', async () => {
+    // Load the Bundle, Book, and Page
+    const bundle = loadSuccess(manager.bundle)
+    const book = loadSuccess(first(bundle.books))
+
+    expect(manager.bundle.books.toArray()).toEqual([book])
+    manager.updateFileContents(manager.bundle.absPath, bundleMaker({}))
+    expect(manager.bundle.books.toArray()).toEqual([])
+    expect((await fireChange(FileChangeType.Changed, 'META-INF/books.xml')).size).toBe(1)
+    expect(manager.bundle.books.toArray()).toEqual([]) // Should still be empty because the unsaved changes
   })
 })
 
@@ -446,6 +443,80 @@ describe('documentLinks()', () => {
     await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'other-el-id' }] }, `modules/${otherId}/index.cnxml#9:0`)
     await testPageLink({ pageLinks: [{ targetPage: nonexistentButLoadedId }] }, undefined)
   })
+})
+
+describe('modifyToc()', () => {
+  let manager = null as unknown as ModelManager
+  let params = null as unknown as BookTocsArgs
+  beforeEach(() => {
+    const bookSlug = 'slug2'
+    const pageId = 'm1234'
+    
+    mockfs({
+      'META-INF/books.xml': bundleMaker({books: [bookSlug]}),
+      'collections/slug2.collection.xml': bookMaker({slug: bookSlug, toc: [{title: 'subcollection', children: [pageId]}]}),
+      'modules/m1234/index.cnxml': pageMaker({})
+    })
+    const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
+    manager = new ModelManager(bundle, conn, (p) => params = p)
+  })
+  afterEach(() => mockfs.restore())
+  it('PageRename', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+    const page = loadSuccess(first(book.pages))
+    
+    const bookIndex = 0
+    const t1 = params.books[bookIndex].tree[0]
+    if (t1.type === TocNodeKind.Inner) {
+      const t2 = t1.children[0]
+      if (t2.type === TocNodeKind.Leaf) {
+        const nodeToken = t2.value.token
+        const newTitle = 'NEW_TITLE'
+  
+        const evt: TocModification<ClientTocNode> = {
+          type: TocModificationKind.PageRename,
+          newTitle,
+          nodeToken,
+          bookIndex,
+        }
+  
+        await manager.modifyToc(evt)
+        expect(page.title(() => { throw new Error('BUG: Title should have been loaded by now')})).toBe(newTitle)
+        return
+      }  
+    }
+    throw new Error('BUG: Test expects first node in the ToC to be a Subbook')
+  })
+  it('SubbookRename', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+    // const page = loadSuccess(first(book.pages))
+    
+    const bookIndex = 0
+    const t1 = params.books[bookIndex].tree[0]
+    if (t1.type === TocNodeKind.Inner) {
+      const nodeToken = t1.value.token
+      const newTitle = 'NEW_TITLE'
+      const newToc = [t1]
+
+      const evt: TocModification<ClientTocNode> = {
+        type: TocModificationKind.SubbookRename,
+        newTitle,
+        nodeToken,
+        bookIndex,
+        newToc,
+        node: t1
+      }
+
+      await manager.modifyToc(evt)
+      const tocNode = book.toc[0]
+      expect(tocNode.type === TocNodeKind.Inner && tocNode.title).toBe(newTitle)
+      return
+    }
+    throw new Error('BUG: Test expects first node in the ToC to be a Subbook')
+  })
+  // Move
+  // Remove
+  // SubbookRename
 })
 
 // ------------ Stubs ------------

@@ -11,7 +11,7 @@ describe('Book validations', () => {
       { title: chapterTitle, children: [] },
       { title: chapterTitle, children: [] }
     ]
-    book.load(bookMaker(toc))
+    book.load(bookMaker({toc}))
     expectErrors(book, [BookValidationKind.DUPLICATE_CHAPTER_TITLE])
   })
   it(BookValidationKind.MISSING_PAGE, () => {
@@ -28,7 +28,7 @@ describe('Book validations', () => {
       { title: 'Chapter 1', children: ['m00001'] },
       { title: 'Chapter 2', children: ['m00001'] }
     ]
-    book.load(bookMaker(toc))
+    book.load(bookMaker({toc}))
     const page = first(book.pages)
     page.load(pageMaker({}))
     expectErrors(book, [BookValidationKind.DUPLICATE_PAGE])
@@ -39,20 +39,33 @@ type TocNode = {
   title: string
   children: TocNode[]
 } | string
-export function bookMaker(toc: TocNode[]) {
-  const title = 'test collection'
-  const slug = 'slug1'
-  const uuid = '00000000-0000-4000-0000-000000000000'
+type BookMakerInfo = {
+  title?: string
+  slug?: string
+  uuid?: string
+  language?: string
+  licenseUrl?: string
+  toc?: TocNode[]
+}
+export function bookMaker(info: BookMakerInfo) {
+  const i = {
+    title: info.title ?? 'test collection',
+    slug: info.slug ?? 'slug1',
+    langauge: info.language ?? 'xxyyzz',
+    licenseUrl: info.licenseUrl ?? 'http://creativecommons.org/licenses/by/4.0/',
+    uuid: info.uuid ?? '00000000-0000-4000-0000-000000000000',
+    toc: info.toc ?? []
+  }
   return `<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns="http://cnx.rice.edu/collxml">
     <col:metadata>
-      <md:title>${title}</md:title>
-      <md:slug>${slug}</md:slug>
-      <md:uuid>${uuid}</md:uuid>
-      <md:language>xxyyzz</md:language>
-      <md:license/>
+      <md:title>${i.title}</md:title>
+      <md:slug>${i.slug}</md:slug>
+      <md:uuid>${i.uuid}</md:uuid>
+      <md:language>${i.langauge}</md:language>
+      <md:license url="${i.licenseUrl}"/>
     </col:metadata>
     <col:content>
-        ${toc.map(tocToString).join('\n')}
+        ${i.toc.map(tocToString).join('\n')}
     </col:content>
 </col:collection>`
 }

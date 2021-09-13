@@ -68,8 +68,8 @@ export interface PageRenameEvent<T> {
   readonly newTitle: string
   readonly nodeToken: Token
   readonly bookIndex: number
-  readonly newToc: T[]
-  readonly node: T
+  // readonly newToc: T[]
+  // readonly node: T
 }
 export interface SubbookRenameEvent<T> {
   readonly type: TocModificationKind.SubbookRename

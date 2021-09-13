@@ -72,16 +72,6 @@ export function pageAsTreeObject(page: PageNode): TocTreeModule {
 // https://stackoverflow.com/a/35008327
 const checkFileExists = async (s: string): Promise<boolean> => await new Promise(resolve => fs.access(s, fs.constants.F_OK, e => resolve(e === null)))
 
-async function readOrNull(node: Fileish): Promise<Opt<string>> {
-  const uri = node.absPath
-  const { fsPath } = URI.parse(uri)
-  if (await checkFileExists(fsPath)) {
-    const stat = await fs.promises.stat(fsPath)
-    if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
-      return await fs.promises.readFile(fsPath, 'utf-8')
-    }
-  }
-}
 function readSync(n: Fileish) {
   const { fsPath } = URI.parse(n.absPath)
   return fs.readFileSync(fsPath, 'utf-8')
@@ -131,7 +121,9 @@ export class ModelManager {
   private tocIdMap: Opt<IdMap<string, TocInnerWithRange|PageNode>>
   private bookTocs: BookToc[] = []
 
-  constructor(public bundle: Bundle, private readonly conn: Connection) {
+  constructor(public bundle: Bundle, private readonly conn: Connection, bookTocHandler?: (params: BookTocsArgs) => void) {
+    const defaultHandler = (params: BookTocsArgs) => conn.sendNotification(ExtensionServerNotification.BookTocs, params)
+    const handler = bookTocHandler ?? defaultHandler
     // BookTocs
     const computeFn = () => {
       let idCounter = 0
@@ -161,7 +153,7 @@ export class ModelManager {
         orphans: v.orphans
       }
       ModelManager.debug('[MODEL_MANAGER] Sending Book TOC Updated', params)
-      conn.sendNotification(ExtensionServerNotification.BookTocs, params)
+      handler(params)
     }
     memoizeTempValue(equalsBooksAndOrphans, computeFn, sideEffectFn)
   }
@@ -281,14 +273,29 @@ export class ModelManager {
     return this.openDocuments.get(absPath)
   }
 
+  private async readOrNull(node: Fileish): Promise<Opt<string>> {
+    const uri = node.absPath
+    const unsavedContents = this.getOpenDocContents(uri)
+    if (unsavedContents !== undefined) {
+      return unsavedContents
+    }
+    const { fsPath } = URI.parse(uri)
+    if (await checkFileExists(fsPath)) {
+      const stat = await fs.promises.stat(fsPath)
+      if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
+        return await fs.promises.readFile(fsPath, 'utf-8')
+      }
+    }
+  }
+  
   private async readAndLoad(node: Fileish) {
     if (node.isLoaded) { return }
-    const fileContent = await readOrNull(node)
+    const fileContent = await this.readOrNull(node)
     node.load(fileContent)
   }
 
   private async readAndUpdate(node: Fileish) {
-    const fileContent = await readOrNull(node)
+    const fileContent = await this.readOrNull(node)
     node.load(fileContent)
   }
 
@@ -409,15 +416,11 @@ export class ModelManager {
   async modifyToc(evt: TocModification<ClientTocNode>) {
     ModelManager.debug('[MODIFY_TOC]', evt)
 
-    const oldBookToc = this.bookTocs[evt.bookIndex]
-    const newBookToc = { ...oldBookToc, tree: evt.newToc }
-
-    const node = this.lookupToken(evt.nodeToken)
-
     if (evt.type === TocModificationKind.PageRename) {
+      const node = this.lookupToken(evt.nodeToken)
       if (node instanceof PageNode) {
         const fsPath = URI.parse(node.absPath).fsPath
-        const oldXml = expectValue(await readOrNull(node), 'BUG? This file should exist right?')
+        const oldXml = expectValue(await this.readOrNull(node), `BUG? This file should exist right? ${fsPath}`)
         const newXml = renameTitle(evt.newTitle, oldXml)
         await fs.promises.writeFile(fsPath, newXml)
         node.load(newXml) // Just speed up the process
@@ -425,6 +428,8 @@ export class ModelManager {
         throw new Error('BUG! This if statement should be hidden away')
       }
     } else {
+      const oldBookToc = this.bookTocs[evt.bookIndex]
+      const newBookToc = { ...oldBookToc, tree: evt.newToc }
       await this.writeBookToc(newBookToc)
     }
   }
@@ -435,6 +440,7 @@ export class ModelManager {
     const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
     await fs.promises.writeFile(fsPath, bookXmlStr)
     book.load(bookXmlStr) // Just speed up the process
+    return book
   }
 
   private lookupToken(token: string) {
