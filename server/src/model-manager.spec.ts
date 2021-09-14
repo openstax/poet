@@ -1,6 +1,7 @@
 import path from 'path'
 import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
+import I from 'immutable'
 import { createConnection, WatchDog } from 'vscode-languageserver'
 import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
 import xmlFormat from 'xml-formatter'
@@ -461,58 +462,147 @@ describe('modifyToc()', () => {
     manager = new ModelManager(bundle, conn, (p) => { params = p })
   })
   afterEach(() => mockfs.restore())
+
+  function getInner(bookIndex: number) {
+    const t1 = params.books[bookIndex].tree[0]
+    if (t1.type === TocNodeKind.Inner) {
+      return t1
+    }
+    throw new Error('BUG: Test expects first node in the ToC to be a Subbook')
+  }
+  function getLeaf(bookIndex: number) {
+    for (const t1 of params.books[bookIndex].tree) {
+      if (t1.type === TocNodeKind.Inner) {
+        const t2 = t1.children[0]
+        if (t2 !== undefined && t2.type === TocNodeKind.Leaf) {
+          return t2
+        }
+      } else {
+        return t1
+      }
+    }
+    throw new Error('BUG: Test expects first node in the ToC to be a Subbook and its child to be a Page')
+  }
+
   it('PageRename', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     const page = loadSuccess(first(book.pages))
 
     const bookIndex = 0
-    const t1 = params.books[bookIndex].tree[0]
-    if (t1.type === TocNodeKind.Inner) {
-      const t2 = t1.children[0]
-      if (t2.type === TocNodeKind.Leaf) {
-        const nodeToken = t2.value.token
-        const newTitle = 'NEW_TITLE'
+    const t = getLeaf(bookIndex)
+    const nodeToken = t.value.token
+    const newTitle = 'NEW_TITLE'
 
-        const evt: TocModification = {
-          type: TocModificationKind.PageRename,
-          newTitle,
-          nodeToken,
-          bookIndex
-        }
-
-        await manager.modifyToc(evt)
-        expect(page.title(() => { throw new Error('BUG: Title should have been loaded by now') })).toBe(newTitle)
-        return
-      }
+    const evt: TocModification = {
+      type: TocModificationKind.PageRename,
+      newTitle,
+      nodeToken,
+      bookIndex
     }
-    throw new Error('BUG: Test expects first node in the ToC to be a Subbook')
+
+    await manager.modifyToc(evt)
+    expect(page.optTitle).toBe(newTitle)
   })
   it('SubbookRename', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
-    // const page = loadSuccess(first(book.pages))
 
     const bookIndex = 0
-    const t1 = params.books[bookIndex].tree[0]
-    if (t1.type === TocNodeKind.Inner) {
-      const nodeToken = t1.value.token
-      const newTitle = 'NEW_TITLE'
-      const evt: TocModification = {
-        type: TocModificationKind.SubbookRename,
-        newTitle,
-        nodeToken,
-        bookIndex
-      }
-
-      await manager.modifyToc(evt)
-      const tocNode = book.toc[0]
-      expect(tocNode.type === TocNodeKind.Inner && tocNode.title).toBe(newTitle)
-      return
+    const t = getInner(bookIndex)
+    const nodeToken = t.value.token
+    const newTitle = 'NEW_TITLE'
+    const evt: TocModification = {
+      type: TocModificationKind.SubbookRename,
+      newTitle,
+      nodeToken,
+      bookIndex
     }
-    throw new Error('BUG: Test expects first node in the ToC to be a Subbook')
+
+    await manager.modifyToc(evt)
+    const tocNode = book.toc[0]
+    expect(tocNode.type === TocNodeKind.Inner && tocNode.title).toBe(newTitle)
   })
-  // Move
-  // Remove
-  // SubbookRename
+  it('Remove Subbook', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    const bookIndex = 0
+    const t = getInner(bookIndex)
+    const nodeToken = t.value.token
+    const evt: TocModification = {
+      type: TocModificationKind.Remove,
+      nodeToken,
+      bookIndex
+    }
+
+    await manager.modifyToc(evt)
+    expect(book.toc).toEqual([])
+  })
+  it('Move to top and non-top', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    // BookToc starts off with just one subBook which contains one Page
+    expect(book.toc[0].type).toBe(TocNodeKind.Inner)
+    expect(book.toc.length).toBe(1)
+
+    const bookIndex = 0
+    let tLeaf = getLeaf(bookIndex)
+
+    const evt1: TocModification = {
+      type: TocModificationKind.Move,
+      nodeToken: tLeaf.value.token,
+      newParentToken: undefined,
+      newChildIndex: 1,
+      bookIndex
+    }
+    await manager.modifyToc(evt1)
+    expect(book.toc[0].type).toBe(TocNodeKind.Inner)
+    expect(book.toc[1].type).toBe(TocNodeKind.Leaf)
+
+    // -------- Need to get new Tokens
+
+    // Move the Page back under the Subbook
+    const tInner = getInner(bookIndex)
+    tLeaf = getLeaf(bookIndex)
+    const evt2: TocModification = {
+      type: TocModificationKind.Move,
+      nodeToken: tLeaf.value.token,
+      newParentToken: tInner.value.token,
+      newChildIndex: 1,
+      bookIndex
+    }
+    await manager.modifyToc(evt2)
+    expect(book.toc[0].type).toBe(TocNodeKind.Inner)
+    expect(book.toc.length).toBe(1)
+  })
+  it('creates a new Page in book', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    expect(book.pages.size).toBe(1)
+
+    const bookIndex = 0
+    const { page: loadedPage } = await manager.newPage(bookIndex, 'TEST_TITLE')
+
+    expect(book.pages.size).toBe(2)
+    expect(I.Set(book.pages).has(loadedPage)).toBe(true)
+    expect(loadedPage.optTitle).toBe('TEST_TITLE')
+
+    // Add another page for code coverage reasons
+    await manager.newPage(bookIndex, 'TEST_TITLE2')
+  })
+  it('creates a new Subbook in book', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    expect(book.toc.length).toBe(1)
+
+    const bookIndex = 0
+    await manager.newSubbook(bookIndex, 'TEST_TITLE')
+
+    expect(book.toc.length).toBe(2)
+    expect(book.toc[0].type).toBe(TocNodeKind.Inner)
+    const tocNode = book.toc[0]
+    if (tocNode.type === TocNodeKind.Inner) {
+      expect(tocNode.title).toBe('TEST_TITLE')
+    } else throw new Error('BUG: unreachable case')
+  })
 })
 
 // ------------ Stubs ------------

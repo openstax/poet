@@ -17,7 +17,7 @@ import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, ren
 import { BooksAndOrphans, BookTocsArgs, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
 import { TocInnerWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
-import { XMLSerializer } from 'xmldom'
+import { DOMParser, XMLSerializer } from 'xmldom'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -31,7 +31,8 @@ function childrenOf(n: ClientTocNode) {
   if (n.type === TocNodeKind.Inner) {
     return n.children
   } else {
-    return []
+    /* istanbul ignore next */
+    throw new Error('BUG: Unreachable code')
   }
 }
 
@@ -471,6 +472,7 @@ export class ModelManager {
       const ret = this.recFind(token, b, b.tree)
       if (ret !== undefined) return ret
     }
+    /* istanbul ignore next */
     throw new Error(`BUG: Could not find ToC item using token='${token}'`)
   }
 
@@ -500,7 +502,7 @@ export class ModelManager {
         continue
       }
       const pageUri = Utils.joinPath(pageDirUri, newModuleId, 'index.cnxml')
-      const page = this.bundle.allPages.getOrAdd(pageUri.toString())
+      const page = this.bundle.allPages.getOrAdd(pageUri.fsPath)
 
       const doc = new DOMParser().parseFromString(template(), 'text/xml')
       selectOne('/cnxml:document/cnxml:title', doc).textContent = title
@@ -521,8 +523,9 @@ export class ModelManager {
       })
       await this.writeBookToc(bookToc)
       ModelManager.debug(`[NEW_PAGE] Prepended to Book: ${pageUri.fsPath}`)
-      return newModuleId
+      return { page, id: newModuleId }
     }
+    /* istanbul ignore next */
     throw new Error('Error: Too many page directories already exist')
   }
 
@@ -545,15 +548,18 @@ function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
     const before = parent.tree.length
     parent.tree = parent.tree.filter(n => n !== node)
     if (parent.tree.length === before) {
+      /* istanbul ignore next */
       throw new Error(`BUG: Could not find Page child in book='${parent.slug}'`)
     }
   } else if (parent.type === TocNodeKind.Inner) {
     const before = parent.children.length
     parent.children = parent.children.filter(n => n !== node)
     if (parent.children.length === before) {
+      /* istanbul ignore next */
       throw new Error(`BUG: Could not find Page child in parent='${parent.value.title}'`)
     }
   } else {
+    /* istanbul ignore next */
     throw new Error('BUG: Unreachable')
   }
 }
