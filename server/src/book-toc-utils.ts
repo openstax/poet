@@ -23,17 +23,24 @@ export const equalsTocNode = (n1: ClientTocNode, n2: ClientTocNode): boolean => 
 export const equalsTocNodeArray = equalsArray(equalsTocNode)
 
 export const equalsClientPageish = (n1: ClientPageish, n2: ClientPageish): boolean => {
+  /* istanbul ignore if */
   if (n1.token !== n2.token) return false
+  /* istanbul ignore if */
   if (n1.title !== n2.title) return false
+  /* istanbul ignore if */
   if (n1.absPath !== n2.absPath) return false
   return true
 }
 export const equalsClientPageishArray = equalsArray(equalsClientPageish)
 
 export const equalsBookToc = (n1: BookToc, n2: BookToc): boolean => {
+  /* istanbul ignore if */
   if (n1.uuid !== n2.uuid) return false
+  /* istanbul ignore if */
   if (n1.title !== n2.title) return false
+  /* istanbul ignore if */
   if (n1.slug !== n2.slug) return false
+  /* istanbul ignore if */
   if (n1.licenseUrl !== n2.licenseUrl) return false
   return equalsArray(equalsTocNode)(n1.tree, n2.tree)
 }
@@ -116,13 +123,14 @@ export class IdMap<K, V> {
   private readonly map1 = new Map<K, V>()
   private readonly map2 = new Map<V, K>()
   constructor(private readonly idGenerator: (v: V) => K) {}
-  clear() {
-    this.map1.clear()
-    this.map2.clear()
-  }
+  // clear() {
+  //   this.map1.clear()
+  //   this.map2.clear()
+  // }
 
   add(v: V) {
     const k = this.map2.get(v)
+    /* istanbul ignore if */
     if (k !== undefined) {
       return k
     } else {
@@ -133,16 +141,10 @@ export class IdMap<K, V> {
     }
   }
 
-  hasKey(k: K) { return this.map1.has(k) }
-  hasValue(v: V) { return this.map2.has(v) }
-  getValue(k: K) { return this.map1.get(k) }
-  getKey(v: V) { return this.map2.get(v) }
-}
-
-export function expectTrue(b: boolean, message: string) {
-  if (!b) {
-    throw new Error(message)
-  }
+  // hasKey(k: K) { return this.map1.has(k) }
+  // hasValue(v: V) { return this.map2.has(v) }
+  // getValue(k: K) { return this.map1.get(k) }
+  // getKey(v: V) { return this.map2.get(v) }
 }
 
 export function renameTitle(newTitle: string, cnxmlStr: string) {

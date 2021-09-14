@@ -28,10 +28,10 @@ const PATH_SEP = path.sep
 
 interface NodeAndParent {node: ClientTocNode, parent: BookToc|ClientTocNode}
 function childrenOf(n: ClientTocNode) {
+  /* istanbul ignore else */
   if (n.type === TocNodeKind.Inner) {
     return n.children
   } else {
-    /* istanbul ignore next */
     throw new Error('BUG: Unreachable code')
   }
 }
@@ -102,12 +102,14 @@ function memoizeTempValue<T>(equalsFn: (a: T, b: T) => boolean, computeFn: () =>
   })
   Quarx.autorun(() => {
     const m = temp.get()
+    /* istanbul ignore else */
     if (m !== undefined) {
       sideEffectFn(m.matryoshka)
     }
   })
 }
 const matryoshkaEquals = <T>(eq: (n1: T, n2: T) => boolean) => (n1: Opt<{matryoshka: T}>, n2: Opt<{matryoshka: T}>) => {
+  /* istanbul ignore next */
   if (n1 === undefined && n2 === undefined) return true
   if (n1 !== undefined && n2 !== undefined) {
     return eq(n1.matryoshka, n2.matryoshka)
@@ -437,7 +439,7 @@ export class ModelManager {
     } else if (evt.type === TocModificationKind.Remove) {
       removeNode(parent, node)
       await this.writeBookToc(bookToc)
-    } else if (evt.type === TocModificationKind.Move) {
+    } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
       removeNode(parent, node)
       // Add the node
       const newParentChildren = evt.newParentToken !== undefined ? childrenOf(this.lookupToken(evt.newParentToken).node) : bookToc.tree
@@ -460,6 +462,7 @@ export class ModelManager {
       if (node.value.token === token) {
         return { node: node, parent }
       }
+      /* istanbul ignore else */
       if (node.type === TocNodeKind.Inner) {
         const ret = this.recFind(token, node, node.children)
         if (ret !== undefined) return ret
@@ -470,6 +473,7 @@ export class ModelManager {
   private lookupToken(token: string): NodeAndParent {
     for (const b of this.bookTocs) {
       const ret = this.recFind(token, b, b.tree)
+      /* istanbul ignore else */
       if (ret !== undefined) return ret
     }
     /* istanbul ignore next */
@@ -547,19 +551,18 @@ function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
   if (parent.type === BookRootNode.Singleton) {
     const before = parent.tree.length
     parent.tree = parent.tree.filter(n => n !== node)
+    /* istanbul ignore if */
     if (parent.tree.length === before) {
-      /* istanbul ignore next */
       throw new Error(`BUG: Could not find Page child in book='${parent.slug}'`)
     }
-  } else if (parent.type === TocNodeKind.Inner) {
+  } else /* istanbul ignore else */ if (parent.type === TocNodeKind.Inner) {
     const before = parent.children.length
     parent.children = parent.children.filter(n => n !== node)
+    /* istanbul ignore if */
     if (parent.children.length === before) {
-      /* istanbul ignore next */
       throw new Error(`BUG: Could not find Page child in parent='${parent.value.title}'`)
     }
   } else {
-    /* istanbul ignore next */
     throw new Error('BUG: Unreachable')
   }
 }
