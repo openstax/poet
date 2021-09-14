@@ -1,24 +1,24 @@
 import { Bundle, BundleValidationKind } from './bundle'
 import { expectErrors, first, loadSuccess, makeBundle, read } from './util.spec'
 
-type BundleMakerInfo = {
+interface BundleMakerInfo {
   version?: number
   books?: Array<string | {slug: string, href: string}>
 }
 export function bundleMaker(info: BundleMakerInfo) {
   const i = {
     version: info.version ?? 1,
-    books: (info.books || []).map(b => {
+    books: (info.books ?? []).map(b => {
       if (typeof b === 'string') {
         const slug = b
-        return { slug, href: `../collections/${slug}.collection.xml`}
+        return { slug, href: `../collections/${slug}.collection.xml` }
       } else {
         return b
       }
     })
   }
   return `<container xmlns="https://openstax.org/namespaces/book-container" version="1">
-${i.books.map(({slug, href}) => `<book slug="${slug}" href="${href}" />`).join('\n')}
+${i.books.map(({ slug, href }) => `<book slug="${slug}" href="${href}" />`).join('\n')}
 </container>`
 }
 

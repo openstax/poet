@@ -7,7 +7,7 @@ import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
-import { TocTreeModule, TocTreeElementType, BookToc, ClientTocNode, TocModification, TocModificationKind, TocInner, ClientSubBookish, ClientPageish, TocNodeKind } from '../../common/src/toc-tree'
+import { TocTreeModule, TocTreeElementType, BookToc, ClientTocNode, TocModification, TocModificationKind, TocInner, ClientSubBookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc-tree'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
@@ -26,8 +26,13 @@ const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 
 const PATH_SEP = path.sep
 
-type BooksAndOrphansAndIdMap = BooksAndOrphans & {
-  tocIdMap: IdMap<string, TocInnerWithRange|PageNode>
+interface NodeAndParent {node: ClientTocNode, parent: BookToc|ClientTocNode}
+function childrenOf(n: ClientTocNode) {
+  if (n.type === TocNodeKind.Inner) {
+    return n.children
+  } else {
+    return []
+  }
 }
 
 function loadedAndExists(n: Fileish) {
@@ -118,7 +123,6 @@ export class ModelManager {
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
   private counter = 0
-  private tocIdMap: Opt<IdMap<string, TocInnerWithRange|PageNode>>
   private bookTocs: BookToc[] = []
 
   constructor(public bundle: Bundle, private readonly conn: Connection, bookTocHandler?: (params: BookTocsArgs) => void) {
@@ -136,7 +140,6 @@ export class ModelManager {
       })
       if (loadedAndExists(this.bundle)) {
         return {
-          tocIdMap: tocIdMap,
           books: this.bundle.books.filter(loadedAndExists).toArray().map(b => fromBook(tocIdMap, b)),
           orphans: this.orphanedPages.filter(loadedAndExists).toArray().map(p => fromPage(tocIdMap, p).value)
         }
@@ -144,8 +147,7 @@ export class ModelManager {
       ModelManager.debug('[MODEL_MANAGER] bundle file is not loaded yet or does not exist')
       return { tocIdMap, books: [], orphans: [] }
     }
-    const sideEffectFn = (v: BooksAndOrphansAndIdMap) => {
-      this.tocIdMap = v.tocIdMap
+    const sideEffectFn = (v: BooksAndOrphans) => {
       this.bookTocs = v.books
       const params: BookTocsArgs = {
         version: ++this.counter,
@@ -287,7 +289,7 @@ export class ModelManager {
       }
     }
   }
-  
+
   private async readAndLoad(node: Fileish) {
     if (node.isLoaded) { return }
     const fileContent = await this.readOrNull(node)
@@ -413,24 +415,33 @@ export class ModelManager {
     return ret
   }
 
-  async modifyToc(evt: TocModification<ClientTocNode>) {
+  async modifyToc(evt: TocModification) {
     ModelManager.debug('[MODIFY_TOC]', evt)
 
-    if (evt.type === TocModificationKind.PageRename) {
-      const node = this.lookupToken(evt.nodeToken)
-      if (node instanceof PageNode) {
-        const fsPath = URI.parse(node.absPath).fsPath
-        const oldXml = expectValue(await this.readOrNull(node), `BUG? This file should exist right? ${fsPath}`)
+    const bookToc = this.bookTocs[evt.bookIndex]
+    const { node, parent } = this.lookupToken(evt.nodeToken)
+
+    if (evt.type === TocModificationKind.PageRename || evt.type === TocModificationKind.SubbookRename) {
+      if (node.type === TocNodeKind.Leaf) {
+        const page = expectValue(this.bundle.allPages.get(node.value.absPath), `BUG: This node should exist: ${node.value.absPath}`)
+        const fsPath = URI.parse(node.value.absPath).fsPath
+        const oldXml = expectValue(await this.readOrNull(page), `BUG? This file should exist right? ${fsPath}`)
         const newXml = renameTitle(evt.newTitle, oldXml)
         await fs.promises.writeFile(fsPath, newXml)
-        node.load(newXml) // Just speed up the process
+        page.load(newXml) // Just speed up the process
       } else {
-        throw new Error('BUG! This if statement should be hidden away')
+        node.value.title = evt.newTitle
+        await this.writeBookToc(bookToc)
       }
-    } else {
-      const oldBookToc = this.bookTocs[evt.bookIndex]
-      const newBookToc = { ...oldBookToc, tree: evt.newToc }
-      await this.writeBookToc(newBookToc)
+    } else if (evt.type === TocModificationKind.Remove) {
+      removeNode(parent, node)
+      await this.writeBookToc(bookToc)
+    } else if (evt.type === TocModificationKind.Move) {
+      removeNode(parent, node)
+      // Add the node
+      const newParentChildren = evt.newParentToken !== undefined ? childrenOf(this.lookupToken(evt.newParentToken).node) : bookToc.tree
+      newParentChildren.splice(evt.newChildIndex, 0, node)
+      await this.writeBookToc(bookToc)
     }
   }
 
@@ -443,8 +454,24 @@ export class ModelManager {
     return book
   }
 
-  private lookupToken(token: string) {
-    return expectValue(expectValue(this.tocIdMap, 'BUG: It should be impossible to modify the ToC before it has been loaded').getValue(token), `BUG: Could not find ToC item using token='${token}'`)
+  private recFind(token: Token, parent: ClientTocNode | BookToc, nodes: ClientTocNode[]): Opt<NodeAndParent> {
+    for (const node of nodes) {
+      if (node.value.token === token) {
+        return { node: node, parent }
+      }
+      if (node.type === TocNodeKind.Inner) {
+        const ret = this.recFind(token, node, node.children)
+        if (ret !== undefined) return ret
+      }
+    }
+  }
+
+  private lookupToken(token: string): NodeAndParent {
+    for (const b of this.bookTocs) {
+      const ret = this.recFind(token, b, b.tree)
+      if (ret !== undefined) return ret
+    }
+    throw new Error(`BUG: Could not find ToC item using token='${token}'`)
   }
 
   public async newPage(bookIndex: number, title: string) {
@@ -510,5 +537,23 @@ export class ModelManager {
     // Prepend new Subbook to top of Book so it is visible to the user
     bookToc.tree.unshift(tocNode)
     await this.writeBookToc(bookToc)
+  }
+}
+
+function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
+  if (parent.type === BookRootNode.Singleton) {
+    const before = parent.tree.length
+    parent.tree = parent.tree.filter(n => n !== node)
+    if (parent.tree.length === before) {
+      throw new Error(`BUG: Could not find Page child in book='${parent.slug}'`)
+    }
+  } else if (parent.type === TocNodeKind.Inner) {
+    const before = parent.children.length
+    parent.children = parent.children.filter(n => n !== node)
+    if (parent.children.length === before) {
+      throw new Error(`BUG: Could not find Page child in parent='${parent.value.title}'`)
+    }
+  } else {
+    throw new Error('BUG: Unreachable')
   }
 }

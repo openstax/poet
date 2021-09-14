@@ -33,19 +33,19 @@ export interface PageCreateSignal {
 }
 export interface TocMoveSignal {
   type: 'TOC_MOVE'
-  event: TocMoveEvent<TreeItemWithToken>
+  event: TocMoveEvent
 }
 export interface TocRemoveSignal {
   type: 'TOC_REMOVE'
-  event: TocRemoveEvent<TreeItemWithToken>
+  event: TocRemoveEvent
 }
 export interface PageRenameSignal {
   type: 'PAGE_RENAME'
-  event: PageRenameEvent<TreeItemWithToken>
+  event: PageRenameEvent
 }
 export interface SubbookRenameSignal {
   type: 'SUBBOOK_RENAME'
-  event: SubbookRenameEvent<TreeItemWithToken>
+  event: SubbookRenameEvent
 }
 // export interface WebviewStartedSignal {
 //   type: 'WEBVIEW_STARTED'
@@ -255,29 +255,6 @@ function toTreeItem(n: ClientTocNode): TreeItemWithToken {
   }
 }
 
-function fromTreeItem(n: TreeItemWithToken): ClientTocNode {
-  if (n.type === TocNodeKind.Leaf) {
-    return {
-      type: n.type,
-      value: {
-        token: n.token,
-        title: n.title,
-        fileId: n.fileId,
-        absPath: n.absPath
-      }
-    }
-  } else {
-    return {
-      type: n.type,
-      value: {
-        token: n.token,
-        title: n.title
-      },
-      children: n.children.map(fromTreeItem)
-    }
-  }
-}
-
 const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {
   const localResourceRoots = [vscode.Uri.file(context.resourceRootDir)]
   const workspaceRoot = getRootPathUri()
@@ -319,15 +296,15 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
   // readonly handleMessage = handleMessageFromWebviewPanel(this.panel, this.context.client)
   readonly handleMessage = async (m: PanelIncomingMessage) => {
     const workspaceUri = expect(getRootPathUri(), 'No root path in which to generate a module').toString()
-    let event: Opt<TocModification<ClientTocNode>>
+    let event: Opt<TocModification>
     if (m.type === 'TOC_MOVE') {
-      event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), type: TocModificationKind.Move }
+      event = { ...m.event, type: TocModificationKind.Move }
     } else if (m.type === 'TOC_REMOVE') {
-      event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), type: TocModificationKind.Remove }
+      event = { ...m.event, type: TocModificationKind.Remove }
     } else if (m.type === 'PAGE_RENAME') {
-      event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), node: fromTreeItem(m.event.node), type: TocModificationKind.PageRename }
+      event = { ...m.event, type: TocModificationKind.PageRename }
     } else if (m.type === 'SUBBOOK_RENAME') {
-      event = { ...m.event, newToc: m.event.newToc.map(fromTreeItem), node: fromTreeItem(m.event.node), type: TocModificationKind.SubbookRename }
+      event = { ...m.event, type: TocModificationKind.SubbookRename }
     } else if (m.type === 'PAGE_CREATE') {
       const title = await vscode.window.showInputBox({ prompt: 'Title of new Page' })
       if (title !== undefined) {

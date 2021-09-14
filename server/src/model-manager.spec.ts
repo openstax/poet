@@ -13,7 +13,7 @@ import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
 
 import { PageNode } from './model/page'
-import { ClientTocNode, TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc-tree'
+import { TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc-tree'
 import { BookTocsArgs, DiagnosticSource } from '../../common/src/requests'
 import { bookMaker } from './model/book.spec'
 import { bundleMaker } from './model/bundle.spec'
@@ -228,8 +228,8 @@ describe('processFilesystemChange()', () => {
     const bookSlug = 'slug2'
     const pageId = 'm1234'
     mockfs({
-      'META-INF/books.xml': bundleMaker({books: [bookSlug]}),
-      'collections/slug2.collection.xml': bookMaker({slug: bookSlug, toc: [{title: 'subcollection', children: [pageId]}]}),
+      'META-INF/books.xml': bundleMaker({ books: [bookSlug] }),
+      'collections/slug2.collection.xml': bookMaker({ slug: bookSlug, toc: [{ title: 'subcollection', children: [pageId] }] }),
       'modules/m1234/index.cnxml': pageMaker({})
     })
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
@@ -451,20 +451,20 @@ describe('modifyToc()', () => {
   beforeEach(() => {
     const bookSlug = 'slug2'
     const pageId = 'm1234'
-    
+
     mockfs({
-      'META-INF/books.xml': bundleMaker({books: [bookSlug]}),
-      'collections/slug2.collection.xml': bookMaker({slug: bookSlug, toc: [{title: 'subcollection', children: [pageId]}]}),
+      'META-INF/books.xml': bundleMaker({ books: [bookSlug] }),
+      'collections/slug2.collection.xml': bookMaker({ slug: bookSlug, toc: [{ title: 'subcollection', children: [pageId] }] }),
       'modules/m1234/index.cnxml': pageMaker({})
     })
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
-    manager = new ModelManager(bundle, conn, (p) => params = p)
+    manager = new ModelManager(bundle, conn, (p) => { params = p })
   })
   afterEach(() => mockfs.restore())
   it('PageRename', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     const page = loadSuccess(first(book.pages))
-    
+
     const bookIndex = 0
     const t1 = params.books[bookIndex].tree[0]
     if (t1.type === TocNodeKind.Inner) {
@@ -472,39 +472,35 @@ describe('modifyToc()', () => {
       if (t2.type === TocNodeKind.Leaf) {
         const nodeToken = t2.value.token
         const newTitle = 'NEW_TITLE'
-  
-        const evt: TocModification<ClientTocNode> = {
+
+        const evt: TocModification = {
           type: TocModificationKind.PageRename,
           newTitle,
           nodeToken,
-          bookIndex,
+          bookIndex
         }
-  
+
         await manager.modifyToc(evt)
-        expect(page.title(() => { throw new Error('BUG: Title should have been loaded by now')})).toBe(newTitle)
+        expect(page.title(() => { throw new Error('BUG: Title should have been loaded by now') })).toBe(newTitle)
         return
-      }  
+      }
     }
     throw new Error('BUG: Test expects first node in the ToC to be a Subbook')
   })
   it('SubbookRename', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     // const page = loadSuccess(first(book.pages))
-    
+
     const bookIndex = 0
     const t1 = params.books[bookIndex].tree[0]
     if (t1.type === TocNodeKind.Inner) {
       const nodeToken = t1.value.token
       const newTitle = 'NEW_TITLE'
-      const newToc = [t1]
-
-      const evt: TocModification<ClientTocNode> = {
+      const evt: TocModification = {
         type: TocModificationKind.SubbookRename,
         newTitle,
         nodeToken,
-        bookIndex,
-        newToc,
-        node: t1
+        bookIndex
       }
 
       await manager.modifyToc(evt)

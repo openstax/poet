@@ -58,7 +58,7 @@ export function fromBook(tocIdMap: IdMap<string, TocInnerWithRange|PageNode>, bo
     slug: book.slug,
     language: book.language,
     licenseUrl: book.licenseUrl,
-    tree: book.toc.map(t => recTree(tocIdMap, t))
+    tree: book.toc.map(t => recTree(tocIdMap, null, t))
   }
 }
 
@@ -86,11 +86,11 @@ export function toString(t: BookToc) {
 export function fromPage(tocIdMap: IdMap<string, TocInnerWithRange|PageNode>, n: PageNode): TocLeaf<ClientPageish> {
   return { type: TocNodeKind.Leaf, value: { token: tocIdMap.add(n), title: n.optTitle, absPath: n.absPath, fileId: pageToModuleId(n) } }
 }
-function recTree(tocIdMap: IdMap<string, TocInnerWithRange|PageNode>, n: TocNodeWithRange): ClientTocNode {
+function recTree(tocIdMap: IdMap<string, TocInnerWithRange|PageNode>, parent: TocInnerWithRange|null, n: TocNodeWithRange): ClientTocNode {
   if (n.type === TocNodeKind.Leaf) {
     return fromPage(tocIdMap, n.page)
   } else {
-    return { ...n, value: { token: tocIdMap.add(n), title: n.title }, children: n.children.map(c => recTree(tocIdMap, c)) }
+    return { ...n, value: { token: tocIdMap.add(n), title: n.title }, children: n.children.map(c => recTree(tocIdMap, n, c)) }
   }
 }
 

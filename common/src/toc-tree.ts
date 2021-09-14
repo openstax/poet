@@ -15,7 +15,7 @@ export enum TocNodeKind {
   Leaf = 'TocNodeKind.Leaf'
 }
 export type TocNode<I, L> = TocInner<I, L> | TocLeaf<L>
-export interface TocInner<I, L> { readonly type: TocNodeKind.Inner, readonly children: Array<TocNode<I, L>>, value: I }
+export interface TocInner<I, L> { readonly type: TocNodeKind.Inner, children: Array<TocNode<I, L>>, value: I }
 export interface TocLeaf<L> { readonly type: TocNodeKind.Leaf, value: L }
 
 export type Token = string
@@ -34,7 +34,7 @@ export interface BookToc {
   readonly slug: string
   readonly language: string
   readonly licenseUrl: string
-  readonly tree: ClientTocNode[]
+  tree: ClientTocNode[]
 }
 
 export enum TocModificationKind {
@@ -44,38 +44,32 @@ export enum TocModificationKind {
   SubbookRename = 'TocModificationKind.SubbookRename',
 }
 export interface TocModificationParams {
-  event: TocModification<ClientTocNode>
+  event: TocModification
   workspaceUri: string
 }
-export type TocModification<T> = (TocMoveEvent<T> | TocRemoveEvent<T> | PageRenameEvent<T> | SubbookRenameEvent<T>)
-export interface TocMoveEvent<T> {
+export type TocModification = (TocMoveEvent | TocRemoveEvent | PageRenameEvent | SubbookRenameEvent)
+export interface TocMoveEvent {
   readonly type: TocModificationKind.Move
   readonly nodeToken: Token
-  readonly newParentToken: Token | undefined // when undefined the newChildIndex is for the top-level Toc items
+  readonly newParentToken: Token | undefined // when undefined the newChildIndex is for the top-level BookToc items
   readonly newChildIndex: number
   readonly bookIndex: number
-  readonly newToc: T[]
 }
-export interface TocRemoveEvent<T> {
+export interface TocRemoveEvent {
   readonly type: TocModificationKind.Remove
   readonly nodeToken: Token
   readonly bookIndex: number
-  readonly newToc: T[]
 }
 
-export interface PageRenameEvent<T> {
+export interface PageRenameEvent {
   readonly type: TocModificationKind.PageRename
   readonly newTitle: string
   readonly nodeToken: Token
   readonly bookIndex: number
-  // readonly newToc: T[]
-  // readonly node: T
 }
-export interface SubbookRenameEvent<T> {
+export interface SubbookRenameEvent {
   readonly type: TocModificationKind.SubbookRename
   readonly newTitle: string
   readonly nodeToken: Token
   readonly bookIndex: number
-  readonly newToc: T[]
-  readonly node: T
 }

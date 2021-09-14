@@ -48,7 +48,7 @@ describe('Quarx.autorun code', () => {
       autorunCalls++
     })
     expect(autorunCalls).toBe(1)
-    book.load(bookMaker([{ title: 'intro', children: [] }]))
+    book.load(bookMaker({ toc: [{ title: 'intro', children: [] }] }))
     expect(autorunCalls).toBe(2)
 
     // just so that the tocSideEffect does not get marked as an unused variable by the linter

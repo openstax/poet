@@ -23,8 +23,8 @@ const equalsOptArrayToc = equalsOpt(equalsArrayToc)
 const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
 
 export type TocNodeWithRange = TocLeafWithRange | TocInnerWithRange
-export type TocInnerWithRange = HasRange & { type: TocNodeKind.Inner, readonly title: string, readonly children: TocNodeWithRange[] }
-export type TocLeafWithRange = HasRange & { type: TocNodeKind.Leaf, readonly page: PageNode }
+export type TocInnerWithRange = HasRange & { readonly type: TocNodeKind.Inner, title: string, children: TocNodeWithRange[] }
+export type TocLeafWithRange = HasRange & { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
 
 export class BookNode extends Fileish {
   private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
