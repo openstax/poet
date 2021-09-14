@@ -12,6 +12,7 @@ import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
 
 import { PageNode } from './model/page'
+import { DiagnosticSource } from '../../common/src/requests'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
@@ -130,6 +131,12 @@ describe('Bundle Manager', () => {
     expect(diagnosticsObj.uri).toBeTruthy()
     expect(diagnosticsObj.diagnostics).toBeTruthy()
     expect(() => JSON.stringify(diagnosticsObj)).not.toThrow()
+  })
+  it('populates the Diagnostics.source field so that pushContent can filter on it', () => {
+    loadSuccess(manager.bundle)
+    manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
+    expect(sendDiagnosticsStub.callCount).toBe(1)
+    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.cnxml)
   })
 })
 

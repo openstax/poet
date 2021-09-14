@@ -2,16 +2,11 @@ import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref } from './git-api/git'
 import { ExtensionHostContext } from './panel'
-import { requestEnsureIds } from '../../common/src/requests'
+import { DiagnosticSource, requestEnsureIds } from '../../common/src/requests'
 
 export enum Tag {
   release = 'Release',
   candidate = 'Release Candidate'
-}
-
-export enum DiagnosticSource {
-  xml = 'xml',
-  cnxml = 'cnxml'
 }
 
 export const PushValidationModal = {

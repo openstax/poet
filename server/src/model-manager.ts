@@ -5,6 +5,7 @@ import I from 'immutable'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI } from 'vscode-uri'
+import { DiagnosticSource } from '../../common/src/requests'
 import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
 import { Opt, expectValue, Position, inRange, Range } from './model/utils'
 import { BookNode, TocNode, TocNodeKind } from './model/book'
@@ -241,7 +242,7 @@ export class ModelManager {
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
       const diagnostics = errors.toSet().map(err => {
-        return Diagnostic.create(err.range, err.message, DiagnosticSeverity.Error)
+        return Diagnostic.create(err.range, err.message, DiagnosticSeverity.Error, undefined, DiagnosticSource.cnxml)
       }).toArray()
       this.conn.sendDiagnostics({
         uri,
