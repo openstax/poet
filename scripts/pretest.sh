@@ -18,7 +18,14 @@ if [[ "$(uname)" == 'Darwin' ]]; then
 fi
 
 echo '==> Instrument the client source files'
-$(npm bin)/nyc instrument --exclude 'client/out/client/src/test/**/*' --compact=false --source-map --in-place ./client/out/ ./client/out/
+$(npm bin)/nyc instrument \
+    --exclude 'client/out/client/src/test/**/*' \
+    --exclude-node-modules \
+    --compact=false \
+    --source-map \
+    --in-place \
+    ./client/out/ \
+    ./client/out/
 
 echo '==> Edit the Cypress HTML files to load javascript'
 find ./client/out/ -name *.html -exec sed -i ${macos_arg} -E "s/(script-src.+)[;]/\1 'unsafe-eval';/g" {} \;
