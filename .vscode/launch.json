@@ -43,6 +43,21 @@
       "type": "node"
     },
     {
+      "args": [
+        "--runInBand"
+      ],
+      "cwd": "${workspaceFolder}/client",
+      "internalConsoleOptions": "openOnSessionStart",
+      "name": "Client Unit Tests",
+      "program": "${workspaceFolder}/client/node_modules/jest/bin/jest.js",
+      "request": "launch",
+      "skipFiles": [
+        "<node_internals>/**",
+        "node_modules"
+      ],
+      "type": "node"
+    },
+    {
       "name": "Extension Tests",
       "type": "extensionHost",
       "request": "launch",

@@ -1,5 +1,8 @@
 {
   "name": "client",
+  "scripts": {
+    "test": "jest --coverage"
+  },
   "dependencies": {
     "uuid": "^8.3.2",
     "vscode-languageclient": "^7.0.0"
@@ -14,11 +17,14 @@
     "@types/uuid": "^8.3.0",
     "@types/vscode": "^1.39.0",
     "@types/xmldom": "^0.1.30",
+    "expect": "^27.2.0",
     "glob": "^7.1.6",
+    "jest": "^27.2.0",
     "json-stable-stringify": "^1.0.1",
     "mocha": "^8.1.3",
     "preact": "^10.5.11",
     "react-sortable-tree": "^2.8.0",
+    "ts-jest": "^27",
     "vscode-test": "^1.4.1",
     "xmldom": "^0.4.0",
     "xpath-ts": "^1.3.13"

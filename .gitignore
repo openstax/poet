@@ -8,6 +8,7 @@ node_modules/
 
 /client/out/
 /client/dist/
+/client/coverage/
 /server/out/
 /server/dist/
 /server/coverage/

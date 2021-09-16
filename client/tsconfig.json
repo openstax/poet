@@ -6,6 +6,7 @@
     "tsBuildInfoFile": "out/tsbuildinfo.json"
   },
   "include": [
+    "specs/**/*.spec.ts",
     "src/**/*.ts",
     "src/**/*.js",
     "src/**/*.jsx",
