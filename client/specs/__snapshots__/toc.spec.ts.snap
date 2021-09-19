@@ -1,0 +1,297 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 1`] = `Array []`;
+
+exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 2`] = `Array []`;
+
+exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 3`] = `
+TocTreeItem {
+  "children": Array [
+    TocTreeItem {
+      "children": Array [
+        TocTreeItem {
+          "children": Array [],
+          "collapsibleState": "None",
+          "command": Object {
+            "arguments": Array [
+              Object {
+                "$mid": 1,
+                "path": "/tmp/fakeworkspace/modules/m00001/index.cnxml",
+                "scheme": "file",
+              },
+            ],
+            "command": "vscode.open",
+            "title": "open",
+          },
+          "description": "m00001",
+          "iconPath": "File",
+          "label": "Module1",
+          "parent": [Circular],
+        },
+        TocTreeItem {
+          "children": Array [],
+          "collapsibleState": "None",
+          "command": Object {
+            "arguments": Array [
+              Object {
+                "$mid": 1,
+                "path": "/tmp/fakeworkspace/modules/m00002/index.cnxml",
+                "scheme": "file",
+              },
+            ],
+            "command": "vscode.open",
+            "title": "open",
+          },
+          "description": "m00002",
+          "iconPath": "File",
+          "label": "Module2",
+          "parent": [Circular],
+        },
+      ],
+      "collapsibleState": "Collapsed",
+      "command": undefined,
+      "description": undefined,
+      "iconPath": "Folder",
+      "label": "subcollection",
+      "parent": [Circular],
+    },
+  ],
+  "collapsibleState": "Collapsed",
+  "command": Object {
+    "arguments": Array [
+      Object {
+        "$mid": 1,
+        "path": "/tmp/fakeworkspace/collections/collection1.collection.xml",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
+  "description": undefined,
+  "iconPath": ThemeIcon {},
+  "label": "Collection1",
+  "parent": undefined,
+}
+`;
+
+exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 4`] = `
+Array [
+  TocTreeItem {
+    "children": Array [],
+    "collapsibleState": "None",
+    "command": Object {
+      "arguments": Array [
+        Object {
+          "$mid": 1,
+          "path": "/tmp/fakeworkspace/modules/m00003/index.cnxml",
+          "scheme": "file",
+        },
+      ],
+      "command": "vscode.open",
+      "title": "open",
+    },
+    "description": "m00003",
+    "iconPath": "File",
+    "label": "Module3",
+    "parent": TocTreeItem {
+      "children": [Circular],
+      "collapsibleState": "Collapsed",
+      "command": Object {
+        "arguments": Array [
+          Object {
+            "$mid": 1,
+            "path": "/tmp/fakeworkspace/collections/collection2.collection.xml",
+            "scheme": "file",
+          },
+        ],
+        "command": "vscode.open",
+        "title": "open",
+      },
+      "description": undefined,
+      "iconPath": ThemeIcon {},
+      "label": "Collection2",
+      "parent": undefined,
+    },
+  },
+]
+`;
+
+exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 5`] = `
+TocTreeItem {
+  "children": Array [
+    TocTreeItem {
+      "children": Array [],
+      "collapsibleState": "None",
+      "command": Object {
+        "arguments": Array [
+          Object {
+            "$mid": 1,
+            "path": "/tmp/fakeworkspace/modules/m00003/index.cnxml",
+            "scheme": "file",
+          },
+        ],
+        "command": "vscode.open",
+        "title": "open",
+      },
+      "description": "m00003",
+      "iconPath": "File",
+      "label": "Module3",
+      "parent": [Circular],
+    },
+  ],
+  "collapsibleState": "Collapsed",
+  "command": Object {
+    "arguments": Array [
+      Object {
+        "$mid": 1,
+        "path": "/tmp/fakeworkspace/collections/collection2.collection.xml",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
+  "description": undefined,
+  "iconPath": ThemeIcon {},
+  "label": "Collection2",
+  "parent": undefined,
+}
+`;
+
+exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 6`] = `undefined`;
+
+exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 7`] = `
+TocTreeItem {
+  "children": Array [
+    TocTreeItem {
+      "children": Array [],
+      "collapsibleState": "None",
+      "command": Object {
+        "arguments": Array [
+          Object {
+            "$mid": 1,
+            "path": "/tmp/fakeworkspace/modules/m00003/index.cnxml",
+            "scheme": "file",
+          },
+        ],
+        "command": "vscode.open",
+        "title": "open",
+      },
+      "description": "m00003",
+      "iconPath": "File",
+      "label": "Module3",
+      "parent": [Circular],
+    },
+  ],
+  "collapsibleState": "Collapsed",
+  "command": Object {
+    "arguments": Array [
+      Object {
+        "$mid": 1,
+        "path": "/tmp/fakeworkspace/collections/collection2.collection.xml",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
+  "description": undefined,
+  "iconPath": ThemeIcon {},
+  "label": "Collection2",
+  "parent": undefined,
+}
+`;
+
+exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 8`] = `
+TocTreeItem {
+  "children": Array [
+    TocTreeItem {
+      "children": Array [],
+      "collapsibleState": "None",
+      "command": Object {
+        "arguments": Array [
+          Object {
+            "$mid": 1,
+            "path": "/tmp/fakeworkspace/modules/m00001/index.cnxml",
+            "scheme": "file",
+          },
+        ],
+        "command": "vscode.open",
+        "title": "open",
+      },
+      "description": "m00001",
+      "iconPath": "File",
+      "label": "Module1",
+      "parent": [Circular],
+    },
+    TocTreeItem {
+      "children": Array [],
+      "collapsibleState": "None",
+      "command": Object {
+        "arguments": Array [
+          Object {
+            "$mid": 1,
+            "path": "/tmp/fakeworkspace/modules/m00002/index.cnxml",
+            "scheme": "file",
+          },
+        ],
+        "command": "vscode.open",
+        "title": "open",
+      },
+      "description": "m00002",
+      "iconPath": "File",
+      "label": "Module2",
+      "parent": [Circular],
+    },
+  ],
+  "collapsibleState": "Collapsed",
+  "command": undefined,
+  "description": undefined,
+  "iconPath": "Folder",
+  "label": "subcollection",
+  "parent": TocTreeItem {
+    "children": Array [
+      [Circular],
+    ],
+    "collapsibleState": "Collapsed",
+    "command": Object {
+      "arguments": Array [
+        Object {
+          "$mid": 1,
+          "path": "/tmp/fakeworkspace/collections/collection1.collection.xml",
+          "scheme": "file",
+        },
+      ],
+      "command": "vscode.open",
+      "title": "open",
+    },
+    "description": undefined,
+    "iconPath": ThemeIcon {},
+    "label": "Collection1",
+    "parent": undefined,
+  },
+}
+`;
+
+exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 9`] = `
+TocTreeItem {
+  "children": Array [],
+  "collapsibleState": "None",
+  "command": Object {
+    "arguments": Array [
+      Object {
+        "$mid": 1,
+        "path": "/tmp/fakeworkspace/modules/m00003/index.cnxml",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
+  "description": undefined,
+  "iconPath": "File",
+  "label": "Module3 (m00003)",
+  "parent": undefined,
+}
+`;

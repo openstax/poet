@@ -1,3 +1,4 @@
+const {URI} = require('vscode-uri')
 
 const REQUIRED_VSCODE_VERSION = '1.52.0'
 const appName = 'VSCODE_MOCK?'
@@ -80,7 +81,7 @@ class Disposable {
 class TreeItem {}
 
 class EventEmitter {
-  get event() {}
+  get event() { return jest.fn() }
   fire() {}
 }
 
@@ -114,7 +115,7 @@ const vscode = {
   env: { appName },
   StatusBarAlignment,
   // OverviewRulerLane,
-  // Uri,
+  Uri: URI,
   Disposable,
   Range,
   Diagnostic,
