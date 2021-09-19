@@ -26,8 +26,6 @@ jobs:
           xvfb-run -a npm run test
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v2
-        with:
-          gcov_path_exclude: client/src/test/**/*
       - name: Build Extension
         run: |
           case "$GITHUB_EVENT_NAME" in
