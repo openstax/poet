@@ -1,8 +1,8 @@
 import { join } from 'path'
 import expect from 'expect'
-import SinonRoot from 'sinon'
+import SinonRoot, { SinonStub } from 'sinon'
 
-import vscode, { Event, EventEmitter, Uri } from 'vscode'
+import vscode, { Event, EventEmitter, Uri, ViewColumn, WebviewPanel } from 'vscode'
 import { BookRootNode, BookToc, TocNodeKind, TocModificationKind, TocMoveEvent, TocRemoveEvent, PageRenameEvent, SubbookRenameEvent } from '../../common/src/toc-tree'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees'
@@ -186,16 +186,24 @@ describe('Toc Editor', () => {
   })
 
   describe('PanelTocEditor', () => {
-    it('translates events from the webview and sends them to the language server', async () => {
-      const { client, sendRequestStub } = createMockClient()
-      const context: ExtensionHostContext = {
-        resourceRootDir: join(__dirname, '..', 'static'), // HTML webview files are loaded from here
-        client,
-        events: { onDidChangeWatchedFiles: sinon.mock() },
-        bookTocs: { version: 1, books: [], orphans: [] }
-      }
-      const p = new TocEditorPanel(context)
+    let postMessageStub = undefined as unknown as SinonStub<[message: any], Thenable<boolean>>
+    let p = undefined as unknown as TocEditorPanel
+    const { client, sendRequestStub } = createMockClient()
+    const { emitters, events } = createMockEvents()
+    const context: ExtensionHostContext = {
+      resourceRootDir: join(__dirname, '..', 'static'), // HTML webview files are loaded from here
+      client,
+      events,
+      bookTocs: { version: 1, books: [], orphans: [] }
+    }
+    beforeEach(() => {
+      const webviewPanel = vscode.window.createWebviewPanel('unused', 'unused', ViewColumn.Active)
+      postMessageStub = sinon.stub(webviewPanel.webview, 'postMessage')
+      sinon.stub(vscode.window, 'createWebviewPanel').returns(webviewPanel)
 
+      p = new TocEditorPanel(context)
+    })
+    it('translates events from the webview and sends them to the language server', async () => {
       let callCount = 0
       function getMessage(reqType: ExtensionServerRequest = ExtensionServerRequest.TocModification) {
         if (sendRequestStub.callCount <= callCount) { throw new Error('expected sendRequest to have been called but it was not') }
@@ -227,6 +235,50 @@ describe('Toc Editor', () => {
 
       await p.handleMessage({ type: 'SUBBOOK_CREATE', bookIndex: 0, slug: 'subbook_slug' })
       expect(getMessage(ExtensionServerRequest.NewSubbook).title).toBe('new_title')
+    })
+    it('disposes', () => {
+      expect(() => p.dispose()).not.toThrow()
+    })
+    it('sends a message to Webview when a fileChanged event is emitted', () => {
+      expect(postMessageStub.callCount).toBe(0)
+      emitters.onDidChangeWatchedFiles.fire()
+      expect(postMessageStub.callCount).toBe(1)
+    })
+    it('sends a message to Webview when the content is updated', async () => {
+      const testToc: BookToc = {
+        type: BookRootNode.Singleton,
+        absPath: '/fake/path',
+        uuid: 'uuid',
+        title: 'title',
+        slug: 'slug',
+        language: 'language',
+        licenseUrl: 'licenseUrl',
+        tree: [{
+          type: TocNodeKind.Inner,
+          value: {
+            token: 'token',
+            title: 'title'
+          },
+          children: [{
+            type: TocNodeKind.Leaf,
+            value: {
+              token: 'token',
+              title: 'title',
+              fileId: 'fileId',
+              absPath: '/fake/path/to/file'
+            }
+          }]
+        }]
+      }
+      const v1 = { version: 1, books: [testToc], orphans: [] }
+
+      expect(postMessageStub.callCount).toBe(0)
+      await p.update(v1)
+      expect(postMessageStub.callCount).toBe(1)
+      expect(postMessageStub.firstCall.args).toMatchSnapshot()
+    })
+    it('does not send a message to Webview when panel is disposed', async () => {
+      await expect(p.refreshPanel({} as unknown as WebviewPanel, client)).rejects
     })
   })
 

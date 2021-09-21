@@ -4,12 +4,6 @@ import expect from 'expect'
 import { activate, deactivate } from '../src/extension'
 import { ExtensionContext } from 'vscode'
 
-describe('Sanity check', () => {
-  it('trivial', () => {
-    expect(true).toBe(true)
-  })
-})
-
 describe('Simple extension activation/deactivation', () => {
   afterEach(async () => await deactivate())
   it('Sanity: starts extension', async function () {

@@ -84,157 +84,6 @@ export interface PanelOutgoingMessage {
   editable: Bookish[]
 }
 
-// async function createBlankModule(): Promise<string> {
-//   const template = (newModuleId: string): string => {
-//     return `
-// <document xmlns="http://cnx.rice.edu/cnxml">
-//   <title>New Module</title>
-//   <metadata xmlns:md="http://cnx.rice.edu/mdml">
-//     <md:title>New Module</md:title>
-//     <md:content-id>${newModuleId}</md:content-id>
-//     <md:uuid>${uuidv4()}</md:uuid>
-//   </metadata>
-//   <content>
-//   </content>
-// </document>`.trim()
-//   }
-//   const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
-//   let moduleNumber = 0
-//   const moduleDirs = new Set(await fsPromises.readdir(path.join(uri.fsPath, 'modules')))
-//   while (true) {
-//     moduleNumber += 1
-//     const newModuleId = `m${moduleNumber.toString().padStart(5, '0')}`
-//     if (moduleDirs.has(newModuleId)) {
-//       // File exists already, try again
-//       continue
-//     }
-//     const newModuleUri = constructModuleUri(uri, newModuleId)
-//     await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(template(newModuleId)))
-//     return newModuleId
-//   }
-// }
-
-// async function createSubcollection(slug: string): Promise<void> {
-//   const uri = expect(getRootPathUri(), 'no root path found in which to write tree')
-//   const replacingUri = constructCollectionUri(uri, slug)
-//   const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' })
-//   const document = new DOMParser().parseFromString(collectionData)
-//   const contentRoot = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
-//   // make a fake tree data collection to populate the new subcollection to the content root
-//   populateTreeDataToXML(document, contentRoot, {
-//     type: TocTreeElementType.collection,
-//     title: 'fake',
-//     children: [{
-//       type: TocTreeElementType.subcollection,
-//       title: 'New Subcollection',
-//       children: []
-//     }]
-//   })
-//   const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(document), {
-//     indentation: '  ',
-//     collapseContent: true,
-//     lineSeparator: '\n'
-//   })
-//   await vscode.workspace.fs.writeFile(replacingUri, Buffer.from(serailizedXml))
-// }
-
-// async function renameModule(id: string, newName: string): Promise<void> {
-//   const uri = expect(getRootPathUri(), 'No root path in which to find renamed module')
-//   const moduleUri = constructModuleUri(uri, id)
-//   const xml = Buffer.from(await vscode.workspace.fs.readFile(moduleUri)).toString('utf-8')
-//   const document = new DOMParser().parseFromString(xml)
-
-//   // Change title in metadata
-//   let metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
-//   if (metadata == null) {
-//     const root = document.getElementsByTagNameNS(NS_CNXML, 'document')[0]
-//     metadata = document.createElementNS(NS_CNXML, 'metadata')
-//     root.appendChild(metadata)
-//   }
-//   let metaTitleElement = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0]
-//   if (metaTitleElement == null) {
-//     metaTitleElement = document.createElementNS(NS_METADATA, 'md:title')
-//     metadata.appendChild(metaTitleElement)
-//   }
-//   metaTitleElement.textContent = newName
-
-//   // Change title in document
-//   let titleElement = document.getElementsByTagNameNS(NS_CNXML, 'title')[0]
-//   if (titleElement == null) {
-//     titleElement = document.createElementNS(NS_CNXML, 'title')
-//     document.insertBefore(titleElement, metadata)
-//   }
-//   titleElement.textContent = newName
-
-//   const newData = new XMLSerializer().serializeToString(document)
-//   await vscode.workspace.fs.writeFile(moduleUri, Buffer.from(newData))
-// }
-
-// export const handleMessageFromWebviewPanel = (panel: vscode.WebviewPanel, client: LanguageClient) => async (message: PanelIncomingMessage): Promise<void> => {
-//   if (message.type === 'refresh') {
-//     await refreshPanel(panel, client)
-//   } else if (message.type === 'error') {
-//     throw new Error(message.message)
-//   } else if (message.type === 'debug') {
-//     // For debugging purposes only
-//     /* istanbul ignore next */
-//     console.debug(message.item)
-//   } else if (message.type === 'PAGE_CREATE') {
-//     await createBlankModule()
-//   } else if (message.type === 'subcollection-create') {
-//     await createSubcollection(message.slug)
-//   } else if (message.type === 'module-rename') {
-//     const { moduleid, newName } = message
-//     await renameModule(moduleid, newName)
-//   } else if (message.type === 'write-tree') {
-//     await writeTree(message.treeData)
-//   } else {
-//     throw new Error(`Unexpected signal: ${JSON.stringify(message)}`)
-//   }
-// }
-
-// async function writeTree(treeData: TocTreeCollection): Promise<void> {
-//   const uri = expect(getRootPathUri(), 'no root path found in which to write tree')
-//   const slug = expect(treeData.slug, 'attempted to write tree with no slug')
-//   const replacingUri = uri.with({ path: path.join(uri.fsPath, 'collections', `${slug}.collection.xml`) })
-//   const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' })
-//   const document = new DOMParser().parseFromString(collectionData)
-//   replaceCollectionContent(document, treeData)
-//   const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(document), {
-//     indentation: '  ',
-//     collapseContent: true,
-//     lineSeparator: '\n'
-//   })
-//   await vscode.workspace.fs.writeFile(replacingUri, Buffer.from(serailizedXml))
-// }
-
-// function populateTreeDataToXML(document: XMLDocument, root: any, treeData: TocTreeCollection): void {
-//   for (const child of treeData.children) {
-//     const element = document.createElementNS(NS_COLLECTION, child.type)
-//     // md prefix is technically a guess. If incorrect, document may have a lot of xmlns:md attributes
-//     const title = document.createElementNS(NS_METADATA, 'md:title')
-//     const titleContent = document.createTextNode(child.title)
-//     title.appendChild(titleContent)
-//     root.appendChild(element)
-//     if (child.type === TocTreeElementType.subcollection) {
-//       element.appendChild(title)
-//       const contentWrapper = document.createElementNS(NS_COLLECTION, 'content')
-//       element.appendChild(contentWrapper)
-//       populateTreeDataToXML(document, contentWrapper, child)
-//     } else if (child.type === TocTreeElementType.module) {
-//       element.setAttribute('document', child.moduleid)
-//     }
-//   }
-// }
-
-// function replaceCollectionContent(document: XMLDocument, treeData: TocTreeCollection): void {
-//   const content = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
-
-//   const newContent = document.createElementNS(NS_COLLECTION, 'content')
-//   expect(content.parentNode, 'expected a parent element').replaceChild(newContent, content)
-//   populateTreeDataToXML(document, newContent, treeData)
-// }
-
 function toTreeItem(n: ClientTocNode): TreeItemWithToken {
   if (n.type === TocNodeKind.Leaf) {
     return {
@@ -258,6 +107,7 @@ function toTreeItem(n: ClientTocNode): TreeItemWithToken {
 const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {
   const localResourceRoots = [vscode.Uri.file(context.resourceRootDir)]
   const workspaceRoot = getRootPathUri()
+  /* istanbul ignore if */
   if (workspaceRoot != null) {
     localResourceRoots.push(workspaceRoot)
   }
@@ -307,24 +157,22 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
       event = { ...m.event, type: TocModificationKind.SubbookRename }
     } else if (m.type === 'PAGE_CREATE') {
       const title = await vscode.window.showInputBox({ prompt: 'Title of new Page' })
+      /* istanbul ignore else */
       if (title !== undefined) {
         const params: NewPageParams = { workspaceUri, title, bookIndex: m.bookIndex }
         await this.context.client.sendRequest(ExtensionServerRequest.NewPage, params)
         return
       }
-    } else if (m.type === 'SUBBOOK_CREATE') {
+    } else /* istanbul ignore else */ if (m.type === 'SUBBOOK_CREATE') {
       const title = await vscode.window.showInputBox({ prompt: 'Title of new Book Section' })
+      /* istanbul ignore else */
       if (title !== undefined) {
         const params: NewSubbookParams = { workspaceUri, title, bookIndex: m.bookIndex, slug: m.slug }
         await this.context.client.sendRequest(ExtensionServerRequest.NewSubbook, params)
         return
       }
-    // } else if (m.type === 'WEBVIEW_LOADED') {
-    // } else if (m.type === 'DEBUG') {
-    //   console.log('DEBUG', m.message)
-    } else {
-      throw new Error(`Unknown Message type: ${m.type}`)
     }
+    /* istanbul ignore else */
     if (event !== undefined) {
       await this.context.client.sendRequest(ExtensionServerRequest.TocModification, { workspaceUri, event })
     }
@@ -374,7 +222,6 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
       // Do no work if the panel is disposed
       return
     }
-
     await panel.webview.postMessage(this.createMessage())
   }
 }

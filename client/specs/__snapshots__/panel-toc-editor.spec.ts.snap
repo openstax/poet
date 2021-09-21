@@ -1,5 +1,61 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`Toc Editor PanelTocEditor sends a message to Webview when the content is updated 1`] = `
+Array [
+  Object {
+    "editable": Array [
+      Object {
+        "absPath": "/fake/path",
+        "language": "language",
+        "licenseUrl": "licenseUrl",
+        "slug": "slug",
+        "title": "title",
+        "tree": Array [
+          Object {
+            "children": Array [
+              Object {
+                "absPath": "/fake/path/to/file",
+                "fileId": "fileId",
+                "subtitle": "fileId",
+                "title": "title",
+                "token": "token",
+                "type": "TocNodeKind.Leaf",
+              },
+            ],
+            "title": "title",
+            "token": "token",
+            "type": "TocNodeKind.Inner",
+          },
+        ],
+        "type": "BookRootNode.Singleton",
+        "uuid": "uuid",
+      },
+    ],
+    "uneditable": Array [
+      Object {
+        "slug": "mock-slug__source-only",
+        "title": "All Modules",
+        "tree": Array [
+          Object {
+            "absPath": "/fake/path/to/file",
+            "fileId": "fileId",
+            "subtitle": "fileId",
+            "title": "title",
+            "token": "token",
+            "type": "TocNodeKind.Leaf",
+          },
+        ],
+      },
+      Object {
+        "slug": "mock-slug__source-only",
+        "title": "Orphan Modules",
+        "tree": Array [],
+      },
+    ],
+  },
+]
+`;
+
 exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 1`] = `Array []`;
 
 exports[`Toc Editor TocTreesProvider returns expected TocTreeItems 2`] = `Array []`;
@@ -313,7 +369,7 @@ Array [
         "expand": 3,
       },
     ],
-    "callId": 11,
+    "callId": 17,
     "callback": undefined,
     "errorWithCallStack": [Error],
     "exception": undefined,
@@ -355,7 +411,7 @@ Array [
         "expand": 3,
       },
     ],
-    "callId": 12,
+    "callId": 18,
     "callback": undefined,
     "errorWithCallStack": [Error],
     "exception": undefined,

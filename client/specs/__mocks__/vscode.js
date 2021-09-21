@@ -27,12 +27,13 @@ const window = {
   // createTextEditorDecorationType: jest.fn(),
   // registerFileDecorationProvider: jest.fn(),
   createWebviewPanel: jest.fn(() => ({
+    dispose: jest.fn(),
     onDidDispose: jest.fn(),
     webview: {
       html: '',
       postMessage: jest.fn(),
       asWebviewUri: jest.fn(() => 'fake-webview-uri'),
-      onDidReceiveMessage: jest.fn(),
+      onDidReceiveMessage: () => new Disposable(),
     }
   })),
   showInputBox: jest.fn(() => Promise.resolve()),
@@ -86,13 +87,24 @@ const TreeItemCollapsibleState = {
 };
 
 class Disposable {
-  dispose() {}
+  constructor(fn) { this.fn = fn }
+  dispose() { if (this.fn) this.fn() }
 }
 class TreeItem {}
 
 class EventEmitter {
-  get event() { return jest.fn() }
-  fire() {}
+  listeners = []
+  event = (listener) => {
+    const disposable = new Disposable()
+    this.listeners.push({ listener, disposable })
+    return disposable
+  }
+  fire(...args) {
+    this.listeners.forEach(({ listener }) => listener(...args))
+  }
+  dispose() {
+    this.listeners.forEach(({ disposable }) => disposable.dispose(...args))
+  }
 }
 
 class CompletionItem {}
