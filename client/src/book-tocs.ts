@@ -50,7 +50,8 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
       }
     } else if (node.type === TocNodeKind.Leaf) {
       const uri = Uri.parse(node.value.absPath)
-      const ret = this.includeFileIdsForFilter ? { label: `${node.value.title ?? 'Loading...'} (${node.value.fileId})` } : { label: node.value.title, description: node.value.fileId }
+      const title = node.value.title ?? 'Loading...'
+      const ret = this.includeFileIdsForFilter ? { label: `${title} (${node.value.fileId})` } : { label: title, description: node.value.fileId }
       return {
         ...ret,
         iconPath: TocItemIcon.Page,

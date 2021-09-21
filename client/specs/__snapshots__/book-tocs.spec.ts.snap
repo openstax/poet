@@ -1,0 +1,133 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Toc Provider filters fileids when filtering is set 1`] = `
+Object {
+  "collapsibleState": "None",
+  "command": Object {
+    "arguments": Array [
+      Object {
+        "$mid": 1,
+        "path": "/path/to/file",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
+  "description": "fileId",
+  "iconPath": "File",
+  "label": "title",
+  "resourceUri": Object {
+    "$mid": 1,
+    "path": "/path/to/file",
+    "scheme": "file",
+  },
+}
+`;
+
+exports[`Toc Provider filters fileids when filtering is set 2`] = `
+Object {
+  "collapsibleState": "None",
+  "command": Object {
+    "arguments": Array [
+      Object {
+        "$mid": 1,
+        "path": "/path/to/file",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
+  "iconPath": "File",
+  "label": "title (fileId)",
+  "resourceUri": Object {
+    "$mid": 1,
+    "path": "/path/to/file",
+    "scheme": "file",
+  },
+}
+`;
+
+exports[`Toc Provider filters fileids when filtering is set 3`] = `
+Object {
+  "collapsibleState": "None",
+  "command": Object {
+    "arguments": Array [
+      Object {
+        "$mid": 1,
+        "path": "/path/to/file",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
+  "description": "fileId",
+  "iconPath": "File",
+  "label": "title",
+  "resourceUri": Object {
+    "$mid": 1,
+    "path": "/path/to/file",
+    "scheme": "file",
+  },
+}
+`;
+
+exports[`Toc Provider returns tree items for children 1`] = `
+Object {
+  "collapsibleState": "Collapsed",
+  "command": Object {
+    "arguments": Array [
+      Object {
+        "$mid": 1,
+        "path": "/some/path",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
+  "description": "slug",
+  "iconPath": ThemeIcon {},
+  "label": "title",
+  "resourceUri": Object {
+    "$mid": 1,
+    "path": "/some/path",
+    "scheme": "file",
+  },
+}
+`;
+
+exports[`Toc Provider returns tree items for children 2`] = `
+Object {
+  "collapsibleState": "Collapsed",
+  "iconPath": "Folder",
+  "label": "title",
+}
+`;
+
+exports[`Toc Provider returns tree items for children 3`] = `
+Object {
+  "collapsibleState": "None",
+  "command": Object {
+    "arguments": Array [
+      Object {
+        "$mid": 1,
+        "path": "/path/to/file",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
+  "description": "fileId",
+  "iconPath": "File",
+  "label": "title",
+  "resourceUri": Object {
+    "$mid": 1,
+    "path": "/path/to/file",
+    "scheme": "file",
+  },
+}
+`;

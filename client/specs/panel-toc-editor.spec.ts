@@ -1,6 +1,5 @@
 import { join } from 'path'
 import expect from 'expect'
-import assert from 'assert'
 import SinonRoot from 'sinon'
 
 import vscode, { Event, EventEmitter, Uri } from 'vscode'
@@ -12,10 +11,6 @@ import { LanguageClient } from 'vscode-languageclient/node'
 import { DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest } from '../../common/src/requests'
 import { ExtensionEvents, ExtensionHostContext } from '../src/panel'
 import { BookOrTocNode, TocsTreeProvider } from '../src/book-tocs'
-
-// function assertDeepStrictEqual<T>(actual: any, expected: T): asserts actual is T {
-//   expect(actual).toEqual(expected)
-// }
 
 const TEST_OUT_DIR = join(__dirname, '../src')
 const resourceRootDir = TEST_OUT_DIR
