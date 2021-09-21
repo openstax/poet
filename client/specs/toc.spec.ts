@@ -1,15 +1,17 @@
 import { join } from 'path'
 import expect from 'expect'
+import assert from 'assert'
 import SinonRoot from 'sinon'
 
 import vscode, { Event, EventEmitter, Uri } from 'vscode'
 import { BookRootNode, BookToc, TocNodeKind, TocModificationKind, TocMoveEvent, TocRemoveEvent, PageRenameEvent, SubbookRenameEvent } from '../../common/src/toc-tree'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
-import { TocItemIcon, TocTreeItem, TocTreesProvider } from '../src/toc-trees'
+import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees'
 import { TocEditorPanel } from '../src/panel-toc-editor'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest } from '../../common/src/requests'
 import { ExtensionEvents, ExtensionHostContext } from '../src/panel'
+import { BookOrTocNode, TocsTreeProvider } from '../src/book-tocs'
 
 // function assertDeepStrictEqual<T>(actual: any, expected: T): asserts actual is T {
 //   expect(actual).toEqual(expected)
@@ -230,6 +232,77 @@ describe('Toc Editor', () => {
 
       await p.handleMessage({ type: 'SUBBOOK_CREATE', bookIndex: 0, slug: 'subbook_slug' })
       expect(getMessage(ExtensionServerRequest.NewSubbook).title).toBe('new_title')
+    })
+  })
+
+  describe('filtering', () => {
+    it('toggleTocTreesFilteringHandler', async () => {
+      const revealStub = sinon.stub()
+      const toggleFilterStub = sinon.stub()
+      const getChildrenStub = sinon.stub()
+      const refreshStub = sinon.stub()
+
+      const view: vscode.TreeView<BookOrTocNode> = {
+        reveal: revealStub
+      } as unknown as vscode.TreeView<BookOrTocNode>
+      const provider: TocsTreeProvider = {
+        toggleFilterMode: toggleFilterStub,
+        getChildren: getChildrenStub,
+        refresh: refreshStub,
+        getParent: () => undefined
+      } as unknown as TocsTreeProvider
+      const fakeChildren = [
+        { label: 'col1', children: [{ label: 'subcol', children: [{ label: 'm2', children: [] }] }] },
+        { label: 'col2', children: [{ label: 'm1', children: [] }] }
+      ]
+      getChildrenStub.returns(fakeChildren)
+
+      const handler = toggleTocTreesFilteringHandler(view, provider)
+      await handler()
+      expect(toggleFilterStub.callCount).toBe(1)
+      expect(getChildrenStub.callCount).toBe(1)
+      expect(revealStub.callCount).toBe(2)
+      expect(revealStub.getCalls()).toMatchSnapshot()
+      expect(refreshStub.callCount).toBe(0)
+    })
+    it('toggleTocTreesFilteringHandler disables itself while revealing', async () => {
+      const revealStub = sinon.stub()
+      const toggleFilterStub = sinon.stub()
+      const getChildrenStub = sinon.stub()
+      const fakeChildren = [
+        { label: 'col1', children: [{ label: 'm1', children: [] }] }
+      ]
+      getChildrenStub.returns(fakeChildren)
+
+      const view: vscode.TreeView<BookOrTocNode> = {
+        reveal: revealStub
+      } as unknown as vscode.TreeView<BookOrTocNode>
+      const provider: TocsTreeProvider = {
+        toggleFilterMode: toggleFilterStub,
+        getChildren: getChildrenStub,
+        getParent: () => undefined
+      } as unknown as TocsTreeProvider
+
+      const handler = toggleTocTreesFilteringHandler(view, provider)
+      // Invoke the handler the first time reveal is called to simulate a parallel
+      // user request without resorting to synthetic delay injection
+      revealStub.onCall(0).callsFake(handler)
+      await handler()
+      expect(toggleFilterStub.callCount).toBe(1)
+      expect(revealStub.callCount).toBe(1)
+      expect(getChildrenStub.callCount).toBe(1)
+    })
+    it('toggleTocTreesFilteringHandler does not lock itself on errors', async () => {
+      const toggleFilterStub = sinon.stub().throws()
+      const view: vscode.TreeView<BookOrTocNode> = {} as unknown as vscode.TreeView<BookOrTocNode>
+      const provider: TocsTreeProvider = {
+        toggleFilterMode: toggleFilterStub
+      } as unknown as TocsTreeProvider
+
+      const handler = toggleTocTreesFilteringHandler(view, provider)
+      try { await handler() } catch { }
+      try { await handler() } catch { }
+      expect(toggleFilterStub.callCount).toBe(2)
     })
   })
 })

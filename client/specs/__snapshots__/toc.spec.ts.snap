@@ -295,3 +295,92 @@ TocTreeItem {
   "parent": undefined,
 }
 `;
+
+exports[`Toc Editor filtering toggleTocTreesFilteringHandler 1`] = `
+Array [
+  Object {
+    "args": Array [
+      Object {
+        "children": Array [
+          Object {
+            "children": Array [],
+            "label": "m1",
+          },
+        ],
+        "label": "col2",
+      },
+      Object {
+        "expand": 3,
+      },
+    ],
+    "callId": 11,
+    "callback": undefined,
+    "errorWithCallStack": [Error],
+    "exception": undefined,
+    "firstArg": Object {
+      "children": Array [
+        Object {
+          "children": Array [],
+          "label": "m1",
+        },
+      ],
+      "label": "col2",
+    },
+    "lastArg": Object {
+      "expand": 3,
+    },
+    "proxy": [Function],
+    "returnValue": undefined,
+    "thisValue": Object {
+      "reveal": [Function],
+    },
+  },
+  Object {
+    "args": Array [
+      Object {
+        "children": Array [
+          Object {
+            "children": Array [
+              Object {
+                "children": Array [],
+                "label": "m2",
+              },
+            ],
+            "label": "subcol",
+          },
+        ],
+        "label": "col1",
+      },
+      Object {
+        "expand": 3,
+      },
+    ],
+    "callId": 12,
+    "callback": undefined,
+    "errorWithCallStack": [Error],
+    "exception": undefined,
+    "firstArg": Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [],
+              "label": "m2",
+            },
+          ],
+          "label": "subcol",
+        },
+      ],
+      "label": "col1",
+    },
+    "lastArg": Object {
+      "expand": 3,
+    },
+    "proxy": [Function],
+    "returnValue": undefined,
+    "thisValue": Object {
+      "reveal": [Function],
+    },
+  },
+]
+`;

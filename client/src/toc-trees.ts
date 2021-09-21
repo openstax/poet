@@ -146,19 +146,19 @@ export function toggleTocTreesFilteringHandler(view: vscode.TreeView<BookOrTocNo
     if (revealing) { return }
     revealing = true
 
-    // Toggle data provider filter mode and reveal all children so the
-    // tree expands if it hasn't already
-    provider.toggleFilterMode()
-    const leaves: ClientTocNode[] = []
-    leafFinder(leaves, provider.getChildren())
-    const nodes3Up = new Set<BookOrTocNode>() // VSCode allows expanding up to 3 levels down
-    leaves.forEach(l => {
-      const p1 = provider.getParent(l)
-      const p2 = p1 === undefined ? undefined : provider.getParent(p1)
-      const p3 = p2 === undefined ? undefined : provider.getParent(p2)
-      nodes3Up.add(p3 ?? p2 ?? p1 ?? l)
-    })
     try {
+      // Toggle data provider filter mode and reveal all children so the
+      // tree expands if it hasn't already
+      provider.toggleFilterMode()
+      const leaves: ClientTocNode[] = []
+      leafFinder(leaves, provider.getChildren())
+      const nodes3Up = new Set<BookOrTocNode>() // VSCode allows expanding up to 3 levels down
+      leaves.forEach(l => {
+        const p1 = provider.getParent(l)
+        const p2 = p1 === undefined ? undefined : provider.getParent(p1)
+        const p3 = p2 === undefined ? undefined : provider.getParent(p2)
+        nodes3Up.add(p3 ?? p2 ?? p1 ?? l)
+      })
       for (const node of Array.from(nodes3Up).reverse()) {
         await view.reveal(node, { expand: 3 })
       }
