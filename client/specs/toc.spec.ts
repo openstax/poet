@@ -2,13 +2,14 @@ import { join } from 'path'
 import expect from 'expect'
 import SinonRoot from 'sinon'
 
-import vscode, { Event, EventEmitter } from 'vscode'
-import { BookRootNode, BookToc, TocNodeKind } from '../../common/src/toc-tree'
+import vscode, { Event, EventEmitter, Uri } from 'vscode'
+import { BookRootNode, BookToc, TocNodeKind, TocModificationKind, TocMoveEvent, TocRemoveEvent, PageRenameEvent, SubbookRenameEvent } from '../../common/src/toc-tree'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { TocItemIcon, TocTreeItem, TocTreesProvider } from '../src/toc-trees'
+import { TocEditorPanel } from '../src/panel-toc-editor'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { DEFAULT_BOOK_TOCS_ARGS } from '../../common/src/requests'
-import { ExtensionEvents } from '../src/panel'
+import { DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest } from '../../common/src/requests'
+import { ExtensionEvents, ExtensionHostContext } from '../src/panel'
 
 // function assertDeepStrictEqual<T>(actual: any, expected: T): asserts actual is T {
 //   expect(actual).toEqual(expected)
@@ -17,11 +18,18 @@ import { ExtensionEvents } from '../src/panel'
 const TEST_OUT_DIR = join(__dirname, '../src')
 const resourceRootDir = TEST_OUT_DIR
 
-const createMockClient = (): LanguageClient => {
-  return {
-    sendRequest: SinonRoot.stub().returns([]),
+const createMockClient = () => {
+  const sendRequestStub = SinonRoot.stub()
+  sendRequestStub.returns([])
+  const client = {
+    sendRequest: sendRequestStub,
     onRequest: SinonRoot.stub().returns({ dispose: () => { } })
   } as unknown as LanguageClient
+
+  return {
+    client,
+    sendRequestStub
+  }
 }
 
 type ExtractEventGeneric<GenericEvent> = GenericEvent extends Event<infer X> ? X : never
@@ -160,7 +168,7 @@ describe('Toc Editor', () => {
       }
     )
 
-    const mockClient = createMockClient()
+    const mockClient = createMockClient().client
     // We don't want to just return []
     const sendRequestMock = sinon.stub()
     mockClient.sendRequest = sendRequestMock
@@ -178,5 +186,50 @@ describe('Toc Editor', () => {
     expect(await tocTreesProvider.getParent(module1Item)).toMatchSnapshot()
     tocTreesProvider.toggleFilterMode()
     expect(tocTreesProvider.getTreeItem(module3Item)).toMatchSnapshot()
+  })
+
+  describe('PanelTocEditor', () => {
+    it('translates events from the webview and sends them to the language server', async () => {
+      const { client, sendRequestStub } = createMockClient()
+      const context: ExtensionHostContext = {
+        resourceRootDir: join(__dirname, '..', 'static'), // HTML webview files are loaded from here
+        client,
+        events: { onDidChangeWatchedFiles: sinon.mock() },
+        bookTocs: { version: 1, books: [], orphans: [] }
+      }
+      const p = new TocEditorPanel(context)
+
+      let callCount = 0
+      function getMessage(reqType: ExtensionServerRequest = ExtensionServerRequest.TocModification) {
+        if (sendRequestStub.callCount <= callCount) { throw new Error('expected sendRequest to have been called but it was not') }
+        const c = sendRequestStub.getCall(callCount++)
+        if (c.firstArg !== reqType) { throw new Error(`expected the first arg of sendRequest to be '${reqType}' but it was '${c.firstArg as unknown as string}'`) }
+        return c.args[1]
+      }
+      const uberEvent = {
+        newTitle: 'my_new_title',
+        nodeToken: 'mytoken',
+        newParentToken: undefined,
+        newChildIndex: 0,
+        bookIndex: 0
+      }
+
+      sinon.stub(vscode.workspace, 'workspaceFolders').get(() => [{ uri: Uri.file('/path/to/workspace/root') }])
+      await p.handleMessage({ type: 'TOC_MOVE', event: uberEvent as unknown as TocMoveEvent })
+      expect(getMessage().event.type).toBe(TocModificationKind.Move)
+      await p.handleMessage({ type: 'TOC_REMOVE', event: uberEvent as unknown as TocRemoveEvent })
+      expect(getMessage().event.type).toBe(TocModificationKind.Remove)
+      await p.handleMessage({ type: 'PAGE_RENAME', event: uberEvent as unknown as PageRenameEvent })
+      expect(getMessage().event.type).toBe(TocModificationKind.PageRename)
+      await p.handleMessage({ type: 'SUBBOOK_RENAME', event: uberEvent as unknown as SubbookRenameEvent })
+      expect(getMessage().event.type).toBe(TocModificationKind.SubbookRename)
+
+      sinon.stub(vscode.window, 'showInputBox').returns(Promise.resolve('new_title'))
+      await p.handleMessage({ type: 'PAGE_CREATE', bookIndex: 0 })
+      expect(getMessage(ExtensionServerRequest.NewPage).title).toBe('new_title')
+
+      await p.handleMessage({ type: 'SUBBOOK_CREATE', bookIndex: 0, slug: 'subbook_slug' })
+      expect(getMessage(ExtensionServerRequest.NewSubbook).title).toBe('new_title')
+    })
   })
 })

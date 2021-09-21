@@ -1,3 +1,4 @@
+import expect from 'expect'
 import * as Quarx from 'quarx'
 import { TocNode, TocNodeKind } from './utils'
 import { first, loadSuccess, makeBundle, read } from './util.spec'

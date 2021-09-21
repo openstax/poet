@@ -26,12 +26,22 @@ const window = {
   // showWarningMessage: jest.fn(),
   // createTextEditorDecorationType: jest.fn(),
   // registerFileDecorationProvider: jest.fn(),
+  createWebviewPanel: jest.fn(() => ({
+    onDidDispose: jest.fn(),
+    webview: {
+      html: '',
+      postMessage: jest.fn(),
+      asWebviewUri: jest.fn(() => 'fake-webview-uri'),
+      onDidReceiveMessage: jest.fn(),
+    }
+  })),
+  showInputBox: jest.fn(() => Promise.resolve()),
 };
 
 const workspace = {
   textDocuments: [],
   getConfiguration: jest.fn(),
-  // workspaceFolders: [],
+  workspaceFolders: [],
   // onDidSaveTextDocument: jest.fn(),
   createFileSystemWatcher: jest.fn(() => ({
     onDidCreate: jest.fn(),
@@ -106,6 +116,20 @@ class CodeActionKind {
     static SourceOrganizeImports = 'SourceOrganizeImports'
 }
 
+const ViewColumn = {
+    Active: -1,
+    Beside: -2,
+    One: 1,
+    Two: 2,
+    Three: 3,
+    Four: 4,
+    Five: 5,
+    Six: 6,
+    Seven: 7,
+    Eight: 8,
+    Nine: 9,
+}
+
 const vscode = {
   version: REQUIRED_VSCODE_VERSION,
   languages,
@@ -114,6 +138,7 @@ const vscode = {
   workspace,
   env: { appName },
   StatusBarAlignment,
+  ViewColumn,
   // OverviewRulerLane,
   Uri: URI,
   Disposable,
@@ -134,4 +159,4 @@ const vscode = {
   ThemeIcon,
 };
 
-module.exports = vscode;
+module.exports = { ...vscode, default: vscode };

@@ -1,7 +1,7 @@
 import { v4 as uuid4 } from 'uuid'
 import { glob } from 'glob'
 import fs from 'fs'
-import path from 'path'
+import * as path from 'path'
 import I from 'immutable'
 import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
@@ -76,7 +76,14 @@ export function pageAsTreeObject(page: PageNode): TocTreeModule {
 }
 
 // https://stackoverflow.com/a/35008327
-const checkFileExists = async (s: string): Promise<boolean> => await new Promise(resolve => fs.access(s, fs.constants.F_OK, e => resolve(e === null)))
+const checkFileExists = async (s: string): Promise<boolean> => {
+  try {
+    await fs.promises.access(s, fs.constants.F_OK)
+    return true
+  } catch {
+    return false
+  }
+}
 
 function readSync(n: Fileish) {
   const { fsPath } = URI.parse(n.absPath)

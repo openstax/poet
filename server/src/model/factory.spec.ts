@@ -1,3 +1,4 @@
+import expect from 'expect'
 import { Factory } from './factory'
 
 describe('Factory', () => {

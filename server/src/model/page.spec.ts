@@ -1,3 +1,4 @@
+import expect from 'expect'
 import * as path from 'path'
 import { PageNode, PageValidationKind, UNTITLED_FILE } from './page'
 import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
@@ -27,7 +28,7 @@ describe('Page', () => {
   })
   it('sets Untitled when there is no title element in the CNXML', () => {
     page.load(pageMaker({ title: null }))
-    expect(page.title(fail)).toBe(UNTITLED_FILE)
+    expect(page.optTitle).toBe(UNTITLED_FILE)
   })
   it('errors if there are two uuid elements (or any element that should occur exactly once in the doc)', () => {
     expect(() => page.load(pageMaker({ uuid: 'little bobby drop tables</md:uuid><md:uuid>injection is fun' })))

@@ -1,3 +1,4 @@
+import expect from 'expect'
 import { JobRunner, URIPair } from './job-runner'
 
 JobRunner.debug = () => {} // Turn off logging

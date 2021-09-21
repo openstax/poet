@@ -1,3 +1,4 @@
+import expect from 'expect'
 import path from 'path'
 import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
@@ -606,32 +607,36 @@ describe('modifyToc()', () => {
 })
 
 // ------------ Stubs ------------
+const emptyFn = <T = any>(): T => {
+  function fn() {}
+  return fn as unknown as T
+} // jest.fn()
 const WATCHDOG = new class StubWatchdog implements WatchDog {
   shutdownReceived = false
-  initialize = jest.fn()
-  exit = jest.fn()
-  onClose = jest.fn()
-  onError = jest.fn()
-  write = jest.fn()
+  initialize = emptyFn()
+  exit = emptyFn()
+  onClose = emptyFn()
+  onError = emptyFn()
+  write = emptyFn()
 }()
 function PROTOCOL_CONNECTION_FACTORY(logger: Logger): ProtocolConnection {
   return {
-    onClose: jest.fn(),
-    onRequest: jest.fn(),
-    onNotification: jest.fn(),
-    onProgress: jest.fn(),
-    onError: jest.fn(),
-    onUnhandledNotification: jest.fn(),
-    onDispose: jest.fn(),
-    sendRequest: jest.fn(),
-    sendNotification: jest.fn(),
-    sendProgress: jest.fn(),
-    trace: jest.fn(),
-    end: jest.fn(),
-    dispose: jest.fn(),
-    listen: jest.fn()
+    onClose: emptyFn(),
+    onRequest: emptyFn(),
+    onNotification: emptyFn(),
+    onProgress: emptyFn(),
+    onError: emptyFn(),
+    onUnhandledNotification: emptyFn(),
+    onDispose: emptyFn(),
+    sendRequest: emptyFn(),
+    sendNotification: emptyFn(),
+    sendProgress: emptyFn(),
+    trace: emptyFn(),
+    end: emptyFn(),
+    dispose: emptyFn(),
+    listen: emptyFn()
   }
 }
-PROTOCOL_CONNECTION_FACTORY.onClose = jest.fn()
-PROTOCOL_CONNECTION_FACTORY.onError = jest.fn()
+PROTOCOL_CONNECTION_FACTORY.onClose = emptyFn()
+PROTOCOL_CONNECTION_FACTORY.onError = emptyFn()
 const conn = createConnection(PROTOCOL_CONNECTION_FACTORY, WATCHDOG)

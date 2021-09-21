@@ -1,3 +1,5 @@
+import expect from 'expect'
+import SinonRoot from 'sinon'
 import { readFileSync } from 'fs'
 import * as path from 'path'
 import * as xpath from 'xpath-ts'
@@ -104,9 +106,9 @@ export function loadSuccess<T extends Fileish>(n: T, skipInitialLoadedCheck = fa
 }
 
 export function ignoreConsoleWarnings(fn: () => void) {
-  const warnSpy = jest.spyOn(console, 'warn').mockImplementation()
+  const warnStub = SinonRoot.stub(console, 'warn')
   fn()
-  warnSpy.mockRestore()
+  warnStub.restore()
 }
 
 export function expectErrors<T extends Fileish>(node: T, messages: string[]) {

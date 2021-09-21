@@ -1,3 +1,4 @@
+import expect from 'expect'
 import { Opt } from './utils'
 import { Fileish } from './fileish'
 import { first, FS_PATH_HELPER, makeBundle } from './util.spec'

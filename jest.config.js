@@ -2,7 +2,13 @@
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'node',
-    roots: [ 'specs' ],
+    roots: [
+      'client/specs',
+      'server/src'
+    ],
     detectOpenHandles: true,
+    testPathIgnorePatterns: [
+      '/out/'
+    ]
   }
   

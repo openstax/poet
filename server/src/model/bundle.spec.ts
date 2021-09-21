@@ -1,3 +1,4 @@
+import expect from 'expect'
 import { Bundle, BundleValidationKind } from './bundle'
 import { expectErrors, first, loadSuccess, makeBundle, read } from './util.spec'
 

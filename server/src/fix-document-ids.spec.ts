@@ -1,3 +1,4 @@
+import expect from 'expect'
 import assert from 'assert'
 import * as xpath from 'xpath-ts'
 import { DOMParser, XMLSerializer } from 'xmldom'
