@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ensureIds runs and yields a response 1`] = `
+Array [
+  "bundle-ensure-ids",
+  Object {
+    "workspaceUri": "/fake/workspace",
+  },
+]
+`;

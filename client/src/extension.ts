@@ -26,6 +26,7 @@ export const forwardOnDidChangeWorkspaceFolders = (clientInner: LanguageClient) 
 type ExtensionExports = { [key in OpenstaxCommand]: PanelManager<Panel<unknown, unknown>> }
 export async function activate(context: vscode.ExtensionContext): Promise<ExtensionExports> {
   // detect Theia. Alert the user if they are running Theia
+  /* istanbul ignore next */
   expect(process.env.GITPOD_HOST != null && process.env.EDITOR?.includes('code') === false ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
 
   client = launchLanguageServer(context)

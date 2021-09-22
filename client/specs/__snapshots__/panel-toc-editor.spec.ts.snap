@@ -356,13 +356,8 @@ exports[`Toc Editor filtering toggleTocTreesFilteringHandler 1`] = `
 Array [
   Array [
     Object {
-      "children": Array [
-        Object {
-          "children": Array [],
-          "label": "m1",
-        },
-      ],
-      "label": "col2",
+      "children": Array [],
+      "label": "m1",
     },
     Object {
       "expand": 3,
@@ -370,18 +365,9 @@ Array [
   ],
   Array [
     Object {
-      "children": Array [
-        Object {
-          "children": Array [
-            Object {
-              "children": Array [],
-              "label": "m2",
-            },
-          ],
-          "label": "subcol",
-        },
-      ],
-      "label": "col1",
+      "children": Array [],
+      "label": "m2",
+      "type": "TocNodeKind.Leaf",
     },
     Object {
       "expand": 3,

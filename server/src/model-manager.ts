@@ -7,7 +7,7 @@ import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
-import { TocTreeModule, TocTreeElementType, BookToc, ClientTocNode, TocModification, TocModificationKind, TocInner, ClientSubBookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc-tree'
+import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocInner, ClientSubBookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc-tree'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
@@ -66,15 +66,6 @@ export function pageToModuleId(page: PageNode) {
   return path.basename(path.dirname(page.absPath))
 }
 
-export function pageAsTreeObject(page: PageNode): TocTreeModule {
-  return {
-    type: TocTreeElementType.module,
-    moduleid: pageToModuleId(page),
-    title: page.title(() => readSync(page)),
-    subtitle: pageToModuleId(page)
-  }
-}
-
 // https://stackoverflow.com/a/35008327
 const checkFileExists = async (s: string): Promise<boolean> => {
   try {
@@ -83,11 +74,6 @@ const checkFileExists = async (s: string): Promise<boolean> => {
   } catch {
     return false
   }
-}
-
-function readSync(n: Fileish) {
-  const { fsPath } = URI.parse(n.absPath)
-  return fs.readFileSync(fsPath, 'utf-8')
 }
 
 function toStringFileChangeType(t: FileChangeType) {

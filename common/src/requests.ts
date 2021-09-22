@@ -1,4 +1,4 @@
-import { TocTreeModule, BookToc, ClientPageish } from './toc-tree'
+import { BookToc, ClientPageish } from './toc-tree'
 
 export enum DiagnosticSource {
   xml = 'xml',
@@ -20,8 +20,6 @@ interface LanguageClient {
 // does not utilize one of the ExtensionServerRequest types
 
 export enum ExtensionServerRequest {
-  BundleModules = 'bundle-modules',
-  BundleOrphanedModules = 'bundle-orphaned-modules',
   BundleEnsureIds = 'bundle-ensure-ids',
   TocModification = 'toc-modification',
   NewPage = 'new-page',
@@ -61,25 +59,10 @@ export interface NewSubbookParams {
   slug: string
 }
 
-export interface BundleOrphanedModulesArgs {
-  workspaceUri: string
-}
-export type BundleOrphanedModulesResponse = TocTreeModule[] | null
-
-export interface BundleModulesArgs {
-  workspaceUri: string
-}
-export type BundleModulesResponse = TocTreeModule[] | null
 export interface BundleEnsureIdsArgs {
   workspaceUri: string
 }
 
-export const requestBundleOrphanedModules = async (client: LanguageClient, args: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleOrphanedModules, args)
-}
-export const requestBundleModules = async (client: LanguageClient, args: BundleModulesArgs): Promise<BundleModulesResponse> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleModules, args)
-}
 export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsArgs): Promise<void> => {
   return await client.sendRequest(ExtensionServerRequest.BundleEnsureIds, args)
 }

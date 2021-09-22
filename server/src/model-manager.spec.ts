@@ -7,9 +7,8 @@ import { createConnection, WatchDog } from 'vscode-languageserver'
 import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
 import xmlFormat from 'xml-formatter'
 import { expectValue, Opt, join, PathKind } from './model/utils'
-import { BookNode } from './model/book'
 import { Bundle } from './model/bundle'
-import { ModelManager, pageAsTreeObject } from './model-manager'
+import { ModelManager } from './model-manager'
 import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/util.spec'
 import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
@@ -26,20 +25,6 @@ JobRunner.debug = () => {} // Turn off logging
 // xml-formatter calls require('xml-parser-xo') _inside_ the format function
 // so we need require to cache it before we start up mock-fs
 xmlFormat('<root/>')
-
-describe('Tree Translator', () => {
-  let book = null as unknown as BookNode
-  beforeEach(() => {
-    book = loadSuccess(first(loadSuccess(makeBundle()).books))
-  })
-  it('pageAsTreeObject', () => {
-    const page = first(book.pages)
-    expect(page.isLoaded).toBe(false)
-    const o = pageAsTreeObject(page)
-    expect(o.moduleid).toEqual('m00001')
-    expect(o.title).toBe('Introduction')
-  })
-})
 
 describe('Bundle Manager', () => {
   const sinon = SinonRoot.createSandbox()

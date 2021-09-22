@@ -317,8 +317,8 @@ describe('Toc Editor', () => {
         getParent: () => undefined
       } as unknown as TocsTreeProvider
       const fakeChildren = [
-        { label: 'col1', children: [{ label: 'subcol', children: [{ label: 'm2', children: [] }] }] },
-        { label: 'col2', children: [{ label: 'm1', children: [] }] }
+        { type: BookRootNode.Singleton, label: 'col1', tree: [{ type: TocNodeKind.Inner, label: 'unit1', children: [{ type: TocNodeKind.Inner, label: 'subcol1', children: [{ type: TocNodeKind.Leaf, label: 'm2', children: [] }] }] }] },
+        { type: BookRootNode.Singleton, label: 'col2', tree: [{ label: 'm1', children: [] }] }
       ]
       getChildrenStub.returns(fakeChildren)
 

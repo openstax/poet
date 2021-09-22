@@ -1,7 +1,5 @@
 import vscode, { ThemeIcon } from 'vscode'
-import { constructModuleUri } from './utils'
-// import { BundleTreesResponse, requestBundleTrees } from '../../common/src/requests'
-import { BookRootNode, ClientTocNode, TocNodeKind, TocTreeModule } from '../../common/src/toc-tree'
+import { BookRootNode, ClientTocNode, TocNodeKind } from '../../common/src/toc-tree'
 import { TocsTreeProvider, BookOrTocNode } from './book-tocs'
 import { ExtensionHostContext } from './panel'
 
@@ -43,25 +41,8 @@ export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {
     return element
   }
 
-  async getChildren(element?: TocTreeItem): Promise<TocTreeItem[]> {
-    if (element !== undefined) {
-      return element.children
-    }
-
-    // const uri = expect(getRootPathUri(), 'No workspace root for ToC trees')
-    // const bundleTrees: BundleTreesResponse = await requestBundleTrees(
-    //   this.context.client,
-    //   { workspaceUri: uri.toString() }
-    // )
-    // if (bundleTrees == null) {
-    return []
-    // }
-
-    // const children: TocTreeItem[] = []
-    // bundleTrees.forEach(collection => {
-    //   children.push(TocTreeItem.fromCollection(collection, uri))
-    // })
-    // return children
+  getChildren(element?: TocTreeItem): TocTreeItem[] {
+    return element?.children ?? []
   }
 
   getParent(element: TocTreeItem): vscode.ProviderResult<TocTreeItem> {
@@ -82,42 +63,6 @@ export class TocTreeItem extends vscode.TreeItem {
   ) {
     super(label, collapsibleState)
     this.children.forEach(child => { child.parent = this })
-  }
-
-  // static fromCollection(treeCollection: TocTreeCollection, workspaceUri: vscode.Uri): TocTreeItem {
-  //   const collapsibleState = vscode.TreeItemCollapsibleState.Collapsed
-  //   const children: TocTreeItem[] = []
-
-  //   treeCollection.children.forEach(element => {
-  //     if (element.type === TocTreeElementType.module) {
-  //       children.push(TocTreeItem.fromModule(element, workspaceUri))
-  //     } else {
-  //       children.push(TocTreeItem.fromCollection(element, workspaceUri))
-  //     }
-  //   })
-
-  //   if ((treeCollection.type === TocTreeElementType.subcollection) || (treeCollection.slug == null)) {
-  //     return new TocTreeItem(TocItemIcon.SubBook, treeCollection.title, collapsibleState, children)
-  //   }
-
-  //   return new TocTreeItem(
-  //     TocItemIcon.Book,
-  //     treeCollection.title,
-  //     collapsibleState,
-  //     children,
-  //     { title: 'open', command: 'vscode.open', arguments: [constructCollectionUri(workspaceUri, treeCollection.slug)] }
-  //   )
-  // }
-
-  static fromModule(treeModule: TocTreeModule, workspaceUri: vscode.Uri): TocTreeItem {
-    return new TocTreeItem(
-      TocItemIcon.Page,
-      treeModule.title,
-      vscode.TreeItemCollapsibleState.None,
-      [],
-      { title: 'open', command: 'vscode.open', arguments: [constructModuleUri(workspaceUri, treeModule.moduleid)] },
-      treeModule.moduleid
-    )
   }
 }
 
@@ -155,8 +100,9 @@ export function toggleTocTreesFilteringHandler(view: vscode.TreeView<BookOrTocNo
       const nodes3Up = new Set<BookOrTocNode>() // VSCode allows expanding up to 3 levels down
       leaves.forEach(l => {
         const p1 = provider.getParent(l)
-        const p2 = p1 === undefined ? undefined : provider.getParent(p1)
-        const p3 = p2 === undefined ? undefined : provider.getParent(p2)
+        const p2 = p1 === undefined ? undefined : /* istanbul ignore next */ provider.getParent(p1)
+        const p3 = p2 === undefined ? undefined : /* istanbul ignore next */ provider.getParent(p2)
+        /* istanbul ignore next */
         nodes3Up.add(p3 ?? p2 ?? p1 ?? l)
       })
       for (const node of Array.from(nodes3Up).reverse()) {
