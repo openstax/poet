@@ -27,12 +27,13 @@
     "pretest:client": "./scripts/pretest.bash",
     "test:client": "node --unhandled-rejections=strict ./client/out/client/src/test/runTest.js",
     "test:cypress": "cypress run --quiet",
-    "test:unit": "jest --coverage",
+    "test:unit": "jest --coverage --coverageDirectory ./.nyc_output/",
     "test:unit:watch": "npm run test:unit -- --watch --updateSnapshot",
+    "posttest:unit": "mv ./.nyc_output/coverage-final.json ./.nyc_output/coverage-jest.json",
     "pretest": "npm run clean && INSTRUMENT_COVERAGE=1 npm run build",
     "test:only": "npm run test:unit && npm run test:client && npm run test:cypress",
     "test": "npm run test:only",
-    "posttest": "nyc report --reporter=lcov --reporter=text --reporter=html",
+    "posttest": "nyc merge ./.nyc_output/ ./.nyc_output/coverage-final.json && nyc report --reporter=lcov --reporter=text --reporter=html",
     "postinstall": "cd ./client/ && npm install && cd ../server/ && npm install"
   },
   "nyc": {

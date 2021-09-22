@@ -7,9 +7,9 @@ import stringify from 'json-stable-stringify'
 const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'
 
-window.addEventListener('load', () => {
-  document.body.setAttribute('data-document-loaded', 'true')
-})
+// window.addEventListener('load', () => {
+//   document.body.setAttribute('data-document-loaded', 'true')
+// })
 
 const SearchContext = createContext({})
 
@@ -139,8 +139,8 @@ const ContentTree = (props) => {
 
   const getNodeProps = ({ node }) => {
     const typeToColor = {
-      subcollection: 'green',
-      module: 'purple'
+      'TocNodeKind.Inner': 'green',
+      'TocNodeKind.Leaf': 'purple'
     }
     const bookIndex = props.index
     const typeToRenameAction = {
@@ -206,13 +206,14 @@ const ContentTree = (props) => {
           newToc
         } /* as TocMoveEvent */
         vscode.postMessage({ type: 'TOC_MOVE', event })
-      } else {
-        debug(node, 'Ignoring event. Maybe the node was dragged from the orphans list')
       }
     }
   }
 
-  const getNodeKey = (n /*: TreeNode<TreeItemWithToken> */) => n.node.token
+  const getNodeKey = (n /*: TreeNode<TreeItemWithToken> */) => {
+    if (!n.node.token) { throw new Error('missing node token') }
+    return n.node.token
+  }
 
   return (
     <div style={{ height: '100%' }}>

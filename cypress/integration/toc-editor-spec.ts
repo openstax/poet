@@ -6,6 +6,11 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
 
   const DO_NOT_INCREMENT = -1
 
+  enum TocNodeKind {
+    Inner = 'TocNodeKind.Inner',
+    Leaf = 'TocNodeKind.Leaf'
+  }
+
   type TocNode = {
     title?: string
     expanded?: true
@@ -19,21 +24,25 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
       }
       const id = `m0000${++counter}`
       return {
-        type: 'module',
+        type: TocNodeKind.Leaf,
+        token: `page-token-${id}`,
         moduleid: id,
         subtitle: id,
         title: node
       }
     } else if (Array.isArray(node)) {
       return {
-        type: 'subcollection',
+        type: TocNodeKind.Inner,
         title: 'subcollection',
+        token: 'subbook-token',
         children: node.map(recBuildSubtree)
       }
     } else {
+      const title = node.title ?? 'subcollection'
       return {
-        type: 'subcollection',
-        title: node.title ?? 'subcollection',
+        type: TocNodeKind.Inner,
+        title,
+        token: `subbook-token-${title}`,
         expanded: node.expanded ?? false,
         children: node.children.map(recBuildSubtree)
       }
@@ -61,7 +70,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
 
   describe('toc-editor Webview Tests', () => {
     function sendMessage(msg: PanelOutgoingMessage): void {
-      cy.log('sending message', JSON.stringify(msg))
+      cy.log('sending message', msg)
       cy.window().then($window => {
         $window.postMessage(msg, '*')
       })
@@ -177,7 +186,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.get('.panel-uneditable .rst__node').should('have.length', 2)
         cy.wrap(messagesFromWidget).snapshot()
       })
-      it.only('allows dnd from editable to editable', () => {
+      it('allows dnd from editable to editable', () => {
         // Drag "Appendix" on top of "Introduction"
         cy.get('.panel-editable .rst__node:nth-child(3) .rst__moveHandle')
           .dnd('.panel-editable .rst__node:nth-child(2) .rst__nodeContent', { offsetX: 100 })
@@ -186,10 +195,13 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.wrap(messagesFromWidget).snapshot()
       })
       it('deletes elements when dnd from editable to uneditable', () => {
+        // Drag "Appendix" to the orphans list
         cy.get('.panel-editable .rst__node:nth-child(3) .rst__moveHandle')
           .dnd('.panel-uneditable .rst__node:nth-child(1) .rst__nodeContent')
-        cy.get('.panel-editable .rst__node').should('have.length', 2)
-        cy.get('.panel-uneditable .rst__node').should('have.length', 2)
+        cy.then(() => {
+          expect(messagesFromWidget).to.have.length(1)
+          expect(messagesFromWidget[0].type).to.equal('TOC_REMOVE')
+        })
         cy.wrap(messagesFromWidget).snapshot()
       })
       it('disallows modules from having children', () => {
@@ -256,16 +268,16 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
           .select('test collection 2')
         cy.get('.panel-editable .search-info').should('contain.text', '1 / 1')
       })
-      it('can tell the extension to create module', () => {
-        cy.get('.panel-uneditable .module-create')
+      it('can tell the extension to create Page', () => {
+        cy.get('.panel-editable .PAGE_CREATE')
           .click()
         cy.then(() => {
-          expect(messagesFromWidget).to.have.length(2)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect(messagesFromWidget[1]).to.deep.equal({ type: 'module-create' })
+          expect(messagesFromWidget).to.have.length(1)
+          expect(messagesFromWidget[0].type).to.equal('PAGE_CREATE')
         })
+        cy.wrap(messagesFromWidget).snapshot()
       })
-      it('can tell the extension to create subcollection', () => {
+      it('can tell the extension to create Subbook', () => {
         cy.get('.panel-editable .subcollection-create')
           .click()
         cy.get('.panel-editable .tree-select')
@@ -273,11 +285,11 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.get('.panel-editable .subcollection-create')
           .click()
         cy.then(() => {
-          expect(messagesFromWidget).to.have.length(3)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect(messagesFromWidget[1]).to.deep.equal({ type: 'subcollection-create', slug: 'test' })
-          expect(messagesFromWidget[2]).to.deep.equal({ type: 'subcollection-create', slug: 'test-2' })
+          expect(messagesFromWidget).to.have.length(2)
+          expect(messagesFromWidget[0].type).to.equal('SUBBOOK_CREATE')
+          expect(messagesFromWidget[1].type).to.equal('SUBBOOK_CREATE')
         })
+        cy.wrap(messagesFromWidget).snapshot()
       })
       it('provides an input box when title is clicked, removes when blurred', () => {
         cy.get('.panel-editable .node-title')
@@ -299,7 +311,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
           .type('{enter}')
           .should('not.exist')
       })
-      it('can tell the extension to rename module', () => {
+      it('can tell the extension to rename Page', () => {
         cy.get('.panel-editable .node-title')
           .eq(1)
           .click()
@@ -309,12 +321,12 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
           .type('abc', { delay: 50 })
           .blur()
         cy.then(() => {
-          expect(messagesFromWidget).to.have.length(2)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect(messagesFromWidget[1]).to.deep.equal({ type: 'module-rename', moduleid: 'm00001', newName: 'Introductionabc' })
+          expect(messagesFromWidget).to.have.length(1)
+          expect(messagesFromWidget[0].type).to.equal('PAGE_RENAME')
         })
+        cy.wrap(messagesFromWidget).snapshot()
       })
-      it('can tell the extension to rename subcollection', () => {
+      it('can tell the extension to rename Subbook', () => {
         cy.get('.panel-editable .node-title')
           .eq(0)
           .click()
@@ -324,10 +336,10 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
           .type('abc', { delay: 50 })
           .blur()
         cy.then(() => {
-          expect(messagesFromWidget).to.have.length(2)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect((messagesFromWidget[1] as WriteTreeSignal).treeData.children[0].title).to.equal('subcollectionabc')
+          expect(messagesFromWidget).to.have.length(1)
+          expect(messagesFromWidget[0].type).to.equal('SUBBOOK_RENAME')
         })
+        cy.wrap(messagesFromWidget).snapshot()
       })
     })
   })

@@ -2,11 +2,11 @@ import { join } from 'path'
 import expect from 'expect'
 import SinonRoot, { SinonStub } from 'sinon'
 
-import vscode, { Event, EventEmitter, Uri, ViewColumn, WebviewPanel } from 'vscode'
+import vscode, { Disposable, Event, EventEmitter, Uri, ViewColumn, WebviewPanel } from 'vscode'
 import { BookRootNode, BookToc, TocNodeKind, TocModificationKind, TocMoveEvent, TocRemoveEvent, PageRenameEvent, SubbookRenameEvent } from '../../common/src/toc-tree'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees'
-import { TocEditorPanel } from '../src/panel-toc-editor'
+import { PanelIncomingMessage, TocEditorPanel } from '../src/panel-toc-editor'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest } from '../../common/src/requests'
 import { ExtensionEvents, ExtensionHostContext } from '../src/panel'
@@ -187,6 +187,7 @@ describe('Toc Editor', () => {
 
   describe('PanelTocEditor', () => {
     let postMessageStub = undefined as unknown as SinonStub<[message: any], Thenable<boolean>>
+    let onDidReceiveMessageStub: SinonRoot.SinonStub<[listener: (e: any) => any, thisArgs?: any, disposables?: vscode.Disposable[] | undefined], vscode.Disposable>
     let p = undefined as unknown as TocEditorPanel
     const { client, sendRequestStub } = createMockClient()
     const { emitters, events } = createMockEvents()
@@ -199,9 +200,26 @@ describe('Toc Editor', () => {
     beforeEach(() => {
       const webviewPanel = vscode.window.createWebviewPanel('unused', 'unused', ViewColumn.Active)
       postMessageStub = sinon.stub(webviewPanel.webview, 'postMessage')
+      onDidReceiveMessageStub = sinon.stub(webviewPanel.webview, 'onDidReceiveMessage')
+      onDidReceiveMessageStub.returns(new Disposable(sinon.stub()))
       sinon.stub(vscode.window, 'createWebviewPanel').returns(webviewPanel)
 
       p = new TocEditorPanel(context)
+    })
+    it('calls handleMessage when the Webview sends a message', () => {
+      const handleMessageStub = sinon.stub(p, 'handleMessage')
+      const message: PanelIncomingMessage = {
+        type: 'TOC_REMOVE',
+        event: {
+          type: TocModificationKind.Remove,
+          nodeToken: 'my-token-id',
+          bookIndex: 0
+        }
+      }
+      expect(handleMessageStub.callCount).toBe(0)
+      expect(onDidReceiveMessageStub.callCount).toBe(1)
+      onDidReceiveMessageStub.firstCall.args[0](message)
+      expect(handleMessageStub.callCount).toBe(1)
     })
     it('translates events from the webview and sends them to the language server', async () => {
       let callCount = 0
@@ -309,7 +327,7 @@ describe('Toc Editor', () => {
       expect(toggleFilterStub.callCount).toBe(1)
       expect(getChildrenStub.callCount).toBe(1)
       expect(revealStub.callCount).toBe(2)
-      expect(revealStub.getCalls()).toMatchSnapshot()
+      expect(revealStub.getCalls().map(c => c.args)).toMatchSnapshot()
       expect(refreshStub.callCount).toBe(0)
     })
     it('toggleTocTreesFilteringHandler disables itself while revealing', async () => {

@@ -14,10 +14,6 @@ export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 export const NS_METADATA = 'http://cnx.rice.edu/mdml'
 
-export interface DebugSignal {
-  type: 'DEBUG'
-  message: any
-}
 export interface ErrorSignal {
   type: 'error'
   message: string
@@ -51,7 +47,6 @@ export interface SubbookRenameSignal {
 //   type: 'WEBVIEW_STARTED'
 // }
 export type PanelIncomingMessage = (
-  DebugSignal
   | TocMoveSignal
   | TocRemoveSignal
   | PageRenameSignal
@@ -123,6 +118,18 @@ const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {
   return panel
 }
 
+const isWebviewDisposed = (panel: vscode.WebviewPanel) => {
+  try {
+    // This attempted access will throw if the panel is disposed
+    /* eslint-disable-next-line @typescript-eslint/no-unused-expressions */
+    panel.webview.html
+    return false
+  } catch {
+    // Do no work if the panel is disposed
+    return true
+  }
+}
+
 const fileIdSorter = (n1: ClientPageish, n2: ClientPageish) => n1.fileId.localeCompare(n2.fileId)
 const toClientTocNode = (n: ClientPageish): ClientTocNode => ({ type: TocNodeKind.Leaf, value: n })
 export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMessage> {
@@ -180,7 +187,9 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
 
   async update(state: BookTocsArgs) {
     this.state = state
-    await this.panel.webview.postMessage(this.createMessage())
+    if (!isWebviewDisposed(this.panel)) {
+      await this.panel.webview.postMessage(this.createMessage())
+    }
   }
 
   private createMessage(): PanelOutgoingMessage {
@@ -214,14 +223,8 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
   }
 
   async refreshPanel(panel: vscode.WebviewPanel, client: LanguageClient): Promise<void> {
-    try {
-      // This attempted access will throw if the panel is disposed
-      /* eslint-disable-next-line @typescript-eslint/no-unused-expressions */
-      panel.webview.html
-    } catch {
-      // Do no work if the panel is disposed
-      return
+    if (!isWebviewDisposed(panel)) {
+      await panel.webview.postMessage(this.createMessage())
     }
-    await panel.webview.postMessage(this.createMessage())
   }
 }
