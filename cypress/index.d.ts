@@ -3,7 +3,7 @@ declare namespace Cypress {
     /**
      * Select an element to DnD. See ./support/ for details.
      */
-    dnd: (selector: string, options?: {offsetX?: number, offsetY?: number}) => void
+    dnd: (targetSelector: string, options?: {offsetX?: number, offsetY?: number}) => void
     /**
      * Simulate dropping a file onto the previous element in the chain. The given filename must be in fixtures.
      */
@@ -14,5 +14,7 @@ declare namespace Cypress {
      * for the provided event have finished processing, regardless of what Cypress is running on.
      */
     awaitInternalEvent: <T extends keyof GlobalEventHandlersEventMap>(event: T, func: () => void) => Cypress.Chainable
+
+    snapshot: (options?: string | {name?: string, json?: boolean}) => void
   }
 }

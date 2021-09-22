@@ -176,6 +176,7 @@
     "@babel/cli": "^7.12.10",
     "@babel/plugin-transform-react-jsx": "^7.12.12",
     "@cypress/code-coverage": "^3.9.2",
+    "@cypress/snapshot": "^2.1.7",
     "@fluffy-spoon/substitute": "^1.197.0",
     "@types/chai": "^4.2.14",
     "@types/fs-extra": "^9.0.7",

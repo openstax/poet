@@ -7,14 +7,9 @@ import stringify from 'json-stable-stringify'
 const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'
 
-// /**
-//  * Helper method for removing the `expanded` key from collection tree objects,
-//  * which we must do in order when checking for tree structural equality.
-//  * @param {string} key The potential key to check
-//  * @param {any} value The value this key would resolve to
-//  * @returns If key is `expanded`, `undefined` (indicating to remove the key), otherwise `value`
-//  */
-// const removeExpanded = (key, value) => key === 'expanded' ? undefined : value
+window.addEventListener('load', () => {
+  document.body.setAttribute('data-document-loaded', 'true')
+})
 
 const SearchContext = createContext({})
 
@@ -25,14 +20,6 @@ const saveState = (item) => {
 // Helper method to get saved state between loads of the page or refreshes
 const getSavedState = () => {
   return vscode.getState()
-}
-
-// Use this function to send messages to the extension debug console
-/* istanbul ignore next */
-// eslint-disable-next-line no-unused-vars
-const debug = (item, message) => {
-  console.debug(item, message)
-  vscode.postMessage({ type: 'DEBUG', item, message })
 }
 
 /**
@@ -404,10 +391,6 @@ const App = (props) => (
   </div>
 )
 
-// window.addEventListener('load', () => {
-//   vscode.postMessage({ type: 'WEBVIEW_STARTED' })
-// })
-
 function walkTree(n /* TreeItem */, fn /* (TreeItem) => void */) {
   fn(n)
   if (n.children) {
@@ -429,16 +412,6 @@ window.addEventListener('message', event => {
       oldBook.tree.forEach(t => walkTree(t, n => { n.expanded && expandedTitles.set(n.title, n.expanded) }))
       newBook.tree.forEach(t => walkTree(t, n => { n.expanded = expandedTitles.get(n.title) }))
     }
-    // const slugToExpandedIndices = {}
-    // for (const tree of oldData.editable) {
-    //   slugToExpandedIndices[tree.slug] = getExpandedIndices(tree)
-    // }
-    // for (const tree of newData.editable) {
-    //   const expandedIndices = slugToExpandedIndices[tree.slug]
-    //   if (expandedIndices != null) {
-    //     expandIndices(tree, expandedIndices)
-    //   }
-    // }
   }
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
   const appRootElement = window.document.querySelector('[data-app-init]')

@@ -4,8 +4,64 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/toc-editor.html'
 
+  const DO_NOT_INCREMENT = -1
+
+  type TocNode = {
+    title?: string
+    expanded?: true
+    children: TocNode[]
+  } | TocNode[] | string
+  let counter = 0
+  const recBuildSubtree = (node: TocNode) => {
+    if (typeof node === 'string') {
+      if (counter === DO_NOT_INCREMENT) {
+        --counter
+      }
+      const id = `m0000${++counter}`
+      return {
+        type: 'module',
+        moduleid: id,
+        subtitle: id,
+        title: node
+      }
+    } else if (Array.isArray(node)) {
+      return {
+        type: 'subcollection',
+        title: 'subcollection',
+        children: node.map(recBuildSubtree)
+      }
+    } else {
+      return {
+        type: 'subcollection',
+        title: node.title ?? 'subcollection',
+        expanded: node.expanded ?? false,
+        children: node.children.map(recBuildSubtree)
+      }
+    }
+  }
+  interface BuildBookOptions {
+    title?: string
+    slug?: string
+    startAt?: number
+  }
+  const buildBook = (tree: TocNode[], opts: BuildBookOptions = {}) => {
+    const title = opts.title ?? 'test collection'
+    const slug = opts.slug ?? 'test'
+    const startAt = opts.startAt
+    if (startAt !== undefined) {
+      counter = startAt
+    }
+    return {
+      type: 'collection',
+      title,
+      slug,
+      tree: tree.map(recBuildSubtree)
+    }
+  }
+
   describe('toc-editor Webview Tests', () => {
     function sendMessage(msg: PanelOutgoingMessage): void {
+      cy.log('sending message', JSON.stringify(msg))
       cy.window().then($window => {
         $window.postMessage(msg, '*')
       })
@@ -17,6 +73,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
     let pageState: any
 
     beforeEach(() => {
+      counter = 0
       // Load the HTML file and inject the acquireVsCodeApi() stub.
       cy.visit(htmlPath, {
         onBeforeLoad: (contentWindow) => {
@@ -35,31 +92,8 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
       messagesFromWidget = []
       pageState = undefined
     })
-    it('will load when a message is sent (unreliable state store)', () => {
-      cy.then(() => {
-        messagesFromWidget = []
-      })
-      cy.visit(htmlPath, {
-        onBeforeLoad: (contentWindow) => {
-          class API {
-            postMessage(msg: PanelIncomingMessage): void { messagesFromWidget.push(msg) }
-            getState(): any { return undefined }
-            setState(_state: any): void { }
-          }
-          (contentWindow as any).acquireVsCodeApi = () => { return new API() }
-        }
-      })
-      sendMessage({
-        editable: [],
-        uneditable: []
-      })
-      cy.get('[data-app-init]').should('exist')
-      cy.get('.panel-editable .rst__node').should('not.exist')
-      cy.get('.panel-uneditable .rst__node').should('not.exist')
-      cy.then(() => {
-        expect(messagesFromWidget).to.have.length(1)
-        expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-      })
+    it('will not load until a message is sent (unreliable state store)', () => {
+      cy.get('[data-app-init]').should('not.exist')
     })
     it('will load when a message is sent (empty)', () => {
       sendMessage({
@@ -69,285 +103,71 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
       cy.get('[data-app-init]').should('exist')
       cy.get('.panel-editable .rst__node').should('not.exist')
       cy.get('.panel-uneditable .rst__node').should('not.exist')
-      cy.then(() => {
-        expect(messagesFromWidget).to.have.length(1)
-        expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-      })
     })
     it('will load when a message is sent', () => {
-      sendMessage({
-        editable: [{
-          type: 'collection',
-          title: 'test collection',
-          slug: 'test',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }, {
-            type: 'module',
-            moduleid: 'm00002',
-            subtitle: 'm00002',
-            title: 'Appendix'
-          }]
-        }],
-        uneditable: []
-      })
+      const book = buildBook([['Introduction'], 'Appendix'])
+      sendMessage({ editable: [book], uneditable: [] })
       cy.get('[data-app-init]').should('exist')
       cy.get('.panel-editable .rst__node').should('have.length', 2)
       cy.get('.panel-uneditable .rst__node').should('not.exist')
-      cy.then(() => {
-        expect(messagesFromWidget).to.have.length(1)
-        expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-      })
     })
     it('will load when a message is sent (expanded)', () => {
-      sendMessage({
-        editable: [{
-          type: 'collection',
-          title: 'test collection',
-          slug: 'test',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            expanded: true,
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }, {
-            type: 'module',
-            moduleid: 'm00002',
-            subtitle: 'm00002',
-            title: 'Appendix'
-          }]
-        }],
-        uneditable: []
-      })
+      const book = buildBook([{ expanded: true, children: ['Introduction'] }, 'Appendix'])
+      sendMessage({ editable: [book], uneditable: [] })
       cy.get('[data-app-init]').should('exist')
       cy.get('.panel-editable .rst__node').should('have.length', 3)
       cy.get('.panel-uneditable .rst__node').should('not.exist')
-      cy.then(() => {
-        expect(messagesFromWidget).to.have.length(1)
-        expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-      })
     })
     it('will not re-render on same data (expanded)', () => {
+      const book1 = buildBook([['Introduction']])
       const message: PanelOutgoingMessage = {
-        editable: [{
-          type: 'collection',
-          title: 'test collection',
-          slug: 'test',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }]
-        }],
+        editable: [book1],
         uneditable: []
       }
       sendMessage(message)
       cy.get('[data-render-cached]').should('not.exist')
       sendMessage(message)
       cy.get('[data-render-cached]').should('exist')
-      sendMessage({
-        editable: [{
-          type: 'collection',
-          title: 'test collection',
-          slug: 'test',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }, {
-            type: 'module',
-            moduleid: 'm00002',
-            subtitle: 'm00002',
-            title: 'Appendix'
-          }]
-        }],
-        uneditable: []
-      })
+
+      const book2 = buildBook([['Introduction'], 'Appendix'])
+      sendMessage({ editable: [book2], uneditable: [] })
       cy.get('[data-render-cached]').should('not.exist')
     })
     it('will not re-render on same data (expanded)', () => {
+      const book1 = buildBook([{ expanded: true, children: ['Introduction'] }])
       const message: PanelOutgoingMessage = {
-        editable: [{
-          type: 'collection',
-          title: 'test collection',
-          slug: 'test',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            expanded: true,
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }]
-        }],
+        editable: [book1],
         uneditable: []
       }
       sendMessage(message)
       cy.get('[data-render-cached]').should('not.exist')
       sendMessage(message)
       cy.get('[data-render-cached]').should('exist')
-      sendMessage({
-        editable: [{
-          type: 'collection',
-          title: 'test collection',
-          slug: 'test',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            expanded: true,
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }, {
-            type: 'module',
-            moduleid: 'm00002',
-            subtitle: 'm00002',
-            title: 'Appendix'
-          }]
-        }],
-        uneditable: []
-      })
+
+      const book2 = buildBook([{ expanded: true, children: ['Introduction'] }, 'Appendix'])
+      sendMessage({ editable: [book2], uneditable: [] })
       cy.get('[data-render-cached]').should('not.exist')
     })
     it('will preserve expanded nodes on reload', () => {
-      sendMessage({
-        editable: [{
-          type: 'collection',
-          title: 'test collection',
-          slug: 'test',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            expanded: true,
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }, {
-            type: 'subcollection',
-            title: 'subcollection',
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }]
-        }],
-        uneditable: []
-      })
+      const book1 = buildBook([{ expanded: true, children: ['Introduction'] }, ['Introduction']], { startAt: DO_NOT_INCREMENT })
+      sendMessage({ editable: [book1], uneditable: [] })
       cy.get('.panel-editable .rst__node').should('have.length', 3)
-      sendMessage({
-        editable: [{
-          type: 'collection',
-          title: 'test collection',
-          slug: 'test',
-          children: [{
-            type: 'subcollection',
-            title: 'subcollection',
-            expanded: true,
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }, {
-            type: 'subcollection',
-            title: 'subcollection',
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }, {
-            type: 'subcollection',
-            title: 'subcollection',
-            children: [{
-              type: 'module',
-              moduleid: 'm00001',
-              subtitle: 'm00001',
-              title: 'Introduction'
-            }]
-          }]
-        }],
-        uneditable: []
-      })
+
+      const book2 = buildBook([{ expanded: true, children: ['Introduction'] }, ['Introduction'], ['Introduction']], { startAt: DO_NOT_INCREMENT })
+      sendMessage({ editable: [book2], uneditable: [] })
+
       // Would be 3 if the expanded subcollection was not preserved
-      cy.get('.panel-editable .rst__node').should('have.length', 4)
+      // Would be 4 if new nodes were initially collapsed
+      cy.get('.panel-editable .rst__node').should('have.length', 6)
     })
 
     describe('drag-n-drop', () => {
       beforeEach(() => {
+        const book = buildBook([{ expanded: true, children: ['Introduction'] }, 'Appendix'])
+        const orphans = buildBook(['Module 3', 'Module 4'])
         sendMessage({
-          editable: [{
-            type: 'collection',
-            title: 'test collection',
-            slug: 'test',
-            children: [{
-              type: 'subcollection',
-              title: 'subcollection',
-              expanded: true,
-              children: [{
-                type: 'module',
-                moduleid: 'm00001',
-                subtitle: 'm00001',
-                title: 'Introduction'
-              }]
-            }, {
-              type: 'module',
-              moduleid: 'm00002',
-              subtitle: 'm00002',
-              title: 'Appendix'
-            }]
-          }],
-          uneditable: [{
-            type: 'collection',
-            title: 'mock',
-            slug: 'mock',
-            children: [{
-              type: 'module',
-              moduleid: 'm00003',
-              subtitle: 'm00003',
-              title: 'Module 3'
-            }, {
-              type: 'module',
-              moduleid: 'm00004',
-              subtitle: 'm00004',
-              title: 'Module 4'
-            }]
-          }]
+          editable: [book],
+          uneditable: [orphans]
         })
       })
       it('allows dnd from uneditable to editable', () => {
@@ -355,102 +175,22 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
           .dnd('.panel-editable .rst__node:nth-child(2) .rst__nodeContent')
         cy.get('.panel-editable .rst__node').should('have.length', 4)
         cy.get('.panel-uneditable .rst__node').should('have.length', 2)
-        cy.then(() => {
-          expect(messagesFromWidget).to.have.length(2)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect(messagesFromWidget[1]).to.deep.equal({
-            type: 'write-tree',
-            treeData: {
-              type: 'collection',
-              title: 'test collection',
-              slug: 'test',
-              children: [{
-                type: 'subcollection',
-                title: 'subcollection',
-                expanded: true,
-                children: [{
-                  type: 'module',
-                  moduleid: 'm00003',
-                  subtitle: 'm00003',
-                  title: 'Module 3'
-                }, {
-                  type: 'module',
-                  moduleid: 'm00001',
-                  subtitle: 'm00001',
-                  title: 'Introduction'
-                }]
-              }, {
-                type: 'module',
-                moduleid: 'm00002',
-                subtitle: 'm00002',
-                title: 'Appendix'
-              }]
-            }
-          })
-        })
+        cy.wrap(messagesFromWidget).snapshot()
       })
-      it('allows dnd from editable to editable', () => {
+      it.only('allows dnd from editable to editable', () => {
+        // Drag "Appendix" on top of "Introduction"
         cy.get('.panel-editable .rst__node:nth-child(3) .rst__moveHandle')
           .dnd('.panel-editable .rst__node:nth-child(2) .rst__nodeContent', { offsetX: 100 })
         cy.get('.panel-editable .rst__node').should('have.length', 3)
         cy.get('.panel-uneditable .rst__node').should('have.length', 2)
-        cy.then(() => {
-          expect(messagesFromWidget).to.have.length(2)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect(messagesFromWidget[1]).to.deep.equal({
-            type: 'write-tree',
-            treeData: {
-              type: 'collection',
-              title: 'test collection',
-              slug: 'test',
-              children: [{
-                type: 'subcollection',
-                title: 'subcollection',
-                expanded: true,
-                children: [{
-                  type: 'module',
-                  moduleid: 'm00002',
-                  subtitle: 'm00002',
-                  title: 'Appendix'
-                }, {
-                  type: 'module',
-                  moduleid: 'm00001',
-                  subtitle: 'm00001',
-                  title: 'Introduction'
-                }]
-              }]
-            }
-          })
-        })
+        cy.wrap(messagesFromWidget).snapshot()
       })
       it('deletes elements when dnd from editable to uneditable', () => {
         cy.get('.panel-editable .rst__node:nth-child(3) .rst__moveHandle')
           .dnd('.panel-uneditable .rst__node:nth-child(1) .rst__nodeContent')
         cy.get('.panel-editable .rst__node').should('have.length', 2)
         cy.get('.panel-uneditable .rst__node').should('have.length', 2)
-        cy.then(() => {
-          expect(messagesFromWidget).to.have.length(2)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect(messagesFromWidget[1]).to.deep.equal({
-            type: 'write-tree',
-            treeData: {
-              type: 'collection',
-              title: 'test collection',
-              slug: 'test',
-              children: [{
-                type: 'subcollection',
-                title: 'subcollection',
-                expanded: true,
-                children: [{
-                  type: 'module',
-                  subtitle: 'm00001',
-                  moduleid: 'm00001',
-                  title: 'Introduction'
-                }]
-              }]
-            }
-          })
-        })
+        cy.wrap(messagesFromWidget).snapshot()
       })
       it('disallows modules from having children', () => {
         cy.get('.panel-uneditable .rst__node:nth-child(1) .rst__moveHandle')
@@ -458,83 +198,17 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.get('.panel-editable .rst__node').should('have.length', 3)
         cy.get('.panel-uneditable .rst__node').should('have.length', 2)
         cy.then(() => {
-          expect(messagesFromWidget).to.have.length(1)
-          expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
+          expect(messagesFromWidget).to.have.length(0)
         })
       })
     })
 
     describe('controls', () => {
       beforeEach(() => {
-        sendMessage({
-          editable: [{
-            type: 'collection',
-            title: 'test collection',
-            slug: 'test',
-            children: [{
-              type: 'subcollection',
-              title: 'subcollection',
-              expanded: true,
-              children: [{
-                type: 'module',
-                moduleid: 'm00001',
-                subtitle: 'm00001',
-                title: 'Introduction'
-              }, {
-                type: 'module',
-                moduleid: 'm00005',
-                subtitle: 'm00005',
-                title: 'Appending To Lists'
-              }]
-            }, {
-              type: 'module',
-              moduleid: 'm00002',
-              subtitle: 'm00002',
-              title: 'Appendix'
-            }]
-          }, {
-            type: 'collection',
-            title: 'test collection 2',
-            slug: 'test-2',
-            children: [{
-              type: 'subcollection',
-              title: 'subcollection',
-              expanded: true,
-              children: [{
-                type: 'module',
-                moduleid: 'm00001',
-                subtitle: 'm00001',
-                title: 'Introduction'
-              }, {
-                type: 'module',
-                moduleid: 'm00006',
-                subtitle: 'm00006',
-                title: 'Deleting From Lists'
-              }]
-            }, {
-              type: 'module',
-              moduleid: 'm00002',
-              subtitle: 'm00002',
-              title: 'Appendix'
-            }]
-          }],
-          uneditable: [{
-            type: 'collection',
-            title: 'mock',
-            slug: 'mock',
-            children: [{
-              type: 'module',
-              moduleid: 'm00003',
-              subtitle: 'm00003',
-              title: 'Module 3'
-            }, {
-              type: 'module',
-              moduleid: 'm00004',
-              subtitle: 'm00004',
-              title: 'Module 4'
-            }]
-          }]
-        })
+        const book1 = buildBook([{ expanded: true, children: ['Introduction', 'Appending To Lists'] }, 'Appendix'])
+        const book2 = buildBook([{ expanded: true, children: ['Introduction', 'Deleting From Lists'] }, 'Appendix'], { title: 'test collection 2', slug: 'test-2'})
+        const orphans = buildBook(['Module 3', 'Module 4'])
+        sendMessage({ editable: [book1, book2], uneditable: [orphans] })
       })
       it('highlights elements that match search by title', () => {
         cy.get('.panel-editable .search')
@@ -588,7 +262,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(2)
           expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect(messagesFromWidget[1]).to.deep.equal({ type: 'PAGE_CREATE' })
+          expect(messagesFromWidget[1]).to.deep.equal({ type: 'module-create' })
         })
       })
       it('can tell the extension to create subcollection', () => {
@@ -652,7 +326,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(2)
           expect(messagesFromWidget[0]).to.deep.equal({ type: 'refresh' })
-          expect((messagesFromWidget[1] as WriteTreeSignal).treeData.tree[0].value.title).to.equal('subcollectionabc')
+          expect((messagesFromWidget[1] as WriteTreeSignal).treeData.children[0].title).to.equal('subcollectionabc')
         })
       })
     })
