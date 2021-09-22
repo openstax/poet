@@ -15,7 +15,6 @@ import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../.
 import { TocEditorPanel } from './../../panel-toc-editor'
 import { ImageManagerPanel } from './../../panel-image-manager'
 import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
-import { BookRootNode, BookToc, TocNodeKind } from '../../../../common/src/toc-tree'
 import { OpenstaxCommand } from '../../extension-types'
 import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
@@ -24,9 +23,7 @@ import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { DEFAULT_BOOK_TOCS_ARGS, DiagnosticSource, ExtensionServerRequest } from '../../../../common/src/requests'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
-import { TocTreesProvider, TocTreeItem, toggleTocTreesFilteringHandler, TocItemIcon } from './../../toc-trees'
-import * as utils from './../../utils' // Used for dependency mocking in tests
-import { BookOrTocNode, TocsTreeProvider } from '../../book-tocs'
+import { TocTreesProvider } from './../../toc-trees'
 
 const ROOT_DIR_REL = '../../../../../../'
 const ROOT_DIR_ABS = path.resolve(__dirname, ROOT_DIR_REL)
@@ -257,7 +254,6 @@ suite('Extension Test Suite', function (this: Suite) {
   test('injectEnsuredMessages injects messages', () => {
     const html = '<html><body></body></html>'
     const result = Panel.prototype.injectEnsuredMessages(html, [{ test: 'abc' }])
-    console.log(result)
     assert(result.includes('script'))
     assert(result.includes('[{"test":"abc"}]'))
   })

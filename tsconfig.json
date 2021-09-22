@@ -2,7 +2,9 @@
   "compilerOptions": {
     "esModuleInterop": true
   },
-  "include": [ "./tsconfig.base.json" ],
+  "include": [
+    "./tsconfig.base.json"
+  ],
   "references": [
     {
       "path": "./client"

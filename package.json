@@ -26,7 +26,7 @@
     "lint:fix": "npm run lint -- --fix",
     "pretest:client": "./scripts/pretest.bash",
     "test:client": "node --unhandled-rejections=strict ./client/out/client/src/test/runTest.js",
-    "test:cypress": "cypress run --quiet",
+    "test:cypress": "cypress run --quiet --config-file ./cypress.json",
     "test:unit": "jest --coverage --coverageDirectory ./.nyc_output/",
     "test:unit:watch": "npm run test:unit -- --watch --updateSnapshot",
     "posttest:unit": "mv ./.nyc_output/coverage-final.json ./.nyc_output/coverage-jest.json",

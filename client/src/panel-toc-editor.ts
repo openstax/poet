@@ -187,6 +187,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
 
   async update(state: BookTocsArgs) {
     this.state = state
+    /* istanbul ignore else */
     if (!isWebviewDisposed(this.panel)) {
       await this.panel.webview.postMessage(this.createMessage())
     }

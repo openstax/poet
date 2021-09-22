@@ -39,7 +39,7 @@ jobs:
           echo $VERSION_VALUE
           sed -Ei 's/("version": ")(.+)(",)$/\1\2-'$VERSION_VALUE'\3/' package.json
           npm run build:production
-      - name: Upload Extention
+      - name: Upload Extension
         uses: actions/upload-artifact@v2
         with:
           name: editor-extension

@@ -10,6 +10,17 @@
       "./server/tsconfig.json"
     ]
   },
+  "ignorePatterns": [
+    "**/node_modules",
+    "**/dist",
+    "**/out",
+    "**/package-lock.json",
+    "coverage",
+    "**/webpack.config.js",
+    "jest.config.js",
+    "client/specs/__mocks__/vscode.js",
+    "snapshots.js"
+  ],
   "plugins": [
     "json-format",
     "@typescript-eslint"

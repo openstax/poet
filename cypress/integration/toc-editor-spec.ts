@@ -1,5 +1,5 @@
 // Shares a namespace with the other specfiles if not scoped
-import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../../client/src/panel-toc-editor'
+import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/panel-toc-editor'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/toc-editor.html'
@@ -218,7 +218,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, WriteTreeSignal } from '../
     describe('controls', () => {
       beforeEach(() => {
         const book1 = buildBook([{ expanded: true, children: ['Introduction', 'Appending To Lists'] }, 'Appendix'])
-        const book2 = buildBook([{ expanded: true, children: ['Introduction', 'Deleting From Lists'] }, 'Appendix'], { title: 'test collection 2', slug: 'test-2'})
+        const book2 = buildBook([{ expanded: true, children: ['Introduction', 'Deleting From Lists'] }, 'Appendix'], { title: 'test collection 2', slug: 'test-2' })
         const orphans = buildBook(['Module 3', 'Module 4'])
         sendMessage({ editable: [book1, book2], uneditable: [orphans] })
       })

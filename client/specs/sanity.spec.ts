@@ -1,5 +1,4 @@
 import { join } from 'path'
-import expect from 'expect'
 
 import { activate, deactivate } from '../src/extension'
 import { ExtensionContext } from 'vscode'
