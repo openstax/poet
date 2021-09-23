@@ -12,6 +12,7 @@ export interface PanelIncomingMessage {
 const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {
   const localResourceRoots = [vscode.Uri.file(context.resourceRootDir)]
   const workspaceRoot = getRootPathUri()
+  /* istanbul ignore else */
   if (workspaceRoot != null) {
     localResourceRoots.push(workspaceRoot)
   }
@@ -48,6 +49,7 @@ export class ImageManagerPanel extends Panel<PanelIncomingMessage, void> {
         // FIXME: File exists already, do nothing for now. Maybe we should confirm the action?
         return
       } catch (err) {
+        /* istanbul ignore else */
         if (err instanceof vscode.FileSystemError && err.name.includes('EntryNotFound')) {
           const content = Buffer.from(data.split(',')[1], 'base64')
           await vscode.workspace.fs.writeFile(newFileUri, content)
