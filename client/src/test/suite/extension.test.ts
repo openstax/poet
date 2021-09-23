@@ -5,12 +5,7 @@ import vscode from 'vscode'
 import SinonRoot from 'sinon'
 import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch, RefType } from '../../git-api/git.d'
 import 'source-map-support/register'
-import {
-  expect as expectOrig, ensureCatch, getRootPathUri,
-  fixResourceReferences, fixCspSourceReferences, addBaseHref, populateXsdSchemaFiles,
-  getErrorDiagnosticsBySource,
-  ensureCatchPromise
-} from './../../utils'
+import { expect as expectOrig, getRootPathUri } from './../../utils'
 import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../../extension'
 import { TocEditorPanel } from './../../panel-toc-editor'
 import { ImageManagerPanel } from './../../panel-image-manager'
@@ -89,21 +84,6 @@ async function replaceUriDocumentContent(uri: vscode.Uri, content: string): Prom
   await document.save()
 }
 
-const withTestPanel = (html: string, func: (arg0: vscode.WebviewPanel) => void): void => {
-  const panel = vscode.window.createWebviewPanel(
-    'openstax.testPanel',
-    'Test Panel',
-    vscode.ViewColumn.One,
-    {
-      enableScripts: true
-    }
-  )
-  panel.reveal(vscode.ViewColumn.One)
-  panel.webview.html = html
-  func(panel)
-  panel.dispose()
-}
-
 const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscode.WebviewPanel) => Promise<void>): Promise<void> => {
   await vscode.commands.executeCommand(command)
   // Wait for panel to load
@@ -144,18 +124,6 @@ suite('Extension Test Suite', function (this: Suite) {
     sinon.resetHistory()
   })
 
-  test('expect unwraps non-null', () => {
-    const maybe: string | null = 'test'
-    assert.doesNotThrow(() => { expect(maybe) })
-  })
-  test('expect throws on null', async () => {
-    const maybe: string | null = null
-    assert.throws(() => { expect(maybe) })
-  })
-  test('expect throws on null with custom message', async () => {
-    const maybe: string | null = null
-    assert.throws(() => { expectOrig(maybe, 'my-message') })
-  })
   test('getRootPathUri', () => {
     const uri = expect(getRootPathUri())
     assert.strictEqual(uri.fsPath, TEST_DATA_DIR)
@@ -173,108 +141,6 @@ suite('Extension Test Suite', function (this: Suite) {
      * assert.strictEqual(uriAgain.fsPath, TEST_DATA_DIR)
      */
   })
-  test('ensureCatch throws when its argument throws', async () => {
-    const errMessage = 'I am an error'
-    async function fn(): Promise<void> { throw new Error(errMessage) }
-    const s = sinon.spy(vscode.window, 'showErrorMessage')
-    const wrapped = ensureCatch(fn)
-
-    try {
-      await wrapped()
-      assert.fail('ensureCatch should have thrown an error')
-    } catch (err) {
-      assert.strictEqual(err.message, errMessage)
-    }
-    // Verify that a message was sent to the user
-    assert.strictEqual(s.callCount, 1)
-  })
-  test('ensureCatchPromise throws when its argument rejects', async () => {
-    const errMessage = 'I am an error'
-    async function fn(): Promise<void> { throw new Error(errMessage) }
-    const s = sinon.spy(vscode.window, 'showErrorMessage')
-    const promise = fn()
-    const caughtPromise = ensureCatchPromise(promise)
-    try {
-      await caughtPromise
-      assert.fail('ensureCatch should have thrown an error')
-    } catch (err) {
-      assert.strictEqual(err.message, errMessage)
-    }
-    // Verify that a message was sent to the user
-    assert.strictEqual(s.callCount, 1)
-  })
-  test('addBaseHref', () => {
-    const uri = expect(getRootPathUri())
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    // eslint-disable-next-line no-template-curly-in-string
-    const html = '<document><base href="${BASE_URI}"/></document>'
-    withTestPanel(
-      html,
-      (panel) => {
-        const modified = addBaseHref(panel.webview, resource, html)
-        assert(modified.includes('vscode-webview'))
-      }
-    )
-  })
-  test('fixResourceReferences relative', () => {
-    const html = '<document><a href="./media/some-image.jpg"></a></document>'
-    withTestPanel(
-      html,
-      (panel) => {
-        const modified = fixResourceReferences(panel.webview, html, TEST_DATA_DIR)
-        assert(modified.includes('vscode-webview'))
-      }
-    )
-  })
-  test('fixResourceReferences non-relative', () => {
-    const html = '<document><a href="media/some-image.jpg"></a></document>'
-    withTestPanel(
-      html,
-      (panel) => {
-        const modified = fixResourceReferences(panel.webview, html, TEST_DATA_DIR)
-        assert.strictEqual(modified, html) // No change when no './' before href
-      }
-    )
-  })
-  test('fixCspSourceReferences', () => {
-    // eslint-disable-next-line no-template-curly-in-string
-    const html = '<document><meta content="${WEBVIEW_CSPSOURCE}"</meta></document>'
-    withTestPanel(
-      html,
-      (panel) => {
-        const modified = fixCspSourceReferences(panel.webview, html)
-        assert(modified.includes('vscode-webview'))
-      }
-    )
-  })
-  test('injectEnsuredMessages no body is noop', () => {
-    const html = '<html></html>'
-    assert.strictEqual(Panel.prototype.injectEnsuredMessages(html, [{ test: 'abc' }]), html)
-  })
-  test('injectEnsuredMessages injects messages', () => {
-    const html = '<html><body></body></html>'
-    const result = Panel.prototype.injectEnsuredMessages(html, [{ test: 'abc' }])
-    assert(result.includes('script'))
-    assert(result.includes('[{"test":"abc"}]'))
-  })
-  test('injectEnsuredMessages zero length messages is noop', () => {
-    const html = '<html><body></body></html>'
-    assert.strictEqual(Panel.prototype.injectEnsuredMessages(html, []), html)
-  })
-  test('tagElementsWithLineNumbers', async () => {
-    const xml = `
-      <document>
-        <div><span>Test</span><div/></div>
-      </document>`
-    const doc = new DOMParser().parseFromString(xml)
-    tagElementsWithLineNumbers(doc)
-    const out = new XMLSerializer().serializeToString(doc)
-    const expected = `
-      <document data-line="2">
-        <div data-line="3"><span data-line="3">Test</span><div data-line="3"/></div>
-      </document>`
-    assert.strictEqual(out, expected)
-  })
   test('show toc editor', async () => {
     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
       const html = panel.webview.html
@@ -283,193 +149,7 @@ suite('Extension Test Suite', function (this: Suite) {
       assert.notStrictEqual(html.indexOf('html'), -1)
     })
   }).timeout(5000)
-  // test('toc editor refresh makes proper language server requests', async () => {
-  //   const mockClient = createMockClient()
-  //   const panel = new TocEditorPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: mockClient, events: createMockEvents().events })
-  //   await panel.handleMessage({ type: 'refresh' })
-  //   const expectedCalls = [
-  //     [ExtensionServerRequest.BundleModules, { workspaceUri: `file://${TEST_DATA_DIR}` }],
-  //     [ExtensionServerRequest.BundleOrphanedModules, { workspaceUri: `file://${TEST_DATA_DIR}` }]
-  //   ]
-  //   assert.strictEqual((mockClient.sendRequest as SinonRoot.SinonStub).getCalls().length, 3)
-  //   for (const args of expectedCalls) {
-  //     assert((mockClient.sendRequest as SinonRoot.SinonStub).calledWith(...args))
-  //   }
-  // }).timeout(5000)
-  // test('toc editor refresh makes no request when disposed', async () => {
-  //   const mockClient = createMockClient()
-  //   const panel = new TocEditorPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: mockClient, events: createMockEvents().events })
-  //   panel.dispose()
-  //   await panel.handleMessage({ type: 'refresh' })
-  //   assert((mockClient.sendRequest as SinonRoot.SinonStub).notCalled)
-  // })
 
-  // const mockEditAddModule: BookToc = {
-  //   type: BookRootNode.Singleton,
-  //   title: 'test collection',
-  //   slug: 'test',
-  //   uuid: '',
-  //   language: '',
-  //   licenseUrl: '',
-  //   absPath: 'path/to/nowhere-book',
-  //   tree: [{
-  //     type: TocNodeKind.Inner,
-  //     value: { token: 'id123', title: 'subcollection' },
-  //     children: [{
-  //       type: TocNodeKind.Leaf,
-  //       value: {
-  //         token: 'id234',
-  //         absPath: 'path/to/nowhere',
-  //         fileId: 'm00001',
-  //         title: 'Introduction'
-  //       }
-  //     }]
-  //   }, {
-  //     type: TocNodeKind.Leaf,
-  //     value: {
-  //       token: 'id345',
-  //       absPath: 'path/to/nowhere2',
-  //       fileId: 'm00002',
-  //       title: 'Unnamed Module'
-  //     }
-  //   }]
-  // }
-
-  //   test('toc editor handle data message', async () => {
-  //     const uri = expect(getRootPathUri())
-  //     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
-  //     const before = fs.readFileSync(collectionPath)
-  //     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-  //       const handler = tocEditorHandleMessage(panel, createMockClient())
-  //       await handler({ type: 'write-tree', treeData: mockEditAddModule })
-  //     })
-  //     const after = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
-  //     assert.strictEqual(before.indexOf('m00002'), -1)
-  //     assert.notStrictEqual(after.indexOf('m00002'), -1)
-  //   }).timeout(5000)
-  //   test('toc editor writes expected collection schema', async () => {
-  //     const uri = expect(getRootPathUri())
-  //     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
-  //     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-  //       const handler = tocEditorHandleMessage(panel, createMockClient())
-  //       await handler({ type: 'write-tree', treeData: mockEditAddModule })
-  //     })
-  //     const result = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
-  //     const expected =
-  // `<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns="http://cnx.rice.edu/collxml">
-  //   <col:metadata>
-  //     <md:content-id>col00042</md:content-id>
-  //     <md:title>test collection</md:title>
-  //     <md:slug>test</md:slug>
-  //     <md:language>en</md:language>
-  //     <md:uuid>e36d32a7-1379-4690-a029-e37246102438</md:uuid>
-  //     <md:license url="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution License 4.0</md:license>
-  //   </col:metadata>
-  //   <content>
-  //     <subcollection>
-  //       <md:title>subcollection</md:title>
-  //       <content>
-  //         <module document="m00001"/>
-  //       </content>
-  //     </subcollection>
-  //     <module document="m00002"/>
-  //   </content>
-  // </col:collection>`
-  //     assert.strictEqual(result, expected)
-  //   })
-  //   test('toc editor handle error message', async () => {
-  //     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-  //       const handler = tocEditorHandleMessage(panel, createMockClient())
-  //       await assert.rejects(async () => await handler({ type: 'error', message: 'test' }))
-  //     })
-  //   }).timeout(5000)
-  //   test('toc editor handle unexpected message', async () => {
-  //     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-  //       const handler = tocEditorHandleMessage(panel, createMockClient())
-  //       await assert.rejects(async () => await handler({ type: 'foo' } as unknown as TocPanelIncomingMessage))
-  //     })
-  //   }).timeout(5000)
-  //   test('toc editor handle subcollection create', async () => {
-  //     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-  //       const handler = tocEditorHandleMessage(panel, createMockClient())
-  //       await handler({ type: 'subcollection-create', slug: 'test' })
-  //     })
-  //     const uri = expect(getRootPathUri())
-  //     const collectionPath = path.join(uri.fsPath, 'collections', 'test.collection.xml')
-  //     const collectionData = fs.readFileSync(collectionPath, { encoding: 'utf-8' })
-  //     const document = new DOMParser().parseFromString(collectionData)
-  //     const newSubcollection = select('/col:collection/col:content/col:subcollection[2]/md:title', document) as Node[]
-  //     assert.notStrictEqual(newSubcollection, undefined)
-  //     assert.notStrictEqual(newSubcollection, null)
-  //     assert.strictEqual(newSubcollection.length, 1)
-  //     assert.strictEqual(newSubcollection[0].textContent, 'New Subcollection')
-  //   })
-  //   test('toc editor handle module create', async () => {
-  //     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-  //       const handler = tocEditorHandleMessage(panel, createMockClient())
-  //       await handler({ type: 'PAGE_CREATE' })
-  //     })
-  //     const uri = expect(getRootPathUri())
-  //     const modulePath = path.join(uri.fsPath, 'modules', 'm00004', 'index.cnxml')
-  //     assert(fs.existsSync(modulePath))
-  //     const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
-  //     const document = new DOMParser().parseFromString(moduleData)
-  //     const moduleTitle = select('//md:title', document) as Node[]
-  //     assert.strictEqual(moduleTitle.length, 1)
-  //     assert.strictEqual(moduleTitle[0].textContent, 'New Module')
-  //     const moduleId = select('//md:content-id', document) as Node[]
-  //     assert.strictEqual(moduleId.length, 1)
-  //     assert.strictEqual(moduleId[0].textContent, 'm00004')
-  //     const moduleUUIDv4 = select('//md:uuid', document) as Node[]
-  //     const uuidRgx = /^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/
-  //     let uuidV4: any = null
-  //     uuidV4 = moduleUUIDv4[0].textContent
-  //     assert.strictEqual(moduleUUIDv4.length, 1)
-  //     assert(uuidRgx.test(uuidV4))
-  //   })
-  //   test('toc editor handle module rename best case', async () => {
-  //     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-  //       const handler = tocEditorHandleMessage(panel, createMockClient())
-  //       await handler({ type: 'module-rename', moduleid: 'm00001', newName: 'rename' })
-  //     })
-  //     const uri = expect(getRootPathUri())
-  //     const modulePath = path.join(uri.fsPath, 'modules', 'm00001', 'index.cnxml')
-  //     const moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
-  //     const document = new DOMParser().parseFromString(moduleData)
-  //     const moduleMetaTitle = select('//cnxml:metadata/md:title', document) as Element[]
-  //     const moduleTitle = select('//cnxml:title', document) as Element[]
-  //     assert.strictEqual(moduleMetaTitle.length, 1)
-  //     assert.strictEqual(moduleMetaTitle[0].textContent, 'rename')
-  //     assert.strictEqual(moduleTitle.length, 1)
-  //     assert.strictEqual(moduleTitle[0].textContent, 'rename')
-  //   })
-  //   test('toc editor handle module rename worst case', async () => {
-  //     // The worst case scenario entails CNXML with no existing metadata or title,
-  //     // so delete them from one of our test book modules prior to doing the
-  //     // rename
-  //     const uri = expect(getRootPathUri())
-  //     const modulePath = path.join(uri.fsPath, 'modules', 'm00002', 'index.cnxml')
-  //     let moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
-  //     let document = new DOMParser().parseFromString(moduleData)
-  //     const metadata = select('//cnxml:metadata', document) as Element[]
-  //     metadata[0].parentNode?.removeChild(metadata[0])
-  //     let moduleTitle = select('//cnxml:title', document) as Element[]
-  //     moduleTitle[0].parentNode?.removeChild(moduleTitle[0])
-  //     const modifiedModule = new XMLSerializer().serializeToString(document)
-  //     fs.writeFileSync(modulePath, modifiedModule, { encoding: 'utf-8' })
-  //     await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-  //       const handler = tocEditorHandleMessage(panel, createMockClient())
-  //       await handler({ type: 'module-rename', moduleid: 'm00002', newName: 'rename' })
-  //     })
-  //     moduleData = fs.readFileSync(modulePath, { encoding: 'utf-8' })
-  //     document = new DOMParser().parseFromString(moduleData)
-  //     const moduleMetaTitle = select('//cnxml:metadata/md:title', document) as Element[]
-  //     moduleTitle = select('//cnxml:title', document) as Element[]
-  //     assert.strictEqual(moduleMetaTitle.length, 1)
-  //     assert.strictEqual(moduleMetaTitle[0].textContent, 'rename')
-  //     assert.strictEqual(moduleTitle.length, 1)
-  //     assert.strictEqual(moduleTitle[0].textContent, 'rename')
-  //   })
   test('toc editor refreshes when server watched file changes', async () => {
     const mockEvents = createMockEvents()
     const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
@@ -825,48 +505,7 @@ suite('Extension Test Suite', function (this: Suite) {
     await sleep(500)
     assert(panelManager.panel()?.visible())
   }).timeout(5000)
-  test('schema files are populated when not existing', async () => {
-    const uri = expect(getRootPathUri())
-    const schemaPath = path.join(uri.path, '.xsd')
-    assert(!fs.existsSync(schemaPath))
-    await populateXsdSchemaFiles(TEST_OUT_DIR)
-    assert(fs.existsSync(schemaPath))
-    assert(fs.existsSync(path.join(schemaPath, 'catalog.xml')))
-  })
-  test('schema files are replaced when they exist', async () => {
-    const uri = expect(getRootPathUri())
-    const schemaPath = path.join(uri.path, '.xsd')
-    const testXsdPath = path.join(schemaPath, 'foo.xsd')
-    assert(!fs.existsSync(schemaPath))
-    fs.mkdirSync(path.join(schemaPath))
-    fs.writeFileSync(testXsdPath, 'test')
-    assert(fs.existsSync(testXsdPath))
-    await populateXsdSchemaFiles(TEST_OUT_DIR)
-    assert(!fs.existsSync(testXsdPath))
-  })
-  test('schema-generation does not run when there is no workspace', async () => {
-    sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
-    await populateXsdSchemaFiles('')
-  })
-  test('getErrorDiagnostics returns expected errors', async () => {
-    const file1Uri = { path: '/test1.cnxml', scheme: 'file' } as any as vscode.Uri
-    const file1Diag1 = { severity: vscode.DiagnosticSeverity.Error, source: 'source1' } as any as vscode.Diagnostic
-    const file1Diag2 = { severity: vscode.DiagnosticSeverity.Error, source: 'source2' } as any as vscode.Diagnostic
-    const file1Diag3 = { severity: vscode.DiagnosticSeverity.Warning, source: 'source2' } as any as vscode.Diagnostic
-    const file2Uri = { path: '/test2.cnxml', scheme: 'file' } as any as vscode.Uri
-    const file2Diag1 = { severity: vscode.DiagnosticSeverity.Error, source: 'source2' } as any as vscode.Diagnostic
-    const file2Diag2 = { severity: vscode.DiagnosticSeverity.Error, source: undefined } as any as vscode.Diagnostic
-    const testDiagnostics: Array<[vscode.Uri, vscode.Diagnostic[]]> = [
-      [file1Uri, [file1Diag1, file1Diag2, file1Diag3]],
-      [file2Uri, [file2Diag1, file2Diag2]]
-    ]
-    sinon.stub(vscode.languages, 'getDiagnostics').returns(testDiagnostics)
-    const errorsBySource = getErrorDiagnosticsBySource()
-    const expected = new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>()
-    expected.set('source1', [[file1Uri, file1Diag1]])
-    expected.set('source2', [[file1Uri, file1Diag2], [file2Uri, file2Diag1]])
-    assert.deepStrictEqual(errorsBySource, expected)
-  })
+
   test('canPush returns correct values', async () => {
     const fileUri = { path: '/test.cnxml', scheme: 'file' } as any as vscode.Uri
     const cnxmlError = {

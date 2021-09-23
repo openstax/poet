@@ -207,7 +207,7 @@ describe('Toc Editor', () => {
       p = new TocEditorPanel(context)
     })
     it('calls handleMessage when the Webview sends a message', () => {
-      const handleMessageStub = sinon.stub(p, 'handleMessage')
+      const handleMessageStub = sinon.stub(p, 'handleMessage').returns(Promise.resolve())
       const message: PanelIncomingMessage = {
         type: 'TOC_REMOVE',
         event: {
@@ -218,7 +218,8 @@ describe('Toc Editor', () => {
       }
       expect(handleMessageStub.callCount).toBe(0)
       expect(onDidReceiveMessageStub.callCount).toBe(1)
-      onDidReceiveMessageStub.firstCall.args[0](message)
+      const cb = onDidReceiveMessageStub.firstCall.args[0]
+      cb(message)
       expect(handleMessageStub.callCount).toBe(1)
     })
     it('translates events from the webview and sends them to the language server', async () => {

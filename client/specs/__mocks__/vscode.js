@@ -3,6 +3,7 @@ const {URI} = require('vscode-uri')
 const REQUIRED_VSCODE_VERSION = '1.52.0'
 const appName = 'VSCODE_MOCK?'
 const languages = {
+  getDiagnostics: jest.fn(),
   createDiagnosticCollection: jest.fn(),
   registerCompletionItemProvider: () => new Disposable(),
   registerDocumentLinkProvider: () => new Disposable(),
@@ -57,6 +58,10 @@ const workspace = {
   onDidCloseTextDocument: jest.fn(),
   onDidSaveTextDocument: jest.fn(),
 };
+
+const extensions = {
+  getExtension: jest.fn(),
+}
 
 const commands = {
   executeCommand: jest.fn(),
@@ -148,6 +153,7 @@ const vscode = {
   commands,
   window,
   workspace,
+  extensions,
   env: { appName },
   StatusBarAlignment,
   ViewColumn,
