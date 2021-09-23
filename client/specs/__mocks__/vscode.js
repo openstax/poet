@@ -12,21 +12,15 @@ const languages = {
 const StatusBarAlignment = {};
 
 const window = {
-  createOutputChannel: (() => ({ // jest.fn(() => ({
+  createOutputChannel: (() => ({
     dispose: jest.fn(),
     append: jest.fn(),
     appendLine: jest.fn(),
     show: jest.fn(),
   })),
-  // createStatusBarItem: jest.fn(() => ({
-  //   show: jest.fn(),
-  // })),
   createTreeView: jest.fn(),
   showErrorMessage: jest.fn(),
   showInformationMessage: jest.fn(() => Promise.resolve()),
-  // showWarningMessage: jest.fn(),
-  // createTextEditorDecorationType: jest.fn(),
-  // registerFileDecorationProvider: jest.fn(),
   createWebviewPanel: jest.fn(() => ({
     dispose: jest.fn(),
     onDidDispose: jest.fn(),
@@ -44,7 +38,6 @@ const workspace = {
   textDocuments: [],
   getConfiguration: jest.fn(),
   workspaceFolders: [],
-  // onDidSaveTextDocument: jest.fn(),
   createFileSystemWatcher: jest.fn(() => ({
     onDidCreate: jest.fn(),
     onDidChange: jest.fn(),
@@ -68,14 +61,6 @@ const commands = {
   registerCommand: jest.fn(),
 }
 
-// const OverviewRulerLane = {
-//   Left: null,
-// };
-
-// const Uri = {
-//   file: (f) => f,
-//   parse: jest.fn(),
-// };
 const Range = jest.fn();
 const Diagnostic = jest.fn();
 const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 };
@@ -157,7 +142,6 @@ const vscode = {
   env: { appName },
   StatusBarAlignment,
   ViewColumn,
-  // OverviewRulerLane,
   Uri: URI,
   Disposable,
   Range,

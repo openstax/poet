@@ -1,5 +1,4 @@
 import vscode from 'vscode'
-import path from 'path'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { pushContent, tagContent } from './push-content'
 import { TocEditorPanel } from './panel-toc-editor'
@@ -12,13 +11,21 @@ import { toggleTocTreesFilteringHandler } from './toc-trees'
 import { BookOrTocNode, TocsTreeProvider } from './book-tocs'
 import { BookTocsArgs, DEFAULT_BOOK_TOCS_ARGS, ExtensionServerNotification } from '../../common/src/requests'
 
-const resourceRootDir = path.join(__dirname) // extension is running in dist/
 let tocTreesView: vscode.TreeView<BookOrTocNode>
 let tocTreesProvider: TocsTreeProvider
 let client: LanguageClient
 const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter()
 const onDidChangeWatchedFiles = onDidChangeWatchedFilesEmitter.event
 
+let resourceRootDir = __dirname // extension is running in dist/
+let languageServerLauncher = launchLanguageServer
+// setters for testing
+export function setResourceRootDir(d: string) {
+  resourceRootDir = d
+}
+export function setLanguageServerLauncher(l: typeof languageServerLauncher) {
+  languageServerLauncher = l
+}
 export const forwardOnDidChangeWorkspaceFolders = (clientInner: LanguageClient) => async (event: vscode.WorkspaceFoldersChangeEvent) => {
   await clientInner.sendRequest('onDidChangeWorkspaceFolders', event)
 }
@@ -29,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   /* istanbul ignore next */
   expect(process.env.GITPOD_HOST != null && process.env.EDITOR?.includes('code') === false ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
 
-  client = launchLanguageServer(context)
+  client = languageServerLauncher(context)
   await populateXsdSchemaFiles(resourceRootDir)
   await client.onReady()
 
@@ -62,7 +69,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent(hostContext)))
   vscode.commands.registerCommand('openstax.tagContent', ensureCatch(tagContent))
-  // vscode.commands.registerCommand('openstax.refreshTocTrees', tocTreesProvider.refresh.bind(tocTreesProvider))
   tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
 

@@ -220,7 +220,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     }
   }
 
-  private async reboundWebviewHtmlForResource(resource: vscode.Uri, messages: PanelOutgoingMessage[] = []): Promise<string> {
+  private async reboundWebviewHtmlForResource(resource: vscode.Uri, messages: PanelOutgoingMessage[]): Promise<string> {
     let html = await fs.promises.readFile(path.join(this.context.resourceRootDir, 'cnxml-preview.html'), 'utf-8')
     html = this.injectEnsuredMessages(html, messages)
     html = addBaseHref(this.panel.webview, resource, html)

@@ -247,23 +247,26 @@ export class PanelManager<T extends Panel<unknown, unknown>> {
    * Create and reveal a new panel of the unknown managed type. If a panel
    * is already being managed, dispose it before creating a new one.
    */
-  newPanel(): void {
+  newPanel(): T {
     if (this._panel != null) {
       this._panel.dispose()
     }
-    this._panel = new this.PanelClass(this.context)
+    const p = new this.PanelClass(this.context)
+    this._panel = p
+    return p
   }
 
   /**
    * Reveal a panel of the unknown managed type. If a panel
    * is not already being managed, create a new one.
    */
-  revealOrNew(): void {
-    if (this._panel != null && !this._panel.disposed()) {
-      this._panel.reveal()
-      return
+  revealOrNew(): T {
+    const p = this._panel
+    if (p != null && !p.disposed()) {
+      p.reveal()
+      return p
     }
-    this.newPanel()
+    return this.newPanel()
   }
 
   /**

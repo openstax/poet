@@ -7,7 +7,6 @@ import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch, RefT
 import 'source-map-support/register'
 import { expect as expectOrig, getRootPathUri } from './../../utils'
 import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../../extension'
-import { TocEditorPanel } from './../../panel-toc-editor'
 import { ImageManagerPanel } from './../../panel-image-manager'
 import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
 import { OpenstaxCommand } from '../../extension-types'
@@ -18,7 +17,6 @@ import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { DEFAULT_BOOK_TOCS_ARGS, DiagnosticSource, ExtensionServerRequest } from '../../../../common/src/requests'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
-import { TocTreesProvider } from './../../toc-trees'
 
 const ROOT_DIR_REL = '../../../../../../'
 const ROOT_DIR_ABS = path.resolve(__dirname, ROOT_DIR_REL)
@@ -141,24 +139,15 @@ suite('Extension Test Suite', function (this: Suite) {
      * assert.strictEqual(uriAgain.fsPath, TEST_DATA_DIR)
      */
   })
-  test('show toc editor', async () => {
-    await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-      const html = panel.webview.html
-      assert.notStrictEqual(html, null)
-      assert.notStrictEqual(html, undefined)
-      assert.notStrictEqual(html.indexOf('html'), -1)
-    })
-  }).timeout(5000)
+  // test('show toc editor', async () => {
+  //   await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
+  //     const html = panel.webview.html
+  //     assert.notStrictEqual(html, null)
+  //     assert.notStrictEqual(html, undefined)
+  //     assert.notStrictEqual(html.indexOf('html'), -1)
+  //   })
+  // }).timeout(5000)
 
-  test('toc editor refreshes when server watched file changes', async () => {
-    const mockEvents = createMockEvents()
-    const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
-    const panel = new TocEditorPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: mockEvents.events })
-    const refreshStub = sinon.stub(panel, 'refreshPanel')
-
-    await watchedFilesSpy.getCall(0).args[0](undefined)
-    assert(refreshStub.called)
-  })
   // TODO: image upload test is commented because image upload UX is not finished.
   // test('show image upload', async () => {
   //   await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, async (panel) => {
@@ -181,14 +170,6 @@ suite('Extension Test Suite', function (this: Suite) {
     await panel.handleMessage({ mediaUploads: [{ mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0' }] })
     const newData = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, newData)
-  })
-  test('raw text html content for webview use', () => {
-    const content = 'test'
-    assert.strictEqual(rawTextHtml(content), '<html><body>test</body></html>')
-  })
-  test('raw text html content for webview use disallows potential unsafe text', () => {
-    const content = '<injected></injected>'
-    assert.throws(() => { rawTextHtml(content) })
   })
   test('show cnxml preview with no file open', async () => {
     assert.strictEqual(vscode.window.activeTextEditor, undefined)
@@ -557,18 +538,6 @@ suite('Extension Test Suite', function (this: Suite) {
     await forwarder('test_event' as unknown as vscode.WorkspaceFoldersChangeEvent)
     const expected = ['onDidChangeWorkspaceFolders', 'test_event']
     assert((mockClient.sendRequest as SinonRoot.SinonStub).calledOnceWith(...expected))
-  })
-  test('TocTreesProvider fires event on refresh', async () => {
-    const tocTreesProvider = new TocTreesProvider({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    const eventFire = sinon.stub((tocTreesProvider as any)._onDidChangeTreeData, 'fire')
-    tocTreesProvider.refresh()
-    assert(eventFire.calledOnce)
-  })
-  test('TocTreesProvider calls refresh when toggling filter mode', async () => {
-    const tocTreesProvider = new TocTreesProvider({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    const refresh = sinon.stub(tocTreesProvider, 'refresh')
-    tocTreesProvider.toggleFilterMode()
-    assert(refresh.calledOnce)
   })
 
   this.afterAll(async () => {

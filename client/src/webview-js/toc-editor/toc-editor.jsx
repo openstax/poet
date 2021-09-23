@@ -4,13 +4,14 @@ import 'react-sortable-tree/style.css'
 import SortableTree from 'react-sortable-tree'
 import stringify from 'json-stable-stringify'
 
+// These strings are defined elsewhere and are in the messages sent/received by this component
+const TocNodeKind = {
+  Inner: 'TocNodeKind.Inner',
+  Leaf: 'TocNodeKind.Leaf'
+}
+
 const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'
-
-// window.addEventListener('load', () => {
-//   document.body.setAttribute('data-document-loaded', 'true')
-// })
-
 const SearchContext = createContext({})
 
 // Helper method to save state between loads of the page or refreshes
@@ -131,36 +132,32 @@ const ContentTree = (props) => {
     treesData[modifiesStateName][props.index].tree = newChildren
     saveState({ treesData, selectionIndices })
     setData(newData)
-
-    // if (oldStructure !== newStructure || force) {
-    //   vscode.postMessage({ type: 'write-tree', treeData: newData })
-    // }
   }
 
   const getNodeProps = ({ node }) => {
-    const typeToColor = {
-      'TocNodeKind.Inner': 'green',
-      'TocNodeKind.Leaf': 'purple'
-    }
+    const typeToColor = {}
+    typeToColor[TocNodeKind.Inner] = 'green'
+    typeToColor[TocNodeKind.Leaf] = 'purple'
     const bookIndex = props.index
-    const typeToRenameAction = {
-      // Force rewriting the tree only will change the module title as it appears in the collection file,
-      // but won't change the actual title inside the module content.
-      // We need to have the base part of the extension do that for us.
-      'TocNodeKind.Leaf': (value) => {
-        if (node.title !== value) {
-          node.title = value
-          vscode.postMessage({ type: 'PAGE_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree } })
-        }
-      },
-      // We can change the title by just force rewriting the collection tree with the modified title
-      // Subcollections don't have persistent identifiers, so changing them in the base part of the
-      // extension would be tougher to do.
-      'TocNodeKind.Inner': (value) => {
-        if (node.title !== value) {
-          node.title = value
-          vscode.postMessage({ type: 'SUBBOOK_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree } })
-        }
+
+    const typeToRenameAction = {}
+    // Force rewriting the tree only will change the module title as it appears in the collection file,
+    // but won't change the actual title inside the module content.
+    // We need to have the base part of the extension do that for us.
+    typeToRenameAction[TocNodeKind.Leaf] = (value) => {
+      if (node.title !== value) {
+        node.title = value
+        vscode.postMessage({ type: 'PAGE_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree } })
+      }
+    }
+    // We can change the title by just force rewriting the collection tree with the modified title
+    // Subcollections don't have persistent identifiers, so changing them in the base part of the
+    // extension would be tougher to do.
+    typeToRenameAction[TocNodeKind.Inner] = (value) => {
+      /* istanbul ignore else */
+      if (node.title !== value) {
+        node.title = value
+        vscode.postMessage({ type: 'SUBBOOK_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree } })
       }
     }
 
@@ -173,7 +170,7 @@ const ContentTree = (props) => {
   }
 
   const canDrop = ({ nextParent }) => {
-    if (nextParent && nextParent.type === 'TocNodeKind.Leaf') {
+    if (nextParent && nextParent.type === TocNodeKind.Leaf) {
       return false
     }
     return true
@@ -194,9 +191,12 @@ const ContentTree = (props) => {
       vscode.postMessage({ type: 'TOC_REMOVE', event })
     } else {
       const hasParent = nextParentNode !== null && nextParentNode !== undefined
+      /* istanbul ignore next */
       const newParentToken = hasParent ? nextParentNode.token : undefined
+      /* istanbul ignore next */
       const parentChildrenArray = hasParent ? nextParentNode.children : treeData
       const newChildIndex = parentChildrenArray.indexOf(node)
+      /* istanbul ignore else */
       if (newChildIndex >= 0) {
         const event = {
           nodeToken,
@@ -211,6 +211,7 @@ const ContentTree = (props) => {
   }
 
   const getNodeKey = (n /*: TreeNode<TreeItemWithToken> */) => {
+    /* istanbul ignore if */
     if (!n.node.token) { throw new Error('missing node token') }
     return n.node.token
   }
@@ -408,6 +409,7 @@ window.addEventListener('message', event => {
     for (let i = 0; i < oldData.editable.length; i++) {
       const oldBook = oldData.editable[i]
       const newBook = newData.editable[i]
+      /* istanbul ignore if */
       if (oldBook === undefined || newBook === undefined) { break }
       const expandedTitles = new Map()
       oldBook.tree.forEach(t => walkTree(t, n => { n.expanded && expandedTitles.set(n.title, n.expanded) }))
@@ -430,7 +432,9 @@ window.addEventListener('message', event => {
 
 function renderApp() {
   const previousState = getSavedState()
+  /* istanbul ignore next */
   const treesData = previousState ? previousState.treesData : { editable: [], uneditable: [] }
+  /* istanbul ignore next */
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
   const mountPoint = document.getElementById('app')
   render(<App {...{ treesData, selectionIndices }}/>, mountPoint)

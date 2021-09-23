@@ -6,7 +6,7 @@ import vscode, { Disposable, Event, EventEmitter, Uri, ViewColumn, WebviewPanel 
 import { BookRootNode, BookToc, TocNodeKind, TocModificationKind, TocMoveEvent, TocRemoveEvent, PageRenameEvent, SubbookRenameEvent } from '../../common/src/toc-tree'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees'
-import { PanelIncomingMessage, TocEditorPanel } from '../src/panel-toc-editor'
+import { PanelIncomingMessage, PanelOutgoingMessage, TocEditorPanel } from '../src/panel-toc-editor'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest } from '../../common/src/requests'
 import { ExtensionEvents, ExtensionHostContext } from '../src/panel'
@@ -188,6 +188,7 @@ describe('Toc Editor', () => {
   describe('PanelTocEditor', () => {
     let postMessageStub = undefined as unknown as SinonStub<[message: any], Thenable<boolean>>
     let onDidReceiveMessageStub: SinonRoot.SinonStub<[listener: (e: any) => any, thisArgs?: any, disposables?: vscode.Disposable[] | undefined], vscode.Disposable>
+    let watchedFilesSpy: SinonRoot.SinonSpy<[listener: (e: any) => any, thisArgs?: any, disposables?: vscode.Disposable[]], vscode.Disposable>
     let p = undefined as unknown as TocEditorPanel
     const { client, sendRequestStub } = createMockClient()
     const { emitters, events } = createMockEvents()
@@ -202,6 +203,8 @@ describe('Toc Editor', () => {
       postMessageStub = sinon.stub(webviewPanel.webview, 'postMessage')
       onDidReceiveMessageStub = sinon.stub(webviewPanel.webview, 'onDidReceiveMessage')
       onDidReceiveMessageStub.returns(new Disposable(sinon.stub()))
+
+      watchedFilesSpy = sinon.spy(events, 'onDidChangeWatchedFiles')
       sinon.stub(vscode.window, 'createWebviewPanel').returns(webviewPanel)
 
       p = new TocEditorPanel(context)
@@ -298,6 +301,47 @@ describe('Toc Editor', () => {
     })
     it('does not send a message to Webview when panel is disposed', async () => {
       await expect(p.refreshPanel({} as unknown as WebviewPanel, client)).rejects
+    })
+    it('refreshes when server watched file changes', async () => {
+      const refreshStub = sinon.stub(p, 'refreshPanel')
+      await watchedFilesSpy.getCall(0).args[0](undefined)
+      expect(refreshStub.called).toBe(true)
+    })
+    it('sorts pages based on fileid', async () => {
+      const testToc: BookToc = {
+        type: BookRootNode.Singleton,
+        absPath: '/fake/path',
+        uuid: 'uuid',
+        title: 'title',
+        slug: 'slug',
+        language: 'language',
+        licenseUrl: 'licenseUrl',
+        tree: [{
+          type: TocNodeKind.Leaf,
+          value: {
+            token: 'token',
+            title: 'title',
+            fileId: 'fileId2',
+            absPath: '/fake/path/to/file2'
+          }
+        }, {
+          type: TocNodeKind.Leaf,
+          value: {
+            token: 'token',
+            title: 'title',
+            fileId: 'fileId1',
+            absPath: '/fake/path/to/file1'
+          }
+        }]
+      }
+      const v = { version: 1, books: [testToc], orphans: [] }
+      expect(postMessageStub.callCount).toBe(0)
+      await p.update(v)
+      const message: PanelOutgoingMessage = postMessageStub.firstCall.args[0]
+      const allModules = message.uneditable[0]
+      expect(allModules.tree.length).toBe(2)
+      expect(allModules.tree[0].fileId).toBe('fileId1')
+      expect(allModules.tree[1].fileId).toBe('fileId2')
     })
   })
 

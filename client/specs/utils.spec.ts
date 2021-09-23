@@ -119,7 +119,7 @@ describe('tests with sinon', () => {
     expect(errorsBySource).toEqual(expected)
   })
 
-  describe('with filesystem', () => {
+  describe('populateXsdSchemaFiles', () => {
     const ROOT_FOR_LOADING = '/root-for-loading'
     const WORKSPACE_ROOT = '/workspace-root'
     function stubWorkspaceRoot() {
