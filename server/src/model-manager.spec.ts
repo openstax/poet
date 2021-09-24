@@ -15,7 +15,7 @@ import { PageInfo, pageMaker } from './model/page.spec'
 
 import { PageNode } from './model/page'
 import { TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc-tree'
-import { BookTocsArgs, DiagnosticSource } from '../../common/src/requests'
+import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { bookMaker } from './model/book.spec'
 import { bundleMaker } from './model/bundle.spec'
 
@@ -434,7 +434,7 @@ describe('documentLinks()', () => {
 
 describe('modifyToc()', () => {
   let manager = null as unknown as ModelManager
-  let params = null as unknown as BookTocsArgs
+  let params = null as unknown as BooksAndOrphans
   beforeEach(() => {
     const bookSlug = 'slug2'
     const pageId = 'm1234'

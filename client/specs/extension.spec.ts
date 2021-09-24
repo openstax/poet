@@ -7,7 +7,7 @@ import Sinon from 'sinon'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { OpenstaxCommand } from '../src/extension-types'
 import { TocEditorPanel } from '../src/panel-toc-editor'
-import { BookTocsArgs, ExtensionServerNotification } from '../../common/src/requests'
+import { BooksAndOrphans, ExtensionServerNotification } from '../../common/src/requests'
 
 describe('Extension', () => {
   const sinon = Sinon.createSandbox()
@@ -47,7 +47,7 @@ describe('Extension', () => {
 
       expect(onNotificationStub.firstCall.args[0]).toBe(ExtensionServerNotification.BookTocs)
       const cb = onNotificationStub.firstCall.args[1]
-      const params: BookTocsArgs = { version: -1, books: [], orphans: [] }
+      const params: BooksAndOrphans = { books: [], orphans: [] }
       cb(params)
 
       const panel = pm.newPanel() as TocEditorPanel

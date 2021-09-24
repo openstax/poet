@@ -7,12 +7,6 @@ export enum DiagnosticSource {
 
 export type Opt<T> = T | undefined
 
-// Mock out the basic need of the LanguageClient for common,
-// since we can't import the client lib.
-interface LanguageClient {
-  sendRequest: <R>(method: string, param: any) => Promise<R>
-}
-
 // The following are all shared between the client and the server
 // to ensure that any requests between the two are type-safe.
 // It is discouraged to have any usage of `client.sendRequest`
@@ -23,27 +17,11 @@ export enum ExtensionServerRequest {
   BundleEnsureIds = 'bundle-ensure-ids',
   TocModification = 'toc-modification',
   NewPage = 'new-page',
-  NewSubbook = 'new-subbook'
+  NewSubbook = 'new-subbook',
 }
 
 export enum ExtensionServerNotification {
   BookTocs = 'book-tocs',
-  AllPages = 'all-pages',
-  // OrphanPages = 'orphan-pages',
-  // OrphanImages = 'orphan-images',
-}
-
-export interface BooksAndOrphans {
-  books: BookToc[]
-  orphans: ClientPageish[]
-}
-
-export type BookTocsArgs = BooksAndOrphans & { version: number }
-
-export const DEFAULT_BOOK_TOCS_ARGS: BookTocsArgs = { version: -1, books: [], orphans: [] }
-
-export interface BundleTreesArgs {
-  workspaceUri: string
 }
 
 export interface NewPageParams {
@@ -59,10 +37,23 @@ export interface NewSubbookParams {
   slug: string
 }
 
-export interface BundleEnsureIdsArgs {
+export interface BooksAndOrphans {
+  books: BookToc[]
+  orphans: ClientPageish[]
+}
+
+export const EMPTY_BOOKS_AND_ORPHANS: BooksAndOrphans = { books: [], orphans: [] }
+
+// Mock out the basic need of the LanguageClient for common,
+// since we can't import the client lib.
+interface LanguageClient {
+  sendRequest: <R>(method: string, param: any) => Promise<R>
+}
+
+export interface BundleEnsureIdsParams {
   workspaceUri: string
 }
 
-export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsArgs): Promise<void> => {
+export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsParams): Promise<void> => {
   return await client.sendRequest(ExtensionServerRequest.BundleEnsureIds, args)
 }

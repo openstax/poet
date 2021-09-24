@@ -15,7 +15,7 @@ import { Suite } from 'mocha'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { DEFAULT_BOOK_TOCS_ARGS, DiagnosticSource, ExtensionServerRequest } from '../../../../common/src/requests'
+import { EMPTY_BOOKS_AND_ORPHANS, DiagnosticSource, ExtensionServerRequest } from '../../../../common/src/requests'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
 
 const ROOT_DIR_REL = '../../../../../../'
@@ -159,14 +159,14 @@ suite('Extension Test Suite', function (this: Suite) {
   // }).timeout(5000)
   test('image upload handle message', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
-    const panel = new ImageManagerPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new ImageManagerPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     await panel.handleMessage({ mediaUploads: [{ mediaName: 'urgent2.jpg', data: 'data:image/jpeg;base64,' + data }] })
     const uploaded = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent2.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, uploaded)
   })
   test('image upload handle message ignore duplicate image', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
-    const panel = new ImageManagerPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new ImageManagerPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     await panel.handleMessage({ mediaUploads: [{ mediaName: 'urgent.jpg', data: 'data:image/jpeg;base64,0' }] })
     const newData = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, newData)
@@ -191,7 +191,7 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('cnxml preview rebinds to resource in the active editor', async () => {
     const uri = expect(getRootPathUri())
-    const panel = new CnxmlPreviewPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
     assert.strictEqual((panel as any).resourceBinding, null)
 
@@ -238,7 +238,7 @@ suite('Extension Test Suite', function (this: Suite) {
   }).timeout(5000)
   test('cnxml preview only rebinds to cnxml', async () => {
     const uri = expect(getRootPathUri())
-    const panel = new CnxmlPreviewPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
 
     const resourceFirst = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
@@ -273,7 +273,7 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual((panel as any).resourceBinding.fsPath, resourceFirst.fsPath)
   })
   test('cnxml preview refuses refresh if no resource bound', async () => {
-    const panel = new CnxmlPreviewPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     assert(panel.isPreviewOf(null))
     await (panel as any).tryRebindToResource(null)
     await (panel as any).rebindToResource(null)
@@ -297,7 +297,7 @@ suite('Extension Test Suite', function (this: Suite) {
 
     // We need something long enough to scroll in
     const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
-    const panel = new CnxmlPreviewPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
       panel.onDidChangeResourceBinding((event) => {
         if (event != null && event.fsPath === resource.fsPath) {
@@ -357,7 +357,7 @@ suite('Extension Test Suite', function (this: Suite) {
 
     // We need something long enough to scroll to
     const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
-    const panel = new CnxmlPreviewPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
       panel.onDidChangeResourceBinding((event) => {
         if (event != null && event.fsPath === resource.fsPath) {
@@ -408,7 +408,7 @@ suite('Extension Test Suite', function (this: Suite) {
 
     // We need something long enough to scroll to
     const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
-    const panel = new CnxmlPreviewPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const boundEditor = expect(vscode.window.visibleTextEditors.find(editor => panel.isPreviewOf(editor.document.uri)))
 
     // reset revealed range
@@ -441,7 +441,7 @@ suite('Extension Test Suite', function (this: Suite) {
     const mockEvents = createMockEvents()
     const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const panel = new CnxmlPreviewPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: mockEvents.events })
+    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: mockEvents.events })
     await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
     const rebindingStub = sinon.spy(panel as any, 'rebindToResource')
     const panelBindingChanged = new Promise((resolve, reject) => {
@@ -459,7 +459,7 @@ suite('Extension Test Suite', function (this: Suite) {
     assert.strictEqual(rebindingStub.callCount, refreshCount + 1)
   })
   test('cnxml preview throws upon unexpected message', async () => {
-    const panel = new CnxmlPreviewPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     await assert.rejects(panel.handleMessage({ type: 'bad-type' } as any))
   })
   test('panel disposed and refocused', async () => {
@@ -573,7 +573,7 @@ suite('Disposables', function (this: Suite) {
   })
 
   test('onDidDispose event run upon disposal', async () => {
-    const panel = new TestPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new TestPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const panelDisposed = new Promise((resolve, reject) => {
       panel.onDidDispose(() => {
         resolve(true)
@@ -583,14 +583,14 @@ suite('Disposables', function (this: Suite) {
     assert(await panelDisposed)
   })
   test('disposed panels may not post messages', async () => {
-    const panel = new TestPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new TestPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const postStub = sinon.stub((panel as any).panel.webview, 'postMessage').rejects()
     panel.dispose()
     await panel.postMessage(undefined)
     assert(postStub.notCalled)
   })
   test('registered disposables disposed upon parent disposal', async () => {
-    const panel = new TestPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new TestPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     const testDisposable = new Disposer()
     panel.registerDisposable(testDisposable)
     const childDisposed = new Promise((resolve, reject) => {
@@ -602,7 +602,7 @@ suite('Disposables', function (this: Suite) {
     assert(await childDisposed)
   })
   test('registered disposables disposed immediately if parent disposed', async () => {
-    const panel = new TestPanel({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+    const panel = new TestPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     panel.dispose()
     const testDisposable = new Disposer()
     const childDisposed = new Promise((resolve, reject) => {

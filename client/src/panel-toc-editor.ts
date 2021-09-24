@@ -7,7 +7,7 @@ import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, 
 import { ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, TocModification, TocModificationKind } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { BookTocsArgs, DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest, NewPageParams, NewSubbookParams, Opt } from '../../common/src/requests'
+import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest, NewPageParams, NewSubbookParams, Opt } from '../../common/src/requests'
 import { ExtensionHostContext, Panel } from './panel'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
@@ -133,7 +133,7 @@ const isWebviewDisposed = (panel: vscode.WebviewPanel) => {
 const fileIdSorter = (n1: ClientPageish, n2: ClientPageish) => n1.fileId.localeCompare(n2.fileId)
 const toClientTocNode = (n: ClientPageish): ClientTocNode => ({ type: TocNodeKind.Leaf, value: n })
 export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMessage> {
-  private state = DEFAULT_BOOK_TOCS_ARGS
+  private state = EMPTY_BOOKS_AND_ORPHANS
   constructor(private readonly context: ExtensionHostContext) {
     super(initPanel(context))
 
@@ -185,7 +185,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
     }
   }
 
-  async update(state: BookTocsArgs) {
+  async update(state: BooksAndOrphans) {
     this.state = state
     /* istanbul ignore else */
     if (!isWebviewDisposed(this.panel)) {

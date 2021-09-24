@@ -9,7 +9,7 @@ import { ExtensionHostContext, Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
 import { toggleTocTreesFilteringHandler } from './toc-trees'
 import { BookOrTocNode, TocsTreeProvider } from './book-tocs'
-import { BookTocsArgs, DEFAULT_BOOK_TOCS_ARGS, ExtensionServerNotification } from '../../common/src/requests'
+import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
 
 let tocTreesView: vscode.TreeView<BookOrTocNode>
 let tocTreesProvider: TocsTreeProvider
@@ -50,14 +50,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
     events: {
       onDidChangeWatchedFiles
     },
-    bookTocs: DEFAULT_BOOK_TOCS_ARGS
+    bookTocs: EMPTY_BOOKS_AND_ORPHANS
   }
   const tocPanelManager = new PanelManager(hostContext, TocEditorPanel)
   const cnxmlPreviewPanelManager = new PanelManager(hostContext, CnxmlPreviewPanel)
   const imageManagerPanelManager = new PanelManager(hostContext, ImageManagerPanel)
 
   tocTreesProvider = new TocsTreeProvider()
-  client.onNotification(ExtensionServerNotification.BookTocs, (params: BookTocsArgs) => {
+  client.onNotification(ExtensionServerNotification.BookTocs, (params: BooksAndOrphans) => {
     hostContext.bookTocs = params // When a panel opens, make sure it has the latest bookTocs
     tocTreesProvider.update(params.books)
     void tocPanelManager.panel()?.update(params)

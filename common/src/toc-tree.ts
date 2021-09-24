@@ -1,26 +1,15 @@
-export enum TocTreeElementType {
-  collection = 'collection',
-  subcollection = 'subcollection',
-  module = 'module'
-}
-export interface TocTreeModule {
-  type: TocTreeElementType.module
-  moduleid: string
-  title: string
-  subtitle?: string
-}
-
+// This enum is also hardcoded in the toc-editor Webview
 export enum TocNodeKind {
   Inner = 'TocNodeKind.Inner',
   Leaf = 'TocNodeKind.Leaf'
 }
-export type TocNode<I, L> = TocInner<I, L> | TocLeaf<L>
+type TocNode<I, L> = TocInner<I, L> | TocLeaf<L>
 export interface TocInner<I, L> { readonly type: TocNodeKind.Inner, children: Array<TocNode<I, L>>, value: I }
 export interface TocLeaf<L> { readonly type: TocNodeKind.Leaf, value: L }
 
 export type Token = string
-export interface ClientPageish {token: Token, title: string|undefined, fileId: string, absPath: string}
-export interface ClientSubBookish {token: Token, title: string}
+export interface ClientPageish { token: Token, title: string | undefined, fileId: string, absPath: string }
+export interface ClientSubBookish { token: Token, title: string }
 export type ClientTocNode = TocNode<ClientSubBookish, ClientPageish>
 
 export enum BookRootNode {

@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { BookTocsArgs } from '../../common/src/requests'
+import { BooksAndOrphans } from '../../common/src/requests'
 import { ensureCatchPromise, genNonce, injectCspNonce } from './utils'
 
 // Modified from https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/src/util/dispose.ts
@@ -227,7 +227,7 @@ export interface ExtensionHostContext {
   resourceRootDir: string
   client: LanguageClient
   events: ExtensionEvents
-  bookTocs: BookTocsArgs
+  bookTocs: BooksAndOrphans
 }
 
 /**

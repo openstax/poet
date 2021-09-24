@@ -8,7 +8,7 @@ import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees'
 import { PanelIncomingMessage, PanelOutgoingMessage, TocEditorPanel } from '../src/panel-toc-editor'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { DEFAULT_BOOK_TOCS_ARGS, ExtensionServerRequest } from '../../common/src/requests'
+import { EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest } from '../../common/src/requests'
 import { ExtensionEvents, ExtensionHostContext } from '../src/panel'
 import { BookOrTocNode, TocsTreeProvider } from '../src/book-tocs'
 
@@ -169,7 +169,7 @@ describe('Toc Editor', () => {
     // We don't want to just return []
     const sendRequestMock = sinon.stub()
     mockClient.sendRequest = sendRequestMock
-    const tocTreesProvider = new TocTreesProvider({ bookTocs: DEFAULT_BOOK_TOCS_ARGS, resourceRootDir, client: mockClient, events: createMockEvents().events })
+    const tocTreesProvider = new TocTreesProvider({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: mockClient, events: createMockEvents().events })
     sendRequestMock.onCall(0).resolves(null)
     sendRequestMock.onCall(1).resolves(fakeTreeCollection)
 
@@ -196,7 +196,7 @@ describe('Toc Editor', () => {
       resourceRootDir: join(__dirname, '..', 'static'), // HTML webview files are loaded from here
       client,
       events,
-      bookTocs: { version: 1, books: [], orphans: [] }
+      bookTocs: { books: [], orphans: [] }
     }
     beforeEach(() => {
       const webviewPanel = vscode.window.createWebviewPanel('unused', 'unused', ViewColumn.Active)
@@ -292,7 +292,7 @@ describe('Toc Editor', () => {
           }]
         }]
       }
-      const v1 = { version: 1, books: [testToc], orphans: [] }
+      const v1 = { books: [testToc], orphans: [] }
 
       expect(postMessageStub.callCount).toBe(0)
       await p.update(v1)
@@ -334,7 +334,7 @@ describe('Toc Editor', () => {
           }
         }]
       }
-      const v = { version: 1, books: [testToc], orphans: [] }
+      const v = { books: [testToc], orphans: [] }
       expect(postMessageStub.callCount).toBe(0)
       await p.update(v)
       const message: PanelOutgoingMessage = postMessageStub.firstCall.args[0]

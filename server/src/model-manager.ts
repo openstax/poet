@@ -14,7 +14,7 @@ import { PageLinkKind, PageNode } from './model/page'
 import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
-import { BooksAndOrphans, BookTocsArgs, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
+import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
 import { TocInnerWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
@@ -118,11 +118,10 @@ export class ModelManager {
   public readonly jobRunner = new JobRunner()
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
-  private counter = 0
   private bookTocs: BookToc[] = []
 
-  constructor(public bundle: Bundle, private readonly conn: Connection, bookTocHandler?: (params: BookTocsArgs) => void) {
-    const defaultHandler = (params: BookTocsArgs) => conn.sendNotification(ExtensionServerNotification.BookTocs, params)
+  constructor(public bundle: Bundle, private readonly conn: Connection, bookTocHandler?: (params: BooksAndOrphans) => void) {
+    const defaultHandler = (params: BooksAndOrphans) => conn.sendNotification(ExtensionServerNotification.BookTocs, params)
     const handler = bookTocHandler ?? defaultHandler
     // BookTocs
     const computeFn = () => {
@@ -145,8 +144,7 @@ export class ModelManager {
     }
     const sideEffectFn = (v: BooksAndOrphans) => {
       this.bookTocs = v.books
-      const params: BookTocsArgs = {
-        version: ++this.counter,
+      const params: BooksAndOrphans = {
         books: v.books,
         orphans: v.orphans
       }
