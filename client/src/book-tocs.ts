@@ -61,7 +61,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
       }
     } else {
       return {
-        iconPath: TocItemIcon.SubBook,
+        iconPath: TocItemIcon.Subbook,
         collapsibleState: TreeItemCollapsibleState.Collapsed,
         label: node.value.title
       }

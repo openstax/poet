@@ -525,7 +525,7 @@ describe('modifyToc()', () => {
   it('Move to top and non-top', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
 
-    // BookToc starts off with just one subBook which contains one Page
+    // BookToc starts off with just one subbook which contains one Page
     expect(book.toc[0].type).toBe(TocNodeKind.Inner)
     expect(book.toc.length).toBe(1)
 

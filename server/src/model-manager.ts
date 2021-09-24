@@ -7,7 +7,7 @@ import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
-import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocInner, ClientSubBookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc-tree'
+import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocInner, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc-tree'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
@@ -527,7 +527,7 @@ export class ModelManager {
   public async newSubbook(bookIndex: number, title: string) {
     ModelManager.debug(`[NEW_SUBBOOK] Creating: ${title}`)
     const bookToc = this.bookTocs[bookIndex]
-    const tocNode: TocInner<ClientSubBookish, ClientPageish> = {
+    const tocNode: TocInner<ClientSubbookish, ClientPageish> = {
       type: TocNodeKind.Inner,
       value: { title, token: 'unused-when-writing' },
       children: []

@@ -6,7 +6,7 @@ import { ExtensionHostContext } from './panel'
 export const TocItemIcon = {
   Page: ThemeIcon.File,
   Book: new ThemeIcon('book'),
-  SubBook: ThemeIcon.Folder
+  Subbook: ThemeIcon.Folder
 }
 
 export class TocTreesProvider implements vscode.TreeDataProvider<TocTreeItem> {

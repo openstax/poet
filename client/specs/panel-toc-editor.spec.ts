@@ -137,7 +137,7 @@ describe('Toc Editor', () => {
       'm00003'
     )
     const subcollectionItem = new TocTreeItem(
-      TocItemIcon.SubBook,
+      TocItemIcon.Subbook,
       'subcollection',
       vscode.TreeItemCollapsibleState.Collapsed,
       [module1Item, module2Item]

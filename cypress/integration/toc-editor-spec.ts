@@ -269,7 +269,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
         cy.get('.panel-editable .search-info').should('contain.text', '1 / 1')
       })
       it('can tell the extension to create Page', () => {
-        cy.get('.panel-editable .PAGE_CREATE')
+        cy.get('.panel-editable .page-create')
           .click()
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(1)
@@ -278,11 +278,11 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
         cy.wrap(messagesFromWidget).snapshot()
       })
       it('can tell the extension to create Subbook', () => {
-        cy.get('.panel-editable .subcollection-create')
+        cy.get('.panel-editable .subbook-create')
           .click()
         cy.get('.panel-editable .tree-select')
           .select('test collection 2')
-        cy.get('.panel-editable .subcollection-create')
+        cy.get('.panel-editable .subbook-create')
           .click()
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(2)

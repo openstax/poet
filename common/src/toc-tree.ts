@@ -9,8 +9,8 @@ export interface TocLeaf<L> { readonly type: TocNodeKind.Leaf, value: L }
 
 export type Token = string
 export interface ClientPageish { token: Token, title: string | undefined, fileId: string, absPath: string }
-export interface ClientSubBookish { token: Token, title: string }
-export type ClientTocNode = TocNode<ClientSubBookish, ClientPageish>
+export interface ClientSubbookish { token: Token, title: string }
+export type ClientTocNode = TocNode<ClientSubbookish, ClientPageish>
 
 export enum BookRootNode {
   Singleton = 'BookRootNode.Singleton'

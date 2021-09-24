@@ -316,12 +316,12 @@ const EditorPanel = (props) => {
               <div style={{ display: 'flex' }}>
                 {
                   props.canAddModules
-                    ? <button className='PAGE_CREATE' onClick={handleAddPage}>Add Module</button>
+                    ? <button className='page-create' onClick={handleAddPage}>Add Module</button>
                     : <></>
                 }
                 {
                   props.canAddSubcollections
-                    ? <button className='subcollection-create' onClick={handleAddSubbook}>Add Subcollection</button>
+                    ? <button className='subbook-create' onClick={handleAddSubbook}>Add Subcollection</button>
                     : <></>
                 }
               </div>
