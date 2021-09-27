@@ -1,5 +1,6 @@
 // Shares a namespace with the other specfiles if not scoped
 import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/panel-toc-editor'
+import { BookRootNode, BookToc } from '../../common/src/toc-tree'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/toc-editor.html'
@@ -53,7 +54,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
     slug?: string
     startAt?: number
   }
-  const buildBook = (tree: TocNode[], opts: BuildBookOptions = {}) => {
+  const buildBook = (tree: TocNode[], opts: BuildBookOptions = {}): BookToc => {
     const title = opts.title ?? 'test collection'
     const slug = opts.slug ?? 'test'
     const startAt = opts.startAt
@@ -61,10 +62,14 @@ import { PanelIncomingMessage, PanelOutgoingMessage } from '../../client/src/pan
       counter = startAt
     }
     return {
-      type: 'collection',
+      type: BookRootNode.Singleton,
       title,
       slug,
-      tree: tree.map(recBuildSubtree)
+      absPath: '/fake/path',
+      uuid: 'fake_uuid',
+      language: 'fake_language',
+      licenseUrl: 'fake_licenseUrl',
+      tocTree: tree.map(recBuildSubtree)
     }
   }
 

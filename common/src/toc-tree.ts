@@ -23,7 +23,7 @@ export interface BookToc {
   readonly slug: string
   readonly language: string
   readonly licenseUrl: string
-  tree: ClientTocNode[]
+  tocTree: ClientTocNode[]
 }
 
 export enum TocModificationKind {

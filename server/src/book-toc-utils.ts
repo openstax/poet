@@ -42,7 +42,7 @@ export const equalsBookToc = (n1: BookToc, n2: BookToc): boolean => {
   if (n1.slug !== n2.slug) return false
   /* istanbul ignore if */
   if (n1.licenseUrl !== n2.licenseUrl) return false
-  return equalsArray(equalsTocNode)(n1.tree, n2.tree)
+  return equalsArray(equalsTocNode)(n1.tocTree, n2.tocTree)
 }
 
 const BOOK_XML_TEMPLATE = `<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns="http://cnx.rice.edu/collxml">
@@ -65,7 +65,7 @@ export function fromBook(tocIdMap: IdMap<string, TocInnerWithRange|PageNode>, bo
     slug: book.slug,
     language: book.language,
     licenseUrl: book.licenseUrl,
-    tree: book.toc.map(t => recTree(tocIdMap, null, t))
+    tocTree: book.toc.map(t => recTree(tocIdMap, null, t))
   }
 }
 
@@ -80,7 +80,7 @@ export function toString(t: BookToc) {
   license.setAttribute('url', t.licenseUrl)
 
   const treeRoot = selectOne('/col:collection/col:content', doc)
-  t.tree.forEach(t => treeRoot.appendChild(recBuild(doc, t)))
+  t.tocTree.forEach(t => treeRoot.appendChild(recBuild(doc, t)))
 
   const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(doc), {
     indentation: '  ',

@@ -10,6 +10,26 @@ Array [
         "licenseUrl": "licenseUrl",
         "slug": "slug",
         "title": "title",
+        "tocTree": Array [
+          Object {
+            "children": Array [
+              Object {
+                "type": "TocNodeKind.Leaf",
+                "value": Object {
+                  "absPath": "/fake/path/to/file",
+                  "fileId": "fileId",
+                  "title": "title",
+                  "token": "token",
+                },
+              },
+            ],
+            "type": "TocNodeKind.Inner",
+            "value": Object {
+              "title": "title",
+              "token": "token",
+            },
+          },
+        ],
         "tree": Array [
           Object {
             "children": Array [

@@ -433,7 +433,7 @@ export class ModelManager {
     } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
       removeNode(parent, node)
       // Add the node
-      const newParentChildren = evt.newParentToken !== undefined ? childrenOf(this.lookupToken(evt.newParentToken).node) : bookToc.tree
+      const newParentChildren = evt.newParentToken !== undefined ? childrenOf(this.lookupToken(evt.newParentToken).node) : bookToc.tocTree
       newParentChildren.splice(evt.newChildIndex, 0, node)
       await this.writeBookToc(bookToc)
     }
@@ -463,7 +463,7 @@ export class ModelManager {
 
   private lookupToken(token: string): NodeAndParent {
     for (const b of this.bookTocs) {
-      const ret = this.recFind(token, b, b.tree)
+      const ret = this.recFind(token, b, b.tocTree)
       /* istanbul ignore else */
       if (ret !== undefined) return ret
     }
@@ -512,7 +512,7 @@ export class ModelManager {
       ModelManager.debug(`[NEW_PAGE] Created: ${pageUri.fsPath}`)
 
       const bookToc = this.bookTocs[bookIndex]
-      bookToc.tree.unshift({
+      bookToc.tocTree.unshift({
         type: TocNodeKind.Leaf,
         value: { token: 'unused-when-writing', title: undefined, fileId: newModuleId, absPath: page.absPath }
       })
@@ -533,17 +533,17 @@ export class ModelManager {
       children: []
     }
     // Prepend new Subbook to top of Book so it is visible to the user
-    bookToc.tree.unshift(tocNode)
+    bookToc.tocTree.unshift(tocNode)
     await this.writeBookToc(bookToc)
   }
 }
 
 function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
   if (parent.type === BookRootNode.Singleton) {
-    const before = parent.tree.length
-    parent.tree = parent.tree.filter(n => n !== node)
+    const before = parent.tocTree.length
+    parent.tocTree = parent.tocTree.filter(n => n !== node)
     /* istanbul ignore if */
-    if (parent.tree.length === before) {
+    if (parent.tocTree.length === before) {
       throw new Error(`BUG: Could not find Page child in book='${parent.slug}'`)
     }
   } else /* istanbul ignore else */ if (parent.type === TocNodeKind.Inner) {

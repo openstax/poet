@@ -120,16 +120,16 @@ const ContentTree = (props) => {
   const onChange = (newChildren, force = false) => {
     const { treesData, selectionIndices } = getSavedState()
 
-    const newData = { ...data, ...{ tree: newChildren } }
+    const newData = { ...data, ...{ tocTree: newChildren } }
 
     /* istanbul ignore if */
-    if (data.tree.length - newChildren.length > 3) {
+    if (data.tocTree.length - newChildren.length > 3) {
       // There's a bug that deletes the whole tree except for one element.
       // Prevent this by not allowing high magnitude deletions
       return
     }
 
-    treesData[modifiesStateName][props.index].tree = newChildren
+    treesData[modifiesStateName][props.index].tocTree = newChildren
     saveState({ treesData, selectionIndices })
     setData(newData)
   }
@@ -147,7 +147,7 @@ const ContentTree = (props) => {
     typeToRenameAction[TocNodeKind.Leaf] = (value) => {
       if (node.title !== value) {
         node.title = value
-        vscode.postMessage({ type: 'PAGE_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree } })
+        vscode.postMessage({ type: 'PAGE_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tocTree } })
       }
     }
     // We can change the title by just force rewriting the collection tree with the modified title
@@ -157,7 +157,7 @@ const ContentTree = (props) => {
       /* istanbul ignore else */
       if (node.title !== value) {
         node.title = value
-        vscode.postMessage({ type: 'SUBBOOK_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tree } })
+        vscode.postMessage({ type: 'SUBBOOK_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tocTree } })
       }
     }
 
@@ -219,7 +219,7 @@ const ContentTree = (props) => {
   return (
     <div style={{ height: '100%' }}>
       <SortableTree
-        treeData={data.tree}
+        treeData={data.tocTree}
         getNodeKey={getNodeKey}
         onMoveNode={props.editable ? onMoveNode : () => {}}
         onChange={onChange} // Do not update state locally. Wait for Language Server to send an updated tree
@@ -412,8 +412,8 @@ window.addEventListener('message', event => {
       /* istanbul ignore if */
       if (oldBook === undefined || newBook === undefined) { break }
       const expandedTitles = new Map()
-      oldBook.tree.forEach(t => walkTree(t, n => { n.expanded && expandedTitles.set(n.title, n.expanded) }))
-      newBook.tree.forEach(t => walkTree(t, n => { n.expanded = expandedTitles.get(n.title) }))
+      oldBook.tocTree.forEach(t => walkTree(t, n => { n.expanded && expandedTitles.set(n.title, n.expanded) }))
+      newBook.tocTree.forEach(t => walkTree(t, n => { n.expanded = expandedTitles.get(n.title) }))
     }
   }
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }

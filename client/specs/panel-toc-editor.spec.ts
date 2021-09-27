@@ -56,7 +56,7 @@ describe('Toc Editor', () => {
         language: '',
         licenseUrl: '',
         absPath: 'path/to/nowhere-book',
-        tree: [{
+        tocTree: [{
           type: TocNodeKind.Inner,
           value: { token: 'id123', title: 'subcollection' },
           children: [{
@@ -87,7 +87,7 @@ describe('Toc Editor', () => {
         language: '',
         licenseUrl: '',
         absPath: 'path/to/nowhere-book',
-        tree: [{
+        tocTree: [{
           type: TocNodeKind.Leaf,
           value: {
             token: 'id123',
@@ -275,7 +275,7 @@ describe('Toc Editor', () => {
         slug: 'slug',
         language: 'language',
         licenseUrl: 'licenseUrl',
-        tree: [{
+        tocTree: [{
           type: TocNodeKind.Inner,
           value: {
             token: 'token',
@@ -316,7 +316,7 @@ describe('Toc Editor', () => {
         slug: 'slug',
         language: 'language',
         licenseUrl: 'licenseUrl',
-        tree: [{
+        tocTree: [{
           type: TocNodeKind.Leaf,
           value: {
             token: 'token',
@@ -362,8 +362,8 @@ describe('Toc Editor', () => {
         getParent: () => undefined
       } as unknown as TocsTreeProvider
       const fakeChildren = [
-        { type: BookRootNode.Singleton, label: 'col1', tree: [{ type: TocNodeKind.Inner, label: 'unit1', children: [{ type: TocNodeKind.Inner, label: 'subcol1', children: [{ type: TocNodeKind.Leaf, label: 'm2', children: [] }] }] }] },
-        { type: BookRootNode.Singleton, label: 'col2', tree: [{ label: 'm1', children: [] }] }
+        { type: BookRootNode.Singleton, tocTree: [{ type: TocNodeKind.Inner, label: 'unit1', children: [{ type: TocNodeKind.Inner, label: 'subcol1', children: [{ type: TocNodeKind.Leaf, label: 'm2', children: [] }] }] }] },
+        { type: BookRootNode.Singleton, tocTree: [{ label: 'm1', children: [] }] }
       ]
       getChildrenStub.returns(fakeChildren)
 

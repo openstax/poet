@@ -202,7 +202,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
         n.children.forEach(recAddModules)
       }
     }
-    this.state.books.forEach(b => b.tree.forEach(recAddModules))
+    this.state.books.forEach(b => b.tocTree.forEach(recAddModules))
     const orphanModules = this.state.orphans
 
     const allModulesSorted = Array.from(allModules).sort(fileIdSorter)
@@ -219,7 +219,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
     }
     return {
       uneditable: [collectionAllModules, collectionOrphanModules],
-      editable: this.state.books.map(b => ({ ...b, tree: b.tree.map(toTreeItem) }))
+      editable: this.state.books.map(b => ({ ...b, tree: b.tocTree.map(toTreeItem) }))
     }
   }
 

@@ -25,7 +25,7 @@ const testToc: BookToc = {
   slug: 'slug',
   language: 'language',
   licenseUrl: 'licenseUrl',
-  tree: [testTocSubbook]
+  tocTree: [testTocSubbook]
 }
 
 describe('Toc Provider', () => {
@@ -53,7 +53,7 @@ describe('Toc Provider', () => {
     p.update([testToc])
     expect(p.getChildren()).toEqual([testToc])
     expect(p.getParent(testToc)).toBe(undefined)
-    expect(p.getChildren(testToc)).toEqual(testToc.tree)
-    expect(p.getParent(testToc.tree[0])).toBe(testToc)
+    expect(p.getChildren(testToc)).toEqual(testToc.tocTree)
+    expect(p.getParent(testToc.tocTree[0])).toBe(testToc)
   })
 })

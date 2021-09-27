@@ -450,14 +450,14 @@ describe('modifyToc()', () => {
   afterEach(() => mockfs.restore())
 
   function getInner(bookIndex: number) {
-    const t1 = params.books[bookIndex].tree[0]
+    const t1 = params.books[bookIndex].tocTree[0]
     if (t1.type === TocNodeKind.Inner) {
       return t1
     }
     throw new Error('BUG: Test expects first node in the ToC to be a Subbook')
   }
   function getLeaf(bookIndex: number) {
-    for (const t1 of params.books[bookIndex].tree) {
+    for (const t1 of params.books[bookIndex].tocTree) {
       if (t1.type === TocNodeKind.Inner) {
         const t2 = t1.children[0]
         if (t2 !== undefined && t2.type === TocNodeKind.Leaf) {

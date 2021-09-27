@@ -76,7 +76,7 @@ export function toggleTocTreesFilteringHandler(view: vscode.TreeView<BookOrTocNo
   function leafFinder(acc: ClientTocNode[], elements: BookOrTocNode[]) {
     for (const el of elements) {
       if (el.type === BookRootNode.Singleton) {
-        leafFinder(acc, el.tree)
+        leafFinder(acc, el.tocTree)
       } else if (el.type === TocNodeKind.Inner) {
         leafFinder(acc, el.children)
       } else {
