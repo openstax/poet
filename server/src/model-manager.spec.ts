@@ -451,16 +451,16 @@ describe('modifyToc()', () => {
 
   function getInner(bookIndex: number) {
     const t1 = params.books[bookIndex].tocTree[0]
-    if (t1.type === TocNodeKind.Inner) {
+    if (t1.type === TocNodeKind.Subbook) {
       return t1
     }
     throw new Error('BUG: Test expects first node in the ToC to be a Subbook')
   }
   function getLeaf(bookIndex: number) {
     for (const t1 of params.books[bookIndex].tocTree) {
-      if (t1.type === TocNodeKind.Inner) {
+      if (t1.type === TocNodeKind.Subbook) {
         const t2 = t1.children[0]
-        if (t2 !== undefined && t2.type === TocNodeKind.Leaf) {
+        if (t2 !== undefined && t2.type === TocNodeKind.Page) {
           return t2
         }
       } else {
@@ -505,7 +505,7 @@ describe('modifyToc()', () => {
 
     await manager.modifyToc(evt)
     const tocNode = book.toc[0]
-    expect(tocNode.type === TocNodeKind.Inner && tocNode.title).toBe(newTitle)
+    expect(tocNode.type === TocNodeKind.Subbook && tocNode.title).toBe(newTitle)
   })
   it('Remove Subbook', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
@@ -526,7 +526,7 @@ describe('modifyToc()', () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
 
     // BookToc starts off with just one subbook which contains one Page
-    expect(book.toc[0].type).toBe(TocNodeKind.Inner)
+    expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
     expect(book.toc.length).toBe(1)
 
     const bookIndex = 0
@@ -540,8 +540,8 @@ describe('modifyToc()', () => {
       bookIndex
     }
     await manager.modifyToc(evt1)
-    expect(book.toc[0].type).toBe(TocNodeKind.Inner)
-    expect(book.toc[1].type).toBe(TocNodeKind.Leaf)
+    expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
+    expect(book.toc[1].type).toBe(TocNodeKind.Page)
 
     // -------- Need to get new Tokens
 
@@ -556,7 +556,7 @@ describe('modifyToc()', () => {
       bookIndex
     }
     await manager.modifyToc(evt2)
-    expect(book.toc[0].type).toBe(TocNodeKind.Inner)
+    expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
     expect(book.toc.length).toBe(1)
   })
   it('creates a new Page in book', async () => {
@@ -565,14 +565,14 @@ describe('modifyToc()', () => {
     expect(book.pages.size).toBe(1)
 
     const bookIndex = 0
-    const { page: loadedPage } = await manager.newPage(bookIndex, 'TEST_TITLE')
+    const { page: loadedPage } = await manager.createPage(bookIndex, 'TEST_TITLE')
 
     expect(book.pages.size).toBe(2)
     expect(I.Set(book.pages).has(loadedPage)).toBe(true)
     expect(loadedPage.optTitle).toBe('TEST_TITLE')
 
     // Add another page for code coverage reasons
-    await manager.newPage(bookIndex, 'TEST_TITLE2')
+    await manager.createPage(bookIndex, 'TEST_TITLE2')
   })
   it('creates a new Subbook in book', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
@@ -580,12 +580,12 @@ describe('modifyToc()', () => {
     expect(book.toc.length).toBe(1)
 
     const bookIndex = 0
-    await manager.newSubbook(bookIndex, 'TEST_TITLE')
+    await manager.createSubbook(bookIndex, 'TEST_TITLE')
 
     expect(book.toc.length).toBe(2)
-    expect(book.toc[0].type).toBe(TocNodeKind.Inner)
+    expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
     const tocNode = book.toc[0]
-    if (tocNode.type === TocNodeKind.Inner) {
+    if (tocNode.type === TocNodeKind.Subbook) {
       expect(tocNode.title).toBe('TEST_TITLE')
     } else throw new Error('BUG: unreachable case')
   })

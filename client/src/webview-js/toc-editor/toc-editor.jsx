@@ -5,10 +5,15 @@ import SortableTree from 'react-sortable-tree'
 import stringify from 'json-stable-stringify'
 
 // These strings are defined elsewhere and are in the messages sent/received by this component
-const TocNodeKind = {
-  Inner: 'TocNodeKind.Inner',
-  Leaf: 'TocNodeKind.Leaf'
-}
+const TocNodeKind = {}
+TocNodeKind.Subbook = 'TocNodeKind.Subbook'
+TocNodeKind.Page = 'TocNodeKind.Page'
+
+const TocModificationKind = {}
+TocModificationKind.Move = 'TocModificationKind.Move'
+TocModificationKind.Remove = 'TocModificationKind.Remove'
+TocModificationKind.PageRename = 'TocModificationKind.PageRename'
+TocModificationKind.SubbookRename = 'TocModificationKind.SubbookRename'
 
 const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'
@@ -136,33 +141,52 @@ const ContentTree = (props) => {
 
   const getNodeProps = ({ node }) => {
     const typeToColor = {}
-    typeToColor[TocNodeKind.Inner] = 'green'
-    typeToColor[TocNodeKind.Leaf] = 'purple'
+    typeToColor[TocNodeKind.Subbook] = 'green'
+    typeToColor[TocNodeKind.Page] = 'purple'
     const bookIndex = props.index
 
     const typeToRenameAction = {}
     // Force rewriting the tree only will change the module title as it appears in the collection file,
     // but won't change the actual title inside the module content.
     // We need to have the base part of the extension do that for us.
-    typeToRenameAction[TocNodeKind.Leaf] = (value) => {
+    typeToRenameAction[TocNodeKind.Page] = (value) => {
       if (node.title !== value) {
         node.title = value
-        vscode.postMessage({ type: 'PAGE_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tocTree } })
+        const message /*: PageRenameEvent */ = {
+          type: TocModificationKind.PageRename,
+          newTitle: value,
+          nodeToken: node.token,
+          node,
+          bookIndex,
+          newToc: data.tocTree
+        }
+        vscode.postMessage(message)
       }
     }
     // We can change the title by just force rewriting the collection tree with the modified title
     // Subcollections don't have persistent identifiers, so changing them in the base part of the
     // extension would be tougher to do.
-    typeToRenameAction[TocNodeKind.Inner] = (value) => {
+    typeToRenameAction[TocNodeKind.Subbook] = (value) => {
       /* istanbul ignore else */
       if (node.title !== value) {
         node.title = value
-        vscode.postMessage({ type: 'SUBBOOK_RENAME', event: { newTitle: value, nodeToken: node.token, node, bookIndex, newToc: data.tocTree } })
+        const message /*: RenameSubbookEvent */ = {
+          type: TocModificationKind.SubbookRename,
+          newTitle: value,
+          nodeToken: node.token,
+          node,
+          bookIndex,
+          newToc: data.tocTree
+        }
+        vscode.postMessage(message)
       }
     }
+    const onBlur = typeToRenameAction[node.type]
+    /* istanbul ignore if */
+    if (!onBlur) { throw new Error(`BUG: Could not find renameAction for type ${node.type}`) }
 
     return {
-      title: <InputOnFocus onBlur={typeToRenameAction[node.type]} value={node.title} />,
+      title: <InputOnFocus onBlur={onBlur} value={node.title} />,
       style: {
         boxShadow: `0 0 0 4px ${typeToColor[node.type]}`
       }
@@ -170,7 +194,7 @@ const ContentTree = (props) => {
   }
 
   const canDrop = ({ nextParent }) => {
-    if (nextParent && nextParent.type === TocNodeKind.Leaf) {
+    if (nextParent && nextParent.type === TocNodeKind.Page) {
       return false
     }
     return true
@@ -183,12 +207,13 @@ const ContentTree = (props) => {
     const newToc = treeData
     if (path === null) {
       // Removed node
-      const event = {
+      const message /*: TocRemoveEvent */ = {
+        type: TocModificationKind.Remove,
         nodeToken,
         bookIndex,
         newToc
       }
-      vscode.postMessage({ type: 'TOC_REMOVE', event })
+      vscode.postMessage(message)
     } else {
       const hasParent = nextParentNode !== null && nextParentNode !== undefined
       /* istanbul ignore next */
@@ -198,21 +223,22 @@ const ContentTree = (props) => {
       const newChildIndex = parentChildrenArray.indexOf(node)
       /* istanbul ignore else */
       if (newChildIndex >= 0) {
-        const event = {
+        const message /*: TocMoveEvent */ = {
+          type: TocModificationKind.Move,
           nodeToken,
           newParentToken,
           newChildIndex,
           bookIndex,
           newToc
-        } /* as TocMoveEvent */
-        vscode.postMessage({ type: 'TOC_MOVE', event })
+        }
+        vscode.postMessage(message)
       }
     }
   }
 
   const getNodeKey = (n /*: TreeNode<TreeItemWithToken> */) => {
     /* istanbul ignore if */
-    if (!n.node.token) { throw new Error('missing node token') }
+    if (!n.node?.token) { throw new Error(`missing node token: ${JSON.stringify(n.node)}`) }
     return n.node.token
   }
 

@@ -4,7 +4,7 @@ import { BookRootNode, BookToc, ClientTocNode, TocNodeKind } from '../../common/
 import { TocsTreeProvider } from '../src/book-tocs'
 
 const testTocPage: ClientTocNode = {
-  type: TocNodeKind.Leaf,
+  type: TocNodeKind.Page,
   value: {
     absPath: '/path/to/file',
     token: 'token',
@@ -13,7 +13,7 @@ const testTocPage: ClientTocNode = {
   }
 }
 const testTocSubbook: ClientTocNode = {
-  type: TocNodeKind.Inner,
+  type: TocNodeKind.Subbook,
   value: { token: 'token', title: 'title' },
   children: [testTocPage]
 }

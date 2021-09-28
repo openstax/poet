@@ -1,14 +1,14 @@
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { BookRootNode, BookToc, ClientPageish, ClientTocNode, TocLeaf } from '../../common/src/toc-tree'
+import { BookRootNode, BookToc, ClientPageish, ClientTocNode, TocPage } from '../../common/src/toc-tree'
 import { pageToModuleId } from './model-manager'
-import { BookNode, TocInnerWithRange, TocNodeWithRange } from './model/book'
+import { BookNode, TocSubbookWithRange, TocNodeWithRange } from './model/book'
 import { PageNode } from './model/page'
 import { selectOne, NS_COLLECTION, NS_METADATA, TocNodeKind, equalsArray } from './model/utils'
 
 export const equalsTocNode = (n1: ClientTocNode, n2: ClientTocNode): boolean => {
   /* istanbul ignore else */
-  if (n1.type === TocNodeKind.Inner) {
+  if (n1.type === TocNodeKind.Subbook) {
     /* istanbul ignore next */
     if (n2.type !== n1.type) return false
     /* istanbul ignore next */
@@ -56,7 +56,7 @@ const BOOK_XML_TEMPLATE = `<col:collection xmlns:col="http://cnx.rice.edu/collxm
 <col:content/>
 </col:collection>`
 
-export function fromBook(tocIdMap: IdMap<string, TocInnerWithRange|PageNode>, book: BookNode): BookToc {
+export function fromBook(tocIdMap: IdMap<string, TocSubbookWithRange|PageNode>, book: BookNode): BookToc {
   return {
     type: BookRootNode.Singleton,
     absPath: book.absPath,
@@ -90,11 +90,11 @@ export function toString(t: BookToc) {
   return serailizedXml
 }
 
-export function fromPage(tocIdMap: IdMap<string, TocInnerWithRange|PageNode>, n: PageNode): TocLeaf<ClientPageish> {
-  return { type: TocNodeKind.Leaf, value: { token: tocIdMap.add(n), title: n.optTitle, absPath: n.absPath, fileId: pageToModuleId(n) } }
+export function fromPage(tocIdMap: IdMap<string, TocSubbookWithRange|PageNode>, n: PageNode): TocPage<ClientPageish> {
+  return { type: TocNodeKind.Page, value: { token: tocIdMap.add(n), title: n.optTitle, absPath: n.absPath, fileId: pageToModuleId(n) } }
 }
-function recTree(tocIdMap: IdMap<string, TocInnerWithRange|PageNode>, parent: TocInnerWithRange|null, n: TocNodeWithRange): ClientTocNode {
-  if (n.type === TocNodeKind.Leaf) {
+function recTree(tocIdMap: IdMap<string, TocSubbookWithRange|PageNode>, parent: TocSubbookWithRange|null, n: TocNodeWithRange): ClientTocNode {
+  if (n.type === TocNodeKind.Page) {
     return fromPage(tocIdMap, n.page)
   } else {
     return { ...n, value: { token: tocIdMap.add(n), title: n.title }, children: n.children.map(c => recTree(tocIdMap, n, c)) }
@@ -102,7 +102,7 @@ function recTree(tocIdMap: IdMap<string, TocInnerWithRange|PageNode>, parent: To
 }
 
 function recBuild(doc: Document, node: ClientTocNode): Element {
-  if (node.type === TocNodeKind.Leaf) {
+  if (node.type === TocNodeKind.Page) {
     const ret = doc.createElementNS(NS_COLLECTION, 'col:module')
     ret.setAttribute('document', node.value.fileId)
     return ret

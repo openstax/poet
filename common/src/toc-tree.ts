@@ -1,20 +1,29 @@
 // This enum is also hardcoded in the toc-editor Webview
 export enum TocNodeKind {
-  Inner = 'TocNodeKind.Inner',
-  Leaf = 'TocNodeKind.Leaf'
+  Subbook = 'TocNodeKind.Subbook',
+  Page = 'TocNodeKind.Page'
 }
-type TocNode<I, L> = TocInner<I, L> | TocLeaf<L>
-export interface TocInner<I, L> { readonly type: TocNodeKind.Inner, children: Array<TocNode<I, L>>, value: I }
-export interface TocLeaf<L> { readonly type: TocNodeKind.Leaf, value: L }
+
+export enum BookRootNode {
+  Singleton = 'BookRootNode.Singleton'
+}
+
+export enum TocModificationKind {
+  Move = 'TocModificationKind.Move',
+  Remove = 'TocModificationKind.Remove',
+  PageRename = 'TocModificationKind.PageRename',
+  SubbookRename = 'TocModificationKind.SubbookRename',
+}
+
+type TocNode<I, L> = TocSubbook<I, L> | TocPage<L>
+export interface TocSubbook<I, L> { readonly type: TocNodeKind.Subbook, children: Array<TocNode<I, L>>, value: I }
+export interface TocPage<L> { readonly type: TocNodeKind.Page, value: L }
 
 export type Token = string
 export interface ClientPageish { token: Token, title: string | undefined, fileId: string, absPath: string }
 export interface ClientSubbookish { token: Token, title: string }
 export type ClientTocNode = TocNode<ClientSubbookish, ClientPageish>
 
-export enum BookRootNode {
-  Singleton = 'BookRootNode.Singleton'
-}
 export interface BookToc {
   readonly type: BookRootNode.Singleton
   readonly absPath: string
@@ -26,15 +35,9 @@ export interface BookToc {
   tocTree: ClientTocNode[]
 }
 
-export enum TocModificationKind {
-  Move = 'TocModificationKind.Move',
-  Remove = 'TocModificationKind.Remove',
-  PageRename = 'TocModificationKind.PageRename',
-  SubbookRename = 'TocModificationKind.SubbookRename',
-}
 export interface TocModificationParams {
-  event: TocModification
   workspaceUri: string
+  event: TocModification | CreateSubbookEvent | CreatePageEvent
 }
 export type TocModification = (TocMoveEvent | TocRemoveEvent | PageRenameEvent | SubbookRenameEvent)
 export interface TocMoveEvent {
@@ -60,5 +63,17 @@ export interface SubbookRenameEvent {
   readonly type: TocModificationKind.SubbookRename
   readonly newTitle: string
   readonly nodeToken: Token
+  readonly bookIndex: number
+}
+
+export interface CreateSubbookEvent {
+  readonly type: TocNodeKind.Subbook
+  readonly title: string
+  readonly slug: string
+  readonly bookIndex: number
+}
+export interface CreatePageEvent {
+  readonly type: TocNodeKind.Page
+  readonly title: string
   readonly bookIndex: number
 }

@@ -14,12 +14,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument'
 import { URI, Utils } from 'vscode-uri'
 import { expectValue } from './model/utils'
 
-import {
-  ExtensionServerRequest,
-  NewPageParams,
-  NewSubbookParams
-} from '../../common/src/requests'
-
+import { ExtensionServerRequest } from '../../common/src/requests'
 import { bundleEnsureIdsHandler, imageAutocompleteHandler } from './server-handler'
 
 import * as sourcemaps from 'source-map-support'
@@ -27,7 +22,7 @@ import { Bundle } from './model/bundle'
 import { Factory } from './model/factory'
 import { ModelManager } from './model-manager'
 import { JobRunner } from './job-runner'
-import { TocModificationParams } from '../../common/src/toc-tree'
+import { TocModificationParams, TocNodeKind } from '../../common/src/toc-tree'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -140,18 +135,15 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
 })
 
 connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocModificationParams) => {
+  const { event } = params
   const manager = getBundleForUri(params.workspaceUri)
-  await manager.modifyToc(params.event)
-})
-
-connection.onRequest(ExtensionServerRequest.NewPage, async (params: NewPageParams) => {
-  const manager = getBundleForUri(params.workspaceUri)
-  await manager.newPage(params.bookIndex, params.title)
-})
-
-connection.onRequest(ExtensionServerRequest.NewSubbook, async (params: NewSubbookParams) => {
-  const manager = getBundleForUri(params.workspaceUri)
-  await manager.newSubbook(params.bookIndex, params.title)
+  if (event.type === TocNodeKind.Page) {
+    await manager.createPage(event.bookIndex, event.title)
+  } else if (event.type === TocNodeKind.Subbook) {
+    await manager.createSubbook(event.bookIndex, event.title)
+  } else {
+    await manager.modifyToc(event)
+  }
 })
 
 connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler())

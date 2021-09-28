@@ -3,7 +3,7 @@ import expect from 'expect'
 import SinonRoot, { SinonStub } from 'sinon'
 
 import vscode, { Disposable, Event, EventEmitter, Uri, ViewColumn, WebviewPanel } from 'vscode'
-import { BookRootNode, BookToc, TocNodeKind, TocModificationKind, TocMoveEvent, TocRemoveEvent, PageRenameEvent, SubbookRenameEvent } from '../../common/src/toc-tree'
+import { BookRootNode, BookToc, TocNodeKind, TocModificationKind } from '../../common/src/toc-tree'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees'
 import { PanelIncomingMessage, PanelOutgoingMessage, TocEditorPanel } from '../src/panel-toc-editor'
@@ -57,10 +57,10 @@ describe('Toc Editor', () => {
         licenseUrl: '',
         absPath: 'path/to/nowhere-book',
         tocTree: [{
-          type: TocNodeKind.Inner,
+          type: TocNodeKind.Subbook,
           value: { token: 'id123', title: 'subcollection' },
           children: [{
-            type: TocNodeKind.Leaf,
+            type: TocNodeKind.Page,
             value: {
               token: 'id234',
               absPath: 'path/to/nowhere',
@@ -69,7 +69,7 @@ describe('Toc Editor', () => {
             }
           },
           {
-            type: TocNodeKind.Leaf,
+            type: TocNodeKind.Page,
             value: {
               token: 'id345',
               absPath: 'path/to/nowhere2',
@@ -88,7 +88,7 @@ describe('Toc Editor', () => {
         licenseUrl: '',
         absPath: 'path/to/nowhere-book',
         tocTree: [{
-          type: TocNodeKind.Leaf,
+          type: TocNodeKind.Page,
           value: {
             token: 'id123',
             absPath: 'path/to/nowhere3',
@@ -212,12 +212,9 @@ describe('Toc Editor', () => {
     it('calls handleMessage when the Webview sends a message', () => {
       const handleMessageStub = sinon.stub(p, 'handleMessage').returns(Promise.resolve())
       const message: PanelIncomingMessage = {
-        type: 'TOC_REMOVE',
-        event: {
-          type: TocModificationKind.Remove,
-          nodeToken: 'my-token-id',
-          bookIndex: 0
-        }
+        type: TocModificationKind.Remove,
+        nodeToken: 'my-token-id',
+        bookIndex: 0
       }
       expect(handleMessageStub.callCount).toBe(0)
       expect(onDidReceiveMessageStub.callCount).toBe(1)
@@ -227,11 +224,12 @@ describe('Toc Editor', () => {
     })
     it('translates events from the webview and sends them to the language server', async () => {
       let callCount = 0
-      function getMessage(reqType: ExtensionServerRequest = ExtensionServerRequest.TocModification) {
+      function getMessage() {
+        const reqType = ExtensionServerRequest.TocModification
         if (sendRequestStub.callCount <= callCount) { throw new Error('expected sendRequest to have been called but it was not') }
         const c = sendRequestStub.getCall(callCount++)
         if (c.firstArg !== reqType) { throw new Error(`expected the first arg of sendRequest to be '${reqType}' but it was '${c.firstArg as unknown as string}'`) }
-        return c.args[1]
+        return c.args[1].event
       }
       const uberEvent = {
         newTitle: 'my_new_title',
@@ -242,21 +240,21 @@ describe('Toc Editor', () => {
       }
 
       sinon.stub(vscode.workspace, 'workspaceFolders').get(() => [{ uri: Uri.file('/path/to/workspace/root') }])
-      await p.handleMessage({ type: 'TOC_MOVE', event: uberEvent as unknown as TocMoveEvent })
-      expect(getMessage().event.type).toBe(TocModificationKind.Move)
-      await p.handleMessage({ type: 'TOC_REMOVE', event: uberEvent as unknown as TocRemoveEvent })
-      expect(getMessage().event.type).toBe(TocModificationKind.Remove)
-      await p.handleMessage({ type: 'PAGE_RENAME', event: uberEvent as unknown as PageRenameEvent })
-      expect(getMessage().event.type).toBe(TocModificationKind.PageRename)
-      await p.handleMessage({ type: 'SUBBOOK_RENAME', event: uberEvent as unknown as SubbookRenameEvent })
-      expect(getMessage().event.type).toBe(TocModificationKind.SubbookRename)
+      await p.handleMessage({ ...uberEvent, type: TocModificationKind.Move })
+      expect(getMessage().type).toBe(TocModificationKind.Move)
+      await p.handleMessage({ ...uberEvent, type: TocModificationKind.Remove })
+      expect(getMessage().type).toBe(TocModificationKind.Remove)
+      await p.handleMessage({ ...uberEvent, type: TocModificationKind.PageRename })
+      expect(getMessage().type).toBe(TocModificationKind.PageRename)
+      await p.handleMessage({ ...uberEvent, type: TocModificationKind.SubbookRename })
+      expect(getMessage().type).toBe(TocModificationKind.SubbookRename)
 
       sinon.stub(vscode.window, 'showInputBox').returns(Promise.resolve('new_title'))
-      await p.handleMessage({ type: 'PAGE_CREATE', bookIndex: 0 })
-      expect(getMessage(ExtensionServerRequest.NewPage).title).toBe('new_title')
+      await p.handleMessage({ type: TocNodeKind.Page, title: 'foo', bookIndex: 0 })
+      expect(getMessage().title).toBe('new_title')
 
-      await p.handleMessage({ type: 'SUBBOOK_CREATE', bookIndex: 0, slug: 'subbook_slug' })
-      expect(getMessage(ExtensionServerRequest.NewSubbook).title).toBe('new_title')
+      await p.handleMessage({ type: TocNodeKind.Subbook, title: 'foo', bookIndex: 0, slug: 'subbook_slug' })
+      expect(getMessage().title).toBe('new_title')
     })
     it('disposes', () => {
       expect(() => p.dispose()).not.toThrow()
@@ -276,13 +274,13 @@ describe('Toc Editor', () => {
         language: 'language',
         licenseUrl: 'licenseUrl',
         tocTree: [{
-          type: TocNodeKind.Inner,
+          type: TocNodeKind.Subbook,
           value: {
             token: 'token',
             title: 'title'
           },
           children: [{
-            type: TocNodeKind.Leaf,
+            type: TocNodeKind.Page,
             value: {
               token: 'token',
               title: 'title',
@@ -317,7 +315,7 @@ describe('Toc Editor', () => {
         language: 'language',
         licenseUrl: 'licenseUrl',
         tocTree: [{
-          type: TocNodeKind.Leaf,
+          type: TocNodeKind.Page,
           value: {
             token: 'token',
             title: 'title',
@@ -325,7 +323,7 @@ describe('Toc Editor', () => {
             absPath: '/fake/path/to/file2'
           }
         }, {
-          type: TocNodeKind.Leaf,
+          type: TocNodeKind.Page,
           value: {
             token: 'token',
             title: 'title',
@@ -339,9 +337,9 @@ describe('Toc Editor', () => {
       await p.update(v)
       const message: PanelOutgoingMessage = postMessageStub.firstCall.args[0]
       const allModules = message.uneditable[0]
-      expect(allModules.tree.length).toBe(2)
-      expect(allModules.tree[0].fileId).toBe('fileId1')
-      expect(allModules.tree[1].fileId).toBe('fileId2')
+      expect(allModules.tocTree.length).toBe(2)
+      expect(allModules.tocTree[0].fileId).toBe('fileId1')
+      expect(allModules.tocTree[1].fileId).toBe('fileId2')
     })
   })
 
@@ -362,7 +360,7 @@ describe('Toc Editor', () => {
         getParent: () => undefined
       } as unknown as TocsTreeProvider
       const fakeChildren = [
-        { type: BookRootNode.Singleton, tocTree: [{ type: TocNodeKind.Inner, label: 'unit1', children: [{ type: TocNodeKind.Inner, label: 'subcol1', children: [{ type: TocNodeKind.Leaf, label: 'm2', children: [] }] }] }] },
+        { type: BookRootNode.Singleton, tocTree: [{ type: TocNodeKind.Subbook, label: 'unit1', children: [{ type: TocNodeKind.Subbook, label: 'subcol1', children: [{ type: TocNodeKind.Page, label: 'm2', children: [] }] }] }] },
         { type: BookRootNode.Singleton, tocTree: [{ label: 'm1', children: [] }] }
       ]
       getChildrenStub.returns(fakeChildren)

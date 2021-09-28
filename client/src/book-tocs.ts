@@ -48,7 +48,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
         resourceUri: uri,
         command: { title: 'open', command: 'vscode.open', arguments: [uri] }
       }
-    } else if (node.type === TocNodeKind.Leaf) {
+    } else if (node.type === TocNodeKind.Page) {
       const uri = Uri.parse(node.value.absPath)
       const title = node.value.title ?? 'Loading...'
       const ret = this.includeFileIdsForFilter ? { label: `${title} (${node.value.fileId})` } : { label: title, description: node.value.fileId }
@@ -74,7 +74,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
       return this.bookTocs
     } else if (node.type === BookRootNode.Singleton) {
       kids = node.tocTree
-    } else if (node.type === TocNodeKind.Leaf) {
+    } else if (node.type === TocNodeKind.Page) {
       kids = []
     } else {
       kids = node.children

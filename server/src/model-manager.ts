@@ -7,7 +7,7 @@ import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
-import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocInner, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc-tree'
+import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc-tree'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
@@ -15,7 +15,7 @@ import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
 import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
-import { TocInnerWithRange } from './model/book'
+import { TocSubbookWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
 
@@ -29,7 +29,7 @@ const PATH_SEP = path.sep
 interface NodeAndParent {node: ClientTocNode, parent: BookToc|ClientTocNode}
 function childrenOf(n: ClientTocNode) {
   /* istanbul ignore else */
-  if (n.type === TocNodeKind.Inner) {
+  if (n.type === TocNodeKind.Subbook) {
     return n.children
   } else {
     throw new Error('BUG: Unreachable code')
@@ -126,7 +126,7 @@ export class ModelManager {
     // BookTocs
     const computeFn = () => {
       let idCounter = 0
-      const tocIdMap = new IdMap<string, TocInnerWithRange|PageNode>((v) => {
+      const tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>((v) => {
         if (v instanceof PageNode) {
           return `servertoken:page:${v.absPath}`
         } else {
@@ -416,7 +416,7 @@ export class ModelManager {
     const { node, parent } = this.lookupToken(evt.nodeToken)
 
     if (evt.type === TocModificationKind.PageRename || evt.type === TocModificationKind.SubbookRename) {
-      if (node.type === TocNodeKind.Leaf) {
+      if (node.type === TocNodeKind.Page) {
         const page = expectValue(this.bundle.allPages.get(node.value.absPath), `BUG: This node should exist: ${node.value.absPath}`)
         const fsPath = URI.parse(node.value.absPath).fsPath
         const oldXml = expectValue(await this.readOrNull(page), `BUG? This file should exist right? ${fsPath}`)
@@ -454,7 +454,7 @@ export class ModelManager {
         return { node: node, parent }
       }
       /* istanbul ignore else */
-      if (node.type === TocNodeKind.Inner) {
+      if (node.type === TocNodeKind.Subbook) {
         const ret = this.recFind(token, node, node.children)
         if (ret !== undefined) return ret
       }
@@ -471,7 +471,7 @@ export class ModelManager {
     throw new Error(`BUG: Could not find ToC item using token='${token}'`)
   }
 
-  public async newPage(bookIndex: number, title: string) {
+  public async createPage(bookIndex: number, title: string) {
     const template = (): string => {
       return `
 <document xmlns="http://cnx.rice.edu/cnxml">
@@ -513,22 +513,22 @@ export class ModelManager {
 
       const bookToc = this.bookTocs[bookIndex]
       bookToc.tocTree.unshift({
-        type: TocNodeKind.Leaf,
+        type: TocNodeKind.Page,
         value: { token: 'unused-when-writing', title: undefined, fileId: newModuleId, absPath: page.absPath }
       })
       await this.writeBookToc(bookToc)
-      ModelManager.debug(`[NEW_PAGE] Prepended to Book: ${pageUri.fsPath}`)
+      ModelManager.debug(`[CREATE_PAGE] Prepended to Book: ${pageUri.fsPath}`)
       return { page, id: newModuleId }
     }
     /* istanbul ignore next */
     throw new Error('Error: Too many page directories already exist')
   }
 
-  public async newSubbook(bookIndex: number, title: string) {
-    ModelManager.debug(`[NEW_SUBBOOK] Creating: ${title}`)
+  public async createSubbook(bookIndex: number, title: string) {
+    ModelManager.debug(`[CREATE_SUBBOOK] Creating: ${title}`)
     const bookToc = this.bookTocs[bookIndex]
-    const tocNode: TocInner<ClientSubbookish, ClientPageish> = {
-      type: TocNodeKind.Inner,
+    const tocNode: TocSubbook<ClientSubbookish, ClientPageish> = {
+      type: TocNodeKind.Subbook,
       value: { title, token: 'unused-when-writing' },
       children: []
     }
@@ -546,7 +546,7 @@ function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
     if (parent.tocTree.length === before) {
       throw new Error(`BUG: Could not find Page child in book='${parent.slug}'`)
     }
-  } else /* istanbul ignore else */ if (parent.type === TocNodeKind.Inner) {
+  } else /* istanbul ignore else */ if (parent.type === TocNodeKind.Subbook) {
     const before = parent.children.length
     parent.children = parent.children.filter(n => n !== node)
     /* istanbul ignore if */

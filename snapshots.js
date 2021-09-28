@@ -5,109 +5,109 @@ module.exports = {
       "allows dnd from uneditable to editable": {
         "1": [
           {
-            "type": "TOC_MOVE",
-            "event": {
-              "nodeToken": "page-token-m00003",
-              "newParentToken": "subbook-token-subcollection",
-              "newChildIndex": 0,
-              "bookIndex": 0,
-              "newToc": [
-                {
-                  "type": "TocNodeKind.Inner",
-                  "title": "subcollection",
-                  "token": "subbook-token-subcollection",
-                  "expanded": true,
-                  "children": [
-                    {
-                      "type": "TocNodeKind.Leaf",
-                      "token": "page-token-m00003",
-                      "moduleid": "m00003",
-                      "subtitle": "m00003",
-                      "title": "Module 3"
-                    },
-                    {
-                      "type": "TocNodeKind.Leaf",
-                      "token": "page-token-m00001",
-                      "moduleid": "m00001",
-                      "subtitle": "m00001",
-                      "title": "Introduction"
-                    }
-                  ]
-                },
-                {
-                  "type": "TocNodeKind.Leaf",
-                  "token": "page-token-m00002",
-                  "moduleid": "m00002",
-                  "subtitle": "m00002",
-                  "title": "Appendix"
-                }
-              ]
-            }
+            "type": "TocModificationKind.Move",
+            "nodeToken": "page-token-m00003",
+            "newParentToken": "subbook-token-subcollection",
+            "newChildIndex": 0,
+            "bookIndex": 0,
+            "newToc": [
+              {
+                "type": "TocNodeKind.Subbook",
+                "title": "subcollection",
+                "token": "subbook-token-subcollection",
+                "expanded": true,
+                "children": [
+                  {
+                    "type": "TocNodeKind.Page",
+                    "token": "page-token-m00003",
+                    "title": "Module 3",
+                    "subtitle": "m00003",
+                    "fileId": "m00003",
+                    "absPath": "/fake-path/to/page/m00003"
+                  },
+                  {
+                    "type": "TocNodeKind.Page",
+                    "token": "page-token-m00001",
+                    "title": "Introduction",
+                    "subtitle": "m00001",
+                    "fileId": "m00001",
+                    "absPath": "/fake-path/to/page/m00001"
+                  }
+                ]
+              },
+              {
+                "type": "TocNodeKind.Page",
+                "token": "page-token-m00002",
+                "title": "Appendix",
+                "subtitle": "m00002",
+                "fileId": "m00002",
+                "absPath": "/fake-path/to/page/m00002"
+              }
+            ]
           }
         ]
       },
       "allows dnd from editable to editable": {
         "1": [
           {
-            "type": "TOC_MOVE",
-            "event": {
-              "nodeToken": "page-token-m00002",
-              "newParentToken": "subbook-token-subcollection",
-              "newChildIndex": 0,
-              "bookIndex": 0,
-              "newToc": [
-                {
-                  "type": "TocNodeKind.Inner",
-                  "title": "subcollection",
-                  "token": "subbook-token-subcollection",
-                  "expanded": true,
-                  "children": [
-                    {
-                      "type": "TocNodeKind.Leaf",
-                      "token": "page-token-m00002",
-                      "moduleid": "m00002",
-                      "subtitle": "m00002",
-                      "title": "Appendix"
-                    },
-                    {
-                      "type": "TocNodeKind.Leaf",
-                      "token": "page-token-m00001",
-                      "moduleid": "m00001",
-                      "subtitle": "m00001",
-                      "title": "Introduction"
-                    }
-                  ]
-                }
-              ]
-            }
+            "type": "TocModificationKind.Move",
+            "nodeToken": "page-token-m00002",
+            "newParentToken": "subbook-token-subcollection",
+            "newChildIndex": 0,
+            "bookIndex": 0,
+            "newToc": [
+              {
+                "type": "TocNodeKind.Subbook",
+                "title": "subcollection",
+                "token": "subbook-token-subcollection",
+                "expanded": true,
+                "children": [
+                  {
+                    "type": "TocNodeKind.Page",
+                    "token": "page-token-m00002",
+                    "title": "Appendix",
+                    "subtitle": "m00002",
+                    "fileId": "m00002",
+                    "absPath": "/fake-path/to/page/m00002"
+                  },
+                  {
+                    "type": "TocNodeKind.Page",
+                    "token": "page-token-m00001",
+                    "title": "Introduction",
+                    "subtitle": "m00001",
+                    "fileId": "m00001",
+                    "absPath": "/fake-path/to/page/m00001"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
       "deletes elements when dnd from editable to uneditable": {
         "1": [
           {
-            "type": "TOC_REMOVE",
-            "event": {
-              "nodeToken": "page-token-m00002",
-              "bookIndex": 0,
-              "newToc": [
-                {
-                  "type": "TocNodeKind.Inner",
-                  "title": "subcollection",
-                  "token": "subbook-token-subcollection",
-                  "expanded": true,
-                  "children": [
-                    {
-                      "type": "TocNodeKind.Leaf",
-                      "token": "page-token-m00001",
-                      "moduleid": "m00001",
-                      "subtitle": "m00001",
-                      "title": "Introduction"
-                    }
-                  ]
-                }
-              ]
-            }
+            "type": "TocModificationKind.Remove",
+            "nodeToken": "page-token-m00002",
+            "bookIndex": 0,
+            "newToc": [
+              {
+                "type": "TocNodeKind.Subbook",
+                "title": "subcollection",
+                "token": "subbook-token-subcollection",
+                "expanded": true,
+                "children": [
+                  {
+                    "type": "TocNodeKind.Page",
+                    "token": "page-token-m00001",
+                    "title": "Introduction",
+                    "subtitle": "m00001",
+                    "fileId": "m00001",
+                    "absPath": "/fake-path/to/page/m00001"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -138,115 +138,120 @@ module.exports = {
       "can tell the extension to rename Page": {
         "1": [
           {
-            "type": "PAGE_RENAME",
-            "event": {
-              "newTitle": "Introductionabc",
-              "nodeToken": "page-token-m00001",
-              "node": {
-                "type": "TocNodeKind.Leaf",
-                "token": "page-token-m00001",
-                "moduleid": "m00001",
-                "subtitle": "m00001",
-                "title": "Introductionabc"
+            "type": "TocModificationKind.PageRename",
+            "newTitle": "Introductionabc",
+            "nodeToken": "page-token-m00001",
+            "node": {
+              "type": "TocNodeKind.Page",
+              "token": "page-token-m00001",
+              "title": "Introductionabc",
+              "subtitle": "m00001",
+              "fileId": "m00001",
+              "absPath": "/fake-path/to/page/m00001"
+            },
+            "bookIndex": 0,
+            "newToc": [
+              {
+                "type": "TocNodeKind.Subbook",
+                "title": "subcollection",
+                "token": "subbook-token-subcollection",
+                "expanded": true,
+                "children": [
+                  {
+                    "type": "TocNodeKind.Page",
+                    "token": "page-token-m00001",
+                    "title": "Introductionabc",
+                    "subtitle": "m00001",
+                    "fileId": "m00001",
+                    "absPath": "/fake-path/to/page/m00001"
+                  },
+                  {
+                    "type": "TocNodeKind.Page",
+                    "token": "page-token-m00002",
+                    "title": "Appending To Lists",
+                    "subtitle": "m00002",
+                    "fileId": "m00002",
+                    "absPath": "/fake-path/to/page/m00002"
+                  }
+                ]
               },
-              "bookIndex": 0,
-              "newToc": [
-                {
-                  "type": "TocNodeKind.Inner",
-                  "title": "subcollection",
-                  "token": "subbook-token-subcollection",
-                  "expanded": true,
-                  "children": [
-                    {
-                      "type": "TocNodeKind.Leaf",
-                      "token": "page-token-m00001",
-                      "moduleid": "m00001",
-                      "subtitle": "m00001",
-                      "title": "Introductionabc"
-                    },
-                    {
-                      "type": "TocNodeKind.Leaf",
-                      "token": "page-token-m00002",
-                      "moduleid": "m00002",
-                      "subtitle": "m00002",
-                      "title": "Appending To Lists"
-                    }
-                  ]
-                },
-                {
-                  "type": "TocNodeKind.Leaf",
-                  "token": "page-token-m00003",
-                  "moduleid": "m00003",
-                  "subtitle": "m00003",
-                  "title": "Appendix"
-                }
-              ]
-            }
+              {
+                "type": "TocNodeKind.Page",
+                "token": "page-token-m00003",
+                "title": "Appendix",
+                "subtitle": "m00003",
+                "fileId": "m00003",
+                "absPath": "/fake-path/to/page/m00003"
+              }
+            ]
           }
         ]
       },
       "can tell the extension to rename Subbook": {
         "1": [
           {
-            "type": "SUBBOOK_RENAME",
-            "event": {
-              "newTitle": "subcollectionabc",
-              "nodeToken": "subbook-token-subcollection",
-              "node": {
-                "type": "TocNodeKind.Inner",
+            "type": "TocModificationKind.SubbookRename",
+            "newTitle": "subcollectionabc",
+            "nodeToken": "subbook-token-subcollection",
+            "node": {
+              "type": "TocNodeKind.Subbook",
+              "title": "subcollectionabc",
+              "token": "subbook-token-subcollection",
+              "expanded": true,
+              "children": [
+                {
+                  "type": "TocNodeKind.Page",
+                  "token": "page-token-m00001",
+                  "title": "Introduction",
+                  "subtitle": "m00001",
+                  "fileId": "m00001",
+                  "absPath": "/fake-path/to/page/m00001"
+                },
+                {
+                  "type": "TocNodeKind.Page",
+                  "token": "page-token-m00002",
+                  "title": "Appending To Lists",
+                  "subtitle": "m00002",
+                  "fileId": "m00002",
+                  "absPath": "/fake-path/to/page/m00002"
+                }
+              ]
+            },
+            "bookIndex": 0,
+            "newToc": [
+              {
+                "type": "TocNodeKind.Subbook",
                 "title": "subcollectionabc",
                 "token": "subbook-token-subcollection",
                 "expanded": true,
                 "children": [
                   {
-                    "type": "TocNodeKind.Leaf",
+                    "type": "TocNodeKind.Page",
                     "token": "page-token-m00001",
-                    "moduleid": "m00001",
+                    "title": "Introduction",
                     "subtitle": "m00001",
-                    "title": "Introduction"
+                    "fileId": "m00001",
+                    "absPath": "/fake-path/to/page/m00001"
                   },
                   {
-                    "type": "TocNodeKind.Leaf",
+                    "type": "TocNodeKind.Page",
                     "token": "page-token-m00002",
-                    "moduleid": "m00002",
+                    "title": "Appending To Lists",
                     "subtitle": "m00002",
-                    "title": "Appending To Lists"
+                    "fileId": "m00002",
+                    "absPath": "/fake-path/to/page/m00002"
                   }
                 ]
               },
-              "bookIndex": 0,
-              "newToc": [
-                {
-                  "type": "TocNodeKind.Inner",
-                  "title": "subcollectionabc",
-                  "token": "subbook-token-subcollection",
-                  "expanded": true,
-                  "children": [
-                    {
-                      "type": "TocNodeKind.Leaf",
-                      "token": "page-token-m00001",
-                      "moduleid": "m00001",
-                      "subtitle": "m00001",
-                      "title": "Introduction"
-                    },
-                    {
-                      "type": "TocNodeKind.Leaf",
-                      "token": "page-token-m00002",
-                      "moduleid": "m00002",
-                      "subtitle": "m00002",
-                      "title": "Appending To Lists"
-                    }
-                  ]
-                },
-                {
-                  "type": "TocNodeKind.Leaf",
-                  "token": "page-token-m00003",
-                  "moduleid": "m00003",
-                  "subtitle": "m00003",
-                  "title": "Appendix"
-                }
-              ]
-            }
+              {
+                "type": "TocNodeKind.Page",
+                "token": "page-token-m00003",
+                "title": "Appendix",
+                "subtitle": "m00003",
+                "fileId": "m00003",
+                "absPath": "/fake-path/to/page/m00003"
+              }
+            ]
           }
         ]
       }

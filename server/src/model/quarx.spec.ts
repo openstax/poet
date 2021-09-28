@@ -58,7 +58,7 @@ describe('Quarx.autorun code', () => {
 })
 
 function tocToString(n: TocNode<PageNode>): string {
-  if (n.type === TocNodeKind.Inner) {
+  if (n.type === TocNodeKind.Subbook) {
     return n.children.map(tocToString).join(' ')
   } else {
     return n.page.title(() => { throw new Error('BUG: Title should have been loaded by now') })

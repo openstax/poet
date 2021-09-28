@@ -14,37 +14,17 @@ Array [
           Object {
             "children": Array [
               Object {
-                "type": "TocNodeKind.Leaf",
-                "value": Object {
-                  "absPath": "/fake/path/to/file",
-                  "fileId": "fileId",
-                  "title": "title",
-                  "token": "token",
-                },
-              },
-            ],
-            "type": "TocNodeKind.Inner",
-            "value": Object {
-              "title": "title",
-              "token": "token",
-            },
-          },
-        ],
-        "tree": Array [
-          Object {
-            "children": Array [
-              Object {
                 "absPath": "/fake/path/to/file",
                 "fileId": "fileId",
                 "subtitle": "fileId",
                 "title": "title",
                 "token": "token",
-                "type": "TocNodeKind.Leaf",
+                "type": "TocNodeKind.Page",
               },
             ],
             "title": "title",
             "token": "token",
-            "type": "TocNodeKind.Inner",
+            "type": "TocNodeKind.Subbook",
           },
         ],
         "type": "BookRootNode.Singleton",
@@ -55,21 +35,21 @@ Array [
       Object {
         "slug": "mock-slug__source-only",
         "title": "All Modules",
-        "tree": Array [
+        "tocTree": Array [
           Object {
             "absPath": "/fake/path/to/file",
             "fileId": "fileId",
             "subtitle": "fileId",
             "title": "title",
             "token": "token",
-            "type": "TocNodeKind.Leaf",
+            "type": "TocNodeKind.Page",
           },
         ],
       },
       Object {
         "slug": "mock-slug__source-only",
         "title": "Orphan Modules",
-        "tree": Array [],
+        "tocTree": Array [],
       },
     ],
   },
@@ -387,7 +367,7 @@ Array [
     Object {
       "children": Array [],
       "label": "m2",
-      "type": "TocNodeKind.Leaf",
+      "type": "TocNodeKind.Page",
     },
     Object {
       "expand": 3,

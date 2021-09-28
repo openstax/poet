@@ -15,9 +15,7 @@ export type Opt<T> = T | undefined
 
 export enum ExtensionServerRequest {
   BundleEnsureIds = 'bundle-ensure-ids',
-  TocModification = 'toc-modification',
-  NewPage = 'new-page',
-  NewSubbook = 'new-subbook',
+  TocModification = 'toc-modification'
 }
 
 export enum ExtensionServerNotification {

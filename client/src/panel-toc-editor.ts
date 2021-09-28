@@ -4,10 +4,10 @@ import vscode from 'vscode'
 
 import { TreeItem as TreeItemUI } from 'react-sortable-tree'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
-import { ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, TocModification, TocModificationKind } from '../../common/src/toc-tree'
+import { ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, CreatePageEvent, CreateSubbookEvent, TocModification, TocModificationKind, TocModificationParams } from '../../common/src/toc-tree'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest, NewPageParams, NewSubbookParams, Opt } from '../../common/src/requests'
+import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest, Opt } from '../../common/src/requests'
 import { ExtensionHostContext, Panel } from './panel'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
@@ -18,61 +18,32 @@ export interface ErrorSignal {
   type: 'error'
   message: string
 }
-export interface SubbookCreateSignal {
-  type: 'SUBBOOK_CREATE'
-  slug: string
-  bookIndex: number
-}
-export interface PageCreateSignal {
-  type: 'PAGE_CREATE'
-  bookIndex: number
-}
-export interface TocMoveSignal {
-  type: 'TOC_MOVE'
-  event: TocMoveEvent
-}
-export interface TocRemoveSignal {
-  type: 'TOC_REMOVE'
-  event: TocRemoveEvent
-}
-export interface PageRenameSignal {
-  type: 'PAGE_RENAME'
-  event: PageRenameEvent
-}
-export interface SubbookRenameSignal {
-  type: 'SUBBOOK_RENAME'
-  event: SubbookRenameEvent
-}
-// export interface WebviewStartedSignal {
-//   type: 'WEBVIEW_STARTED'
-// }
 export type PanelIncomingMessage = (
-  | TocMoveSignal
-  | TocRemoveSignal
-  | PageRenameSignal
-  | SubbookRenameSignal
-  // | WebviewStartedSignal
+  | TocMoveEvent
+  | TocRemoveEvent
+  | PageRenameEvent
+  | SubbookRenameEvent
+  | CreateSubbookEvent
+  | CreatePageEvent
   | ErrorSignal
-  | SubbookCreateSignal
-  | PageCreateSignal
 )
 
-type TreeItemWithToken = TreeItemUI & ({
-  type: TocNodeKind.Leaf
+export type TreeItemWithToken = TreeItemUI & ({
+  type: TocNodeKind.Page
   token: string
   title: string | undefined
   fileId: string
   absPath: string
 } | {
-  type: TocNodeKind.Inner
+  type: TocNodeKind.Subbook
   token: string
   title: string
   children: TreeItemWithToken[]
 })
-interface Bookish {
+export interface Bookish {
   title: string
   slug: string
-  tree: TreeItemWithToken[]
+  tocTree: TreeItemWithToken[]
 }
 export interface PanelOutgoingMessage {
   uneditable: Bookish[]
@@ -80,7 +51,7 @@ export interface PanelOutgoingMessage {
 }
 
 function toTreeItem(n: ClientTocNode): TreeItemWithToken {
-  if (n.type === TocNodeKind.Leaf) {
+  if (n.type === TocNodeKind.Page) {
     return {
       type: n.type,
       token: n.value.token,
@@ -131,7 +102,7 @@ const isWebviewDisposed = (panel: vscode.WebviewPanel) => {
 }
 
 const fileIdSorter = (n1: ClientPageish, n2: ClientPageish) => n1.fileId.localeCompare(n2.fileId)
-const toClientTocNode = (n: ClientPageish): ClientTocNode => ({ type: TocNodeKind.Leaf, value: n })
+const toClientTocNode = (n: ClientPageish): ClientTocNode => ({ type: TocNodeKind.Page, value: n })
 export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMessage> {
   private state = EMPTY_BOOKS_AND_ORPHANS
   constructor(private readonly context: ExtensionHostContext) {
@@ -153,35 +124,30 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
   // readonly handleMessage = handleMessageFromWebviewPanel(this.panel, this.context.client)
   readonly handleMessage = async (m: PanelIncomingMessage) => {
     const workspaceUri = expect(getRootPathUri(), 'No root path in which to generate a module').toString()
-    let event: Opt<TocModification>
-    if (m.type === 'TOC_MOVE') {
-      event = { ...m.event, type: TocModificationKind.Move }
-    } else if (m.type === 'TOC_REMOVE') {
-      event = { ...m.event, type: TocModificationKind.Remove }
-    } else if (m.type === 'PAGE_RENAME') {
-      event = { ...m.event, type: TocModificationKind.PageRename }
-    } else if (m.type === 'SUBBOOK_RENAME') {
-      event = { ...m.event, type: TocModificationKind.SubbookRename }
-    } else if (m.type === 'PAGE_CREATE') {
+    let event: Opt<TocModification|CreatePageEvent|CreateSubbookEvent>
+    if (m.type === TocModificationKind.Move || m.type === TocModificationKind.Remove || m.type === TocModificationKind.PageRename || m.type === TocModificationKind.SubbookRename) {
+      event = m
+    } else if (m.type === TocNodeKind.Page) {
       const title = await vscode.window.showInputBox({ prompt: 'Title of new Page' })
-      /* istanbul ignore else */
-      if (title !== undefined) {
-        const params: NewPageParams = { workspaceUri, title, bookIndex: m.bookIndex }
-        await this.context.client.sendRequest(ExtensionServerRequest.NewPage, params)
+      /* istanbul ignore if */
+      if (title === undefined) {
         return
+      } else {
+        event = { ...m, title }
       }
-    } else /* istanbul ignore else */ if (m.type === 'SUBBOOK_CREATE') {
+    } else /* istanbul ignore else */ if (m.type === TocNodeKind.Subbook) {
       const title = await vscode.window.showInputBox({ prompt: 'Title of new Book Section' })
-      /* istanbul ignore else */
-      if (title !== undefined) {
-        const params: NewSubbookParams = { workspaceUri, title, bookIndex: m.bookIndex, slug: m.slug }
-        await this.context.client.sendRequest(ExtensionServerRequest.NewSubbook, params)
+      /* istanbul ignore if */
+      if (title === undefined) {
         return
+      } else {
+        event = { ...m, title }
       }
     }
     /* istanbul ignore else */
     if (event !== undefined) {
-      await this.context.client.sendRequest(ExtensionServerRequest.TocModification, { workspaceUri, event })
+      const params: TocModificationParams = { workspaceUri, event }
+      await this.context.client.sendRequest(ExtensionServerRequest.TocModification, params)
     }
   }
 
@@ -196,7 +162,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
   private createMessage(): PanelOutgoingMessage {
     const allModules = new Set<ClientPageish>()
     function recAddModules(n: ClientTocNode) {
-      if (n.type === TocNodeKind.Leaf) {
+      if (n.type === TocNodeKind.Page) {
         allModules.add(n.value)
       } else {
         n.children.forEach(recAddModules)
@@ -210,16 +176,16 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
     const collectionAllModules = {
       title: 'All Modules',
       slug: 'mock-slug__source-only',
-      tree: allModulesSorted.map(toClientTocNode).map(toTreeItem)
+      tocTree: allModulesSorted.map(toClientTocNode).map(toTreeItem)
     }
     const collectionOrphanModules = {
       title: 'Orphan Modules',
       slug: 'mock-slug__source-only',
-      tree: orphanModulesSorted.map(toClientTocNode).map(toTreeItem)
+      tocTree: orphanModulesSorted.map(toClientTocNode).map(toTreeItem)
     }
     return {
       uneditable: [collectionAllModules, collectionOrphanModules],
-      editable: this.state.books.map(b => ({ ...b, tree: b.tocTree.map(toTreeItem) }))
+      editable: this.state.books.map(b => ({ ...b, tocTree: b.tocTree.map(toTreeItem) }))
     }
   }
 
