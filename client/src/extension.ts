@@ -7,7 +7,7 @@ import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } fro
 import { OpenstaxCommand } from './extension-types'
 import { ExtensionHostContext, Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
-import { toggleTocTreesFilteringHandler } from './toc-trees'
+import { toggleTocTreesFilteringHandler } from './toc-trees-provider'
 import { BookOrTocNode, TocsTreeProvider } from './book-tocs'
 import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
 

@@ -1,4 +1,4 @@
-import { BookToc, ClientPageish } from './toc-tree'
+import { BookToc, ClientPageish } from './toc'
 
 export enum DiagnosticSource {
   xml = 'xml',
@@ -14,12 +14,12 @@ export type Opt<T> = T | undefined
 // does not utilize one of the ExtensionServerRequest types
 
 export enum ExtensionServerRequest {
-  BundleEnsureIds = 'bundle-ensure-ids',
-  TocModification = 'toc-modification'
+  BundleEnsureIds = 'BUNDLE_ENSURE_IDS',
+  TocModification = 'TOC_MODIFICATION'
 }
 
 export enum ExtensionServerNotification {
-  BookTocs = 'book-tocs',
+  BookTocs = 'BOOK_TOCS',
 }
 
 export interface NewPageParams {

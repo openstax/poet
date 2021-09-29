@@ -22,7 +22,7 @@ import { Bundle } from './model/bundle'
 import { Factory } from './model/factory'
 import { ModelManager } from './model-manager'
 import { JobRunner } from './job-runner'
-import { TocModificationParams, TocNodeKind } from '../../common/src/toc-tree'
+import { TocModificationParams, TocNodeKind } from '../../common/src/toc'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.

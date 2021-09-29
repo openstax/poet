@@ -3,9 +3,9 @@ import expect from 'expect'
 import SinonRoot, { SinonStub } from 'sinon'
 
 import vscode, { Disposable, Event, EventEmitter, Uri, ViewColumn, WebviewPanel } from 'vscode'
-import { BookRootNode, BookToc, TocNodeKind, TocModificationKind } from '../../common/src/toc-tree'
+import { BookRootNode, BookToc, TocNodeKind, TocModificationKind } from '../../common/src/toc'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
-import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees'
+import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees-provider'
 import { PanelIncomingMessage, PanelOutgoingMessage, TocEditorPanel } from '../src/panel-toc-editor'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest } from '../../common/src/requests'

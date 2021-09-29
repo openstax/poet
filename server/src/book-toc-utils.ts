@@ -1,6 +1,6 @@
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { BookRootNode, BookToc, ClientPageish, ClientTocNode, TocPage } from '../../common/src/toc-tree'
+import { BookRootNode, BookToc, ClientPageish, ClientTocNode, TocPage } from '../../common/src/toc'
 import { pageToModuleId } from './model-manager'
 import { BookNode, TocSubbookWithRange, TocNodeWithRange } from './model/book'
 import { PageNode } from './model/page'

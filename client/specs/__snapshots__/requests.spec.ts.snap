@@ -2,7 +2,7 @@
 
 exports[`ensureIds runs and yields a response 1`] = `
 Array [
-  "bundle-ensure-ids",
+  "BUNDLE_ENSURE_IDS",
   Object {
     "workspaceUri": "/fake/workspace",
   },

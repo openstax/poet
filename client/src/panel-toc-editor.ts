@@ -4,7 +4,7 @@ import vscode from 'vscode'
 
 import { TreeItem as TreeItemUI } from 'react-sortable-tree'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
-import { ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, CreatePageEvent, CreateSubbookEvent, TocModification, TocModificationKind, TocModificationParams } from '../../common/src/toc-tree'
+import { ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, CreatePageEvent, CreateSubbookEvent, TocModification, TocModificationKind, TocModificationParams } from '../../common/src/toc'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest, Opt } from '../../common/src/requests'
