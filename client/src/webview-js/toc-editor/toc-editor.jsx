@@ -3,17 +3,7 @@ import { useState, useContext, useEffect, useRef } from 'preact/hooks'
 import 'react-sortable-tree/style.css'
 import SortableTree from 'react-sortable-tree'
 import stringify from 'json-stable-stringify'
-
-// These strings are defined elsewhere and are in the messages sent/received by this component
-const TocNodeKind = {}
-TocNodeKind.Subbook = 'TocNodeKind.Subbook'
-TocNodeKind.Page = 'TocNodeKind.Page'
-
-const TocModificationKind = {}
-TocModificationKind.Move = 'TocModificationKind.Move'
-TocModificationKind.Remove = 'TocModificationKind.Remove'
-TocModificationKind.PageRename = 'TocModificationKind.PageRename'
-TocModificationKind.SubbookRename = 'TocModificationKind.SubbookRename'
+import { TocNodeKind, TocModificationKind } from '~common-api~/toc'
 
 const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'

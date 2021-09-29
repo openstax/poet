@@ -1,15 +1,11 @@
 // Shares a namespace with the other specfiles if not scoped
 import { PanelIncomingMessage, PanelOutgoingMessage, Bookish, TreeItemWithToken } from '../../client/src/panel-toc-editor'
+import { TocNodeKind } from '../../common/src/toc'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/toc-editor.html'
 
   const DO_NOT_INCREMENT = -1
-
-  enum TocNodeKind {
-    Subbook = 'TocNodeKind.Subbook',
-    Page = 'TocNodeKind.Page'
-  }
 
   type TocNode = {
     title?: string
