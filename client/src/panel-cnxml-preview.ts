@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import fs from 'fs'
 import path from 'path'
-import { fixResourceReferences, fixCspSourceReferences, addBaseHref, expect, getRootPathUri, ensureCatchPromise, ensureCatch, injectCspNonce } from './utils'
+import { fixResourceReferences, fixCspSourceReferences, addBaseHref, expect, getRootPathUri, ensureCatchPromise, ensureCatch } from './utils'
 import { PanelType } from './extension-types'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { ExtensionHostContext, Panel } from './panel'
@@ -220,13 +220,12 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     }
   }
 
-  private async reboundWebviewHtmlForResource(resource: vscode.Uri, messages: PanelOutgoingMessage[] = []): Promise<string> {
+  private async reboundWebviewHtmlForResource(resource: vscode.Uri, messages: PanelOutgoingMessage[]): Promise<string> {
     let html = await fs.promises.readFile(path.join(this.context.resourceRootDir, 'cnxml-preview.html'), 'utf-8')
     html = this.injectEnsuredMessages(html, messages)
     html = addBaseHref(this.panel.webview, resource, html)
     html = fixResourceReferences(this.panel.webview, html, this.context.resourceRootDir)
     html = fixCspSourceReferences(this.panel.webview, html)
-    html = injectCspNonce(html, this.nonce)
     return html
   }
 }

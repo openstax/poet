@@ -5,9 +5,9 @@ import { PageNode } from './page'
 import { Factory } from './factory'
 import { ImageNode } from './image'
 
-const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
+export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
-const NS_METADATA = 'http://cnx.rice.edu/mdml'
+export const NS_METADATA = 'http://cnx.rice.edu/mdml'
 const NS_CONTAINER = 'https://openstax.org/namespaces/book-container'
 
 const NOWHERE_START: Position = { line: 0, character: 0 }
@@ -15,10 +15,10 @@ const NOWHERE_END: Position = { line: 0, character: 0 /* Number.MAX_VALUE */ }
 export const NOWHERE: Range = { start: NOWHERE_START, end: NOWHERE_END }
 
 export const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA, bk: NS_CONTAINER })
-export const selectOne = <T extends Node>(sel: string, doc: Node): T => {
+export const selectOne = (sel: string, doc: Node): Element => {
   const ret = select(sel, doc) as Node[]
   expectValue(ret.length === 1 || null, `ERROR: Expected one but found ${ret.length} results that match '${sel}'`)
-  return ret[0] as T
+  return ret[0] as Element
 }
 
 export type Opt<T> = T | undefined
@@ -43,12 +43,11 @@ export interface Range {
 export interface WithRange<T> extends HasRange {
   v: T
 }
-
 export interface HasRange {
   range: Range
 }
 
-export function textWithSource(el: Element, attr?: string): WithRange<string> {
+export function textWithRange(el: Element, attr?: string): WithRange<string> {
   const range = calculateElementPositions(el)
   const v = attr !== undefined ? el.getAttribute(attr) : el.textContent
   return {
@@ -57,10 +56,19 @@ export function textWithSource(el: Element, attr?: string): WithRange<string> {
   }
 }
 
+// This also exists in ../common/
+export enum TocNodeKind {
+  Subbook = 'TocNodeKind.Subbook',
+  Page = 'TocNodeKind.Page'
+}
+export type TocNode<T> = TocSubbook<T> | TocPage<T>
+export interface TocSubbook<T> { type: TocNodeKind.Subbook, readonly title: string, readonly children: Array<TocNode<T>> }
+export interface TocPage<T> { type: TocNodeKind.Page, readonly page: T }
+
 export interface Bundleish {
   allPages: Factory<PageNode>
   allImages: Factory<ImageNode>
-  workspaceRoot: string
+  workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
 }
 
@@ -160,4 +168,32 @@ function isBeforeOrEqual(a: Position, b: Position) {
 
 export function inRange(range: Range, current: Position) {
   return (isAfter(current, range.start) && isBeforeOrEqual(current, range.end))
+}
+export const equalsOpt = <T>(eq: (n1: T, n2: T) => boolean) => (n1: Opt<T>, n2: Opt<T>) => {
+  /* istanbul ignore next */
+  return n1 === undefined ? n2 === undefined : n2 === undefined ? false : eq(n1, n2)
+}
+export const equalsWithRange = <T>(eq: (n1: T, n2: T) => boolean) => (n1: WithRange<T>, n2: WithRange<T>) => {
+  return equalsPos(n1.range.start, n2.range.start) && equalsPos(n1.range.end, n2.range.end) && eq(n1.v, n2.v)
+}
+export const equalsArray = <T>(eq: (n1: T, n2: T) => boolean) => (n1: T[], n2: T[]) => {
+  /* istanbul ignore else */
+  if (n1.length === n2.length) {
+    for (let i = 0; i < n1.length; i++) {
+      /* istanbul ignore else */
+      if (!eq(n1[i], n2[i])) {
+        return false
+      }
+    }
+    /* istanbul ignore next */
+    return true
+  }
+  /* istanbul ignore next */
+  return false
+}
+export const tripleEq = <T>(n1: T, n2: T) => {
+  return n1 === n2
+}
+export const equalsPos = (n1: Position, n2: Position) => {
+  return n1.line === n2.line && n1.character === n2.character
 }

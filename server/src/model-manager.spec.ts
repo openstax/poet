@@ -1,41 +1,30 @@
+import expect from 'expect'
 import path from 'path'
 import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
+import I from 'immutable'
 import { createConnection, WatchDog } from 'vscode-languageserver'
 import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
+import xmlFormat from 'xml-formatter'
 import { expectValue, Opt, join, PathKind } from './model/utils'
-import { BookNode } from './model/book'
 import { Bundle } from './model/bundle'
-import { ModelManager, pageAsTreeObject, bookTocAsTreeCollection } from './model-manager'
+import { ModelManager } from './model-manager'
 import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/util.spec'
 import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
 
 import { PageNode } from './model/page'
-import { DiagnosticSource } from '../../common/src/requests'
+import { TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc'
+import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
+import { bookMaker } from './model/book.spec'
+import { bundleMaker } from './model/bundle.spec'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
 
-describe('Tree Translator', () => {
-  let book = null as unknown as BookNode
-  beforeEach(() => {
-    book = loadSuccess(first(loadSuccess(makeBundle()).books))
-  })
-  it('pageAsTreeObject', () => {
-    const page = first(book.pages)
-    expect(page.isLoaded).toBe(false)
-    const o = pageAsTreeObject(page)
-    expect(o.moduleid).toEqual('m00001')
-    expect(o.title).toBe('Introduction')
-  })
-  it('bookTocAsTreeCollection', () => {
-    const o = bookTocAsTreeCollection(book)
-    expect(o.slug).toBe('test')
-    expect(o.title).toBe('test collection')
-    expect(o.children.length).toBe(1)
-  })
-})
+// xml-formatter calls require('xml-parser-xo') _inside_ the format function
+// so we need require to cache it before we start up mock-fs
+xmlFormat('<root/>')
 
 describe('Bundle Manager', () => {
   const sinon = SinonRoot.createSandbox()
@@ -55,7 +44,7 @@ describe('Bundle Manager', () => {
   })
   it('responds with all pages when the books have loaded', () => {
     // Nothing loaded yet
-    expect(manager.allPages.size).toBe(0)
+    expect(manager.allPages.toArray()).toEqual([])
     // Load the pages
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     loadSuccess(first(book.pages))
@@ -64,9 +53,11 @@ describe('Bundle Manager', () => {
   it('orphanedPages()', () => {
     loadSuccess(first(loadSuccess(manager.bundle).books))
     expect(manager.allPages.size).toBe(1)
-    expect(manager.orphanedPages.size).toBe(0)
+    expect(manager.orphanedPages.toArray()).toEqual([])
     const orphanedPage = manager.bundle.allPages.getOrAdd('path/to/orphaned/page')
     expect(manager.allPages.size).toBe(2)
+    expect(manager.orphanedPages.toArray()).toEqual([]) // We did not load the file yet
+    orphanedPage.load(pageMaker({}))
     expect(manager.orphanedPages.size).toBe(1)
     expect(manager.orphanedPages.first()).toBe(orphanedPage)
   })
@@ -103,11 +94,11 @@ describe('Bundle Manager', () => {
     manager.bundle.allNodes.forEach(n => expect(n.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() sends diagnostics for a file we recognize', async () => {
-    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, manager.bundle.absPath)
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, manager.bundle.absPath)
     await manager.jobRunner.done()
 
     expect(sendDiagnosticsStub.callCount).toBe(1)
-    expect(manager.bundle.validationErrors.nodesToLoad.size).toBe(0)
+    expect(manager.bundle.validationErrors.nodesToLoad.toArray()).toEqual([])
 
     // Bundle needs to load all the books
     const books = manager.bundle.books
@@ -115,14 +106,14 @@ describe('Bundle Manager', () => {
     books.forEach(b => expect(b.isLoaded).toBe(true))
   })
   it('loadEnoughToSendDiagnostics() does not send diagnostics for a file we do not recognize', async () => {
-    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, '/path/t/non-existent/file')
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, '/path/t/non-existent/file')
     await manager.jobRunner.done()
     expect(sendDiagnosticsStub.callCount).toBe(0)
   })
   it('loadEnoughToSendDiagnostics() loads the node with the contents of the file', async () => {
-    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, manager.bundle.absPath, '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>')
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, manager.bundle.absPath, bundleMaker({}))
     await manager.jobRunner.done()
-    expect(manager.bundle.books.size).toBe(0)
+    expect(manager.bundle.books.toArray()).toEqual([])
   })
   it('calls sendDiagnostics with objects that can be serialized (no cycles)', () => {
     ignoreConsoleWarnings(() => manager.updateFileContents(manager.bundle.absPath, '<notvalidXML'))
@@ -190,9 +181,9 @@ describe('Find orphaned files', () => {
   const sinon = SinonRoot.createSandbox()
   beforeEach(() => {
     mockfs({
-      'META-INF/books.xml': '<container xmlns="https://openstax.org/namespaces/book-container" version="1"/>',
-      'modules/m2468/index.cnxml': 'this does-not-have-to-be-valid-XML-because-we-do-not-actually-parse-it-yet',
-      'modules/m1357/index.cnxml': 'this does-not-have-to-be-valid-XML-because-we-do-not-actually-parse-it-yet'
+      'META-INF/books.xml': bundleMaker({}),
+      'modules/m2468/index.cnxml': pageMaker({}),
+      'modules/m1357/index.cnxml': pageMaker({})
     })
   })
   afterEach(() => {
@@ -203,10 +194,8 @@ describe('Find orphaned files', () => {
     sinon.stub(conn, 'sendDiagnostics')
     const manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
     await manager.loadEnoughForOrphans()
-    await manager.jobRunner.done()
     // Run again to verify we do not perform the expensive fetch again (via code coverage)
     await manager.loadEnoughForOrphans()
-    await manager.jobRunner.done()
     expect(manager.orphanedPages.size).toBe(2)
   })
 })
@@ -223,31 +212,12 @@ describe('processFilesystemChange()', () => {
   }
 
   beforeEach(() => {
+    const bookSlug = 'slug2'
+    const pageId = 'm1234'
     mockfs({
-      'META-INF/books.xml': `<container xmlns="https://openstax.org/namespaces/book-container" version="1">
-                                <book slug="slug1" href="../collections/slug2.collection.xml" />
-                            </container>`,
-      'collections/slug2.collection.xml': `<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns="http://cnx.rice.edu/collxml">
-                              <col:metadata>
-                                <md:title>test collection</md:title>
-                                <md:slug>test1</md:slug>
-                              </col:metadata>
-                              <col:content>
-                                <col:subcollection>
-                                  <md:title>subcollection</md:title>
-                                  <col:content>
-                                    <col:module document="m1234" />
-                                  </col:content>
-                                </col:subcollection>
-                              </col:content>
-                            </col:collection>`,
-      'modules/m1234/index.cnxml': `<document xmlns="http://cnx.rice.edu/cnxml">
-                        <title>Module Title</title>
-                        <metadata xmlns:md="http://cnx.rice.edu/mdml">
-                          <md:uuid>00000000-0000-4000-0000-000000000000</md:uuid>
-                        </metadata>
-                        <content/>
-                      </document>`
+      'META-INF/books.xml': bundleMaker({ books: [bookSlug] }),
+      'collections/slug2.collection.xml': bookMaker({ slug: bookSlug, toc: [{ title: 'subcollection', children: [pageId] }] }),
+      'modules/m1234/index.cnxml': pageMaker({})
     })
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
     manager = new ModelManager(bundle, conn)
@@ -272,7 +242,7 @@ describe('processFilesystemChange()', () => {
     expect((await fireChange(FileChangeType.Created, 'media/newpic.png')).size).toBe(1)
   })
   it('does not create things it does not understand', async () => {
-    expect((await fireChange(FileChangeType.Created, 'README.md')).size).toBe(0)
+    expect((await fireChange(FileChangeType.Created, 'README.md')).toArray()).toEqual([])
   })
   it('updates Images/Pages/Books', async () => {
     expect((await fireChange(FileChangeType.Changed, 'META-INF/books.xml')).size).toBe(1)
@@ -285,14 +255,14 @@ describe('processFilesystemChange()', () => {
     expect((await fireChange(FileChangeType.Changed, 'modules/m1234/index.cnxml')).size).toBe(1)
     expect(sendDiagnosticsStub.callCount).toBe(1)
 
-    expect((await fireChange(FileChangeType.Changed, 'media/newpic.png')).size).toBe(0) // Since the model was not aware of the file yet
+    expect((await fireChange(FileChangeType.Changed, 'media/newpic.png')).toArray()).toEqual([]) // Since the model was not aware of the file yet
   })
   it('deletes Files and directories', async () => {
     // Load the Bundle, Book, and Page
     loadSuccess(first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages))
 
     // Delete non-existent file
-    expect((await fireChange(FileChangeType.Deleted, 'media/newpic.png')).size).toBe(0)
+    expect((await fireChange(FileChangeType.Deleted, 'media/newpic.png')).toArray()).toEqual([])
     // Delete a file
     const deletedModules = await fireChange(FileChangeType.Deleted, 'modules/m1234/index.cnxml')
     expect(deletedModules.size).toBe(1)
@@ -314,6 +284,17 @@ describe('processFilesystemChange()', () => {
     expect((await fireChange(FileChangeType.Deleted, book.workspacePath)).size).toBe(1)
     expect((await fireChange(FileChangeType.Deleted, page.workspacePath)).size).toBe(1)
     expect((await fireChange(FileChangeType.Deleted, bundle.workspacePath)).size).toBe(1)
+  })
+  it('Uses the unsaved content even when a filesystem change event occurs', async () => {
+    // Load the Bundle, Book, and Page
+    const bundle = loadSuccess(manager.bundle)
+    const book = loadSuccess(first(bundle.books))
+
+    expect(manager.bundle.books.toArray()).toEqual([book])
+    manager.updateFileContents(manager.bundle.absPath, bundleMaker({}))
+    expect(manager.bundle.books.toArray()).toEqual([])
+    expect((await fireChange(FileChangeType.Changed, 'META-INF/books.xml')).size).toBe(1)
+    expect(manager.bundle.books.toArray()).toEqual([]) // Should still be empty because the unsaved changes
   })
 })
 
@@ -427,7 +408,7 @@ describe('documentLinks()', () => {
     function rel(target: string | undefined) {
       const t = expectValue(target, 'BUG')
       if (t.startsWith('https://')) { return t }
-      return path.relative(manager.bundle.workspaceRoot, t)
+      return path.relative(manager.bundle.workspaceRootUri, t)
     }
 
     async function testPageLink(info: PageInfo, target: Opt<string>) {
@@ -451,33 +432,196 @@ describe('documentLinks()', () => {
   })
 })
 
+describe('modifyToc()', () => {
+  let manager = null as unknown as ModelManager
+  let params = null as unknown as BooksAndOrphans
+  beforeEach(() => {
+    const bookSlug = 'slug2'
+    const pageId = 'm1234'
+
+    mockfs({
+      'META-INF/books.xml': bundleMaker({ books: [bookSlug] }),
+      'collections/slug2.collection.xml': bookMaker({ slug: bookSlug, toc: [{ title: 'subcollection', children: [pageId] }] }),
+      'modules/m1234/index.cnxml': pageMaker({})
+    })
+    const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
+    manager = new ModelManager(bundle, conn, (p) => { params = p })
+  })
+  afterEach(() => mockfs.restore())
+
+  function getInner(bookIndex: number) {
+    const t1 = params.books[bookIndex].tocTree[0]
+    if (t1.type === TocNodeKind.Subbook) {
+      return t1
+    }
+    throw new Error('BUG: Test expects first node in the ToC to be a Subbook')
+  }
+  function getLeaf(bookIndex: number) {
+    for (const t1 of params.books[bookIndex].tocTree) {
+      if (t1.type === TocNodeKind.Subbook) {
+        const t2 = t1.children[0]
+        if (t2 !== undefined && t2.type === TocNodeKind.Page) {
+          return t2
+        }
+      } else {
+        return t1
+      }
+    }
+    throw new Error('BUG: Test expects first node in the ToC to be a Subbook and its child to be a Page')
+  }
+
+  it('PageRename', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+    const page = loadSuccess(first(book.pages))
+
+    const bookIndex = 0
+    const t = getLeaf(bookIndex)
+    const nodeToken = t.value.token
+    const newTitle = 'NEW_TITLE'
+
+    const evt: TocModification = {
+      type: TocModificationKind.PageRename,
+      newTitle,
+      nodeToken,
+      bookIndex
+    }
+
+    await manager.modifyToc(evt)
+    expect(page.optTitle).toBe(newTitle)
+  })
+  it('SubbookRename', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    const bookIndex = 0
+    const t = getInner(bookIndex)
+    const nodeToken = t.value.token
+    const newTitle = 'NEW_TITLE'
+    const evt: TocModification = {
+      type: TocModificationKind.SubbookRename,
+      newTitle,
+      nodeToken,
+      bookIndex
+    }
+
+    await manager.modifyToc(evt)
+    const tocNode = book.toc[0]
+    expect(tocNode.type === TocNodeKind.Subbook && tocNode.title).toBe(newTitle)
+  })
+  it('Remove Subbook', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    const bookIndex = 0
+    const t = getInner(bookIndex)
+    const nodeToken = t.value.token
+    const evt: TocModification = {
+      type: TocModificationKind.Remove,
+      nodeToken,
+      bookIndex
+    }
+
+    await manager.modifyToc(evt)
+    expect(book.toc).toEqual([])
+  })
+  it('Move to top and non-top', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    // BookToc starts off with just one subbook which contains one Page
+    expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
+    expect(book.toc.length).toBe(1)
+
+    const bookIndex = 0
+    let tLeaf = getLeaf(bookIndex)
+
+    const evt1: TocModification = {
+      type: TocModificationKind.Move,
+      nodeToken: tLeaf.value.token,
+      newParentToken: undefined,
+      newChildIndex: 1,
+      bookIndex
+    }
+    await manager.modifyToc(evt1)
+    expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
+    expect(book.toc[1].type).toBe(TocNodeKind.Page)
+
+    // -------- Need to get new Tokens
+
+    // Move the Page back under the Subbook
+    const tInner = getInner(bookIndex)
+    tLeaf = getLeaf(bookIndex)
+    const evt2: TocModification = {
+      type: TocModificationKind.Move,
+      nodeToken: tLeaf.value.token,
+      newParentToken: tInner.value.token,
+      newChildIndex: 1,
+      bookIndex
+    }
+    await manager.modifyToc(evt2)
+    expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
+    expect(book.toc.length).toBe(1)
+  })
+  it('creates a new Page in book', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    expect(book.pages.size).toBe(1)
+
+    const bookIndex = 0
+    const { page: loadedPage } = await manager.createPage(bookIndex, 'TEST_TITLE')
+
+    expect(book.pages.size).toBe(2)
+    expect(I.Set(book.pages).has(loadedPage)).toBe(true)
+    expect(loadedPage.optTitle).toBe('TEST_TITLE')
+
+    // Add another page for code coverage reasons
+    await manager.createPage(bookIndex, 'TEST_TITLE2')
+  })
+  it('creates a new Subbook in book', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    expect(book.toc.length).toBe(1)
+
+    const bookIndex = 0
+    await manager.createSubbook(bookIndex, 'TEST_TITLE')
+
+    expect(book.toc.length).toBe(2)
+    expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
+    const tocNode = book.toc[0]
+    if (tocNode.type === TocNodeKind.Subbook) {
+      expect(tocNode.title).toBe('TEST_TITLE')
+    } else throw new Error('BUG: unreachable case')
+  })
+})
+
 // ------------ Stubs ------------
+const emptyFn = <T = any>(): T => {
+  function fn() {}
+  return fn as unknown as T
+} // jest.fn()
 const WATCHDOG = new class StubWatchdog implements WatchDog {
   shutdownReceived = false
-  initialize = jest.fn()
-  exit = jest.fn()
-  onClose = jest.fn()
-  onError = jest.fn()
-  write = jest.fn()
+  initialize = emptyFn()
+  exit = emptyFn()
+  onClose = emptyFn()
+  onError = emptyFn()
+  write = emptyFn()
 }()
 function PROTOCOL_CONNECTION_FACTORY(logger: Logger): ProtocolConnection {
   return {
-    onClose: jest.fn(),
-    onRequest: jest.fn(),
-    onNotification: jest.fn(),
-    onProgress: jest.fn(),
-    onError: jest.fn(),
-    onUnhandledNotification: jest.fn(),
-    onDispose: jest.fn(),
-    sendRequest: jest.fn(),
-    sendNotification: jest.fn(),
-    sendProgress: jest.fn(),
-    trace: jest.fn(),
-    end: jest.fn(),
-    dispose: jest.fn(),
-    listen: jest.fn()
+    onClose: emptyFn(),
+    onRequest: emptyFn(),
+    onNotification: emptyFn(),
+    onProgress: emptyFn(),
+    onError: emptyFn(),
+    onUnhandledNotification: emptyFn(),
+    onDispose: emptyFn(),
+    sendRequest: emptyFn(),
+    sendNotification: emptyFn(),
+    sendProgress: emptyFn(),
+    trace: emptyFn(),
+    end: emptyFn(),
+    dispose: emptyFn(),
+    listen: emptyFn()
   }
 }
-PROTOCOL_CONNECTION_FACTORY.onClose = jest.fn()
-PROTOCOL_CONNECTION_FACTORY.onError = jest.fn()
+PROTOCOL_CONNECTION_FACTORY.onClose = emptyFn()
+PROTOCOL_CONNECTION_FACTORY.onError = emptyFn()
 const conn = createConnection(PROTOCOL_CONNECTION_FACTORY, WATCHDOG)

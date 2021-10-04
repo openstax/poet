@@ -1,6 +1,0 @@
-**/node_modules
-**/dist
-**/out
-**/package-lock.json
-coverage
-**/webpack.config.js

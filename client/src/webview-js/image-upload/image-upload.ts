@@ -63,8 +63,10 @@ window.addEventListener('load', () => {
   }
 
   const handleDrop = (e: DragEvent): void => {
+    /* istanbul ignore next */
     const files = e.dataTransfer?.files
 
+    /* istanbul ignore else */
     if (files != null) {
       ([...files]).forEach(previewFile)
     }

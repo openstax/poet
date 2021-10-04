@@ -39,7 +39,7 @@ export async function run(): Promise<void> {
     })
   }).finally(() => {
     const destDir = path.join(__dirname, '../../../../../../.nyc_output')
-    const dest = path.join(destDir, 'coverage.json')
+    const dest = path.join(destDir, 'coverage-vscode-tests.json')
     const coverage = (global as any).__coverage__
     if (coverage === undefined) {
       console.error('Did not find coverage data on global.__coverage__ . Failing')

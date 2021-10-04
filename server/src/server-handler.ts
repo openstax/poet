@@ -1,23 +1,11 @@
-import {
-  BundleTreesArgs,
-  BundleTreesResponse,
-  BundleEnsureIdsArgs
-} from '../../common/src/requests'
-import { bundleFactory } from './server'
-import { bookTocAsTreeCollection, ModelManager } from './model-manager'
-import { CompletionItem, CompletionParams } from 'vscode-languageserver/node'
+import { BundleEnsureIdsParams } from '../../common/src/requests'
 import { fixModule } from './fix-document-ids'
+import { bundleFactory } from './server'
+import { ModelManager } from './model-manager'
+import { CompletionItem, CompletionParams } from 'vscode-languageserver/node'
 
-export function bundleTreesHandler(): (request: BundleTreesArgs) => Promise<BundleTreesResponse> {
-  return async (request: BundleTreesArgs) => {
-    const manager = bundleFactory.getOrAdd(request.workspaceUri)
-    await manager.loadEnoughForToc() // Just enough to send the ToC and list orphans
-    return manager.bundle.books.map(bookTocAsTreeCollection).toArray()
-  }
-}
-
-export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsArgs) => Promise<void> {
-  return async (request: BundleEnsureIdsArgs) => {
+export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsParams) => Promise<void> {
+  return async (request: BundleEnsureIdsParams) => {
     const manager = bundleFactory.getOrAdd(request.workspaceUri)
     // TODO: fix modules in parallel. Problem: Could be a memory hog.
     const pages = manager.bundle.allPages.all.filter(p => p.exists && p.isLoaded)

@@ -118,16 +118,18 @@ export const _pushContent = (
   let commitSucceeded = false
 
   const commitMessage = await _getMessage()
+  /* istanbul ignore if */
   if (commitMessage == null) { return }
   try {
     await repo.commit(commitMessage, commitOptions)
     commitSucceeded = true
   } catch (e) {
+    /* istanbul ignore if */
     if (e.stdout == null) { throw e }
     if ((e.stdout as string).includes('nothing to commit')) {
       void errorReporter('No changes to push.')
     } else {
-      const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
+      const message: string = e.gitErrorCode === undefined ? e.message : /* istanbul ignore next */ e.gitErrorCode
       void errorReporter(`Push failed: ${message}`)
     }
   }
@@ -144,6 +146,7 @@ export const _pushContent = (
       }
       void infoReporter('Successful content push.')
     } catch (e) {
+      /* istanbul ignore if */
       if (e.gitErrorCode == null) { throw e }
       if (e.gitErrorCode === GitErrorCodes.Conflict) {
         void errorReporter('Content conflict, please resolve.')
@@ -166,7 +169,7 @@ export const tagContent = async (): Promise<void> => {
   }
 
   const tagging = await taggingDialog()
-
+  /* istanbul ignore if */
   if (tagging === undefined) { return }
 
   const tag = await getNewTag(repo, tagging, head)
@@ -176,7 +179,7 @@ export const tagContent = async (): Promise<void> => {
   try {
     await (repo as any)._repository.tag(tag) // when VSCode API is updated -> await repo.tag(tag)
   } catch (e) {
-    const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
+    const message: string = e.gitErrorCode === undefined ? e.message : /* istanbul ignore next */ e.gitErrorCode
     void vscode.window.showErrorMessage(`Tagging failed: ${message}`, { modal: false }) // ${String(e.stderr)}
     return
   }
@@ -186,7 +189,7 @@ export const tagContent = async (): Promise<void> => {
     await repo.push('origin', tag)
     void vscode.window.showInformationMessage(`Successful tag for ${tagging}.`, { modal: false })
   } catch (e) {
-    const message: string = e.gitErrorCode === undefined ? e.message : e.gitErrorCode
+    const message: string = e.gitErrorCode === undefined ? e.message : /* istanbul ignore next */ e.gitErrorCode
     void vscode.window.showErrorMessage(`Push failed: ${message}`, { modal: false })
   }
 }

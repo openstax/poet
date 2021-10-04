@@ -1,37 +1,58 @@
 import I from 'immutable'
+import * as Quarx from 'quarx'
 import { PageNode } from './page'
-import { Opt, PathKind, WithRange, textWithSource, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join } from './utils'
+import { Opt, WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, TocNodeKind } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 
-export enum TocNodeKind {
-  Inner,
-  Leaf
+const equalsTocNodeWithRange = (n1: TocNodeWithRange, n2: TocNodeWithRange): boolean => {
+  /* istanbul ignore else */
+  if (n1.type === TocNodeKind.Subbook) {
+    /* istanbul ignore next */
+    if (n2.type !== n1.type) return false
+    /* istanbul ignore next */
+    return equalsPos(n1.range.start, n2.range.start) && equalsPos(n1.range.end, n2.range.end) && n1.title === n2.title && equalsArrayToc(n1.children, n2.children)
+  } else {
+    /* istanbul ignore next */
+    if (n2.type !== n1.type) return false
+    /* istanbul ignore next */
+    return equalsPos(n1.range.start, n2.range.start) && equalsPos(n1.range.end, n2.range.end) && n1.page === n2.page
+  }
 }
-export type TocNode = TocInner | TocLeaf
-interface TocInner extends HasRange { readonly type: TocNodeKind.Inner, readonly title: string, readonly children: TocNode[] }
-interface TocLeaf extends HasRange { readonly type: TocNodeKind.Leaf, readonly page: PageNode }
+const equalsArrayToc = equalsArray(equalsTocNodeWithRange)
+const equalsOptArrayToc = equalsOpt(equalsArrayToc)
+const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
+
+export type TocNodeWithRange = TocPageWithRange | TocSubbookWithRange
+export type TocSubbookWithRange = HasRange & { readonly type: TocNodeKind.Subbook, title: string, children: TocNodeWithRange[] }
+export type TocPageWithRange = HasRange & { readonly type: TocNodeKind.Page, readonly page: PageNode }
 
 export class BookNode extends Fileish {
-  private _title: Opt<WithRange<string>>
-  private _slug: Opt<WithRange<string>>
-  private _toc: Opt<TocNode[]>
+  private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _slug = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _language = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _licenseUrl = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _toc = Quarx.observable.box<Opt<TocNodeWithRange[]>>(undefined, { equals: equalsOptArrayToc })
 
   protected parseXML = (doc: Document) => {
-    this._title = textWithSource(selectOne('/col:collection/col:metadata/md:title', doc))
-    this._slug = textWithSource(selectOne('/col:collection/col:metadata/md:slug', doc))
+    this._uuid.set(textWithRange(selectOne('/col:collection/col:metadata/md:uuid', doc)))
+    this._title.set(textWithRange(selectOne('/col:collection/col:metadata/md:title', doc)))
+    this._slug.set(textWithRange(selectOne('/col:collection/col:metadata/md:slug', doc)))
+    this._language.set(textWithRange(selectOne('/col:collection/col:metadata/md:language', doc)))
+    this._licenseUrl.set(textWithRange(selectOne('/col:collection/col:metadata/md:license', doc), 'url'))
     const root: Element = selectOne('/col:collection/col:content', doc)
-    this._toc = this.buildChildren(root)
+    this._toc.set(this.buildChildren(root))
   }
 
-  private buildChildren(root: Element): TocNode[] {
-    const ret = (select('./col:*', root) as Element[]).map((childNode): TocNode => {
+  private buildChildren(root: Element): TocNodeWithRange[] {
+    const ret = (select('./col:*', root) as Element[]).map((childNode): TocNodeWithRange => {
       const range = calculateElementPositions(childNode)
       switch (childNode.localName) {
         case 'subcollection': {
           const titleNode = selectOne('md:title', childNode)
           const range = calculateElementPositions(titleNode)
           return {
-            type: TocNodeKind.Inner,
+            type: TocNodeKind.Subbook,
             title: expectValue(titleNode.textContent, 'ERROR: Malformed or missing md:title element in Subcollection'),
             children: this.buildChildren(selectOne('./col:content', childNode)),
             range
@@ -41,7 +62,7 @@ export class BookNode extends Fileish {
           const pageId = expectValue(selectOne('@document', childNode).nodeValue, 'BUG: missing @document on col:module')
           const page = super.bundle.allPages.getOrAdd(join(this._pathHelper, PathKind.COLLECTION_TO_MODULEID, this.absPath, pageId))
           return {
-            type: TocNodeKind.Leaf,
+            type: TocNodeKind.Page,
             page,
             range
           }
@@ -55,8 +76,16 @@ export class BookNode extends Fileish {
     return ret
   }
 
-  public get toc() {
+  private get __toc() {
     return this.ensureLoaded(this._toc)
+  }
+
+  public get toc(): TocNodeWithRange[] {
+    return this.__toc
+  }
+
+  public get uuid() {
+    return this.ensureLoaded(this._uuid).v
   }
 
   public get title() {
@@ -67,24 +96,31 @@ export class BookNode extends Fileish {
     return this.ensureLoaded(this._slug).v
   }
 
+  public get language() {
+    return this.ensureLoaded(this._language).v
+  }
+
+  public get licenseUrl() {
+    return this.ensureLoaded(this._licenseUrl).v
+  }
+
   public get pages() {
     return this.tocLeaves().map(l => l.page)
   }
 
   private tocLeaves() {
-    const toc = this.toc
-    return I.List<TocLeaf>().withMutations(acc => this.collectPages(toc, acc))
+    return I.List<TocPageWithRange>().withMutations(acc => this.collectPages(this.__toc, acc))
   }
 
-  private collectPages(nodes: TocNode[], acc: I.List<TocLeaf>) {
+  private collectPages(nodes: TocNodeWithRange[], acc: I.List<TocPageWithRange>) {
     nodes.forEach(n => {
-      if (n.type === TocNodeKind.Leaf) { acc.push(n) } else { this.collectPages(n.children, acc) }
+      if (n.type === TocNodeKind.Page) { acc.push(n) } else { this.collectPages(n.children, acc) }
     })
   }
 
-  private collectNonPages(nodes: TocNode[], acc: I.List<TocInner>) {
+  private collectNonPages(nodes: TocNodeWithRange[], acc: I.List<TocSubbookWithRange>) {
     nodes.forEach(n => {
-      if (n.type !== TocNodeKind.Leaf) {
+      if (n.type !== TocNodeKind.Page) {
         acc.push(n)
         this.collectNonPages(n.children, acc)
       }
@@ -93,9 +129,9 @@ export class BookNode extends Fileish {
 
   protected getValidationChecks(): ValidationCheck[] {
     const pages = this.pages
-    const nonPages = I.List<TocInner>().withMutations(acc => this.collectNonPages(this.toc, acc))
+    const nonPages = I.List<TocSubbookWithRange>().withMutations(acc => this.collectNonPages(this.__toc, acc))
     const duplicateTitles = I.Set(findDuplicates(nonPages.map(subcol => subcol.title)))
-    const pageLeaves = I.List<TocLeaf>().withMutations(acc => this.collectPages(this.toc, acc))
+    const pageLeaves = I.List<TocPageWithRange>().withMutations(acc => this.collectPages(this.__toc, acc))
     const duplicatePages = I.Set(findDuplicates(pages))
     return [
       {

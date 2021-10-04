@@ -155,14 +155,16 @@ const elementsOfSourceLine = (line) => {
     return entry.line > lineOfInterest
   })
   if (nextIndex === 0) {
-    return { previous: elements[0] ?? null, next: elements[0] ?? null }
+    return { previous: elements[0] ?? /* istanbul ignore next */ null, next: elements[0] ?? /* istanbul ignore next */ null }
   }
   if (nextIndex === -1) {
     const lastIndex = elements.length - 1
     // Essentially: Are all the elements on one line?
     return (!elements.some(entry => entry.line < lineOfInterest))
-      ? { previous: elements[0] ?? null, next: elements[lastIndex] ?? null } // If so, our region is the full page
-      : { previous: elements[lastIndex] ?? null, next: elements[lastIndex] ?? null } // If not, we are beyond all the content
+      // If so, our region is the full page
+      ? { previous: elements[0] ?? null, next: elements[lastIndex] ?? null }
+      // If not, we are beyond all the content
+      : { previous: elements[lastIndex] ?? /* istanbul ignore next */ null, next: elements[lastIndex] ?? /* istanbul ignore next */ null }
   }
   const next = elements[nextIndex]
   const previousLine = elements[nextIndex - 1].line
@@ -249,7 +251,7 @@ const handleRefresh = (xml, xsl) => {
   vdom_patch(preview, newVDom, currentVDom)
   currentVDom = newVDom
 
-  window.MathJax ? window.MathJax.Hub.Typeset(preview) : document.body.append('[MathJax is not loaded]')
+  window.MathJax ? window.MathJax.Hub.Typeset(preview) : /* istanbul ignore next */ document.body.append('[MathJax is not loaded]')
 }
 
 /* VirtualDOM */
@@ -267,7 +269,7 @@ function vdom_h(type, props, ...children) {
   if (__vdom__isArray(__vdom__head(children))) {
     children = __vdom__head(children)
   }
-  return { type, props: props || {}, children }
+  return { type, props: props || /* istanbul ignore next */ {}, children }
 }
 function __vdom__createElement(node) {
   if (typeof node === 'string') {
@@ -286,8 +288,8 @@ function vdom_patch($parent, newTree, oldTree, index = 0) {
   } else if (__vdom__changed(newTree, oldTree)) {
     $parent.replaceChild(__vdom__createElement(newTree), $parent.childNodes[index])
   } else if (typeof newTree !== 'string') {
+    /* istanbul ignore if */
     if (typeof oldTree === 'string') {
-      /* istanbul ignore next */
       throw new Error('BUG: Unreachable! __vdom__changed should detect disparate types')
     }
     __vdom__applyProps($parent.childNodes[index], newTree.props, oldTree.props)
@@ -315,8 +317,8 @@ function __vdom__patchNodes($parent, newTree, oldTree, index) {
   const len = Math.max(newTree.children.length, oldTree.children.length)
   let i = -1
   while (++i < len) {
+    /* istanbul ignore if */
     if (!$parent.childNodes[index]) {
-      /* istanbul ignore next */
       throw new Error(`BUG: VDom Found null child at index ${i} in '${$parent.tagName}'`)
     }
     vdom_patch($parent.childNodes[index], newTree.children[i], oldTree.children[i], i)
@@ -325,6 +327,7 @@ function __vdom__patchNodes($parent, newTree, oldTree, index) {
 function __vdom__removeChildren($parent, index) {
   let times = ($parent.childNodes.length || 0) - index
   while (times-- > 0) {
+    /* istanbul ignore else */
     if ($parent.lastChild) {
       $parent.removeChild($parent.lastChild)
     }
@@ -335,10 +338,9 @@ function __vdom__applyProps($el, newProps, oldProps = {}) {
   Object.keys(props).forEach(name => {
     const newValue = newProps[name]
     const oldValue = oldProps[name]
+    /* istanbul ignore if */
     if (__vdom__isObject(newValue)) {
-      /* istanbul ignore next */
       throw new Error('Does not support setting multiple attributes on an element')
-      // applyProps($el[name], (newValue as any) as ObjectLiteral, (oldValue as any) as ObjectLiteral)
     } else {
       if (!newValue) {
         $el.removeAttribute(name)
@@ -351,12 +353,9 @@ function __vdom__applyProps($el, newProps, oldProps = {}) {
 function __vdom__isObject(x) {
   return typeof x === 'object' && x != null
 }
-const __vdom__isArray = Array.isArray || function (obj) {
-  /* istanbul ignore next */
-  return Object.prototype.toString.call(obj) === '[object Array]'
-}
+const __vdom__isArray = Array.isArray
 function __vdom__head(x) {
-  return typeof x === 'string' ? x.charAt(0) : x[0]
+  return typeof x === 'string' ? /* istanbul ignore next */ x.charAt(0) : x[0]
 }
 function __vdom__merge(a, b) {
   return Object.assign({}, a, b)

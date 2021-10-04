@@ -14,25 +14,15 @@ import { TextDocument } from 'vscode-languageserver-textdocument'
 import { URI, Utils } from 'vscode-uri'
 import { expectValue } from './model/utils'
 
-import {
-  BundleModulesArgs,
-  BundleOrphanedModulesArgs,
-  BundleModulesResponse,
-  BundleOrphanedModulesResponse,
-  ExtensionServerRequest
-} from '../../common/src/requests'
-
-import {
-  bundleEnsureIdsHandler,
-  bundleTreesHandler,
-  imageAutocompleteHandler
-} from './server-handler'
+import { ExtensionServerRequest } from '../../common/src/requests'
+import { bundleEnsureIdsHandler, imageAutocompleteHandler } from './server-handler'
 
 import * as sourcemaps from 'source-map-support'
 import { Bundle } from './model/bundle'
 import { Factory } from './model/factory'
-import { pageAsTreeObject, ModelManager } from './model-manager'
+import { ModelManager } from './model-manager'
 import { JobRunner } from './job-runner'
+import { TocModificationParams, TocNodeKind } from '../../common/src/toc'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -43,7 +33,7 @@ const connection = createConnection(ProposedFeatures.all)
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
 
 function getBundleForUri(uri: string): ModelManager {
-  const bundles = bundleFactory.all.filter(b => uri.startsWith(b.bundle.workspaceRoot))
+  const bundles = bundleFactory.all.filter(b => uri.startsWith(b.bundle.workspaceRootUri))
   return expectValue(bundles.first(), 'BUG: Workspace should have loaded up an instance by now.')
 }
 
@@ -64,7 +54,7 @@ const consoleDebug = (...args: any[]) => {
   connection.console.log(args.map(a => `${a}`).join(', '))
 }
 ModelManager.debug = consoleDebug
-JobRunner.debug = consoleDebug
+JobRunner.debug = () => {}
 
 connection.onInitialize(async (params: InitializeParams) => {
   // https://microsoft.github.io/language-server-protocol/specification#workspace_workspaceFolders
@@ -115,7 +105,7 @@ documents.onDidOpen(({ document }) => {
     }
     const manager = getBundleForUri(document.uri)
     manager.performInitialValidation() // just-in-case. It seems to be missed sometimes
-    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRoot, document.uri, document.getText())
+    manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, document.uri, document.getText())
   }
   inner().catch(err => { throw err })
 })
@@ -144,17 +134,16 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
   inner().catch(err => { throw err })
 })
 
-connection.onRequest(ExtensionServerRequest.BundleTrees, bundleTreesHandler())
-
-connection.onRequest(ExtensionServerRequest.BundleOrphanedModules, async ({ workspaceUri }: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
-  const manager = getBundleForUri(workspaceUri)
-  await manager.loadEnoughForOrphans()
-  return manager.orphanedPages.map(pageAsTreeObject).toArray()
-})
-
-connection.onRequest(ExtensionServerRequest.BundleModules, ({ workspaceUri }: BundleModulesArgs): BundleModulesResponse => {
-  const manager = getBundleForUri(workspaceUri)
-  return manager.allPages.map(pageAsTreeObject).toArray()
+connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocModificationParams) => {
+  const { event } = params
+  const manager = getBundleForUri(params.workspaceUri)
+  if (event.type === TocNodeKind.Page) {
+    await manager.createPage(event.bookIndex, event.title)
+  } else if (event.type === TocNodeKind.Subbook) {
+    await manager.createSubbook(event.bookIndex, event.title)
+  } else {
+    await manager.modifyToc(event)
+  }
 })
 
 connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler())

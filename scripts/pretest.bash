@@ -12,6 +12,16 @@ cp -r ./media "${test_repo_dest}"
 cp -r ./modules "${test_repo_dest}"
 cp -r ./.vscode "${test_repo_dest}"
 
+echo '==> Instrument the client source files'
+$(npm bin)/nyc instrument \
+    --exclude 'client/out/client/src/test/**/*' \
+    --exclude-node-modules \
+    --compact=false \
+    --source-map \
+    --in-place \
+    ./client/out/ \
+    ./client/out/
+
 macos_arg=''
 if [[ "$(uname)" == 'Darwin' ]]; then
     macos_arg='-e'

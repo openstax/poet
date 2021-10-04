@@ -10,7 +10,6 @@ node_modules/
 /client/dist/
 /server/out/
 /server/dist/
-/server/coverage/
 
 # These are here for the testbook
 /.xsd/

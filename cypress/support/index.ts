@@ -1,4 +1,6 @@
 import '@cypress/code-coverage/support'
+import * as snapshot from '@cypress/snapshot'
+snapshot.register()
 
 // Credit: User zquancai on GitHub
 // Code from this comment: https://github.com/cypress-io/cypress/issues/1752#issuecomment-459625541

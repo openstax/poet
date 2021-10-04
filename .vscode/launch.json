@@ -31,10 +31,10 @@
       // sudo ln --symbolic ~/.nodenv/shims/node /usr/local/bin/node
       //
       // "runtimeExecutable": "/usr/local/bin/node",
-      "cwd": "${workspaceFolder}/server",
+      "cwd": "${workspaceFolder}",
       "internalConsoleOptions": "openOnSessionStart",
-      "name": "LanguageServer Unit Tests",
-      "program": "${workspaceFolder}/server/node_modules/jest/bin/jest.js",
+      "name": "Jest Unit Tests",
+      "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
       "request": "launch",
       "skipFiles": [
         "<node_internals>/**",

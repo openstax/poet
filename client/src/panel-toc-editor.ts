@@ -1,255 +1,79 @@
-import vscode from 'vscode'
-import fs, { promises as fsPromises } from 'fs'
+import fs from 'fs'
 import path from 'path'
+import vscode from 'vscode'
 
-import xmlFormat from 'xml-formatter'
-import { DOMParser, XMLSerializer } from 'xmldom'
-import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, constructModuleUri, constructCollectionUri, ensureCatch } from './utils'
-import { TocTreeCollection, TocTreeElementType } from '../../common/src/toc-tree'
+import { TreeItem as TreeItemUI } from 'react-sortable-tree'
+import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
+import { ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, CreatePageEvent, CreateSubbookEvent, TocModification, TocModificationKind, TocModificationParams } from '../../common/src/toc'
 import { PanelType } from './extension-types'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { requestBundleModules, requestBundleOrphanedModules, requestBundleTrees } from '../../common/src/requests'
+import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest, Opt } from '../../common/src/requests'
 import { ExtensionHostContext, Panel } from './panel'
-import { v4 as uuidv4 } from 'uuid'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 export const NS_METADATA = 'http://cnx.rice.edu/mdml'
 
-export interface DebugSignal {
-  type: 'debug'
-  item: any
-}
-export interface RefreshSignal {
-  type: 'refresh'
-}
 export interface ErrorSignal {
   type: 'error'
   message: string
 }
-export interface WriteTreeSignal {
-  type: 'write-tree'
-  treeData: TocTreeCollection
-}
-export interface SubcollectionCreateSignal {
-  type: 'subcollection-create'
-  slug: string
-}
-export interface ModuleCreateSignal {
-  type: 'module-create'
-}
-export interface ModuleRenameSignal {
-  type: 'module-rename'
-  moduleid: string
-  newName: string
-}
 export type PanelIncomingMessage = (
-  DebugSignal
-  | RefreshSignal
+  | TocMoveEvent
+  | TocRemoveEvent
+  | PageRenameEvent
+  | SubbookRenameEvent
+  | CreateSubbookEvent
+  | CreatePageEvent
   | ErrorSignal
-  | WriteTreeSignal
-  | SubcollectionCreateSignal
-  | ModuleCreateSignal
-  | ModuleRenameSignal
 )
 
+export type TreeItemWithToken = TreeItemUI & ({
+  type: TocNodeKind.Page
+  token: string
+  title: string | undefined
+  fileId: string
+  absPath: string
+} | {
+  type: TocNodeKind.Subbook
+  token: string
+  title: string
+  children: TreeItemWithToken[]
+})
+export interface Bookish {
+  title: string
+  slug: string
+  tocTree: TreeItemWithToken[]
+}
 export interface PanelOutgoingMessage {
-  uneditable: TocTreeCollection[]
-  editable: TocTreeCollection[]
+  uneditable: Bookish[]
+  editable: Bookish[]
 }
 
-async function createBlankModule(): Promise<string> {
-  const template = (newModuleId: string): string => {
-    return `
-<document xmlns="http://cnx.rice.edu/cnxml">
-  <title>New Module</title>
-  <metadata xmlns:md="http://cnx.rice.edu/mdml">
-    <md:title>New Module</md:title>
-    <md:content-id>${newModuleId}</md:content-id>
-    <md:uuid>${uuidv4()}</md:uuid>
-  </metadata>
-  <content>
-  </content>
-</document>`.trim()
-  }
-  const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
-  let moduleNumber = 0
-  const moduleDirs = new Set(await fsPromises.readdir(path.join(uri.fsPath, 'modules')))
-  while (true) {
-    moduleNumber += 1
-    const newModuleId = `m${moduleNumber.toString().padStart(5, '0')}`
-    if (moduleDirs.has(newModuleId)) {
-      // File exists already, try again
-      continue
+function toTreeItem(n: ClientTocNode): TreeItemWithToken {
+  if (n.type === TocNodeKind.Page) {
+    return {
+      type: n.type,
+      token: n.value.token,
+      title: n.value.title,
+      subtitle: n.value.fileId,
+      fileId: n.value.fileId,
+      absPath: n.value.absPath
     }
-    const newModuleUri = constructModuleUri(uri, newModuleId)
-    await vscode.workspace.fs.writeFile(newModuleUri, Buffer.from(template(newModuleId)))
-    return newModuleId
-  }
-}
-
-async function createSubcollection(slug: string): Promise<void> {
-  const uri = expect(getRootPathUri(), 'no root path found in which to write tree')
-  const replacingUri = constructCollectionUri(uri, slug)
-  const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' })
-  const document = new DOMParser().parseFromString(collectionData)
-  const contentRoot = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
-  // make a fake tree data collection to populate the new subcollection to the content root
-  populateTreeDataToXML(document, contentRoot, {
-    type: TocTreeElementType.collection,
-    title: 'fake',
-    children: [{
-      type: TocTreeElementType.subcollection,
-      title: 'New Subcollection',
-      children: []
-    }]
-  })
-  const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(document), {
-    indentation: '  ',
-    collapseContent: true,
-    lineSeparator: '\n'
-  })
-  await vscode.workspace.fs.writeFile(replacingUri, Buffer.from(serailizedXml))
-}
-
-async function renameModule(id: string, newName: string): Promise<void> {
-  const uri = expect(getRootPathUri(), 'No root path in which to find renamed module')
-  const moduleUri = constructModuleUri(uri, id)
-  const xml = Buffer.from(await vscode.workspace.fs.readFile(moduleUri)).toString('utf-8')
-  const document = new DOMParser().parseFromString(xml)
-
-  // Change title in metadata
-  let metadata = document.getElementsByTagNameNS(NS_CNXML, 'metadata')[0]
-  if (metadata == null) {
-    const root = document.getElementsByTagNameNS(NS_CNXML, 'document')[0]
-    metadata = document.createElementNS(NS_CNXML, 'metadata')
-    root.appendChild(metadata)
-  }
-  let metaTitleElement = metadata.getElementsByTagNameNS(NS_METADATA, 'title')[0]
-  if (metaTitleElement == null) {
-    metaTitleElement = document.createElementNS(NS_METADATA, 'md:title')
-    metadata.appendChild(metaTitleElement)
-  }
-  metaTitleElement.textContent = newName
-
-  // Change title in document
-  let titleElement = document.getElementsByTagNameNS(NS_CNXML, 'title')[0]
-  if (titleElement == null) {
-    titleElement = document.createElementNS(NS_CNXML, 'title')
-    document.insertBefore(titleElement, metadata)
-  }
-  titleElement.textContent = newName
-
-  const newData = new XMLSerializer().serializeToString(document)
-  await vscode.workspace.fs.writeFile(moduleUri, Buffer.from(newData))
-}
-
-export const refreshPanel = async (panel: vscode.WebviewPanel, client: LanguageClient): Promise<void> => {
-  try {
-    // This attempted access will throw if the panel is disposed
-    /* eslint-disable-next-line @typescript-eslint/no-unused-expressions */
-    panel.webview.html
-  } catch {
-    // Do no work if the panel is disposed
-    return
-  }
-
-  const uri = expect(getRootPathUri(), 'no workspace root from which to generate trees')
-
-  const serverErrorMessage = 'Server cannot properly find workspace'
-  const trees = expect(await requestBundleTrees(client, { workspaceUri: uri.toString() }), serverErrorMessage)
-  const allModules = expect(await requestBundleModules(client, { workspaceUri: uri.toString() }), serverErrorMessage)
-  const orphanModules = expect(await requestBundleOrphanedModules(client, { workspaceUri: uri.toString() }), serverErrorMessage)
-
-  const allModulesSorted = allModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
-  const orphanModulesSorted = orphanModules.sort((m, n) => m.moduleid.localeCompare(n.moduleid))
-  const collectionAllModules: TocTreeCollection = {
-    type: TocTreeElementType.collection,
-    title: 'All Modules',
-    slug: 'mock-slug__source-only',
-    children: allModulesSorted
-  }
-  const collectionOrphanModules: TocTreeCollection = {
-    type: TocTreeElementType.collection,
-    title: 'Orphan Modules',
-    slug: 'mock-slug__source-only',
-    children: orphanModulesSorted
-  }
-  const out = {
-    uneditable: [collectionAllModules, collectionOrphanModules],
-    editable: trees
-  }
-  await panel.webview.postMessage(out)
-}
-
-export const handleMessageFromWebviewPanel = (panel: vscode.WebviewPanel, client: LanguageClient) => async (message: PanelIncomingMessage): Promise<void> => {
-  if (message.type === 'refresh') {
-    await refreshPanel(panel, client)
-  } else if (message.type === 'error') {
-    throw new Error(message.message)
-  } else if (message.type === 'debug') {
-    // For debugging purposes only
-    /* istanbul ignore next */
-    console.debug(message.item)
-  } else if (message.type === 'module-create') {
-    await createBlankModule()
-  } else if (message.type === 'subcollection-create') {
-    await createSubcollection(message.slug)
-  } else if (message.type === 'module-rename') {
-    const { moduleid, newName } = message
-    await renameModule(moduleid, newName)
-  } else if (message.type === 'write-tree') {
-    await writeTree(message.treeData)
   } else {
-    throw new Error(`Unexpected signal: ${JSON.stringify(message)}`)
-  }
-}
-
-async function writeTree(treeData: TocTreeCollection): Promise<void> {
-  const uri = expect(getRootPathUri(), 'no root path found in which to write tree')
-  const slug = expect(treeData.slug, 'attempted to write tree with no slug')
-  const replacingUri = uri.with({ path: path.join(uri.fsPath, 'collections', `${slug}.collection.xml`) })
-  const collectionData = fs.readFileSync(replacingUri.fsPath, { encoding: 'utf-8' })
-  const document = new DOMParser().parseFromString(collectionData)
-  replaceCollectionContent(document, treeData)
-  const serailizedXml = xmlFormat(new XMLSerializer().serializeToString(document), {
-    indentation: '  ',
-    collapseContent: true,
-    lineSeparator: '\n'
-  })
-  await vscode.workspace.fs.writeFile(replacingUri, Buffer.from(serailizedXml))
-}
-
-function populateTreeDataToXML(document: XMLDocument, root: any, treeData: TocTreeCollection): void {
-  for (const child of treeData.children) {
-    const element = document.createElementNS(NS_COLLECTION, child.type)
-    // md prefix is technically a guess. If incorrect, document may have a lot of xmlns:md attributes
-    const title = document.createElementNS(NS_METADATA, 'md:title')
-    const titleContent = document.createTextNode(child.title)
-    title.appendChild(titleContent)
-    root.appendChild(element)
-    if (child.type === TocTreeElementType.subcollection) {
-      element.appendChild(title)
-      const contentWrapper = document.createElementNS(NS_COLLECTION, 'content')
-      element.appendChild(contentWrapper)
-      populateTreeDataToXML(document, contentWrapper, child)
-    } else if (child.type === TocTreeElementType.module) {
-      element.setAttribute('document', child.moduleid)
+    return {
+      type: n.type,
+      token: n.value.token,
+      title: n.value.title,
+      children: n.children.map(toTreeItem)
     }
   }
-}
-
-function replaceCollectionContent(document: XMLDocument, treeData: TocTreeCollection): void {
-  const content = document.getElementsByTagNameNS(NS_COLLECTION, 'content')[0]
-
-  const newContent = document.createElementNS(NS_COLLECTION, 'content')
-  expect(content.parentNode, 'expected a parent element').replaceChild(newContent, content)
-  populateTreeDataToXML(document, newContent, treeData)
 }
 
 const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {
   const localResourceRoots = [vscode.Uri.file(context.resourceRootDir)]
   const workspaceRoot = getRootPathUri()
+  /* istanbul ignore if */
   if (workspaceRoot != null) {
     localResourceRoots.push(workspaceRoot)
   }
@@ -262,23 +86,112 @@ const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {
       localResourceRoots
     }
   )
-
-  let html = fs.readFileSync(path.join(context.resourceRootDir, 'toc-editor.html'), 'utf-8')
-  html = fixResourceReferences(panel.webview, html, context.resourceRootDir)
-  html = fixCspSourceReferences(panel.webview, html)
-  panel.webview.html = html
   return panel
 }
 
+const isWebviewDisposed = (panel: vscode.WebviewPanel) => {
+  try {
+    // This attempted access will throw if the panel is disposed
+    /* eslint-disable-next-line @typescript-eslint/no-unused-expressions */
+    panel.webview.html
+    return false
+  } catch {
+    // Do no work if the panel is disposed
+    return true
+  }
+}
+
+const fileIdSorter = (n1: ClientPageish, n2: ClientPageish) => n1.fileId.localeCompare(n2.fileId)
+const toClientTocNode = (n: ClientPageish): ClientTocNode => ({ type: TocNodeKind.Page, value: n })
 export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMessage> {
+  private state = EMPTY_BOOKS_AND_ORPHANS
   constructor(private readonly context: ExtensionHostContext) {
     super(initPanel(context))
+
+    this.state = context.bookTocs
 
     this.registerDisposable(this.context.events.onDidChangeWatchedFiles(ensureCatch(async () => {
       await this.refreshPanel(this.panel, this.context.client)
     })))
+
+    let html = fs.readFileSync(path.join(context.resourceRootDir, 'toc-editor.html'), 'utf-8')
+    html = fixResourceReferences(this.panel.webview, html, context.resourceRootDir)
+    html = fixCspSourceReferences(this.panel.webview, html)
+    html = this.injectEnsuredMessages(html, [this.createMessage()])
+    this.panel.webview.html = html
   }
 
-  readonly refreshPanel = refreshPanel
-  readonly handleMessage = handleMessageFromWebviewPanel(this.panel, this.context.client)
+  // readonly handleMessage = handleMessageFromWebviewPanel(this.panel, this.context.client)
+  readonly handleMessage = async (m: PanelIncomingMessage) => {
+    const workspaceUri = expect(getRootPathUri(), 'No root path in which to generate a module').toString()
+    let event: Opt<TocModification|CreatePageEvent|CreateSubbookEvent>
+    if (m.type === TocModificationKind.Move || m.type === TocModificationKind.Remove || m.type === TocModificationKind.PageRename || m.type === TocModificationKind.SubbookRename) {
+      event = m
+    } else if (m.type === TocNodeKind.Page) {
+      const title = await vscode.window.showInputBox({ prompt: 'Title of new Page' })
+      /* istanbul ignore if */
+      if (title === undefined) {
+        return
+      } else {
+        event = { ...m, title }
+      }
+    } else /* istanbul ignore else */ if (m.type === TocNodeKind.Subbook) {
+      const title = await vscode.window.showInputBox({ prompt: 'Title of new Book Section' })
+      /* istanbul ignore if */
+      if (title === undefined) {
+        return
+      } else {
+        event = { ...m, title }
+      }
+    }
+    /* istanbul ignore else */
+    if (event !== undefined) {
+      const params: TocModificationParams = { workspaceUri, event }
+      await this.context.client.sendRequest(ExtensionServerRequest.TocModification, params)
+    }
+  }
+
+  async update(state: BooksAndOrphans) {
+    this.state = state
+    /* istanbul ignore else */
+    if (!isWebviewDisposed(this.panel)) {
+      await this.panel.webview.postMessage(this.createMessage())
+    }
+  }
+
+  private createMessage(): PanelOutgoingMessage {
+    const allModules = new Set<ClientPageish>()
+    function recAddModules(n: ClientTocNode) {
+      if (n.type === TocNodeKind.Page) {
+        allModules.add(n.value)
+      } else {
+        n.children.forEach(recAddModules)
+      }
+    }
+    this.state.books.forEach(b => b.tocTree.forEach(recAddModules))
+    const orphanModules = this.state.orphans
+
+    const allModulesSorted = Array.from(allModules).sort(fileIdSorter)
+    const orphanModulesSorted = orphanModules.sort(fileIdSorter)
+    const collectionAllModules = {
+      title: 'All Modules',
+      slug: 'mock-slug__source-only',
+      tocTree: allModulesSorted.map(toClientTocNode).map(toTreeItem)
+    }
+    const collectionOrphanModules = {
+      title: 'Orphan Modules',
+      slug: 'mock-slug__source-only',
+      tocTree: orphanModulesSorted.map(toClientTocNode).map(toTreeItem)
+    }
+    return {
+      uneditable: [collectionAllModules, collectionOrphanModules],
+      editable: this.state.books.map(b => ({ ...b, tocTree: b.tocTree.map(toTreeItem) }))
+    }
+  }
+
+  async refreshPanel(panel: vscode.WebviewPanel, client: LanguageClient): Promise<void> {
+    if (!isWebviewDisposed(panel)) {
+      await panel.webview.postMessage(this.createMessage())
+    }
+  }
 }

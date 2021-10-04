@@ -1,15 +1,11 @@
-import { TocTreeModule, TocTreeCollection } from './toc-tree'
+import { BookToc, ClientPageish } from './toc'
 
 export enum DiagnosticSource {
   xml = 'xml',
   cnxml = 'cnxml'
 }
 
-// Mock out the basic need of the LanguageClient for common,
-// since we can't import the client lib.
-interface LanguageClient {
-  sendRequest: <R>(method: string, param: any) => Promise<R>
-}
+export type Opt<T> = T | undefined
 
 // The following are all shared between the client and the server
 // to ensure that any requests between the two are type-safe.
@@ -18,38 +14,44 @@ interface LanguageClient {
 // does not utilize one of the ExtensionServerRequest types
 
 export enum ExtensionServerRequest {
-  BundleTrees = 'bundle-trees',
-  BundleModules = 'bundle-modules',
-  BundleOrphanedModules = 'bundle-orphaned-modules',
-  BundleEnsureIds = 'bundle-ensure-ids'
-}
-export interface BundleTreesArgs {
-  workspaceUri: string
-}
-export type BundleTreesResponse = TocTreeCollection[] | null
-
-export interface BundleOrphanedModulesArgs {
-  workspaceUri: string
-}
-export type BundleOrphanedModulesResponse = TocTreeModule[] | null
-
-export interface BundleModulesArgs {
-  workspaceUri: string
-}
-export type BundleModulesResponse = TocTreeModule[] | null
-export interface BundleEnsureIdsArgs {
-  workspaceUri: string
+  BundleEnsureIds = 'BUNDLE_ENSURE_IDS',
+  TocModification = 'TOC_MODIFICATION'
 }
 
-export const requestBundleTrees = async (client: LanguageClient, args: BundleTreesArgs): Promise<BundleTreesResponse> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleTrees, args)
+export enum ExtensionServerNotification {
+  BookTocs = 'BOOK_TOCS',
 }
-export const requestBundleOrphanedModules = async (client: LanguageClient, args: BundleOrphanedModulesArgs): Promise<BundleOrphanedModulesResponse> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleOrphanedModules, args)
+
+export interface NewPageParams {
+  workspaceUri: string
+  title: string
+  bookIndex: number
 }
-export const requestBundleModules = async (client: LanguageClient, args: BundleModulesArgs): Promise<BundleModulesResponse> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleModules, args)
+
+export interface NewSubbookParams {
+  workspaceUri: string
+  title: string
+  bookIndex: number
+  slug: string
 }
-export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsArgs): Promise<void> => {
+
+export interface BooksAndOrphans {
+  books: BookToc[]
+  orphans: ClientPageish[]
+}
+
+export const EMPTY_BOOKS_AND_ORPHANS: BooksAndOrphans = { books: [], orphans: [] }
+
+// Mock out the basic need of the LanguageClient for common,
+// since we can't import the client lib.
+interface LanguageClient {
+  sendRequest: <R>(method: string, param: any) => Promise<R>
+}
+
+export interface BundleEnsureIdsParams {
+  workspaceUri: string
+}
+
+export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsParams): Promise<void> => {
   return await client.sendRequest(ExtensionServerRequest.BundleEnsureIds, args)
 }

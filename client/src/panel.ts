@@ -1,6 +1,7 @@
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { ensureCatchPromise, genNonce } from './utils'
+import { BooksAndOrphans } from '../../common/src/requests'
+import { ensureCatchPromise, genNonce, injectCspNonce } from './utils'
 
 // Modified from https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/src/util/dispose.ts
 /**
@@ -118,6 +119,7 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
       (() => {
         let fireInjectedEvents = () => {
           let messages=${JSON.stringify(messages)};
+          console.debug('[ENSURED_MESSAGE_DEBUG] sending messages:', messages);
           messages.forEach(message => {
             let event = new CustomEvent('message');
             event.data = message;
@@ -128,7 +130,9 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
         window.addEventListener('load', fireInjectedEvents);
       })()
     </script>`
-    return html.replace('</body>', `</body>${injection}`)
+    html = html.replace('</body>', `</body>${injection}`)
+    html = injectCspNonce(html, this.nonce)
+    return html
   }
 
   readonly reveal: Panel<InMessage, OutMessage>['panel']['reveal'] = (...args) => {
@@ -223,6 +227,7 @@ export interface ExtensionHostContext {
   resourceRootDir: string
   client: LanguageClient
   events: ExtensionEvents
+  bookTocs: BooksAndOrphans
 }
 
 /**
@@ -242,23 +247,26 @@ export class PanelManager<T extends Panel<unknown, unknown>> {
    * Create and reveal a new panel of the unknown managed type. If a panel
    * is already being managed, dispose it before creating a new one.
    */
-  newPanel(): void {
+  newPanel(): T {
     if (this._panel != null) {
       this._panel.dispose()
     }
-    this._panel = new this.PanelClass(this.context)
+    const p = new this.PanelClass(this.context)
+    this._panel = p
+    return p
   }
 
   /**
    * Reveal a panel of the unknown managed type. If a panel
    * is not already being managed, create a new one.
    */
-  revealOrNew(): void {
-    if (this._panel != null && !this._panel.disposed()) {
-      this._panel.reveal()
-      return
+  revealOrNew(): T {
+    const p = this._panel
+    if (p != null && !p.disposed()) {
+      p.reveal()
+      return p
     }
-    this.newPanel()
+    return this.newPanel()
   }
 
   /**

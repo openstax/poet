@@ -3,70 +3,10 @@ import { useState, useContext, useEffect, useRef } from 'preact/hooks'
 import 'react-sortable-tree/style.css'
 import SortableTree from 'react-sortable-tree'
 import stringify from 'json-stable-stringify'
+import { TocNodeKind, TocModificationKind } from '~common-api~/toc'
 
 const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
 const nodeType = 'toc-element'
-
-/**
- * Imagining the items of a book tree in depth-first order (the order in which
- * the contents would be viewed in a web page scrolling down), return an array
- * of the indices of the items that have been expanded in the UI, i.e. items
- * which have the `expanded` attribute set to true. Used to persist expanded
- * items between loads and refreshes of the webview panel data by storing the
- * indices and loading them again with `expandIndices`.
- * @param {TocTreeCollection} tree tree object to query for expanded indices
- * @returns {number[]} array of indices which are expanded
- */
-const getExpandedIndices = (tree) => {
-  const stack = [...tree.children.slice().reverse()]
-  const subcollections = []
-  while (stack.length > 0) {
-    const element = stack.pop()
-    if (element.type === 'subcollection') {
-      subcollections.push(element)
-      stack.push(...element.children.slice().reverse())
-    }
-  }
-  const indices = []
-  for (let x = 0; x < subcollections.length; x++) {
-    if (subcollections[x].expanded === true) {
-      indices.push(x)
-    }
-  }
-  return indices
-}
-
-/**
- * Mutates the passed tree by expanding the items in it corresponding to the
- * indices in the second argument. The passed indices should be sourced from
- * a prior call to `getExpandedIndices`.
- * @param {TocTreeCollection} tree the collection tree object to mutate
- * @param {number[]} indices indices created by the `getExpandedIndices` method
- */
-const expandIndices = (tree, indices) => {
-  const stack = [...tree.children.slice().reverse()]
-  const subcollections = []
-  while (stack.length > 0) {
-    const element = stack.pop()
-    if (element.type === 'subcollection') {
-      subcollections.push(element)
-      stack.push(...element.children.slice().reverse())
-    }
-  }
-  for (const index of indices) {
-    subcollections[index].expanded = true
-  }
-}
-
-/**
- * Helper method for removing the `expanded` key from collection tree objects,
- * which we must do in order when checking for tree structural equality.
- * @param {string} key The potential key to check
- * @param {any} value The value this key would resolve to
- * @returns If key is `expanded`, `undefined` (indicating to remove the key), otherwise `value`
- */
-const removeExpanded = (key, value) => key === 'expanded' ? undefined : value
-
 const SearchContext = createContext({})
 
 // Helper method to save state between loads of the page or refreshes
@@ -76,13 +16,6 @@ const saveState = (item) => {
 // Helper method to get saved state between loads of the page or refreshes
 const getSavedState = () => {
   return vscode.getState()
-}
-
-// Use this function to send messages to the extension debug console
-/* istanbul ignore next */
-// eslint-disable-next-line no-unused-vars
-const debug = (item) => {
-  vscode.postMessage({ type: 'debug', item })
 }
 
 /**
@@ -179,53 +112,71 @@ const ContentTree = (props) => {
    * If either a change is meaningful or if `force` is true. We direct the extension host to update
    * the bundle with our changes in the UI.
    */
-  const handleChange = (newChildren, force = false) => {
+  const onChange = (newChildren, force = false) => {
     const { treesData, selectionIndices } = getSavedState()
 
-    const newData = { ...data, ...{ children: newChildren } }
-    const oldStructure = stringify(data.children, { replacer: removeExpanded })
-    const newStructure = stringify(newChildren, { replacer: removeExpanded })
+    const newData = { ...data, ...{ tocTree: newChildren } }
 
     /* istanbul ignore if */
-    if (data.children.length - newChildren.length > 3) {
+    if (data.tocTree.length - newChildren.length > 3) {
       // There's a bug that deletes the whole tree except for one element.
       // Prevent this by not allowing high magnitude deletions
       return
     }
 
-    treesData[modifiesStateName][props.index].children = newChildren
+    treesData[modifiesStateName][props.index].tocTree = newChildren
     saveState({ treesData, selectionIndices })
     setData(newData)
-
-    if (oldStructure !== newStructure || force) {
-      vscode.postMessage({ type: 'write-tree', treeData: newData })
-    }
   }
 
   const getNodeProps = ({ node }) => {
-    const typeToColor = {
-      subcollection: 'green',
-      module: 'purple'
-    }
-    const typeToRenameAction = {
-      // Force rewriting the tree only will change the module title as it appears in the collection file,
-      // but won't change the actual title inside the module content.
-      // We need to have the base part of the extension do that for us.
-      module: (value) => {
+    const typeToColor = {}
+    typeToColor[TocNodeKind.Subbook] = 'green'
+    typeToColor[TocNodeKind.Page] = 'purple'
+    const bookIndex = props.index
+
+    const typeToRenameAction = {}
+    // Force rewriting the tree only will change the module title as it appears in the collection file,
+    // but won't change the actual title inside the module content.
+    // We need to have the base part of the extension do that for us.
+    typeToRenameAction[TocNodeKind.Page] = (value) => {
+      if (node.title !== value) {
         node.title = value
-        vscode.postMessage({ type: 'module-rename', moduleid: node.moduleid, newName: value })
-      },
-      // We can change the title by just force rewriting the collection tree with the modified title
-      // Subcollections don't have persistent identifiers, so changing them in the base part of the
-      // extension would be tougher to do.
-      subcollection: (value) => {
-        node.title = value
-        handleChange(data.children, true)
+        const message /*: PageRenameEvent */ = {
+          type: TocModificationKind.PageRename,
+          newTitle: value,
+          nodeToken: node.token,
+          node,
+          bookIndex,
+          newToc: data.tocTree
+        }
+        vscode.postMessage(message)
       }
     }
+    // We can change the title by just force rewriting the collection tree with the modified title
+    // Subcollections don't have persistent identifiers, so changing them in the base part of the
+    // extension would be tougher to do.
+    typeToRenameAction[TocNodeKind.Subbook] = (value) => {
+      /* istanbul ignore else */
+      if (node.title !== value) {
+        node.title = value
+        const message /*: RenameSubbookEvent */ = {
+          type: TocModificationKind.SubbookRename,
+          newTitle: value,
+          nodeToken: node.token,
+          node,
+          bookIndex,
+          newToc: data.tocTree
+        }
+        vscode.postMessage(message)
+      }
+    }
+    const onBlur = typeToRenameAction[node.type]
+    /* istanbul ignore if */
+    if (!onBlur) { throw new Error(`BUG: Could not find renameAction for type ${node.type}`) }
 
     return {
-      title: <InputOnFocus onBlur={typeToRenameAction[node.type]} value={node.title} />,
+      title: <InputOnFocus onBlur={onBlur} value={node.title} />,
       style: {
         boxShadow: `0 0 0 4px ${typeToColor[node.type]}`
       }
@@ -233,17 +184,61 @@ const ContentTree = (props) => {
   }
 
   const canDrop = ({ nextParent }) => {
-    if (nextParent && nextParent.type === 'module') {
+    if (nextParent && nextParent.type === TocNodeKind.Page) {
       return false
     }
     return true
   }
 
+  const onMoveNode = (data /*: NodeData & FullTree & OnMovePreviousAndNextLocation */) => {
+    const { node, nextParentNode, path, treeData } = data
+    const bookIndex = props.index
+    const nodeToken = node.token
+    const newToc = treeData
+    if (path === null) {
+      // Removed node
+      const message /*: TocRemoveEvent */ = {
+        type: TocModificationKind.Remove,
+        nodeToken,
+        bookIndex,
+        newToc
+      }
+      vscode.postMessage(message)
+    } else {
+      const hasParent = nextParentNode !== null && nextParentNode !== undefined
+      /* istanbul ignore next */
+      const newParentToken = hasParent ? nextParentNode.token : undefined
+      /* istanbul ignore next */
+      const parentChildrenArray = hasParent ? nextParentNode.children : treeData
+      const newChildIndex = parentChildrenArray.indexOf(node)
+      /* istanbul ignore else */
+      if (newChildIndex >= 0) {
+        const message /*: TocMoveEvent */ = {
+          type: TocModificationKind.Move,
+          nodeToken,
+          newParentToken,
+          newChildIndex,
+          bookIndex,
+          newToc
+        }
+        vscode.postMessage(message)
+      }
+    }
+  }
+
+  const getNodeKey = (n /*: SortableTree.TreeNode<TreeItemWithToken> */) => {
+    /* istanbul ignore if */
+    if (!n.node?.token) { throw new Error(`missing node token: ${JSON.stringify(n.node)}`) }
+    return n.node.token
+  }
+
   return (
     <div style={{ height: '100%' }}>
       <SortableTree
-        treeData={data.children}
-        onChange={props.editable ? handleChange : () => {}} // non-editable treeData will never change
+        treeData={data.tocTree}
+        getNodeKey={getNodeKey}
+        onMoveNode={props.editable ? onMoveNode : () => {}}
+        onChange={onChange} // Do not update state locally. Wait for Language Server to send an updated tree
         generateNodeProps={getNodeProps}
         canDrop={props.editable ? canDrop : () => true} // Dropping item into non-editable trees will destroy the item
         shouldCopyOnOutsideDrop={!props.editable}
@@ -259,7 +254,7 @@ const ContentTree = (props) => {
 
 const EditorPanel = (props) => {
   const modifiesStateName = props.modifiesStateName
-  const trees = props.treesData
+  const trees /*: PanelOutgoingMessage */ = props.treesData
   const [selection, setSelection] = useState(props.selectionIndex)
 
   const selectedTree = trees[selection]
@@ -288,12 +283,12 @@ const EditorPanel = (props) => {
     setSearchFocusIndex((searchFocusIndex + searchFoundCount + 1) % searchFoundCount)
   }
 
-  const handleAddModule = (event) => {
-    vscode.postMessage({ type: 'module-create' })
+  const handleAddPage = (event) => {
+    vscode.postMessage({ type: 'PAGE_CREATE', bookIndex: props.selectionIndex })
   }
 
-  const handleAddSubcollection = (event) => {
-    vscode.postMessage({ type: 'subcollection-create', slug: selectedTree.slug })
+  const handleAddSubbook = (event) => {
+    vscode.postMessage({ type: 'SUBBOOK_CREATE', slug: selectedTree.slug, bookIndex: props.selectionIndex })
   }
 
   const handleSelect = (event) => {
@@ -337,12 +332,12 @@ const EditorPanel = (props) => {
               <div style={{ display: 'flex' }}>
                 {
                   props.canAddModules
-                    ? <button className='module-create' onClick={handleAddModule}>Add Module</button>
+                    ? <button className='page-create' onClick={handleAddPage}>Add Module</button>
                     : <></>
                 }
                 {
                   props.canAddSubcollections
-                    ? <button className='subcollection-create' onClick={handleAddSubcollection}>Add Subcollection</button>
+                    ? <button className='subbook-create' onClick={handleAddSubbook}>Add Subcollection</button>
                     : <></>
                 }
               </div>
@@ -403,35 +398,38 @@ const App = (props) => (
       selectionIndex={props.selectionIndices.editable}
       editable={true}
       canAddSubcollections
+      canAddModules
     />
     <EditorPanel
       modifiesStateName={'uneditable'}
       treesData={props.treesData.uneditable}
       selectionIndex={props.selectionIndices.uneditable}
       editable={false}
-      canAddModules
     />
   </div>
 )
 
-window.addEventListener('load', () => {
-  vscode.postMessage({ type: 'refresh' })
-})
+function walkTree(n /*: TreeItemWithToken */, fn /*: (TreeItemWithToken) => void */) {
+  fn(n)
+  if (n.children) {
+    n.children.forEach(c => walkTree(c, fn))
+  }
+}
 
 window.addEventListener('message', event => {
   const previousState = getSavedState()
   const oldData = previousState?.treesData
-  const newData = event.data
+  const newData /*: PanelOutgoingMessage */ = event.data
   if (oldData != null) {
-    const slugToExpandedIndices = {}
-    for (const tree of oldData.editable) {
-      slugToExpandedIndices[tree.slug] = getExpandedIndices(tree)
-    }
-    for (const tree of newData.editable) {
-      const expandedIndices = slugToExpandedIndices[tree.slug]
-      if (expandedIndices != null) {
-        expandIndices(tree, expandedIndices)
-      }
+    // Copy the expanded/collapsed state for each node to the new tree based on the title of the node
+    for (let i = 0; i < oldData.editable.length; i++) {
+      const oldBook = oldData.editable[i]
+      const newBook = newData.editable[i]
+      /* istanbul ignore if */
+      if (oldBook === undefined || newBook === undefined) { break }
+      const expandedTitles = new Map()
+      oldBook.tocTree.forEach(t => walkTree(t, n => { n.expanded && expandedTitles.set(n.title, n.expanded) }))
+      newBook.tocTree.forEach(t => walkTree(t, n => { n.expanded = expandedTitles.get(n.title) }))
     }
   }
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
@@ -450,7 +448,9 @@ window.addEventListener('message', event => {
 
 function renderApp() {
   const previousState = getSavedState()
-  const treesData = previousState ? previousState.treesData : { editable: [], uneditable: [] }
+  /* istanbul ignore next */
+  const treesData /*: PanelOutgoingMessage */ = previousState ? previousState.treesData : { editable: [], uneditable: [] }
+  /* istanbul ignore next */
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
   const mountPoint = document.getElementById('app')
   render(<App {...{ treesData, selectionIndices }}/>, mountPoint)

@@ -1,18 +1,23 @@
+import { v4 as uuid4 } from 'uuid'
 import { glob } from 'glob'
 import fs from 'fs'
-import path from 'path'
+import * as path from 'path'
 import I from 'immutable'
+import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
-import { URI } from 'vscode-uri'
-import { DiagnosticSource } from '../../common/src/requests'
-import { TocTreeModule, TocTreeCollection, TocTreeElement, TocTreeElementType } from '../../common/src/toc-tree'
-import { Opt, expectValue, Position, inRange, Range } from './model/utils'
-import { BookNode, TocNode, TocNodeKind } from './model/book'
+import { URI, Utils } from 'vscode-uri'
+import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc'
+import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
 import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
+import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
+import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
+import { TocSubbookWithRange } from './model/book'
+import { mkdirp } from 'fs-extra'
+import { DOMParser, XMLSerializer } from 'xmldom'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -20,6 +25,20 @@ const PAGE_RE = /\/modules\/[^/]+\/index\.cnxml$/
 const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 
 const PATH_SEP = path.sep
+
+interface NodeAndParent {node: ClientTocNode, parent: BookToc|ClientTocNode}
+function childrenOf(n: ClientTocNode) {
+  /* istanbul ignore else */
+  if (n.type === TocNodeKind.Subbook) {
+    return n.children
+  } else {
+    throw new Error('BUG: Unreachable code')
+  }
+}
+
+function loadedAndExists(n: Fileish) {
+  return n.isLoaded && n.exists
+}
 
 function findOrCreateNode(bundle: Bundle, absPath: string) {
   if (bundle.absPath === absPath) {
@@ -47,57 +66,14 @@ export function pageToModuleId(page: PageNode) {
   return path.basename(path.dirname(page.absPath))
 }
 
-export function pageAsTreeObject(page: PageNode): TocTreeModule {
-  return {
-    type: TocTreeElementType.module,
-    moduleid: pageToModuleId(page),
-    title: page.title(() => readSync(page)),
-    subtitle: pageToModuleId(page)
-  }
-}
-
-export function bookTocAsTreeCollection(book: BookNode): TocTreeCollection {
-  const children = book.toc.map(recTocConvert)
-  return {
-    type: TocTreeElementType.collection,
-    title: book.title,
-    slug: book.slug,
-    children
-  }
-}
-
-function recTocConvert(node: TocNode): TocTreeElement {
-  if (node.type === TocNodeKind.Inner) {
-    const children = node.children.map(recTocConvert)
-    return {
-      type: TocTreeElementType.subcollection,
-      title: node.title,
-      children
-    }
-  } else {
-    return {
-      type: TocTreeElementType.module,
-      title: node.page.title(() => readSync(node.page)),
-      moduleid: pageToModuleId(node.page)
-    }
-  }
-}
-
 // https://stackoverflow.com/a/35008327
-const checkFileExists = async (s: string): Promise<boolean> => await new Promise(resolve => fs.access(s, fs.constants.F_OK, e => resolve(e === null)))
-
-async function readOrNull(uri: string): Promise<Opt<string>> {
-  const { fsPath } = URI.parse(uri)
-  if (await checkFileExists(fsPath)) {
-    const stat = await fs.promises.stat(fsPath)
-    if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
-      return await fs.promises.readFile(fsPath, 'utf-8')
-    }
+const checkFileExists = async (s: string): Promise<boolean> => {
+  try {
+    await fs.promises.access(s, fs.constants.F_OK)
+    return true
+  } catch {
+    return false
   }
-}
-function readSync(n: Fileish) {
-  const { fsPath } = URI.parse(n.absPath)
-  return fs.readFileSync(fsPath, 'utf-8')
 }
 
 function toStringFileChangeType(t: FileChangeType) {
@@ -107,28 +83,90 @@ function toStringFileChangeType(t: FileChangeType) {
     case FileChangeType.Deleted: return 'DELETED'
   }
 }
+
+// In Quarx, whenever the inputs change autorun is executed.
+// But: sometimes the inputs change in ways that do not affect the resulting objects (like the column number of an <image> tag)
+//
+// This splits the sideEffect from the re-compute function so that sideEffectFn only runs when the input to the sideEffectFn changes
+function memoizeTempValue<T>(equalsFn: (a: T, b: T) => boolean, computeFn: () => T, sideEffectFn: (arg: T) => void) {
+  const temp = Quarx.observable.box<Opt<{matryoshka: T}>>(undefined, { equals: matryoshkaEquals(equalsFn) })
+  Quarx.autorun(() => {
+    temp.set({ matryoshka: computeFn() })
+  })
+  Quarx.autorun(() => {
+    const m = temp.get()
+    /* istanbul ignore else */
+    if (m !== undefined) {
+      sideEffectFn(m.matryoshka)
+    }
+  })
+}
+const matryoshkaEquals = <T>(eq: (n1: T, n2: T) => boolean) => (n1: Opt<{matryoshka: T}>, n2: Opt<{matryoshka: T}>) => {
+  /* istanbul ignore next */
+  if (n1 === undefined && n2 === undefined) return true
+  if (n1 !== undefined && n2 !== undefined) {
+    return eq(n1.matryoshka, n2.matryoshka)
+  } return false
+}
+const equalsBookTocArray = equalsArray(equalsBookToc)
+const equalsBooksAndOrphans = (n1: BooksAndOrphans, n2: BooksAndOrphans) => {
+  return equalsBookTocArray(n1.books, n2.books) && equalsClientPageishArray(n1.orphans, n2.orphans)
+}
 export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
 
   public readonly jobRunner = new JobRunner()
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
+  private bookTocs: BookToc[] = []
 
-  constructor(public bundle: Bundle, private readonly conn: Connection) {}
+  constructor(public bundle: Bundle, private readonly conn: Connection, bookTocHandler?: (params: BooksAndOrphans) => void) {
+    const defaultHandler = (params: BooksAndOrphans) => conn.sendNotification(ExtensionServerNotification.BookTocs, params)
+    const handler = bookTocHandler ?? defaultHandler
+    // BookTocs
+    const computeFn = () => {
+      let idCounter = 0
+      const tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>((v) => {
+        if (v instanceof PageNode) {
+          return `servertoken:page:${v.absPath}`
+        } else {
+          return `servertoken:inner:${idCounter++}:${v.title}`
+        }
+      })
+      if (loadedAndExists(this.bundle)) {
+        return {
+          books: this.bundle.books.filter(loadedAndExists).toArray().map(b => fromBook(tocIdMap, b)),
+          orphans: this.orphanedPages.filter(loadedAndExists).toArray().map(p => fromPage(tocIdMap, p).value)
+        }
+      }
+      ModelManager.debug('[MODEL_MANAGER] bundle file is not loaded yet or does not exist')
+      return { tocIdMap, books: [], orphans: [] }
+    }
+    const sideEffectFn = (v: BooksAndOrphans) => {
+      this.bookTocs = v.books
+      const params: BooksAndOrphans = {
+        books: v.books,
+        orphans: v.orphans
+      }
+      ModelManager.debug('[MODEL_MANAGER] Sending Book TOC Updated', params)
+      handler(params)
+    }
+    memoizeTempValue(equalsBooksAndOrphans, computeFn, sideEffectFn)
+  }
 
   public get allPages() {
     return this.bundle.allPages.all
   }
 
   public get orphanedPages() {
-    const books = this.bundle.books
-    return this.bundle.allPages.all.subtract(books.flatMap(b => b.pages))
+    const books = this.bundle.books.filter(loadedAndExists)
+    return this.bundle.allPages.all.filter(loadedAndExists).subtract(books.flatMap(b => b.pages))
   }
 
   public get orphanedImages() {
-    const books = this.bundle.books
+    const books = this.bundle.books.filter(loadedAndExists)
     const pages = books.flatMap(b => b.pages)
-    return this.bundle.allImages.all.filter(i => i.isLoaded && i.exists).subtract(pages.flatMap(p => p.images))
+    return this.bundle.allImages.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.images))
   }
 
   public async loadEnoughForToc() {
@@ -147,8 +185,13 @@ export class ModelManager {
     if (this.didLoadOrphans) return
     await this.loadEnoughForToc()
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRoot).fsPath, absolute: true })
-    files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
+    Quarx.batch(() => {
+      files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+    })
+    // Load everything before we can know where the orphans are
+    this.performInitialValidation()
+    await this.jobRunner.done()
     this.didLoadOrphans = true
   }
 
@@ -226,14 +269,29 @@ export class ModelManager {
     return this.openDocuments.get(absPath)
   }
 
+  private async readOrNull(node: Fileish): Promise<Opt<string>> {
+    const uri = node.absPath
+    const unsavedContents = this.getOpenDocContents(uri)
+    if (unsavedContents !== undefined) {
+      return unsavedContents
+    }
+    const { fsPath } = URI.parse(uri)
+    if (await checkFileExists(fsPath)) {
+      const stat = await fs.promises.stat(fsPath)
+      if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
+        return await fs.promises.readFile(fsPath, 'utf-8')
+      }
+    }
+  }
+
   private async readAndLoad(node: Fileish) {
     if (node.isLoaded) { return }
-    const fileContent = await readOrNull(node.absPath)
+    const fileContent = await this.readOrNull(node)
     node.load(fileContent)
   }
 
   private async readAndUpdate(node: Fileish) {
-    const fileContent = await readOrNull(node.absPath)
+    const fileContent = await this.readOrNull(node)
     node.load(fileContent)
   }
 
@@ -349,5 +407,153 @@ export class ModelManager {
       }
     }
     return ret
+  }
+
+  async modifyToc(evt: TocModification) {
+    ModelManager.debug('[MODIFY_TOC]', evt)
+
+    const bookToc = this.bookTocs[evt.bookIndex]
+    const { node, parent } = this.lookupToken(evt.nodeToken)
+
+    if (evt.type === TocModificationKind.PageRename || evt.type === TocModificationKind.SubbookRename) {
+      if (node.type === TocNodeKind.Page) {
+        const page = expectValue(this.bundle.allPages.get(node.value.absPath), `BUG: This node should exist: ${node.value.absPath}`)
+        const fsPath = URI.parse(node.value.absPath).fsPath
+        const oldXml = expectValue(await this.readOrNull(page), `BUG? This file should exist right? ${fsPath}`)
+        const newXml = renameTitle(evt.newTitle, oldXml)
+        await fs.promises.writeFile(fsPath, newXml)
+        page.load(newXml) // Just speed up the process
+      } else {
+        node.value.title = evt.newTitle
+        await this.writeBookToc(bookToc)
+      }
+    } else if (evt.type === TocModificationKind.Remove) {
+      removeNode(parent, node)
+      await this.writeBookToc(bookToc)
+    } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
+      removeNode(parent, node)
+      // Add the node
+      const newParentChildren = evt.newParentToken !== undefined ? childrenOf(this.lookupToken(evt.newParentToken).node) : bookToc.tocTree
+      newParentChildren.splice(evt.newChildIndex, 0, node)
+      await this.writeBookToc(bookToc)
+    }
+  }
+
+  private async writeBookToc(bookToc: BookToc) {
+    const bookXmlStr = toString(bookToc)
+    const fsPath = URI.parse(bookToc.absPath).fsPath
+    const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
+    await fs.promises.writeFile(fsPath, bookXmlStr)
+    book.load(bookXmlStr) // Just speed up the process
+    return book
+  }
+
+  private recFind(token: Token, parent: ClientTocNode | BookToc, nodes: ClientTocNode[]): Opt<NodeAndParent> {
+    for (const node of nodes) {
+      if (node.value.token === token) {
+        return { node: node, parent }
+      }
+      /* istanbul ignore else */
+      if (node.type === TocNodeKind.Subbook) {
+        const ret = this.recFind(token, node, node.children)
+        if (ret !== undefined) return ret
+      }
+    }
+  }
+
+  private lookupToken(token: string): NodeAndParent {
+    for (const b of this.bookTocs) {
+      const ret = this.recFind(token, b, b.tocTree)
+      /* istanbul ignore else */
+      if (ret !== undefined) return ret
+    }
+    /* istanbul ignore next */
+    throw new Error(`BUG: Could not find ToC item using token='${token}'`)
+  }
+
+  public async createPage(bookIndex: number, title: string) {
+    const template = (): string => {
+      return `
+<document xmlns="http://cnx.rice.edu/cnxml">
+  <title/>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:title/>
+    <md:content-id/>
+    <md:uuid/>
+  </metadata>
+  <content>
+  </content>
+</document>`.trim()
+    }
+    const workspaceRootUri = URI.parse(this.bundle.workspaceRootUri)
+    const pageDirUri = Utils.joinPath(workspaceRootUri, 'modules')
+    let moduleNumber = 0
+    const moduleDirs = new Set(await fs.promises.readdir(pageDirUri.fsPath))
+    while (moduleNumber < 1000) {
+      moduleNumber += 1
+      const newModuleId = `m${moduleNumber.toString().padStart(5, '0')}`
+      if (moduleDirs.has(newModuleId)) {
+        // File exists already, try again
+        continue
+      }
+      const pageUri = Utils.joinPath(pageDirUri, newModuleId, 'index.cnxml')
+      const page = this.bundle.allPages.getOrAdd(pageUri.fsPath)
+
+      const doc = new DOMParser().parseFromString(template(), 'text/xml')
+      selectOne('/cnxml:document/cnxml:title', doc).textContent = title
+      selectOne('/cnxml:document/cnxml:metadata/md:title', doc).textContent = title
+      selectOne('/cnxml:document/cnxml:metadata/md:content-id', doc).textContent = newModuleId
+      selectOne('/cnxml:document/cnxml:metadata/md:uuid', doc).textContent = uuid4()
+      const xmlStr = new XMLSerializer().serializeToString(doc)
+
+      page.load(xmlStr)
+      await mkdirp(Utils.joinPath(pageDirUri, newModuleId).fsPath)
+      await fs.promises.writeFile(pageUri.fsPath, xmlStr)
+      ModelManager.debug(`[NEW_PAGE] Created: ${pageUri.fsPath}`)
+
+      const bookToc = this.bookTocs[bookIndex]
+      bookToc.tocTree.unshift({
+        type: TocNodeKind.Page,
+        value: { token: 'unused-when-writing', title: undefined, fileId: newModuleId, absPath: page.absPath }
+      })
+      await this.writeBookToc(bookToc)
+      ModelManager.debug(`[CREATE_PAGE] Prepended to Book: ${pageUri.fsPath}`)
+      return { page, id: newModuleId }
+    }
+    /* istanbul ignore next */
+    throw new Error('Error: Too many page directories already exist')
+  }
+
+  public async createSubbook(bookIndex: number, title: string) {
+    ModelManager.debug(`[CREATE_SUBBOOK] Creating: ${title}`)
+    const bookToc = this.bookTocs[bookIndex]
+    const tocNode: TocSubbook<ClientSubbookish, ClientPageish> = {
+      type: TocNodeKind.Subbook,
+      value: { title, token: 'unused-when-writing' },
+      children: []
+    }
+    // Prepend new Subbook to top of Book so it is visible to the user
+    bookToc.tocTree.unshift(tocNode)
+    await this.writeBookToc(bookToc)
+  }
+}
+
+function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
+  if (parent.type === BookRootNode.Singleton) {
+    const before = parent.tocTree.length
+    parent.tocTree = parent.tocTree.filter(n => n !== node)
+    /* istanbul ignore if */
+    if (parent.tocTree.length === before) {
+      throw new Error(`BUG: Could not find Page child in book='${parent.slug}'`)
+    }
+  } else /* istanbul ignore else */ if (parent.type === TocNodeKind.Subbook) {
+    const before = parent.children.length
+    parent.children = parent.children.filter(n => n !== node)
+    /* istanbul ignore if */
+    if (parent.children.length === before) {
+      throw new Error(`BUG: Could not find Page child in parent='${parent.value.title}'`)
+    }
+  } else {
+    throw new Error('BUG: Unreachable')
   }
 }

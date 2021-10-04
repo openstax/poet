@@ -30,10 +30,10 @@ $ npm run test:client
 The Language Server tests do not require building beforehand. To run them:
 
 ```bash
-$ npm run test:server
+$ npm run test:unit
 
 # To automatically re-build and re-run only the tests affected by uncommitted changes
-$ npm run test:server:watch
+$ npm run test:unit:watch
 ```
 
 If you use the launch configuration to invoke the client tests from VS Code, the `build` will be run automatically.
@@ -43,10 +43,10 @@ If you use the launch configuration to invoke the client tests from VS Code, the
 The Language Server tests do not require building beforehand. To run them:
 
 ```bash
-$ npm run test:server
+$ npm run test:unit
 
 # To automatically re-build and re-run only the tests affected by the change
-$ npm run test:server:watch
+$ npm run test:unit:watch
 ```
 
 Additionally, you can step through the server tests by setting a breakpoint in VSCode and launching the ["Language Server Tests"](./launch.json) in the Debugging panel.
