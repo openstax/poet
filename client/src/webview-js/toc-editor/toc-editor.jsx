@@ -226,7 +226,7 @@ const ContentTree = (props) => {
     }
   }
 
-  const getNodeKey = (n /*: TreeNode<TreeItemWithToken> */) => {
+  const getNodeKey = (n /*: SortableTree.TreeNode<TreeItemWithToken> */) => {
     /* istanbul ignore if */
     if (!n.node?.token) { throw new Error(`missing node token: ${JSON.stringify(n.node)}`) }
     return n.node.token
@@ -254,7 +254,7 @@ const ContentTree = (props) => {
 
 const EditorPanel = (props) => {
   const modifiesStateName = props.modifiesStateName
-  const trees = props.treesData
+  const trees /*: PanelOutgoingMessage */ = props.treesData
   const [selection, setSelection] = useState(props.selectionIndex)
 
   const selectedTree = trees[selection]
@@ -409,7 +409,7 @@ const App = (props) => (
   </div>
 )
 
-function walkTree(n /* TreeItem */, fn /* (TreeItem) => void */) {
+function walkTree(n /*: TreeItemWithToken */, fn /*: (TreeItemWithToken) => void */) {
   fn(n)
   if (n.children) {
     n.children.forEach(c => walkTree(c, fn))
@@ -419,7 +419,7 @@ function walkTree(n /* TreeItem */, fn /* (TreeItem) => void */) {
 window.addEventListener('message', event => {
   const previousState = getSavedState()
   const oldData = previousState?.treesData
-  const newData = event.data
+  const newData /*: PanelOutgoingMessage */ = event.data
   if (oldData != null) {
     // Copy the expanded/collapsed state for each node to the new tree based on the title of the node
     for (let i = 0; i < oldData.editable.length; i++) {
@@ -449,7 +449,7 @@ window.addEventListener('message', event => {
 function renderApp() {
   const previousState = getSavedState()
   /* istanbul ignore next */
-  const treesData = previousState ? previousState.treesData : { editable: [], uneditable: [] }
+  const treesData /*: PanelOutgoingMessage */ = previousState ? previousState.treesData : { editable: [], uneditable: [] }
   /* istanbul ignore next */
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }
   const mountPoint = document.getElementById('app')

@@ -37,5 +37,5 @@ To show/verify that the model works outside the language server, there is a CLI 
 To run it:
 
 ```bash
-npx ts-node@10.1.0 ./model/_cli.ts /path/to/book/repo /path/to/another/book/repo
+npx ts-node@10.1.0 ./src/model/_cli.ts /path/to/book/repo /path/to/another/book/repo
 ```
