@@ -7,14 +7,14 @@ module.exports = {
           {
             "type": "TocModificationKind.Move",
             "nodeToken": "page-token-m00003",
-            "newParentToken": "subbook-token-subcollection",
+            "newParentToken": "subbook-token-subbook",
             "newChildIndex": 0,
             "bookIndex": 0,
             "newToc": [
               {
                 "type": "TocNodeKind.Subbook",
-                "title": "subcollection",
-                "token": "subbook-token-subcollection",
+                "title": "subbook",
+                "token": "subbook-token-subbook",
                 "expanded": true,
                 "children": [
                   {
@@ -52,14 +52,14 @@ module.exports = {
           {
             "type": "TocModificationKind.Move",
             "nodeToken": "page-token-m00002",
-            "newParentToken": "subbook-token-subcollection",
+            "newParentToken": "subbook-token-subbook",
             "newChildIndex": 0,
             "bookIndex": 0,
             "newToc": [
               {
                 "type": "TocNodeKind.Subbook",
-                "title": "subcollection",
-                "token": "subbook-token-subcollection",
+                "title": "subbook",
+                "token": "subbook-token-subbook",
                 "expanded": true,
                 "children": [
                   {
@@ -93,8 +93,8 @@ module.exports = {
             "newToc": [
               {
                 "type": "TocNodeKind.Subbook",
-                "title": "subcollection",
-                "token": "subbook-token-subcollection",
+                "title": "subbook",
+                "token": "subbook-token-subbook",
                 "expanded": true,
                 "children": [
                   {
@@ -153,8 +153,8 @@ module.exports = {
             "newToc": [
               {
                 "type": "TocNodeKind.Subbook",
-                "title": "subcollection",
-                "token": "subbook-token-subcollection",
+                "title": "subbook",
+                "token": "subbook-token-subbook",
                 "expanded": true,
                 "children": [
                   {
@@ -191,12 +191,12 @@ module.exports = {
         "1": [
           {
             "type": "TocModificationKind.SubbookRename",
-            "newTitle": "subcollectionabc",
-            "nodeToken": "subbook-token-subcollection",
+            "newTitle": "subbookabc",
+            "nodeToken": "subbook-token-subbook",
             "node": {
               "type": "TocNodeKind.Subbook",
-              "title": "subcollectionabc",
-              "token": "subbook-token-subcollection",
+              "title": "subbookabc",
+              "token": "subbook-token-subbook",
               "expanded": true,
               "children": [
                 {
@@ -221,8 +221,8 @@ module.exports = {
             "newToc": [
               {
                 "type": "TocNodeKind.Subbook",
-                "title": "subcollectionabc",
-                "token": "subbook-token-subcollection",
+                "title": "subbookabc",
+                "token": "subbook-token-subbook",
                 "expanded": true,
                 "children": [
                   {

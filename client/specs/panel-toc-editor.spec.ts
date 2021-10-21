@@ -59,7 +59,7 @@ describe('Toc Editor', () => {
         absPath: 'path/to/nowhere-book',
         tocTree: [{
           type: TocNodeKind.Subbook,
-          value: { token: 'id123', title: 'subcollection' },
+          value: { token: 'id123', title: 'subbook' },
           children: [{
             type: TocNodeKind.Page,
             value: {
@@ -137,9 +137,9 @@ describe('Toc Editor', () => {
       },
       'm00003'
     )
-    const subcollectionItem = new TocTreeItem(
+    const subbookItem = new TocTreeItem(
       TocItemIcon.Subbook,
-      'subcollection',
+      'subbook',
       vscode.TreeItemCollapsibleState.Collapsed,
       [module1Item, module2Item]
     )
@@ -147,7 +147,7 @@ describe('Toc Editor', () => {
       TocItemIcon.Book,
       'Collection1',
       vscode.TreeItemCollapsibleState.Collapsed,
-      [subcollectionItem],
+      [subbookItem],
       {
         title: 'open',
         command: 'vscode.open',

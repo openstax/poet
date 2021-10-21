@@ -111,7 +111,7 @@ TocTreeItem {
       "command": undefined,
       "description": undefined,
       "iconPath": "Folder",
-      "label": "subcollection",
+      "label": "subbook",
       "parent": [Circular],
     },
   ],
@@ -308,7 +308,7 @@ TocTreeItem {
   "command": undefined,
   "description": undefined,
   "iconPath": "Folder",
-  "label": "subcollection",
+  "label": "subbook",
   "parent": TocTreeItem {
     "children": Array [
       [Circular],
