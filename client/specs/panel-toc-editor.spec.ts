@@ -47,12 +47,12 @@ describe('Toc Editor', () => {
   const sinon = SinonRoot.createSandbox()
   afterEach(() => sinon.restore())
   it('TocTreesProvider returns expected TocTreeItems', async () => {
-    const fakeTreeCollection: BookToc[] = []
-    fakeTreeCollection.push(
+    const fakeTreeBooks: BookToc[] = []
+    fakeTreeBooks.push(
       {
         type: BookRootNode.Singleton,
-        title: 'Collection1',
-        slug: 'collection1',
+        title: 'Book1',
+        slug: 'slug1',
         uuid: '',
         language: '',
         licenseUrl: '',
@@ -82,8 +82,8 @@ describe('Toc Editor', () => {
       },
       {
         type: BookRootNode.Singleton,
-        title: 'Collection2',
-        slug: 'collection2',
+        title: 'Book2',
+        slug: 'slug2',
         uuid: '',
         language: '',
         licenseUrl: '',
@@ -143,26 +143,26 @@ describe('Toc Editor', () => {
       vscode.TreeItemCollapsibleState.Collapsed,
       [module1Item, module2Item]
     )
-    const collection1Item = new TocTreeItem(
+    const book1Item = new TocTreeItem(
       TocItemIcon.Book,
-      'Collection1',
+      'Book1',
       vscode.TreeItemCollapsibleState.Collapsed,
       [subbookItem],
       {
         title: 'open',
         command: 'vscode.open',
-        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/collections/collection1.collection.xml`)]
+        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/collections/slug1.collection.xml`)]
       }
     )
-    const collection2Item = new TocTreeItem(
+    const book2Item = new TocTreeItem(
       TocItemIcon.Book,
-      'Collection2',
+      'Book2',
       vscode.TreeItemCollapsibleState.Collapsed,
       [module3Item],
       {
         title: 'open',
         command: 'vscode.open',
-        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/collections/collection2.collection.xml`)]
+        arguments: [vscode.Uri.file(`${fakeWorkspacePath}/collections/slug2.collection.xml`)]
       }
     )
 
@@ -172,14 +172,14 @@ describe('Toc Editor', () => {
     mockClient.sendRequest = sendRequestMock
     const tocTreesProvider = new TocTreesProvider({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: mockClient, events: createMockEvents().events })
     sendRequestMock.onCall(0).resolves(null)
-    sendRequestMock.onCall(1).resolves(fakeTreeCollection)
+    sendRequestMock.onCall(1).resolves(fakeTreeBooks)
 
     expect(await tocTreesProvider.getChildren(undefined)).toMatchSnapshot()
     expect(await tocTreesProvider.getChildren(undefined)).toMatchSnapshot()
-    expect(collection1Item).toMatchSnapshot()
-    expect(await tocTreesProvider.getChildren(collection2Item)).toMatchSnapshot()
-    expect(tocTreesProvider.getTreeItem(collection2Item)).toMatchSnapshot()
-    expect(await tocTreesProvider.getParent(collection2Item)).toMatchSnapshot()
+    expect(book1Item).toMatchSnapshot()
+    expect(await tocTreesProvider.getChildren(book2Item)).toMatchSnapshot()
+    expect(tocTreesProvider.getTreeItem(book2Item)).toMatchSnapshot()
+    expect(await tocTreesProvider.getParent(book2Item)).toMatchSnapshot()
     expect(await tocTreesProvider.getParent(module3Item)).toMatchSnapshot()
     expect(await tocTreesProvider.getParent(module1Item)).toMatchSnapshot()
     tocTreesProvider.toggleFilterMode()

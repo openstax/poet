@@ -120,7 +120,7 @@ TocTreeItem {
     "arguments": Array [
       Object {
         "$mid": 1,
-        "path": "/tmp/fakeworkspace/collections/collection1.collection.xml",
+        "path": "/tmp/fakeworkspace/collections/slug1.collection.xml",
         "scheme": "file",
       },
     ],
@@ -129,7 +129,7 @@ TocTreeItem {
   },
   "description": undefined,
   "iconPath": ThemeIcon {},
-  "label": "Collection1",
+  "label": "Book1",
   "parent": undefined,
 }
 `;
@@ -160,7 +160,7 @@ Array [
         "arguments": Array [
           Object {
             "$mid": 1,
-            "path": "/tmp/fakeworkspace/collections/collection2.collection.xml",
+            "path": "/tmp/fakeworkspace/collections/slug2.collection.xml",
             "scheme": "file",
           },
         ],
@@ -169,7 +169,7 @@ Array [
       },
       "description": undefined,
       "iconPath": ThemeIcon {},
-      "label": "Collection2",
+      "label": "Book2",
       "parent": undefined,
     },
   },
@@ -204,7 +204,7 @@ TocTreeItem {
     "arguments": Array [
       Object {
         "$mid": 1,
-        "path": "/tmp/fakeworkspace/collections/collection2.collection.xml",
+        "path": "/tmp/fakeworkspace/collections/slug2.collection.xml",
         "scheme": "file",
       },
     ],
@@ -213,7 +213,7 @@ TocTreeItem {
   },
   "description": undefined,
   "iconPath": ThemeIcon {},
-  "label": "Collection2",
+  "label": "Book2",
   "parent": undefined,
 }
 `;
@@ -248,7 +248,7 @@ TocTreeItem {
     "arguments": Array [
       Object {
         "$mid": 1,
-        "path": "/tmp/fakeworkspace/collections/collection2.collection.xml",
+        "path": "/tmp/fakeworkspace/collections/slug2.collection.xml",
         "scheme": "file",
       },
     ],
@@ -257,7 +257,7 @@ TocTreeItem {
   },
   "description": undefined,
   "iconPath": ThemeIcon {},
-  "label": "Collection2",
+  "label": "Book2",
   "parent": undefined,
 }
 `;
@@ -318,7 +318,7 @@ TocTreeItem {
       "arguments": Array [
         Object {
           "$mid": 1,
-          "path": "/tmp/fakeworkspace/collections/collection1.collection.xml",
+          "path": "/tmp/fakeworkspace/collections/slug1.collection.xml",
           "scheme": "file",
         },
       ],
@@ -327,7 +327,7 @@ TocTreeItem {
     },
     "description": undefined,
     "iconPath": ThemeIcon {},
-    "label": "Collection1",
+    "label": "Book1",
     "parent": undefined,
   },
 }
