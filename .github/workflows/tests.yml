@@ -21,11 +21,6 @@ jobs:
       - name: Setup
         run: |
           npm install
-      - name: Test
-        run: |
-          xvfb-run -a npm run test
-      - name: Upload Code Coverage
-        uses: codecov/codecov-action@v2
       - name: Build Extension
         run: |
           case "$GITHUB_EVENT_NAME" in
@@ -44,6 +39,11 @@ jobs:
         with:
           name: editor-extension
           path: editor-*.vsix
+      - name: Test
+        run: |
+          xvfb-run -a npm run test
+      - name: Upload Code Coverage
+        uses: codecov/codecov-action@v2
       - name: Lint
         run: |
           npm run lint
