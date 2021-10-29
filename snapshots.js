@@ -116,7 +116,7 @@ module.exports = {
       "can tell the extension to create Page": {
         "1": [
           {
-            "type": "PAGE_CREATE",
+            "type": "TocNodeKind.Page",
             "bookIndex": 0
           }
         ]
@@ -124,12 +124,12 @@ module.exports = {
       "can tell the extension to create Subbook": {
         "1": [
           {
-            "type": "SUBBOOK_CREATE",
+            "type": "TocNodeKind.Subbook",
             "slug": "test",
             "bookIndex": 0
           },
           {
-            "type": "SUBBOOK_CREATE",
+            "type": "TocNodeKind.Subbook",
             "slug": "test-2",
             "bookIndex": 0
           }

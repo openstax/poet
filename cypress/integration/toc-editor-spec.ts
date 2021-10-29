@@ -266,7 +266,7 @@ import { TocNodeKind } from '../../common/src/toc'
           .click()
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(1)
-          expect(messagesFromWidget[0].type).to.equal('PAGE_CREATE')
+          expect(messagesFromWidget[0].type).to.equal(TocNodeKind.Page)
         })
         cy.wrap(messagesFromWidget).snapshot()
       })
@@ -279,8 +279,8 @@ import { TocNodeKind } from '../../common/src/toc'
           .click()
         cy.then(() => {
           expect(messagesFromWidget).to.have.length(2)
-          expect(messagesFromWidget[0].type).to.equal('SUBBOOK_CREATE')
-          expect(messagesFromWidget[1].type).to.equal('SUBBOOK_CREATE')
+          expect(messagesFromWidget[0].type).to.equal(TocNodeKind.Subbook)
+          expect(messagesFromWidget[1].type).to.equal(TocNodeKind.Subbook)
         })
         cy.wrap(messagesFromWidget).snapshot()
       })
