@@ -284,11 +284,11 @@ const EditorPanel = (props) => {
   }
 
   const handleAddPage = (event) => {
-    vscode.postMessage({ type: 'PAGE_CREATE', bookIndex: props.selectionIndex })
+    vscode.postMessage({ type: TocNodeKind.Page, bookIndex: props.selectionIndex })
   }
 
   const handleAddSubbook = (event) => {
-    vscode.postMessage({ type: 'SUBBOOK_CREATE', slug: selectedTree.slug, bookIndex: props.selectionIndex })
+    vscode.postMessage({ type: TocNodeKind.Subbook, slug: selectedTree.slug, bookIndex: props.selectionIndex })
   }
 
   const handleSelect = (event) => {
