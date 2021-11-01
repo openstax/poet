@@ -2,6 +2,8 @@
   "name": "editor",
   "version": "0.0.0-dev",
   "publisher": "openstax",
+  "displayName": "POET",
+  "license": "LICENSE",
   "description": "An editor for OpenStax-organized books.",
   "author": "phil@openstax.org",
   "repository": {
@@ -10,6 +12,11 @@
   "engines": {
     "vscode": "^1.39.0"
   },
+  "categories": [
+    "Formatters",
+    "Linters",
+    "Visualization"
+  ],
   "main": "./client/dist/client/src/extension.js",
   "scripts": {
     "clean": "rimraf *.vsix ./coverage/ ./.nyc_output/ ./client/dist/ ./client/out/ ./server/dist/ ./server/out/",
