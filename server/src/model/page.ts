@@ -121,7 +121,7 @@ export class PageNode extends Fileish {
     const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
     this._imageLinks.set(I.Set(imageNodes.map(attr => {
       const src = expectValue(attr.nodeValue, 'BUG: Attribute does not have a value')
-      const image = super.bundle.allImages.getOrAdd(join(this._pathHelper, PathKind.ABS_TO_REL, this.absPath, src))
+      const image = super.bundle.allImages.getOrAdd(join(this.pathHelper, PathKind.ABS_TO_REL, this.absPath, src))
       // Get the line/col position of the <image> tag
       const imageNode = expectValue(attr.ownerElement, 'BUG: attributes always have a parent element')
       const range = calculateElementPositions(imageNode)
@@ -139,7 +139,7 @@ export class PageNode extends Fileish {
       if (toUrl !== undefined) {
         return { range, type: PageLinkKind.URL, url: toUrl }
       }
-      const toPage = toDocument !== undefined ? super.bundle.allPages.getOrAdd(join(this._pathHelper, PathKind.MODULE_TO_MODULEID, this.absPath, toDocument)) : this
+      const toPage = toDocument !== undefined ? super.bundle.allPages.getOrAdd(join(this.pathHelper, PathKind.MODULE_TO_MODULEID, this.absPath, toDocument)) : this
       if (toTargetId !== undefined) {
         return {
           range,

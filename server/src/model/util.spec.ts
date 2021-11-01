@@ -85,7 +85,8 @@ export const read = (filePath: string) => readFileSync(filePath, 'utf-8')
 
 export const FS_PATH_HELPER: PathHelper<string> = {
   join: path.join,
-  dirname: path.dirname
+  dirname: path.dirname,
+  canonicalize: (x) => x
 }
 
 export function first<T>(col: I.Set<T> | I.List<T>) {

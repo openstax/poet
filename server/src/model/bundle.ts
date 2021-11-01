@@ -8,9 +8,9 @@ import { Fileish, ValidationCheck } from './fileish'
 import { ImageNode } from './image'
 
 export class Bundle extends Fileish implements Bundleish {
-  public readonly allImages: Factory<ImageNode> = new Factory((absPath: string) => new ImageNode(this, this._pathHelper, absPath))
-  public readonly allPages: Factory<PageNode> = new Factory((absPath: string) => new PageNode(this, this._pathHelper, absPath))
-  public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this._pathHelper, absPath))
+  public readonly allImages: Factory<ImageNode> = new Factory((absPath: string) => new ImageNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
+  public readonly allPages: Factory<PageNode> = new Factory((absPath: string) => new PageNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
+  public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
 
   constructor(pathHelper: PathHelper<string>, public readonly workspaceRootUri: string) {
@@ -23,7 +23,7 @@ export class Bundle extends Fileish implements Bundleish {
     this._books.set(I.Set(bookNodes.map(b => {
       const range = calculateElementPositions(b)
       const href = expectValue(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
-      const book = this.allBooks.getOrAdd(join(this._pathHelper, PathKind.ABS_TO_REL, this.absPath, href))
+      const book = this.allBooks.getOrAdd(join(this.pathHelper, PathKind.ABS_TO_REL, this.absPath, href))
       return {
         v: book,
         range

@@ -39,14 +39,17 @@ function getBundleForUri(uri: string): ModelManager {
 
 const pathHelper = {
   join: (uri: string, ...relPaths: string[]) => Utils.joinPath(URI.parse(uri), ...relPaths).toString(),
-  dirname: (uri: string) => Utils.dirname(URI.parse(uri)).toString()
+  dirname: (uri: string) => Utils.dirname(URI.parse(uri)).toString(),
+  canonicalize: (uri: string) => {
+    return URI.parse(uri).toString()
+  }
 }
 
 export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUri => {
   const filePath = workspaceUri
   const b = new Bundle(pathHelper, filePath)
   return new ModelManager(b, connection)
-})
+}, (x) => pathHelper.canonicalize(x))
 
 const consoleDebug = (...args: any[]) => {
   console.debug(...args)
@@ -129,7 +132,6 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
       const manager = getBundleForUri(change.uri)
       await manager.processFilesystemChange(change)
     }
-    await connection.sendRequest('onDidChangeWatchedFiles')
   }
   inner().catch(err => { throw err })
 })
