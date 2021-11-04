@@ -43,9 +43,12 @@ export abstract class Fileish {
   private readonly _isLoaded = Quarx.observable.box(false)
   private readonly _exists = Quarx.observable.box(false)
   private readonly _parseError = Quarx.observable.box<Opt<ParseError>>(undefined)
+  public readonly absPath
   protected parseXML: Opt<(doc: Document) => void> // Subclasses define this
 
-  constructor(private _bundle: Opt<Bundleish>, protected _pathHelper: PathHelper<string>, public readonly absPath: string) { }
+  constructor(private _bundle: Opt<Bundleish>, public pathHelper: PathHelper<string>, absPath: string) {
+    this.absPath = this.pathHelper.canonicalize(absPath)
+  }
 
   static debug = (...args: any[]) => {} // console.debug
   protected abstract getValidationChecks(): ValidationCheck[]

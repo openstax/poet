@@ -33,6 +33,7 @@ export interface Position {
 export interface PathHelper<T> {
   join: (root: T, ...components: string[]) => T
   dirname: (p: T) => T
+  canonicalize: (p: T) => T
 }
 
 export interface Range {

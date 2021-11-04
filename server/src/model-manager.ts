@@ -187,7 +187,7 @@ export class ModelManager {
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
     const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
     Quarx.batch(() => {
-      files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, URI.parse(absPath).toString()), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+      files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, this.bundle.pathHelper.canonicalize(absPath)), `BUG? We found files that the bundle did not recognize: ${absPath}`))
     })
     // Load everything before we can know where the orphans are
     this.performInitialValidation()
@@ -497,7 +497,7 @@ export class ModelManager {
         continue
       }
       const pageUri = Utils.joinPath(pageDirUri, newModuleId, 'index.cnxml')
-      const page = this.bundle.allPages.getOrAdd(pageUri.fsPath)
+      const page = this.bundle.allPages.getOrAdd(pageUri.fsPath) // fsPath works for tests and gets converted to file:// for real
 
       const doc = new DOMParser().parseFromString(template(), 'text/xml')
       selectOne('/cnxml:document/cnxml:title', doc).textContent = title
