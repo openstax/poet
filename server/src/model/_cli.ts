@@ -10,15 +10,20 @@
 // (10.2 has a bug: https://github.com/TypeStrong/ts-node/issues/1426)
 // -------------------------
 
+import http from 'http' // easier to use node-fetch but didn't want to add a dependency
+import https from 'https'
 import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
 import { PathHelper } from './utils'
 import { Bundle } from './bundle'
 import { Fileish } from './fileish'
+import { PageLinkKind } from './page'
 
 console.warn('WARN: Manually setting NODE_ENV=production so we get nicer error messages')
 process.env.NODE_ENV = 'production'
+
+const sleep = async (ms: number) => await new Promise((resolve) => setTimeout(resolve, ms))
 
 function toRelPath(p: string) {
   return path.relative(process.cwd(), p)
@@ -60,9 +65,36 @@ const pathHelper: PathHelper<string> = {
       const { range } = e
       console.log(toRelPath(e.node.absPath), `${range.start.line}:${range.start.character}`, e.message)
     })
+    for (const page of bundle.allPages.all.filter(page => page.isLoaded && page.exists)) {
+      for (const link of page.pageLinks) {
+        if (link.type === PageLinkKind.URL) {
+          const url = link.url
+          console.log('Checking Link to URL', url)
+          // const resp = await fetch(url)
+          // if (resp.status < 200 || resp.status >= 300) {
+          //   console.log(page.absPath, link.url)
+          // }
+          let proto: typeof http | typeof https = http
+          if (url.startsWith('https:')) {
+            proto = https
+          }
+          proto.get(url, res => {
+            if (res.statusCode !== undefined) {
+              if (res.statusCode >= 200 && res.statusCode < 300) {
+                console.log('Ok:', res.statusCode, link.url)
+              } else if (res.statusCode >= 300 && res.statusCode < 400) {
+                console.log('Redirect:', res.statusCode, link.url)
+              } else {
+                console.log('Error:', res.statusCode, link.url)
+              }
+            }
+          })
+        }
+      }
+    }
     console.error('----------------------------')
     errorCount += validationErrors.size
   }
-
+  await sleep(10 * 1000)
   process.exit(errorCount)
 })().then(null, (err) => { throw err })
