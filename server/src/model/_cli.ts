@@ -83,9 +83,31 @@ const pathHelper: PathHelper<string> = {
               if (res.statusCode >= 200 && res.statusCode < 300) {
                 console.log('Ok:', res.statusCode, link.url)
               } else if (res.statusCode >= 300 && res.statusCode < 400) {
-                console.log('Redirect:', res.statusCode, link.url)
+                console.warn('Following Redirect:', res.statusCode, link.url)
+                const destUrl = res.headers.location
+                if (destUrl !== undefined) {
+                  // -------------------
+                  // Avert your eyes!
+                  // This is lazy copy/pasta
+                  // -------------------
+                  let proto2: typeof http | typeof https = http
+                  if (destUrl.startsWith('https:')) {
+                    proto2 = https
+                  }
+                  proto2.get(destUrl, res => {
+                    if (res.statusCode !== undefined) {
+                      if (res.statusCode >= 200 && res.statusCode < 300) {
+                        console.log('Ok:', res.statusCode, link.url, 'to', destUrl)
+                      } else if (res.statusCode >= 300 && res.statusCode < 400) {
+                        console.error('Double Redirect:', res.statusCode, link.url, 'to', destUrl, 'to', res.headers.location)
+                      } else {
+                        console.error('Error:', res.statusCode, link.url, 'to', destUrl)
+                      }
+                    }
+                  })
+                }
               } else {
-                console.log('Error:', res.statusCode, link.url)
+                console.error('Error:', res.statusCode, link.url)
               }
             }
           })
