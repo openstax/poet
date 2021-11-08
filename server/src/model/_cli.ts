@@ -20,7 +20,7 @@ import { Bundle } from './bundle'
 import { Fileish } from './fileish'
 import { PageLinkKind } from './page'
 
-console.warn('WARN: Manually setting NODE_ENV=production so we get nicer error messages')
+console.log('WARN: Manually setting NODE_ENV=production so we get nicer error messages')
 process.env.NODE_ENV = 'production'
 
 const sleep = async (ms: number) => await new Promise((resolve) => setTimeout(resolve, ms))
@@ -44,23 +44,25 @@ const pathHelper: PathHelper<string> = {
   const bookDirs = process.argv.length >= 3 ? process.argv.slice(2) : [process.cwd()]
   let errorCount = 0
   for (const rootPath of bookDirs) {
-    console.error('Validating', toRelPath(rootPath))
+    console.log('Validating', toRelPath(rootPath))
     const bundle = new Bundle(pathHelper, rootPath)
     let nodesToLoad = I.Set<Fileish>()
     do {
       nodesToLoad = bundle.allNodes.flatMap(n => n.validationErrors.nodesToLoad).filter(n => !n.isLoaded && n.validationErrors.errors.size === 0)
-      console.error('Loading', nodesToLoad.size, 'file(s)...')
+      console.log('Loading', nodesToLoad.size, 'file(s)...')
       nodesToLoad.forEach(loadNode)
     } while (nodesToLoad.size > 0)
 
-    console.error('')
-    console.error('This directory contains:')
-    console.error('  Books:', bundle.allBooks.size)
-    console.error('  Pages:', bundle.allPages.size)
-    console.error('  Images:', bundle.allImages.size)
+    console.log('')
+    console.log('This directory contains:')
+    console.log('  Books:', bundle.allBooks.size)
+    console.log('  Pages:', bundle.allPages.size)
+    console.log('  Images:', bundle.allImages.size)
 
     const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
-    console.error('Validation Errors:', validationErrors.size)
+    if (validationErrors.size > 0) {
+      console.error('Validation Errors:', validationErrors.size)
+    }
     validationErrors.forEach(e => {
       const { range } = e
       console.log(toRelPath(e.node.absPath), `${range.start.line}:${range.start.character}`, e.message)
@@ -94,7 +96,7 @@ const pathHelper: PathHelper<string> = {
               if (res.statusCode >= 200 && res.statusCode < 300) {
                 console.log('Ok:', res.statusCode, link.url)
               } else if (res.statusCode >= 300 && res.statusCode < 400) {
-                console.warn('Following Redirect:', res.statusCode, link.url)
+                console.log('Following Redirect:', res.statusCode, link.url)
                 const destUrl = res.headers.location
                 if (destUrl !== undefined) {
                   // -------------------
@@ -128,7 +130,7 @@ const pathHelper: PathHelper<string> = {
         }
       }
     }
-    console.error('----------------------------')
+    console.log('----------------------------')
     errorCount += validationErrors.size
   }
   await sleep(10 * 1000)
