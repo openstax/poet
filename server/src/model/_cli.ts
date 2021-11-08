@@ -78,6 +78,17 @@ const pathHelper: PathHelper<string> = {
           if (url.startsWith('https:')) {
             proto = https
           }
+
+          // Parse the URL first because it might not be valid
+          try {
+            // eslint-disable-next-line no-new
+            new URL(url)
+          } catch {
+            errorCount++
+            console.error(`Error: Could not parse URL '${url}' and urlEncoded to show any odd unicode characters`, encodeURI(url))
+            continue
+          }
+
           proto.get(url, res => {
             if (res.statusCode !== undefined) {
               if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -99,14 +110,17 @@ const pathHelper: PathHelper<string> = {
                       if (res.statusCode >= 200 && res.statusCode < 300) {
                         console.log('Ok:', res.statusCode, link.url, 'to', destUrl)
                       } else if (res.statusCode >= 300 && res.statusCode < 400) {
+                        errorCount++
                         console.error('Double Redirect:', res.statusCode, link.url, 'to', destUrl, 'to', res.headers.location)
                       } else {
+                        errorCount++
                         console.error('Error:', res.statusCode, link.url, 'to', destUrl)
                       }
                     }
                   })
                 }
               } else {
+                errorCount++
                 console.error('Error:', res.statusCode, link.url)
               }
             }
