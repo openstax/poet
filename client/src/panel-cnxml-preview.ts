@@ -18,8 +18,7 @@ export interface DidReloadIncoming {
 
 export type PanelIncomingMessage = ScrollInEditorIncoming | DidReloadIncoming
 
-export interface RefreshOutgoing {
-  type: 'refresh'
+export interface PanelState {
   xml: string
   xsl: string
 }
@@ -29,11 +28,6 @@ export interface ScrollToLineOutgoing {
   type: 'scroll-in-preview'
   line: number
 }
-
-export type PanelOutgoingMessage = (
-  RefreshOutgoing
-  | ScrollToLineOutgoing
-)
 
 const ELEMENT_NODE = 1
 export const tagElementsWithLineNumbers = (doc: Document): void => {
@@ -76,7 +70,7 @@ export const rawTextHtml = (text: string): string => {
   return `<html><body>${text}</body></html>`
 }
 
-export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoingMessage> {
+export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineOutgoing, PanelState> {
   private resourceBinding: vscode.Uri | null = null
   private webviewIsScrolling: boolean = false
   private resourceIsScrolling: boolean = false
@@ -184,20 +178,21 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
     return activeUri
   }
 
-  private async refreshContentsMessage(resource: vscode.Uri): Promise<PanelOutgoingMessage> {
+  protected getState(): PanelState {
+    const resource = expect(this.resourceBinding, 'BUG: Maybe se should only be asking to get the state when a resource is open???')
     // TODO: Get resource contents from the language server?
-    const contents = await fs.promises.readFile(resource.fsPath, { encoding: 'utf-8' })
+    const contents = fs.readFileSync(resource.fsPath, { encoding: 'utf-8' })
     const doc = new DOMParser().parseFromString(contents)
     tagElementsWithLineNumbers(doc)
     const lineTaggedContents = new XMLSerializer().serializeToString(doc)
     // Load XSL if we haven't already
     if (this.xsl === '') {
-      this.xsl = await fs.promises.readFile(
+      this.xsl = fs.readFileSync(
         path.join(this.context.resourceRootDir, 'cnxml-to-html5.xsl'),
         'utf-8'
       )
     }
-    return { type: 'refresh', xml: lineTaggedContents, xsl: this.xsl }
+    return { xml: lineTaggedContents, xsl: this.xsl }
   }
 
   isPreviewOf(resource: vscode.Uri | null): boolean {
@@ -211,18 +206,17 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, PanelOutgoing
       this.panel.webview.html = rawTextHtml('No resource available to preview')
       return
     }
-    const message = await this.refreshContentsMessage(this.resourceBinding)
     if (oldBinding == null) {
-      const html = await this.reboundWebviewHtmlForResource(this.resourceBinding, [message])
+      const html = await this.reboundWebviewHtmlForResource(this.resourceBinding)
       this.panel.webview.html = html
     } else {
-      void this.postMessage(message)
+      void this.sendState()
     }
   }
 
-  private async reboundWebviewHtmlForResource(resource: vscode.Uri, messages: PanelOutgoingMessage[]): Promise<string> {
+  private async reboundWebviewHtmlForResource(resource: vscode.Uri): Promise<string> {
     let html = await fs.promises.readFile(path.join(this.context.resourceRootDir, 'cnxml-preview.html'), 'utf-8')
-    html = this.injectEnsuredMessages(html, messages)
+    html = this.injectInitialState(html, this.getState())
     html = addBaseHref(this.panel.webview, resource, html)
     html = fixResourceReferences(this.panel.webview, html, this.context.resourceRootDir)
     html = fixCspSourceReferences(this.panel.webview, html)

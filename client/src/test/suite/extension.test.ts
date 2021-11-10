@@ -16,6 +16,7 @@ import { DOMParser, XMLSerializer } from 'xmldom'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { EMPTY_BOOKS_AND_ORPHANS, DiagnosticSource, ExtensionServerRequest } from '../../../../common/src/requests'
+import { PanelStateMessageType } from '../../../../common/src/webview-constants'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
 
 const ROOT_DIR_REL = '../../../../../../'
@@ -233,7 +234,7 @@ suite('Extension Test Suite', function (this: Suite) {
       path.join(resourceRootDir, 'cnxml-to-html5.xsl'),
       'utf-8'
     )
-    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'refresh', xml: xmlExpectedSecond, xsl: xsl }))
+    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: PanelStateMessageType.Response, state: { xml: xmlExpectedSecond, xsl: xsl } }))
     assert.strictEqual((panel as any).resourceBinding.fsPath, resourceSecond.fsPath)
   }).timeout(5000)
   test('cnxml preview only rebinds to cnxml', async () => {
@@ -556,10 +557,12 @@ suite('Disposables', function (this: Suite) {
     panel.webview.html = rawTextHtml('test')
     return panel
   }
-  class TestPanel extends Panel<void, void> {
+  class TestPanel extends Panel<void, void, null> {
     constructor(private readonly context: ExtensionHostContext) {
       super(initTestPanel(context))
     }
+
+    protected getState() { return null }
 
     async handleMessage(_message: undefined): Promise<void> {
       throw new Error('Method not implemented.')

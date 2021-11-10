@@ -1,5 +1,6 @@
 // Shares a namespace with the other specfiles if not scoped
 import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } from '../../client/src/panel-cnxml-preview'
+import { PanelStateMessageType } from '../../common/src/webview-constants'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/cnxml-preview.html'
@@ -12,7 +13,7 @@ import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } fr
     }
     function sendXml(xmlStr: string): void {
       cy.fixture('cnxml-to-html5.xsl').then(xsl => {
-        sendMessage({ type: 'refresh', xml: xmlStr, xsl: xsl })
+        sendMessage({ type: PanelStateMessageType.Response, state: { xml: xmlStr, xsl: xsl } })
       })
     }
     function createCnxmlFromContent(content: string): string {

@@ -4,8 +4,13 @@ import 'react-sortable-tree/style.css'
 import SortableTree from 'react-sortable-tree'
 import stringify from 'json-stable-stringify'
 import { TocNodeKind, TocModificationKind } from '~common-api~/toc'
+import { PanelStateMessageType } from '~common-api~/webview-constants'
 
 const vscode = acquireVsCodeApi() // eslint-disable-line no-undef
+// vscode only allows calling acquireVsCodeApi once.
+// Since we called it we will redefine the function so it does not error.
+window.acquireVsCodeApi = () => vscode
+
 const nodeType = 'toc-element'
 const SearchContext = createContext({})
 
@@ -419,7 +424,15 @@ function walkTree(n /*: TreeItemWithToken */, fn /*: (TreeItemWithToken) => void
 window.addEventListener('message', event => {
   const previousState = getSavedState()
   const oldData = previousState?.treesData
-  const newData /*: PanelOutgoingMessage */ = event.data
+  const message /*: PanelOutgoingMessage | PanelStateMessage<PanelState> */ = event.data
+
+  if (message.type !== PanelStateMessageType.Response) {
+    console.error('[TOC_EDITOR_WEBVIEW] BUG? Unknown Message type', message)
+    return
+  }
+  console.log('[TOC_EDITOR_WEBVIEW] Handling state update', message)
+  const newData = message.state
+
   if (oldData != null) {
     // Copy the expanded/collapsed state for each node to the new tree based on the title of the node
     for (let i = 0; i < oldData.editable.length; i++) {

@@ -1,4 +1,5 @@
 import './index.less'
+import { PanelStateMessageType } from '~common-api~/webview-constants'
 
 let vscode
 
@@ -104,6 +105,9 @@ window.addEventListener('scroll', () => {
 window.addEventListener('DOMContentLoaded', () => {
   // https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
   vscode = acquireVsCodeApi() // eslint-disable-line no-undef
+  // vscode only allows calling acquireVsCodeApi once.
+  // Since we called it we will redefine the function so it does not error.
+  window.acquireVsCodeApi = () => vscode
 
   preview = document.querySelector('#preview')
   preview.innerHTML = '' // remove the "JS did not run" message
@@ -113,8 +117,8 @@ window.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('message', event => {
   const request = event.data
   const type = request.type
-  if (type === 'refresh') {
-    handleRefresh(request.xml, request.xsl)
+  if (type === PanelStateMessageType.Response) {
+    handleRefresh(request.state.xml, request.state.xsl)
   } else if (type === 'scroll-in-preview') {
     scrollToElementOfSourceLine(parseFloat(request.line))
   } else {
