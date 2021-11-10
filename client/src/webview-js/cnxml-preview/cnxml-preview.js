@@ -107,6 +107,7 @@ window.addEventListener('DOMContentLoaded', () => {
   vscode = acquireVsCodeApi() // eslint-disable-line no-undef
   // vscode only allows calling acquireVsCodeApi once.
   // Since we called it we will redefine the function so it does not error.
+  /* istanbul ignore next */
   window.acquireVsCodeApi = () => vscode
 
   preview = document.querySelector('#preview')
