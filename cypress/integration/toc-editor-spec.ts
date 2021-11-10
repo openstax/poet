@@ -1,5 +1,5 @@
 // Shares a namespace with the other specfiles if not scoped
-import { PanelIncomingMessage, PanelOutgoingMessage, Bookish, TreeItemWithToken } from '../../client/src/panel-toc-editor'
+import { PanelIncomingMessage, Bookish, TreeItemWithToken, PanelState } from '../../client/src/panel-toc-editor'
 import { TocNodeKind } from '../../common/src/toc'
 import { PanelStateMessageType } from '../../common/src/webview-constants'
 {
@@ -67,7 +67,7 @@ import { PanelStateMessageType } from '../../common/src/webview-constants'
   }
 
   describe('toc-editor Webview Tests', () => {
-    function sendStateMessage(msg: PanelOutgoingMessage): void {
+    function sendStateMessage(msg: PanelState): void {
       const m = {
         type: PanelStateMessageType.Response,
         state: msg
@@ -131,7 +131,7 @@ import { PanelStateMessageType } from '../../common/src/webview-constants'
     })
     it('will not re-render on same data (expanded)', () => {
       const book1 = buildBook([['Introduction']])
-      const message: PanelOutgoingMessage = {
+      const message: PanelState = {
         editable: [book1],
         uneditable: []
       }
@@ -146,7 +146,7 @@ import { PanelStateMessageType } from '../../common/src/webview-constants'
     })
     it('will not re-render on same data (expanded)', () => {
       const book1 = buildBook([{ expanded: true, children: ['Introduction'] }])
-      const message: PanelOutgoingMessage = {
+      const message: PanelState = {
         editable: [book1],
         uneditable: []
       }

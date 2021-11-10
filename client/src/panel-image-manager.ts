@@ -33,12 +33,13 @@ const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {
   return panel
 }
 
-export class ImageManagerPanel extends Panel<PanelIncomingMessage, void, null> {
+export class ImageManagerPanel extends Panel<PanelIncomingMessage, void, void> {
   constructor(private readonly context: ExtensionHostContext) {
     super(initPanel(context))
   }
 
-  protected getState() { return null }
+  /* istanbul ignore next */
+  protected getState() { throw new Error('BUG: Not implemented') }
 
   async handleMessage(message: PanelIncomingMessage): Promise<void> {
     const { mediaUploads } = message

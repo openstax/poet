@@ -426,6 +426,7 @@ window.addEventListener('message', event => {
   const oldData = previousState?.treesData
   const message /*: PanelOutgoingMessage | PanelStateMessage<PanelState> */ = event.data
 
+  /* istanbul ignore if */
   if (message.type !== PanelStateMessageType.Response) {
     console.error('[TOC_EDITOR_WEBVIEW] BUG? Unknown Message type', message)
     return

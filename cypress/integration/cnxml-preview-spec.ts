@@ -1,12 +1,12 @@
 // Shares a namespace with the other specfiles if not scoped
-import { PanelIncomingMessage, PanelOutgoingMessage, ScrollInEditorIncoming } from '../../client/src/panel-cnxml-preview'
-import { PanelStateMessageType } from '../../common/src/webview-constants'
+import { PanelIncomingMessage, ScrollInEditorIncoming, ScrollToLineOutgoing } from '../../client/src/panel-cnxml-preview'
+import { PanelStateMessage, PanelStateMessageType } from '../../common/src/webview-constants'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/cnxml-preview.html'
 
   describe('cnxml-preview Webview Tests', () => {
-    function sendMessage(msg: PanelOutgoingMessage): void {
+    function sendMessage(msg: ScrollToLineOutgoing | PanelStateMessage<any>): void {
       cy.window().then($window => {
         $window.postMessage(msg, '*')
       })
@@ -43,7 +43,7 @@ import { PanelStateMessageType } from '../../common/src/webview-constants'
     })
 
     it('Errors when malformed outgoing message is sent', () => {
-      sendMessage(({ type: 'xml', somethingOtherThanXml: 'hello' } as unknown as PanelOutgoingMessage))
+      sendMessage(({ type: 'xml', somethingOtherThanXml: 'hello' } as unknown as PanelStateMessage<any>))
       cy.get('#preview *').should('not.exist')
     })
 
