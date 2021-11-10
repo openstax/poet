@@ -6,7 +6,7 @@ import { Disposable, WebviewPanel } from 'vscode'
 describe('panel', () => {
   const sinon = Sinon.createSandbox()
 
-  class TestPanel extends Panel<boolean, string> {
+  class TestPanel extends Panel<boolean, string, null> {
     public webviewPanel: WebviewPanel
     constructor() {
       super({
@@ -21,6 +21,8 @@ describe('panel', () => {
       } as unknown as WebviewPanel)
       this.webviewPanel = this.panel
     }
+
+    protected getState() { return null }
 
     async handleMessage(message: boolean) {}
   }

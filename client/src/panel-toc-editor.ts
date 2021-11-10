@@ -45,7 +45,7 @@ export interface Bookish {
   slug: string
   tocTree: TreeItemWithToken[]
 }
-export interface PanelOutgoingMessage {
+export interface PanelState {
   uneditable: Bookish[]
   editable: Bookish[]
 }
@@ -103,7 +103,7 @@ const isWebviewDisposed = (panel: vscode.WebviewPanel) => {
 
 const fileIdSorter = (n1: ClientPageish, n2: ClientPageish) => n1.fileId.localeCompare(n2.fileId)
 const toClientTocNode = (n: ClientPageish): ClientTocNode => ({ type: TocNodeKind.Page, value: n })
-export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMessage> {
+export class TocEditorPanel extends Panel<PanelIncomingMessage, never, PanelState> {
   private state = EMPTY_BOOKS_AND_ORPHANS
   constructor(private readonly context: ExtensionHostContext) {
     super(initPanel(context))
@@ -117,7 +117,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
     let html = fs.readFileSync(path.join(context.resourceRootDir, 'toc-editor.html'), 'utf-8')
     html = fixResourceReferences(this.panel.webview, html, context.resourceRootDir)
     html = fixCspSourceReferences(this.panel.webview, html)
-    html = this.injectEnsuredMessages(html, [this.createMessage()])
+    html = this.injectInitialState(html, this.getState())
     this.panel.webview.html = html
   }
 
@@ -155,11 +155,11 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
     this.state = state
     /* istanbul ignore else */
     if (!isWebviewDisposed(this.panel)) {
-      await this.panel.webview.postMessage(this.createMessage())
+      await this.sendState()
     }
   }
 
-  private createMessage(): PanelOutgoingMessage {
+  protected getState(): PanelState {
     const allModules = new Set<ClientPageish>()
     function recAddModules(n: ClientTocNode) {
       if (n.type === TocNodeKind.Page) {
@@ -191,7 +191,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, PanelOutgoingMes
 
   async refreshPanel(panel: vscode.WebviewPanel, client: LanguageClient): Promise<void> {
     if (!isWebviewDisposed(panel)) {
-      await panel.webview.postMessage(this.createMessage())
+      await this.sendState()
     }
   }
 }
