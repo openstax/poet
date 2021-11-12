@@ -120,6 +120,7 @@ export class ModelManager {
   private didLoadOrphans = false
   private bookTocs: BookToc[] = []
   private tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>(x => {
+    /* istanbul ignore next */
     throw new Error('BUG: has not been set yet')
   })
 
@@ -445,9 +446,10 @@ export class ModelManager {
         newParentChildren.splice(evt.newChildIndex, 0, node)
         await this.writeBookToc(bookToc)
       }
-    } else if (evt.type === TocModificationKind.Move) {
+    } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
       // We are manipulating an orphaned Page (probably moving it into the ToC of a book)
       const pageNode = expectValue(this.tocIdMap.getValue(evt.nodeToken), `BUG: Should have found an item with key '${evt.nodeToken}' in the ToC idMap but did not. Maybe the client is stale?`)
+      /* istanbul ignore else */
       if (pageNode instanceof PageNode) {
         const node: TocPage<ClientPageish> = {
           type: TocNodeKind.Page,
@@ -459,6 +461,7 @@ export class ModelManager {
           }
         }
         // Add the node
+        /* istanbul ignore next */
         const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
         newParentChildren.splice(evt.newChildIndex, 0, node)
         await this.writeBookToc(bookToc)
