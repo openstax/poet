@@ -7,7 +7,7 @@ import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
-import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc'
+import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode, TocPage } from '../../common/src/toc'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
@@ -119,6 +119,9 @@ export class ModelManager {
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
   private bookTocs: BookToc[] = []
+  private tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>(x => {
+    throw new Error('BUG: has not been set yet')
+  })
 
   constructor(public bundle: Bundle, private readonly conn: Connection, bookTocHandler?: (params: BooksAndOrphans) => void) {
     const defaultHandler = (params: BooksAndOrphans) => conn.sendNotification(ExtensionServerNotification.BookTocs, params)
@@ -135,6 +138,7 @@ export class ModelManager {
       })
       if (loadedAndExists(this.bundle)) {
         return {
+          tocIdMap,
           books: this.bundle.books.filter(loadedAndExists).toArray().map(b => fromBook(tocIdMap, b)),
           orphans: this.orphanedPages.filter(loadedAndExists).toArray().map(p => fromPage(tocIdMap, p).value)
         }
@@ -142,7 +146,8 @@ export class ModelManager {
       ModelManager.debug('[MODEL_MANAGER] bundle file is not loaded yet or does not exist')
       return { tocIdMap, books: [], orphans: [] }
     }
-    const sideEffectFn = (v: BooksAndOrphans) => {
+    const sideEffectFn = (v: BooksAndOrphans & {tocIdMap: IdMap<string, TocSubbookWithRange|PageNode>}) => {
+      this.tocIdMap = v.tocIdMap
       this.bookTocs = v.books
       const params: BooksAndOrphans = {
         books: v.books,
@@ -413,29 +418,55 @@ export class ModelManager {
     ModelManager.debug('[MODIFY_TOC]', evt)
 
     const bookToc = this.bookTocs[evt.bookIndex]
-    const { node, parent } = this.lookupToken(evt.nodeToken)
+    const nodeAndParent = this.lookupToken(evt.nodeToken)
 
-    if (evt.type === TocModificationKind.PageRename || evt.type === TocModificationKind.SubbookRename) {
-      if (node.type === TocNodeKind.Page) {
-        const page = expectValue(this.bundle.allPages.get(node.value.absPath), `BUG: This node should exist: ${node.value.absPath}`)
-        const fsPath = URI.parse(node.value.absPath).fsPath
-        const oldXml = expectValue(await this.readOrNull(page), `BUG? This file should exist right? ${fsPath}`)
-        const newXml = renameTitle(evt.newTitle, oldXml)
-        await fs.promises.writeFile(fsPath, newXml)
-        page.load(newXml) // Just speed up the process
-      } else {
-        node.value.title = evt.newTitle
+    if (nodeAndParent !== undefined) {
+      // We are manipulating an item in a Book ToC
+      const { node, parent } = nodeAndParent
+      if (evt.type === TocModificationKind.PageRename || evt.type === TocModificationKind.SubbookRename) {
+        if (node.type === TocNodeKind.Page) {
+          const page = expectValue(this.bundle.allPages.get(node.value.absPath), `BUG: This node should exist: ${node.value.absPath}`)
+          const fsPath = URI.parse(node.value.absPath).fsPath
+          const oldXml = expectValue(await this.readOrNull(page), `BUG? This file should exist right? ${fsPath}`)
+          const newXml = renameTitle(evt.newTitle, oldXml)
+          await fs.promises.writeFile(fsPath, newXml)
+          page.load(newXml) // Just speed up the process
+        } else {
+          node.value.title = evt.newTitle
+          await this.writeBookToc(bookToc)
+        }
+      } else if (evt.type === TocModificationKind.Remove) {
+        removeNode(parent, node)
+        await this.writeBookToc(bookToc)
+      } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
+        removeNode(parent, node)
+        // Add the node
+        const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
+        newParentChildren.splice(evt.newChildIndex, 0, node)
         await this.writeBookToc(bookToc)
       }
-    } else if (evt.type === TocModificationKind.Remove) {
-      removeNode(parent, node)
-      await this.writeBookToc(bookToc)
-    } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
-      removeNode(parent, node)
-      // Add the node
-      const newParentChildren = evt.newParentToken !== undefined ? childrenOf(this.lookupToken(evt.newParentToken).node) : bookToc.tocTree
-      newParentChildren.splice(evt.newChildIndex, 0, node)
-      await this.writeBookToc(bookToc)
+    } else if (evt.type === TocModificationKind.Move) {
+      // We are manipulating an orphaned Page (probably moving it into the ToC of a book)
+      const pageNode = expectValue(this.tocIdMap.getValue(evt.nodeToken), `BUG: Should have found an item with key '${evt.nodeToken}' in the ToC idMap but did not. Maybe the client is stale?`)
+      if (pageNode instanceof PageNode) {
+        const node: TocPage<ClientPageish> = {
+          type: TocNodeKind.Page,
+          value: {
+            token: evt.nodeToken,
+            title: pageNode.optTitle,
+            fileId: pageToModuleId(pageNode),
+            absPath: pageNode.absPath
+          }
+        }
+        // Add the node
+        const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
+        newParentChildren.splice(evt.newChildIndex, 0, node)
+        await this.writeBookToc(bookToc)
+      } else {
+        throw new Error(`BUG: The orphaned item being dragged around was not a PageNode. nodeToken='${evt.nodeToken}' That is really unexpected. Maybe the client is stale?`)
+      }
+    } else {
+      throw new Error(`BUG: The operation '${evt.type}' is not yet implemented for the orphaned item with nodeToken='${evt.nodeToken}'`)
     }
   }
 
@@ -461,14 +492,12 @@ export class ModelManager {
     }
   }
 
-  private lookupToken(token: string): NodeAndParent {
+  private lookupToken(token: string): Opt<NodeAndParent> {
     for (const b of this.bookTocs) {
       const ret = this.recFind(token, b, b.tocTree)
       /* istanbul ignore else */
       if (ret !== undefined) return ret
     }
-    /* istanbul ignore next */
-    throw new Error(`BUG: Could not find ToC item using token='${token}'`)
   }
 
   public async createPage(bookIndex: number, title: string) {

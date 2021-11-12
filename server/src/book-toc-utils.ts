@@ -143,7 +143,7 @@ export class IdMap<K, V> {
 
   // hasKey(k: K) { return this.map1.has(k) }
   // hasValue(v: V) { return this.map2.has(v) }
-  // getValue(k: K) { return this.map1.get(k) }
+  getValue(k: K) { return this.map1.get(k) }
   // getKey(v: V) { return this.map2.get(v) }
 }
 
