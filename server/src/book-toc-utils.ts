@@ -7,28 +7,25 @@ import { PageNode } from './model/page'
 import { selectOne, NS_COLLECTION, NS_METADATA, TocNodeKind, equalsArray } from './model/utils'
 
 export const equalsTocNode = (n1: ClientTocNode, n2: ClientTocNode): boolean => {
-  /* istanbul ignore else */
+  /* istanbul ignore next */
   if (n1.type === TocNodeKind.Subbook) {
-    /* istanbul ignore next */
     if (n2.type !== n1.type) return false
-    /* istanbul ignore next */
     return n1.value === n2.value && equalsTocNodeArray(n1.children, n2.children)
   } else {
-    /* istanbul ignore next */
     if (n2.type !== n1.type) return false
-    /* istanbul ignore next */
     return n1.value === n2.value
   }
 }
 export const equalsTocNodeArray = equalsArray(equalsTocNode)
 
 export const equalsClientPageish = (n1: ClientPageish, n2: ClientPageish): boolean => {
-  /* istanbul ignore if */
+  /* istanbul ignore next */
   if (n1.token !== n2.token) return false
-  /* istanbul ignore if */
+  /* istanbul ignore next */
   if (n1.title !== n2.title) return false
-  /* istanbul ignore if */
+  /* istanbul ignore next */
   if (n1.absPath !== n2.absPath) return false
+  /* istanbul ignore next */
   return true
 }
 export const equalsClientPageishArray = equalsArray(equalsClientPageish)
@@ -143,7 +140,7 @@ export class IdMap<K, V> {
 
   // hasKey(k: K) { return this.map1.has(k) }
   // hasValue(v: V) { return this.map2.has(v) }
-  // getValue(k: K) { return this.map1.get(k) }
+  getValue(k: K) { return this.map1.get(k) }
   // getKey(v: V) { return this.map2.get(v) }
 }
 

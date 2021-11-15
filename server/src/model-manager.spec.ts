@@ -18,6 +18,7 @@ import { TocModification, TocModificationKind, TocNodeKind } from '../../common/
 import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { bookMaker } from './model/book.spec'
 import { bundleMaker } from './model/bundle.spec'
+import { URI, Utils } from 'vscode-uri'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
@@ -558,6 +559,38 @@ describe('modifyToc()', () => {
     await manager.modifyToc(evt2)
     expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
     expect(book.toc.length).toBe(1)
+  })
+  it('moves an orphaned Page into the ToC of a book', async () => {
+    const bundle = loadSuccess(manager.bundle)
+    const book = loadSuccess(first(bundle.books))
+    const bookIndex = 0
+
+    expect(manager.orphanedPages.toArray()).toEqual([])
+    // Construct a path to the orphaned page
+    const workspaceRootUri = URI.parse(bundle.workspaceRootUri)
+    const pageDirUri = Utils.joinPath(workspaceRootUri, 'modules')
+    const pageUri = Utils.joinPath(pageDirUri, 'sakjgfsakjsdjfkg', 'index.cnxml')
+    const orphan = bundle.allPages.getOrAdd(pageUri.fsPath)
+    orphan.load(pageMaker({}))
+
+    expect(manager.orphanedPages.toArray()).toEqual([orphan])
+    expect(params.orphans).not.toEqual([])
+    const orphanToken = params.orphans[0].token
+
+    const evt1: TocModification = {
+      type: TocModificationKind.Move,
+      nodeToken: orphanToken,
+      newParentToken: undefined,
+      newChildIndex: 0,
+      bookIndex
+    }
+    await manager.modifyToc(evt1)
+
+    expect(book.toc[0].type).toBe(TocNodeKind.Page)
+    const tocEntry = book.toc[0]
+    if (tocEntry.type === TocNodeKind.Page) {
+      expect(tocEntry.page).toBe(orphan)
+    }
   })
   it('creates a new Page in book', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
