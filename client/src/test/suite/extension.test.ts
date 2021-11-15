@@ -106,7 +106,7 @@ const resetTestData = async (): Promise<void> => {
 suite('Extension Test Suite', function (this: Suite) {
   const sinon = SinonRoot.createSandbox()
 
-  this.beforeAll(async () => {
+  this.beforeEach(async () => {
     await resetTestData()
   })
 
@@ -442,6 +442,7 @@ suite('Extension Test Suite', function (this: Suite) {
     const mockEvents = createMockEvents()
     const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
+    assert.strictEqual(fs.existsSync(resource.fsPath), true)
     const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: mockEvents.events })
     await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
     const rebindingStub = sinon.spy(panel as any, 'rebindToResource')
