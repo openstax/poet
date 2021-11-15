@@ -2,6 +2,7 @@
   "name": "editor",
   "version": "0.0.0-dev",
   "publisher": "openstax",
+  "icon": "logo-128x128.png",
   "displayName": "POET",
   "license": "LICENSE",
   "description": "An editor for OpenStax-organized books.",
