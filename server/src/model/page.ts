@@ -118,7 +118,7 @@ export class PageNode extends Fileish {
 
     this._elementIds.set(I.Set((select('//cnxml:*[@id]', doc) as Element[]).map(el => textWithRange(el, 'id'))))
 
-    const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
+    const imageNodes = select('//cnxml:*[self::cnxml:image or self::cnxml:iframe]/@src', doc) as Attr[]
     this._imageLinks.set(I.Set(imageNodes.map(attr => {
       const src = expectValue(attr.nodeValue, 'BUG: Attribute does not have a value')
       const image = super.bundle.allImages.getOrAdd(join(this.pathHelper, PathKind.ABS_TO_REL, this.absPath, src))
