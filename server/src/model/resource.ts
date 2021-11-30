@@ -1,6 +1,7 @@
 import { Fileish } from './fileish'
 
-export class ImageNode extends Fileish {
+// This can be an Image or an IFrame
+export class ResourceNode extends Fileish {
   /* istanbul ignore next */
   protected getValidationChecks() { return [] }
 }

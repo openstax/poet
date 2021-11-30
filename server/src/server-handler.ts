@@ -13,13 +13,13 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsParams) => Pr
   }
 }
 
-export async function imageAutocompleteHandler(documentPosition: CompletionParams, manager: ModelManager): Promise<CompletionItem[]> {
+export async function resourceAutocompleteHandler(documentPosition: CompletionParams, manager: ModelManager): Promise<CompletionItem[]> {
   await manager.loadEnoughForOrphans()
   const cursor = documentPosition.position
   const page = manager.bundle.allPages.get(documentPosition.textDocument.uri)
 
   if (page !== undefined) {
-    return manager.autocompleteImages(page, cursor)
+    return manager.autocompleteResources(page, cursor)
   }
   return []
 }

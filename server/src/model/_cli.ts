@@ -52,7 +52,7 @@ const pathHelper: PathHelper<string> = {
     console.error('This directory contains:')
     console.error('  Books:', bundle.allBooks.size)
     console.error('  Pages:', bundle.allPages.size)
-    console.error('  Images:', bundle.allImages.size)
+    console.error('  Images:', bundle.allResources.size)
 
     const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
     console.error('Validation Errors:', validationErrors.size)

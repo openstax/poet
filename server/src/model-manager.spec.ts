@@ -322,8 +322,8 @@ describe('Image Autocomplete', () => {
     const imagePath = '../../media/image.png'
     const orphanedPath = '../../media/orphan.png'
 
-    const existingImage = manager.bundle.allImages.getOrAdd(joinPath(page, imagePath))
-    const orphanedImage = manager.bundle.allImages.getOrAdd(joinPath(page, orphanedPath))
+    const existingImage = manager.bundle.allResources.getOrAdd(joinPath(page, imagePath))
+    const orphanedImage = manager.bundle.allResources.getOrAdd(joinPath(page, orphanedPath))
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
@@ -331,9 +331,9 @@ describe('Image Autocomplete', () => {
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
-    expect(page.imageLinks.size).toBe(1)
-    const firstImageRef = first(page.imageLinks)
-    const results = manager.autocompleteImages(page, { line: firstImageRef.range.start.line, character: firstImageRef.range.start.character + '<image src="X'.length })
+    expect(page.resourceLinks.size).toBe(1)
+    const firstImageRef = first(page.resourceLinks)
+    const results = manager.autocompleteResources(page, { line: firstImageRef.range.start.line, character: firstImageRef.range.start.character + '<image src="X'.length })
     expect(results).not.toEqual([])
     expect(results[0].label).toBe(orphanedPath)
   })
@@ -344,8 +344,8 @@ describe('Image Autocomplete', () => {
     const imagePath = '../../media/image.png'
     const orphanedPath = '../../media/orphan.png'
 
-    const existingImage = manager.bundle.allImages.getOrAdd(joinPath(page, imagePath))
-    const orphanedImage = manager.bundle.allImages.getOrAdd(joinPath(page, orphanedPath))
+    const existingImage = manager.bundle.allResources.getOrAdd(joinPath(page, imagePath))
+    const orphanedImage = manager.bundle.allResources.getOrAdd(joinPath(page, orphanedPath))
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
@@ -354,7 +354,7 @@ describe('Image Autocomplete', () => {
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
     const cursor = { line: 0, character: 0 }
-    const results = manager.autocompleteImages(page, cursor)
+    const results = manager.autocompleteResources(page, cursor)
     expect(results).toEqual([])
   })
 
@@ -365,9 +365,9 @@ describe('Image Autocomplete', () => {
     const orphanedPath = '../../media/orphan.png'
     const missingPath = ''
 
-    const existingImage = manager.bundle.allImages.getOrAdd(joinPath(page, imagePath))
-    const orphanedImage = manager.bundle.allImages.getOrAdd(joinPath(page, orphanedPath))
-    const missingImage = manager.bundle.allImages.getOrAdd(joinPath(page, missingPath))
+    const existingImage = manager.bundle.allResources.getOrAdd(joinPath(page, imagePath))
+    const orphanedImage = manager.bundle.allResources.getOrAdd(joinPath(page, orphanedPath))
+    const missingImage = manager.bundle.allResources.getOrAdd(joinPath(page, missingPath))
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
     missingImage.load('')
@@ -376,8 +376,8 @@ describe('Image Autocomplete', () => {
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
-    const secondImageRef = page.imageLinks.toArray()[1]
-    const results = manager.autocompleteImages(page, { line: secondImageRef.range.start.line, character: secondImageRef.range.start.character + '<image'.length })
+    const secondImageRef = page.resourceLinks.toArray()[1]
+    const results = manager.autocompleteResources(page, { line: secondImageRef.range.start.line, character: secondImageRef.range.start.character + '<image'.length })
     expect(results).toEqual([])
   })
 })
