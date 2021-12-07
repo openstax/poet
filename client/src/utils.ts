@@ -210,3 +210,12 @@ export function getErrorDiagnosticsBySource(): Map<string, Array<[vscode.Uri, vs
 
   return errorsBySource
 }
+
+export async function configureWorkspaceSettings(): Promise<void> {
+  const config = vscode.workspace.getConfiguration()
+  await config.update(
+    'files.associations',
+    { '*.cnxml': 'xml' },
+    vscode.ConfigurationTarget.Workspace
+  )
+}
