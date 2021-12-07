@@ -4,6 +4,7 @@ import * as xpath from 'xpath-ts'
 import { PageNode } from './page'
 import { Factory } from './factory'
 import { ImageNode } from './image'
+import { BookNode } from './book'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -69,6 +70,7 @@ export interface TocPage<T> { type: TocNodeKind.Page, readonly page: T }
 export interface Bundleish {
   allPages: Factory<PageNode>
   allImages: Factory<ImageNode>
+  books: I.Set<BookNode>
   workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
 }

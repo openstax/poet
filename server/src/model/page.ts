@@ -1,8 +1,9 @@
-import I from 'immutable'
+import I, { hasIn } from 'immutable'
 import * as Quarx from 'quarx'
-import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq } from './utils'
+import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, TocNodeKind, Range } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 import { ImageNode } from './image'
+import { TocNodeWithRange } from './book'
 
 export interface ImageLink extends HasRange {
   image: ImageNode
@@ -51,6 +52,7 @@ export class PageNode extends Fileish {
   private readonly _elementIds = Quarx.observable.box<Opt<I.Set<WithRange<string>>>>(undefined)
   private readonly _imageLinks = Quarx.observable.box<Opt<I.Set<ImageLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
+  private readonly _hasIntroduction = Quarx.observable.box<Opt<WithRange<boolean>>>(undefined, { equals: equalsOptWithRange })
   public uuid() { return this.ensureLoaded(this._uuid).v }
   public get optTitle() {
     const t = this._title.get()
@@ -152,6 +154,15 @@ export class PageNode extends Fileish {
       }
     })))
 
+    const docRoot = selectOne('//cnxml:document', doc) as Element
+    const docClass = docRoot.getAttribute('class')
+    const hasIntroduction = docClass !== null && docClass.indexOf('introduction') >= 0
+    const introRange = calculateElementPositions(docRoot)
+    this._hasIntroduction.set({
+      range: introRange,
+      v: hasIntroduction
+    })
+
     const titleNode = select('//cnxml:title', doc) as Element[]
     if (titleNode.length > 0) {
       this._title.set(textWithRange(titleNode[0]))
@@ -167,6 +178,35 @@ export class PageNode extends Fileish {
     const imageLinks = this.imageLinks
     const pageLinks = this.pageLinks
     return [
+      {
+        message: PageValidationKind.MISSING_INTRO,
+        nodesToLoad: I.Set<Fileish>(),
+        fn: () => {
+          // Find all the books this page is in
+          // If it's the first page in a chapter then error (return the range) if this page does not have an introduction
+          let ret = I.Set<Range>()
+          const walker = (n: TocNodeWithRange) => {
+            if (n.type === TocNodeKind.Subbook) {
+              const firstChild = n.children[0]
+              if (firstChild.type === TocNodeKind.Page) {
+                // If we are the Page and we don't have introduction then error
+                if (firstChild.page === this) {
+                  const v = expectValue(this._hasIntroduction.get(), 'BUG: This Page should have already been loaded by now')
+                  if (!v.v) {
+                    ret = I.Set([v.range])
+                  }
+                }
+                return
+              }
+              n.children.forEach(walker)
+            }
+          }
+          
+          this.bundle.books.toArray()[0].toc.forEach(walker)
+
+          return ret
+        }
+      },
       {
         message: PageValidationKind.MISSING_IMAGE,
         nodesToLoad: imageLinks.map(l => l.image),
@@ -212,6 +252,7 @@ export class PageNode extends Fileish {
 }
 
 export enum PageValidationKind {
+  MISSING_INTRO = 'class="introduction" missing',
   MISSING_IMAGE = 'Image file does not exist',
   MISSING_TARGET = 'Link target does not exist',
   MALFORMED_UUID = 'Malformed UUID',
