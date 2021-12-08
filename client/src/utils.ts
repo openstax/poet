@@ -211,11 +211,20 @@ export function getErrorDiagnosticsBySource(): Map<string, Array<[vscode.Uri, vs
   return errorsBySource
 }
 
+/**
+ * This is, hopefully, a temporary solution to the settings.json file failing to load in GitPod.
+ * It sets the value of one property to '', then resets it to it's original value, effectively
+ * forcing the settings to reload.
+ */
 export async function configureWorkspaceSettings(): Promise<void> {
   const config = vscode.workspace.getConfiguration()
-  await config.update(
-    'files.associations',
-    { '*.cnxml': 'xml' },
-    vscode.ConfigurationTarget.Workspace
-  )
+  const property = 'files.associations'
+  const value = config.get(property, {})
+  const target = vscode.ConfigurationTarget.Workspace
+  if (Object.keys(value).length < 1) {
+    void vscode.window.showErrorMessage(`BUG: Could not reload ${property} because it was unset.`)
+    return
+  }
+  await config.update(property, '', target)
+  await config.update(property, value, target)
 }

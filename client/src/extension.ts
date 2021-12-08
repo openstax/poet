@@ -36,7 +36,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   /* istanbul ignore next */
   expect(process.env.GITPOD_HOST != null && process.env.EDITOR?.includes('code') === false ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
 
-  // This must run before languageServerLauncher
   await configureWorkspaceSettings()
 
   client = languageServerLauncher(context)
