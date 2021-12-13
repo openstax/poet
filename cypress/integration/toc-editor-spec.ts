@@ -1,6 +1,7 @@
 // Shares a namespace with the other specfiles if not scoped
-import { PanelIncomingMessage, PanelOutgoingMessage, Bookish, TreeItemWithToken } from '../../client/src/panel-toc-editor'
+import { PanelIncomingMessage, Bookish, TreeItemWithToken, PanelState } from '../../client/src/panel-toc-editor'
 import { TocNodeKind } from '../../common/src/toc'
+import { PanelStateMessageType } from '../../common/src/webview-constants'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
   const htmlPath = './client/out/client/src/toc-editor.html'
@@ -66,10 +67,14 @@ import { TocNodeKind } from '../../common/src/toc'
   }
 
   describe('toc-editor Webview Tests', () => {
-    function sendMessage(msg: PanelOutgoingMessage): void {
-      cy.log('sending message', msg)
+    function sendStateMessage(msg: PanelState): void {
+      const m = {
+        type: PanelStateMessageType.Response,
+        state: msg
+      }
+      cy.log('sending state update message', m)
       cy.window().then($window => {
-        $window.postMessage(msg, '*')
+        $window.postMessage(m, '*')
       })
     }
 
@@ -102,7 +107,7 @@ import { TocNodeKind } from '../../common/src/toc'
       cy.get('[data-app-init]').should('not.exist')
     })
     it('will load when a message is sent (empty)', () => {
-      sendMessage({
+      sendStateMessage({
         editable: [],
         uneditable: []
       })
@@ -112,55 +117,55 @@ import { TocNodeKind } from '../../common/src/toc'
     })
     it('will load when a message is sent', () => {
       const book = buildBook([['Introduction'], 'Appendix'])
-      sendMessage({ editable: [book], uneditable: [] })
+      sendStateMessage({ editable: [book], uneditable: [] })
       cy.get('[data-app-init]').should('exist')
       cy.get('.panel-editable .rst__node').should('have.length', 2)
       cy.get('.panel-uneditable .rst__node').should('not.exist')
     })
     it('will load when a message is sent (expanded)', () => {
       const book = buildBook([{ expanded: true, children: ['Introduction'] }, 'Appendix'])
-      sendMessage({ editable: [book], uneditable: [] })
+      sendStateMessage({ editable: [book], uneditable: [] })
       cy.get('[data-app-init]').should('exist')
       cy.get('.panel-editable .rst__node').should('have.length', 3)
       cy.get('.panel-uneditable .rst__node').should('not.exist')
     })
     it('will not re-render on same data (expanded)', () => {
       const book1 = buildBook([['Introduction']])
-      const message: PanelOutgoingMessage = {
+      const message: PanelState = {
         editable: [book1],
         uneditable: []
       }
-      sendMessage(message)
+      sendStateMessage(message)
       cy.get('[data-render-cached]').should('not.exist')
-      sendMessage(message)
+      sendStateMessage(message)
       cy.get('[data-render-cached]').should('exist')
 
       const book2 = buildBook([['Introduction'], 'Appendix'])
-      sendMessage({ editable: [book2], uneditable: [] })
+      sendStateMessage({ editable: [book2], uneditable: [] })
       cy.get('[data-render-cached]').should('not.exist')
     })
     it('will not re-render on same data (expanded)', () => {
       const book1 = buildBook([{ expanded: true, children: ['Introduction'] }])
-      const message: PanelOutgoingMessage = {
+      const message: PanelState = {
         editable: [book1],
         uneditable: []
       }
-      sendMessage(message)
+      sendStateMessage(message)
       cy.get('[data-render-cached]').should('not.exist')
-      sendMessage(message)
+      sendStateMessage(message)
       cy.get('[data-render-cached]').should('exist')
 
       const book2 = buildBook([{ expanded: true, children: ['Introduction'] }, 'Appendix'])
-      sendMessage({ editable: [book2], uneditable: [] })
+      sendStateMessage({ editable: [book2], uneditable: [] })
       cy.get('[data-render-cached]').should('not.exist')
     })
     it('will preserve expanded nodes on reload', () => {
       const book1 = buildBook([{ expanded: true, children: ['Introduction'] }, ['Introduction']], { startAt: DO_NOT_INCREMENT })
-      sendMessage({ editable: [book1], uneditable: [] })
+      sendStateMessage({ editable: [book1], uneditable: [] })
       cy.get('.panel-editable .rst__node').should('have.length', 3)
 
       const book2 = buildBook([{ expanded: true, children: ['Introduction'] }, ['Introduction'], ['Introduction']], { startAt: DO_NOT_INCREMENT })
-      sendMessage({ editable: [book2], uneditable: [] })
+      sendStateMessage({ editable: [book2], uneditable: [] })
 
       // Would be 3 if the expanded subcollection was not preserved
       // Would be 4 if new nodes were initially collapsed
@@ -171,7 +176,7 @@ import { TocNodeKind } from '../../common/src/toc'
       beforeEach(() => {
         const book = buildBook([{ expanded: true, children: ['Introduction'] }, 'Appendix'])
         const orphans = buildBook(['Module 3', 'Module 4'])
-        sendMessage({
+        sendStateMessage({
           editable: [book],
           uneditable: [orphans]
         })
@@ -213,7 +218,7 @@ import { TocNodeKind } from '../../common/src/toc'
         const book1 = buildBook([{ expanded: true, children: ['Introduction', 'Appending To Lists'] }, 'Appendix'])
         const book2 = buildBook([{ expanded: true, children: ['Introduction', 'Deleting From Lists'] }, 'Appendix'], { title: 'test collection 2', slug: 'test-2' })
         const orphans = buildBook(['Module 3', 'Module 4'])
-        sendMessage({ editable: [book1, book2], uneditable: [orphans] })
+        sendStateMessage({ editable: [book1, book2], uneditable: [orphans] })
       })
       it('highlights elements that match search by title', () => {
         cy.get('.panel-editable .search')

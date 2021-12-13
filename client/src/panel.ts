@@ -1,6 +1,7 @@
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { BooksAndOrphans } from '../../common/src/requests'
+import { PanelStateMessageType, PanelStateMessage } from '../../common/src/webview-constants'
 import { ensureCatchPromise, genNonce, injectCspNonce } from './utils'
 
 // Modified from https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/src/util/dispose.ts
@@ -66,7 +67,7 @@ export class Disposer implements DisposableSupplemental {
  * panel to the host. `OutMessage` is the type of messages sent from the host
  * to the internal webview panel.
  */
-export abstract class Panel<InMessage, OutMessage> implements DisposableSupplemental, Messageable<InMessage, OutMessage> {
+export abstract class Panel<InMessage, OutMessage, State> implements DisposableSupplemental, Messageable<InMessage, OutMessage> {
   protected readonly panel: vscode.WebviewPanel
   protected nonce: string
   private readonly disposer: DisposableSupplemental
@@ -79,7 +80,11 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
     this.panel.onDidDispose(() => this.dispose())
 
     this.registerDisposable(this.panel.webview.onDidReceiveMessage((message) => {
-      void ensureCatchPromise(this.handleMessage(message))
+      if (message.type === PanelStateMessageType.Request) {
+        void ensureCatchPromise(this.sendState())
+      } else {
+        void ensureCatchPromise(this.handleMessage(message))
+      }
     }))
   }
 
@@ -94,38 +99,48 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
    * Handle a message sent to the host from the internal webview panel
    */
   abstract handleMessage(message: InMessage): Promise<void>
+  protected abstract getState(): State
+
   /**
    * Send a message from the host to the internal webview panel
    */
-  async postMessage(message: OutMessage): Promise<void> {
+  async postMessage(message: OutMessage | PanelStateMessage<State>): Promise<void> {
     if (this.disposed()) {
       return
     }
     await this.panel.webview.postMessage(message)
   }
 
+  async sendState(): Promise<void> {
+    await this.postMessage({ type: PanelStateMessageType.Response, state: this.getState() })
+  }
+
   /**
-   * Inject messages into an html string to ensure that the document load does not race with message receival
+   * Inject initial state into an html string to ensure that the document load does not race with message receival
    * @param html an html string which must: a) contain a single body element, and b) load js that listens for and handles a 'message' event by the time the document is loaded
-   * @param messages the messages to replay to the document upon loading
-   * @returns the same html but with messages inlined that will automatially replay on load
+   * @param state the initial state to give the document upon loading
+   * @returns the same html but with the state inlined that will automatially replay on load
    */
-  injectEnsuredMessages(html: string, messages: OutMessage[]): string {
-    if (messages.length === 0) {
-      return html
-    }
+  injectInitialState(html: string, state: State): string {
     const injection = `
     <script nonce="${this.nonce}">
       (() => {
         let fireInjectedEvents = () => {
-          let messages=${JSON.stringify(messages)};
-          console.debug('[ENSURED_MESSAGE_DEBUG] sending messages:', messages);
-          messages.forEach(message => {
-            let event = new CustomEvent('message');
-            event.data = message;
-            window.dispatchEvent(event);
-          });
+          let state = { type: ${JSON.stringify(PanelStateMessageType.Response)}, state: /* rest is injected */ ${JSON.stringify(state)} };
+          console.debug('[ENSURED_STATE_DEBUG] loading pickled initial state:', state);
+          let event = new CustomEvent('message');
+          event.data = state;
+          window.dispatchEvent(event);
           window.removeEventListener('load', fireInjectedEvents);
+
+          // Ask for any updates to the state since this HTML was pickled.
+          // This also allows the extension to know that the webview has loaded.
+          const vscode = acquireVsCodeApi()
+          vscode.postMessage({ type: ${JSON.stringify(PanelStateMessageType.Request)} })
+          
+          // vscode only allows calling acquireVsCodeApi once.
+          // Since we called it we will redefine the function so it does not error.
+          window.acquireVsCodeApi = () => vscode
         };
         window.addEventListener('load', fireInjectedEvents);
       })()
@@ -135,23 +150,23 @@ export abstract class Panel<InMessage, OutMessage> implements DisposableSuppleme
     return html
   }
 
-  readonly reveal: Panel<InMessage, OutMessage>['panel']['reveal'] = (...args) => {
+  readonly reveal: Panel<InMessage, OutMessage, State>['panel']['reveal'] = (...args) => {
     return this.panel.reveal(...args)
   }
 
-  readonly onDidDispose: Panel<InMessage, OutMessage>['disposer']['onDidDispose'] = (...args) => {
+  readonly onDidDispose: Panel<InMessage, OutMessage, State>['disposer']['onDidDispose'] = (...args) => {
     return this.disposer.onDidDispose(...args)
   }
 
-  readonly dispose: Panel<InMessage, OutMessage>['disposer']['dispose'] = (...args) => {
+  readonly dispose: Panel<InMessage, OutMessage, State>['disposer']['dispose'] = (...args) => {
     return this.disposer.dispose(...args)
   }
 
-  readonly registerDisposable: Panel<InMessage, OutMessage>['disposer']['registerDisposable'] = (...args) => {
+  readonly registerDisposable: Panel<InMessage, OutMessage, State>['disposer']['registerDisposable'] = (...args) => {
     return this.disposer.registerDisposable(...args)
   }
 
-  readonly disposed: Panel<InMessage, OutMessage>['disposer']['disposed'] = (...args) => {
+  readonly disposed: Panel<InMessage, OutMessage, State>['disposer']['disposed'] = (...args) => {
     return this.disposer.disposed(...args)
   }
 }
@@ -235,7 +250,7 @@ export interface ExtensionHostContext {
  * unknown type of webview panel. Meant to be used in the extension base to
  * disassociate registered commands from the concerns of panel state.
  */
-export class PanelManager<T extends Panel<unknown, unknown>> {
+export class PanelManager<T extends Panel<unknown, unknown, unknown>> {
   private _panel: T | null = null
 
   constructor(

@@ -7,7 +7,7 @@ import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
 import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
-import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode } from '../../common/src/toc'
+import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode, TocPage } from '../../common/src/toc'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
@@ -44,7 +44,7 @@ function findOrCreateNode(bundle: Bundle, absPath: string) {
   if (bundle.absPath === absPath) {
     return bundle
   } else if (IMAGE_RE.test(absPath)) {
-    return bundle.allImages.getOrAdd(absPath)
+    return bundle.allResources.getOrAdd(absPath)
   } else if (PAGE_RE.test(absPath)) {
     return bundle.allPages.getOrAdd(absPath)
   } else if (BOOK_RE.test(absPath)) {
@@ -58,7 +58,7 @@ function findNode(bundle: Bundle, absPath: string) {
     : (
         bundle.allBooks.get(absPath) ??
         bundle.allPages.get(absPath) ??
-        bundle.allImages.get(absPath))
+        bundle.allResources.get(absPath))
 }
 
 export function pageToModuleId(page: PageNode) {
@@ -119,6 +119,10 @@ export class ModelManager {
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
   private bookTocs: BookToc[] = []
+  private tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>(x => {
+    /* istanbul ignore next */
+    throw new Error('BUG: has not been set yet')
+  })
 
   constructor(public bundle: Bundle, private readonly conn: Connection, bookTocHandler?: (params: BooksAndOrphans) => void) {
     const defaultHandler = (params: BooksAndOrphans) => conn.sendNotification(ExtensionServerNotification.BookTocs, params)
@@ -135,6 +139,7 @@ export class ModelManager {
       })
       if (loadedAndExists(this.bundle)) {
         return {
+          tocIdMap,
           books: this.bundle.books.filter(loadedAndExists).toArray().map(b => fromBook(tocIdMap, b)),
           orphans: this.orphanedPages.filter(loadedAndExists).toArray().map(p => fromPage(tocIdMap, p).value)
         }
@@ -142,7 +147,8 @@ export class ModelManager {
       ModelManager.debug('[MODEL_MANAGER] bundle file is not loaded yet or does not exist')
       return { tocIdMap, books: [], orphans: [] }
     }
-    const sideEffectFn = (v: BooksAndOrphans) => {
+    const sideEffectFn = (v: BooksAndOrphans & {tocIdMap: IdMap<string, TocSubbookWithRange|PageNode>}) => {
+      this.tocIdMap = v.tocIdMap
       this.bookTocs = v.books
       const params: BooksAndOrphans = {
         books: v.books,
@@ -163,10 +169,10 @@ export class ModelManager {
     return this.bundle.allPages.all.filter(loadedAndExists).subtract(books.flatMap(b => b.pages))
   }
 
-  public get orphanedImages() {
+  public get orphanedResources() {
     const books = this.bundle.books.filter(loadedAndExists)
     const pages = books.flatMap(b => b.pages)
-    return this.bundle.allImages.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.images))
+    return this.bundle.allResources.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.resources))
   }
 
   public async loadEnoughForToc() {
@@ -235,13 +241,13 @@ export class ModelManager {
         // Remove if it was a file
         const removedNode = bundle.allBooks.remove(uri) ??
                   bundle.allPages.remove(uri) ??
-                  bundle.allImages.remove(uri)
+                  bundle.allResources.remove(uri)
         if (removedNode !== undefined) s.add(removedNode)
         // Remove if it was a directory
         const filePathDir = `${uri}${PATH_SEP}`
         s.union(bundle.allBooks.removeByKeyPrefix(filePathDir))
         s.union(bundle.allPages.removeByKeyPrefix(filePathDir))
-        s.union(bundle.allImages.removeByKeyPrefix(filePathDir))
+        s.union(bundle.allResources.removeByKeyPrefix(filePathDir))
       })
       // Unload all removed nodes so users do not think the files still exist
       removedNodes.forEach(n => n.load(undefined))
@@ -322,7 +328,7 @@ export class ModelManager {
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: () => this.bundle.allBooks.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(this.sendFileDiagnostics.bind(this)) } },
       { slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: () => this.bundle.allPages.all.forEach(enqueueLoadJob) },
-      { slow: true, type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: () => this.bundle.allImages.all.forEach(enqueueLoadJob) },
+      { slow: true, type: 'INITIAL_LOAD_ALL_RESOURCES', context: this.bundle, fn: () => this.bundle.allResources.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes.map(f => this.sendFileDiagnostics(f))) }
     ]
     jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
@@ -352,14 +358,14 @@ export class ModelManager {
     jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
   }
 
-  public autocompleteImages(page: PageNode, cursor: Position) {
-    const foundLinks = page.imageLinks.toArray().filter((l) => {
+  public autocompleteResources(page: PageNode, cursor: Position) {
+    const foundLinks = page.resourceLinks.toArray().filter((l) => {
       return inRange(l.range, cursor)
     })
 
     if (foundLinks.length === 0) { return [] }
 
-    // We're inside an <image> element.
+    // We're inside an <image> or <iframe> element.
     // Now check and see if we are right at the src=" point
     const content = expectValue(this.getOpenDocContents(page.absPath), 'BUG: This file should be open and have been sent from the vscode client').split('\n')
     const beforeCursor = content[cursor.line].substring(0, cursor.character)
@@ -371,12 +377,12 @@ export class ModelManager {
         start: { line: cursor.line, character: startQuoteOffset + 'src="'.length },
         end: { line: cursor.line, character: endQuoteOffset + cursor.character }
       }
-      const ret = this.orphanedImages.toArray().map(i => {
+      const ret = this.orphanedResources.toArray().map(i => {
         const insertText = path.relative(path.dirname(page.absPath), i.absPath)
         const item = CompletionItem.create(insertText)
         item.textEdit = TextEdit.replace(range, insertText)
         item.kind = CompletionItemKind.File
-        item.detail = 'Orphaned Image'
+        item.detail = 'Orphaned Resource'
         return item
       })
       return ret
@@ -413,29 +419,57 @@ export class ModelManager {
     ModelManager.debug('[MODIFY_TOC]', evt)
 
     const bookToc = this.bookTocs[evt.bookIndex]
-    const { node, parent } = this.lookupToken(evt.nodeToken)
+    const nodeAndParent = this.lookupToken(evt.nodeToken)
 
-    if (evt.type === TocModificationKind.PageRename || evt.type === TocModificationKind.SubbookRename) {
-      if (node.type === TocNodeKind.Page) {
-        const page = expectValue(this.bundle.allPages.get(node.value.absPath), `BUG: This node should exist: ${node.value.absPath}`)
-        const fsPath = URI.parse(node.value.absPath).fsPath
-        const oldXml = expectValue(await this.readOrNull(page), `BUG? This file should exist right? ${fsPath}`)
-        const newXml = renameTitle(evt.newTitle, oldXml)
-        await fs.promises.writeFile(fsPath, newXml)
-        page.load(newXml) // Just speed up the process
-      } else {
-        node.value.title = evt.newTitle
+    if (nodeAndParent !== undefined) {
+      // We are manipulating an item in a Book ToC
+      const { node, parent } = nodeAndParent
+      if (evt.type === TocModificationKind.PageRename || evt.type === TocModificationKind.SubbookRename) {
+        if (node.type === TocNodeKind.Page) {
+          const page = expectValue(this.bundle.allPages.get(node.value.absPath), `BUG: This node should exist: ${node.value.absPath}`)
+          const fsPath = URI.parse(node.value.absPath).fsPath
+          const oldXml = expectValue(await this.readOrNull(page), `BUG? This file should exist right? ${fsPath}`)
+          const newXml = renameTitle(evt.newTitle, oldXml)
+          await fs.promises.writeFile(fsPath, newXml)
+          page.load(newXml) // Just speed up the process
+        } else {
+          node.value.title = evt.newTitle
+          await this.writeBookToc(bookToc)
+        }
+      } else if (evt.type === TocModificationKind.Remove) {
+        removeNode(parent, node)
+        await this.writeBookToc(bookToc)
+      } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
+        removeNode(parent, node)
+        // Add the node
+        const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
+        newParentChildren.splice(evt.newChildIndex, 0, node)
         await this.writeBookToc(bookToc)
       }
-    } else if (evt.type === TocModificationKind.Remove) {
-      removeNode(parent, node)
-      await this.writeBookToc(bookToc)
     } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
-      removeNode(parent, node)
-      // Add the node
-      const newParentChildren = evt.newParentToken !== undefined ? childrenOf(this.lookupToken(evt.newParentToken).node) : bookToc.tocTree
-      newParentChildren.splice(evt.newChildIndex, 0, node)
-      await this.writeBookToc(bookToc)
+      // We are manipulating an orphaned Page (probably moving it into the ToC of a book)
+      const pageNode = expectValue(this.tocIdMap.getValue(evt.nodeToken), `BUG: Should have found an item with key '${evt.nodeToken}' in the ToC idMap but did not. Maybe the client is stale?`)
+      /* istanbul ignore else */
+      if (pageNode instanceof PageNode) {
+        const node: TocPage<ClientPageish> = {
+          type: TocNodeKind.Page,
+          value: {
+            token: evt.nodeToken,
+            title: pageNode.optTitle,
+            fileId: pageToModuleId(pageNode),
+            absPath: pageNode.absPath
+          }
+        }
+        // Add the node
+        /* istanbul ignore next */
+        const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
+        newParentChildren.splice(evt.newChildIndex, 0, node)
+        await this.writeBookToc(bookToc)
+      } else {
+        throw new Error(`BUG: The orphaned item being dragged around was not a PageNode. nodeToken='${evt.nodeToken}' That is really unexpected. Maybe the client is stale?`)
+      }
+    } else {
+      throw new Error(`BUG: The operation '${evt.type}' is not yet implemented for the orphaned item with nodeToken='${evt.nodeToken}'`)
     }
   }
 
@@ -461,14 +495,12 @@ export class ModelManager {
     }
   }
 
-  private lookupToken(token: string): NodeAndParent {
+  private lookupToken(token: string): Opt<NodeAndParent> {
     for (const b of this.bookTocs) {
       const ret = this.recFind(token, b, b.tocTree)
       /* istanbul ignore else */
       if (ret !== undefined) return ret
     }
-    /* istanbul ignore next */
-    throw new Error(`BUG: Could not find ToC item using token='${token}'`)
   }
 
   public async createPage(bookIndex: number, title: string) {

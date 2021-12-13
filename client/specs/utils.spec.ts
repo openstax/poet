@@ -85,17 +85,13 @@ describe('tests with sinon', () => {
     })
     it('injectEnsuredMessages no body is noop', () => {
       const html = '<html></html>'
-      expect(Panel.prototype.injectEnsuredMessages(html, [{ test: 'abc' }])).toBe(html)
+      expect(Panel.prototype.injectInitialState(html, { test: 'abc' })).toBe(html)
     })
     it('injectEnsuredMessages injects messages', () => {
       const html = '<html><body></body></html>'
-      const result = Panel.prototype.injectEnsuredMessages(html, [{ test: 'abc' }])
+      const result = Panel.prototype.injectInitialState(html, { test: 'abc' })
       expect(result.includes('script')).toBe(true)
-      expect(result.includes('[{"test":"abc"}]')).toBe(true)
-    })
-    it('injectEnsuredMessages zero length messages is noop', () => {
-      const html = '<html><body></body></html>'
-      expect(Panel.prototype.injectEnsuredMessages(html, [])).toBe(html)
+      expect(result.includes('{"test":"abc"}')).toBe(true)
     })
   })
 

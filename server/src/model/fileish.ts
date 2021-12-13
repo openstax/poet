@@ -64,38 +64,40 @@ export abstract class Fileish {
   // Update this Node, and collect all Parse errors
   public load(fileContent: Opt<string>): void {
     Fileish.debug(this.workspacePath, 'update() started')
-    this._parseError.set(undefined)
-    if (fileContent === undefined) {
-      this._exists.set(false)
-      this._isLoaded.set(true)
-      return
-    }
-    if (this.parseXML !== undefined) {
-      Fileish.debug(this.workspacePath, 'parsing XML')
-
-      // Development version throws errors instead of turning them into messages
-      const parseXML = this.parseXML
-      const fn = () => {
-        const doc = this.readXML(fileContent)
-        if (this._parseError.get() !== undefined) return
-        parseXML(doc)
+    Quarx.batch(() => {
+      this._parseError.set(undefined)
+      if (fileContent === undefined) {
+        this._exists.set(false)
         this._isLoaded.set(true)
-        this._exists.set(true)
+        return
       }
-      if (process.env.NODE_ENV !== 'production') {
-        fn()
-      } else {
-        try {
-          fn()
-        } catch (e) {
-          this._parseError.set(new WrappedParseError(this, e))
+      if (this.parseXML !== undefined) {
+        Fileish.debug(this.workspacePath, 'parsing XML')
+
+        // Development version throws errors instead of turning them into messages
+        const parseXML = this.parseXML
+        const fn = () => {
+          const doc = this.readXML(fileContent)
+          if (this._parseError.get() !== undefined) return
+          parseXML(doc)
+          this._isLoaded.set(true)
+          this._exists.set(true)
         }
+        if (process.env.NODE_ENV !== 'production') {
+          fn()
+        } else {
+          try {
+            fn()
+          } catch (e) {
+            this._parseError.set(new WrappedParseError(this, e))
+          }
+        }
+        Fileish.debug(this.workspacePath, 'parsing XML (done)')
+      } else {
+        this._exists.set(true)
+        this._isLoaded.set(true)
       }
-      Fileish.debug(this.workspacePath, 'parsing XML (done)')
-    } else {
-      this._exists.set(true)
-      this._isLoaded.set(true)
-    }
+    })
     Fileish.debug(this.workspacePath, 'update done')
   }
 

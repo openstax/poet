@@ -3,55 +3,58 @@
 exports[`Toc Editor PanelTocEditor sends a message to Webview when the content is updated 1`] = `
 Array [
   Object {
-    "editable": Array [
-      Object {
-        "absPath": "/fake/path",
-        "language": "language",
-        "licenseUrl": "licenseUrl",
-        "slug": "slug",
-        "title": "title",
-        "tocTree": Array [
-          Object {
-            "children": Array [
-              Object {
-                "absPath": "/fake/path/to/file",
-                "fileId": "fileId",
-                "subtitle": "fileId",
-                "title": "title",
-                "token": "token",
-                "type": "TocNodeKind.Page",
-              },
-            ],
-            "title": "title",
-            "token": "token",
-            "type": "TocNodeKind.Subbook",
-          },
-        ],
-        "type": "BookRootNode.Singleton",
-        "uuid": "uuid",
-      },
-    ],
-    "uneditable": Array [
-      Object {
-        "slug": "mock-slug__source-only",
-        "title": "All Modules",
-        "tocTree": Array [
-          Object {
-            "absPath": "/fake/path/to/file",
-            "fileId": "fileId",
-            "subtitle": "fileId",
-            "title": "title",
-            "token": "token",
-            "type": "TocNodeKind.Page",
-          },
-        ],
-      },
-      Object {
-        "slug": "mock-slug__source-only",
-        "title": "Orphan Modules",
-        "tocTree": Array [],
-      },
-    ],
+    "state": Object {
+      "editable": Array [
+        Object {
+          "absPath": "/fake/path",
+          "language": "language",
+          "licenseUrl": "licenseUrl",
+          "slug": "slug",
+          "title": "title",
+          "tocTree": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "absPath": "/fake/path/to/file",
+                  "fileId": "fileId",
+                  "subtitle": "fileId",
+                  "title": "title",
+                  "token": "token",
+                  "type": "TocNodeKind.Page",
+                },
+              ],
+              "title": "title",
+              "token": "token",
+              "type": "TocNodeKind.Subbook",
+            },
+          ],
+          "type": "BookRootNode.Singleton",
+          "uuid": "uuid",
+        },
+      ],
+      "uneditable": Array [
+        Object {
+          "slug": "mock-slug__source-only",
+          "title": "All Modules",
+          "tocTree": Array [
+            Object {
+              "absPath": "/fake/path/to/file",
+              "fileId": "fileId",
+              "subtitle": "fileId",
+              "title": "title",
+              "token": "token",
+              "type": "TocNodeKind.Page",
+            },
+          ],
+        },
+        Object {
+          "slug": "mock-slug__source-only",
+          "title": "Orphan Modules",
+          "tocTree": Array [],
+        },
+      ],
+    },
+    "type": "PanelStateMessageType.Response",
   },
 ]
 `;

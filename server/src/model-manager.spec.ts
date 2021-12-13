@@ -18,6 +18,7 @@ import { TocModification, TocModificationKind, TocNodeKind } from '../../common/
 import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { bookMaker } from './model/book.spec'
 import { bundleMaker } from './model/bundle.spec'
+import { URI, Utils } from 'vscode-uri'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
@@ -321,8 +322,8 @@ describe('Image Autocomplete', () => {
     const imagePath = '../../media/image.png'
     const orphanedPath = '../../media/orphan.png'
 
-    const existingImage = manager.bundle.allImages.getOrAdd(joinPath(page, imagePath))
-    const orphanedImage = manager.bundle.allImages.getOrAdd(joinPath(page, orphanedPath))
+    const existingImage = manager.bundle.allResources.getOrAdd(joinPath(page, imagePath))
+    const orphanedImage = manager.bundle.allResources.getOrAdd(joinPath(page, orphanedPath))
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
@@ -330,9 +331,9 @@ describe('Image Autocomplete', () => {
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
-    expect(page.imageLinks.size).toBe(1)
-    const firstImageRef = first(page.imageLinks)
-    const results = manager.autocompleteImages(page, { line: firstImageRef.range.start.line, character: firstImageRef.range.start.character + '<image src="X'.length })
+    expect(page.resourceLinks.size).toBe(1)
+    const firstImageRef = first(page.resourceLinks)
+    const results = manager.autocompleteResources(page, { line: firstImageRef.range.start.line, character: firstImageRef.range.start.character + '<image src="X'.length })
     expect(results).not.toEqual([])
     expect(results[0].label).toBe(orphanedPath)
   })
@@ -343,8 +344,8 @@ describe('Image Autocomplete', () => {
     const imagePath = '../../media/image.png'
     const orphanedPath = '../../media/orphan.png'
 
-    const existingImage = manager.bundle.allImages.getOrAdd(joinPath(page, imagePath))
-    const orphanedImage = manager.bundle.allImages.getOrAdd(joinPath(page, orphanedPath))
+    const existingImage = manager.bundle.allResources.getOrAdd(joinPath(page, imagePath))
+    const orphanedImage = manager.bundle.allResources.getOrAdd(joinPath(page, orphanedPath))
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
@@ -353,7 +354,7 @@ describe('Image Autocomplete', () => {
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
     const cursor = { line: 0, character: 0 }
-    const results = manager.autocompleteImages(page, cursor)
+    const results = manager.autocompleteResources(page, cursor)
     expect(results).toEqual([])
   })
 
@@ -364,9 +365,9 @@ describe('Image Autocomplete', () => {
     const orphanedPath = '../../media/orphan.png'
     const missingPath = ''
 
-    const existingImage = manager.bundle.allImages.getOrAdd(joinPath(page, imagePath))
-    const orphanedImage = manager.bundle.allImages.getOrAdd(joinPath(page, orphanedPath))
-    const missingImage = manager.bundle.allImages.getOrAdd(joinPath(page, missingPath))
+    const existingImage = manager.bundle.allResources.getOrAdd(joinPath(page, imagePath))
+    const orphanedImage = manager.bundle.allResources.getOrAdd(joinPath(page, orphanedPath))
+    const missingImage = manager.bundle.allResources.getOrAdd(joinPath(page, missingPath))
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
     missingImage.load('')
@@ -375,8 +376,8 @@ describe('Image Autocomplete', () => {
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
-    const secondImageRef = page.imageLinks.toArray()[1]
-    const results = manager.autocompleteImages(page, { line: secondImageRef.range.start.line, character: secondImageRef.range.start.character + '<image'.length })
+    const secondImageRef = page.resourceLinks.toArray()[1]
+    const results = manager.autocompleteResources(page, { line: secondImageRef.range.start.line, character: secondImageRef.range.start.character + '<image'.length })
     expect(results).toEqual([])
   })
 })
@@ -558,6 +559,38 @@ describe('modifyToc()', () => {
     await manager.modifyToc(evt2)
     expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
     expect(book.toc.length).toBe(1)
+  })
+  it('moves an orphaned Page into the ToC of a book', async () => {
+    const bundle = loadSuccess(manager.bundle)
+    const book = loadSuccess(first(bundle.books))
+    const bookIndex = 0
+
+    expect(manager.orphanedPages.toArray()).toEqual([])
+    // Construct a path to the orphaned page
+    const workspaceRootUri = URI.parse(bundle.workspaceRootUri)
+    const pageDirUri = Utils.joinPath(workspaceRootUri, 'modules')
+    const pageUri = Utils.joinPath(pageDirUri, 'sakjgfsakjsdjfkg', 'index.cnxml')
+    const orphan = bundle.allPages.getOrAdd(pageUri.fsPath)
+    orphan.load(pageMaker({}))
+
+    expect(manager.orphanedPages.toArray()).toEqual([orphan])
+    expect(params.orphans).not.toEqual([])
+    const orphanToken = params.orphans[0].token
+
+    const evt1: TocModification = {
+      type: TocModificationKind.Move,
+      nodeToken: orphanToken,
+      newParentToken: undefined,
+      newChildIndex: 0,
+      bookIndex
+    }
+    await manager.modifyToc(evt1)
+
+    expect(book.toc[0].type).toBe(TocNodeKind.Page)
+    const tocEntry = book.toc[0]
+    if (tocEntry.type === TocNodeKind.Page) {
+      expect(tocEntry.page).toBe(orphan)
+    }
   })
   it('creates a new Page in book', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))

@@ -30,7 +30,7 @@ export const forwardOnDidChangeWorkspaceFolders = (clientInner: LanguageClient) 
   await clientInner.sendRequest('onDidChangeWorkspaceFolders', event)
 }
 
-type ExtensionExports = { [key in OpenstaxCommand]: PanelManager<Panel<unknown, unknown>> }
+type ExtensionExports = { [key in OpenstaxCommand]: PanelManager<Panel<unknown, unknown, unknown>> }
 export async function activate(context: vscode.ExtensionContext): Promise<ExtensionExports> {
   // detect Theia. Alert the user if they are running Theia
   /* istanbul ignore next */

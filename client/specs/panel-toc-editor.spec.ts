@@ -6,11 +6,12 @@ import vscode, { Disposable, Event, EventEmitter, Uri, ViewColumn, WebviewPanel 
 import { BookRootNode, BookToc, TocNodeKind, TocModificationKind } from '../../common/src/toc'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees-provider'
-import { PanelIncomingMessage, PanelOutgoingMessage, TocEditorPanel } from '../src/panel-toc-editor'
+import { PanelIncomingMessage, TocEditorPanel } from '../src/panel-toc-editor'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest } from '../../common/src/requests'
 import { ExtensionEvents, ExtensionHostContext } from '../src/panel'
 import { BookOrTocNode, TocsTreeProvider } from '../src/book-tocs'
+import { PanelStateMessage, PanelStateMessageType } from '../../common/src/webview-constants'
 
 const TEST_OUT_DIR = join(__dirname, '../src')
 const resourceRootDir = TEST_OUT_DIR
@@ -335,8 +336,9 @@ describe('Toc Editor', () => {
       const v = { books: [testToc], orphans: [] }
       expect(postMessageStub.callCount).toBe(0)
       await p.update(v)
-      const message: PanelOutgoingMessage = postMessageStub.firstCall.args[0]
-      const allModules = message.uneditable[0]
+      const message: PanelStateMessage<any> = postMessageStub.firstCall.args[0]
+      expect(message.type).toBe(PanelStateMessageType.Response)
+      const allModules = message.state.uneditable[0]
       expect(allModules.tocTree.length).toBe(2)
       expect(allModules.tocTree[0].fileId).toBe('fileId1')
       expect(allModules.tocTree[1].fileId).toBe('fileId2')
