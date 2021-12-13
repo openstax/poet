@@ -36,11 +36,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   /* istanbul ignore next */
   expect(process.env.GITPOD_HOST != null && process.env.EDITOR?.includes('code') === false ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
 
-  await configureWorkspaceSettings()
+  const extensionIDs = [
+    'redhat.vscode-xml',
+    'vscode.git',
+    'cweijan.git-history-plus'
+  ]
+  for (const id of extensionIDs) {
+    const extension = vscode.extensions.getExtension(id)
+    if (extension === undefined) {
+      await vscode.commands.executeCommand('workbench.extensions.installExtension', id)
+    }
+  }
 
   client = languageServerLauncher(context)
   await populateXsdSchemaFiles(resourceRootDir)
   await client.onReady()
+
+  await configureWorkspaceSettings()
 
   // It is a logic error for anything else to listen to this event from the client.
   // It is only allowed a single handler, from what we can tell
