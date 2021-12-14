@@ -221,7 +221,7 @@ export async function configureWorkspaceSettings(): Promise<void> {
   const property = 'files.associations'
   const target = vscode.ConfigurationTarget.Workspace
   let value = config.get(property, {})
-  if (Object.keys(value).length < 1) {
+  if (Object.keys(value).length === 0) {
     value = { '*.cnxml': 'xml' }
   }
   await config.update(property, '', target)

@@ -5,7 +5,7 @@ import vscode from 'vscode'
 import SinonRoot from 'sinon'
 import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch, RefType } from '../../git-api/git.d'
 import 'source-map-support/register'
-import { configureWorkspaceSettings, expect as expectOrig, getRootPathUri } from './../../utils'
+import { expect as expectOrig, getRootPathUri } from './../../utils'
 import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../../extension'
 import { ImageManagerPanel } from './../../panel-image-manager'
 import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
@@ -174,6 +174,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('show cnxml preview with no file open', async () => {
     assert.strictEqual(vscode.window.activeTextEditor, undefined)
+    await sleep(500) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
     await withPanelFromCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, async (panel) => {
       assert(panel.webview.html.includes('No resource available to preview'))
     })
@@ -539,24 +540,6 @@ suite('Extension Test Suite', function (this: Suite) {
     await forwarder('test_event' as unknown as vscode.WorkspaceFoldersChangeEvent)
     const expected = ['onDidChangeWorkspaceFolders', 'test_event']
     assert((mockClient.sendRequest as SinonRoot.SinonStub).calledOnceWith(...expected))
-  })
-  test('configureWorkspaceSettings changes files.associations', async () => {
-    const getStub = sinon.stub().returns({})
-    const hasStub = sinon.stub().returns(false)
-    const inspectStub = sinon.stub().returns({})
-    const updateStub = sinon.stub().resolves()
-    const property = 'files.associations'
-    const target = vscode.ConfigurationTarget.Workspace
-    sinon.stub(vscode.workspace, 'getConfiguration').returns({
-      get: getStub,
-      has: hasStub,
-      inspect: inspectStub,
-      update: updateStub
-    })
-    await configureWorkspaceSettings()
-    assert(getStub.calledOnceWith('files.associations'))
-    assert(updateStub.calledWith(property, '', target))
-    assert(updateStub.calledWith(property, { '*.cnxml': 'xml' }, target))
   })
 
   this.afterAll(async () => {

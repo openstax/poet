@@ -2,7 +2,7 @@ import expect from 'expect'
 import Sinon from 'sinon'
 import mockfs from 'mock-fs'
 import vscode, { Uri, Webview } from 'vscode'
-import { addBaseHref, fixResourceReferences, fixCspSourceReferences, ensureCatch, ensureCatchPromise, expect as expectOrig, getErrorDiagnosticsBySource, populateXsdSchemaFiles } from '../src/utils'
+import { addBaseHref, fixResourceReferences, fixCspSourceReferences, ensureCatch, ensureCatchPromise, expect as expectOrig, getErrorDiagnosticsBySource, populateXsdSchemaFiles, configureWorkspaceSettings } from '../src/utils'
 import { Panel } from '../src/panel'
 import { join } from 'path'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
@@ -160,6 +160,42 @@ describe('tests with sinon', () => {
     it('schema-generation does not run when there is no workspace', async () => {
       sinon.stub(vscode.workspace, 'workspaceFolders').get(() => undefined)
       await populateXsdSchemaFiles('')
+    })
+  })
+
+  describe('configureWorkspaceSettings', () => {
+    it('reloads settings', async () => {
+      const getStub = sinon.stub().returns({ '*.cnxml': 'xml' })
+      const updateStub = sinon.stub().resolves()
+      sinon.stub(vscode.workspace, 'getConfiguration').returns({
+        get: getStub,
+        has: sinon.stub().returns(false),
+        inspect: sinon.stub().returns({}),
+        update: updateStub
+      })
+
+      await configureWorkspaceSettings()
+
+      getStub.returns({})
+      await configureWorkspaceSettings()
+
+      const updateCalls = updateStub.getCalls()
+      expect(updateCalls.length).toBe(4)
+      // Make sure the property is set to '', then anything other than ''
+      expect(updateCalls[0].args[1] === '').toBe(true)
+      expect(updateCalls[0].args[2] === vscode.ConfigurationTarget.Workspace).toBe(true)
+
+      expect(updateCalls[1].args[1] !== '').toBe(true)
+      expect(updateCalls[1].args[2] === vscode.ConfigurationTarget.Workspace).toBe(true)
+
+      expect(updateCalls[2].args[1] === '').toBe(true)
+      expect(updateCalls[2].args[2] === vscode.ConfigurationTarget.Workspace).toBe(true)
+
+      expect(updateCalls[3].args[1] !== '').toBe(true)
+      expect(updateCalls[3].args[2] === vscode.ConfigurationTarget.Workspace).toBe(true)
+
+      expect(updateStub.alwaysCalledWith('files.associations')).toBe(true)
+      expect(getStub.alwaysCalledWith('files.associations')).toBe(true)
     })
   })
 })
