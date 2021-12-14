@@ -219,11 +219,10 @@ export function getErrorDiagnosticsBySource(): Map<string, Array<[vscode.Uri, vs
 export async function configureWorkspaceSettings(): Promise<void> {
   const config = vscode.workspace.getConfiguration()
   const property = 'files.associations'
-  const value = config.get(property, {})
   const target = vscode.ConfigurationTarget.Workspace
+  let value = config.get(property, {})
   if (Object.keys(value).length < 1) {
-    void vscode.window.showErrorMessage(`BUG: Could not reload ${property} because it was unset.`)
-    return
+    value = { '*.cnxml': 'xml' }
   }
   await config.update(property, '', target)
   await config.update(property, value, target)
