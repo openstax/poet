@@ -72,12 +72,11 @@ ${i.extraCnxml}
 }
 
 describe('Page validations', () => {
-  it(PageValidationKind.MISSING_IMAGE, () => {
+  it(PageValidationKind.MISSING_RESOURCE, () => {
     const bundle = loadSuccess(makeBundle())
     loadSuccess(first(bundle.books))
-
     const page = bundle.allPages.getOrAdd('somepage/filename')
-    const image = bundle.allImages.getOrAdd('someimage')
+    const image = bundle.allResources.getOrAdd('someimage')
     const info = { imageHrefs: [path.relative(path.dirname(page.absPath), image.absPath)] }
     page.load(pageMaker(info))
     // Verify the image needs to be loaded
@@ -85,7 +84,7 @@ describe('Page validations', () => {
     expect(first(page.validationErrors.nodesToLoad)).toBe(image)
     // At first the image does not exist:
     image.load(undefined)
-    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MISSING_IMAGE)
+    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MISSING_RESOURCE)
     // And then it does:
     image.load('somebits')
     expect(page.validationErrors.errors.size).toBe(0)

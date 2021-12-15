@@ -2,11 +2,21 @@ import I from 'immutable'
 import * as Quarx from 'quarx'
 import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, TocNodeKind, Range } from './utils'
 import { Fileish, ILoadable, ValidationCheck } from './fileish'
-import { ImageNode } from './image'
+import { ResourceNode } from './resource'
 import { TocNodeWithRange } from './book'
 
+enum ResourceLinkKind {
+  Image,
+  IFrame
+}
+export type ResourceLink = ImageLink | IFrameLink
 export interface ImageLink extends HasRange {
-  image: ImageNode
+  type: ResourceLinkKind.Image
+  target: ResourceNode
+}
+export interface IFrameLink extends HasRange {
+  type: ResourceLinkKind.IFrame
+  target: ResourceNode
 }
 
 export enum PageLinkKind {
@@ -50,7 +60,7 @@ export class PageNode extends Fileish {
   private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _elementIds = Quarx.observable.box<Opt<I.Set<WithRange<string>>>>(undefined)
-  private readonly _imageLinks = Quarx.observable.box<Opt<I.Set<ImageLink>>>(undefined)
+  private readonly _resourceLinks = Quarx.observable.box<Opt<I.Set<ResourceLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
   private readonly _hasIntroduction = Quarx.observable.box<Opt<WithRange<boolean>>>(undefined, { equals: equalsOptWithRange })
   public uuid() { return this.ensureLoaded(this._uuid).v }
@@ -95,12 +105,12 @@ export class PageNode extends Fileish {
     }
   }
 
-  public get images() {
-    return this.imageLinks.map(l => l.image)
+  public get resources() {
+    return this.resourceLinks.map(l => l.target)
   }
 
-  public get imageLinks() {
-    return this.ensureLoaded(this._imageLinks)
+  public get resourceLinks() {
+    return this.ensureLoaded(this._resourceLinks)
   }
 
   public get pageLinks() {
@@ -120,15 +130,21 @@ export class PageNode extends Fileish {
 
     this._elementIds.set(I.Set((select('//cnxml:*[@id]', doc) as Element[]).map(el => textWithRange(el, 'id'))))
 
-    const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
-    this._imageLinks.set(I.Set(imageNodes.map(attr => {
+    const toResourceLink = (type: ResourceLinkKind, attr: Attr): ResourceLink => {
       const src = expectValue(attr.nodeValue, 'BUG: Attribute does not have a value')
-      const image = super.bundle.allImages.getOrAdd(join(this.pathHelper, PathKind.ABS_TO_REL, this.absPath, src))
+      const target = super.bundle.allResources.getOrAdd(join(this.pathHelper, PathKind.ABS_TO_REL, this.absPath, src))
       // Get the line/col position of the <image> tag
       const imageNode = expectValue(attr.ownerElement, 'BUG: attributes always have a parent element')
       const range = calculateElementPositions(imageNode)
-      return { image, range }
-    })))
+      return { type, target, range }
+    }
+
+    const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
+    const iframeNodes = select('//cnxml:iframe/@src', doc) as Attr[]
+    const imageLinks = imageNodes.map(n => toResourceLink(ResourceLinkKind.Image, n))
+    const iframeLinks = iframeNodes.map(n => toResourceLink(ResourceLinkKind.IFrame, n))
+
+    this._resourceLinks.set(I.Set([...imageLinks, ...iframeLinks]))
 
     const linkNodes = select('//cnxml:link', doc) as Element[]
     const changeEmptyToNull = (str: string | null): Opt<string> => (str === '' || str === null) ? undefined : str
@@ -176,7 +192,7 @@ export class PageNode extends Fileish {
   }
 
   protected getValidationChecks(): ValidationCheck[] {
-    const imageLinks = this.imageLinks
+    const resourceLinks = this.resourceLinks
     const pageLinks = this.pageLinks
     const preloadTheBundle = this.bundle.isLoaded ? [] : [this.bundle]
     return [
@@ -210,9 +226,9 @@ export class PageNode extends Fileish {
         }
       },
       {
-        message: PageValidationKind.MISSING_IMAGE,
-        nodesToLoad: imageLinks.map(l => l.image),
-        fn: () => imageLinks.filter(img => !img.image.exists).map(l => l.range)
+        message: PageValidationKind.MISSING_RESOURCE,
+        nodesToLoad: resourceLinks.map(l => l.target),
+        fn: () => resourceLinks.filter(img => !img.target.exists).map(l => l.range)
       },
       {
         message: PageValidationKind.MISSING_TARGET,
@@ -255,7 +271,7 @@ export class PageNode extends Fileish {
 
 export enum PageValidationKind {
   MISSING_INTRO = 'class="introduction" missing',
-  MISSING_IMAGE = 'Image file does not exist',
+  MISSING_RESOURCE = 'Target resource file does not exist',
   MISSING_TARGET = 'Link target does not exist',
   MALFORMED_UUID = 'Malformed UUID',
   DUPLICATE_UUID = 'Duplicate Page/Module UUID',

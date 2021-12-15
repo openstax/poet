@@ -3,7 +3,7 @@ import I from 'immutable'
 import * as xpath from 'xpath-ts'
 import { PageNode } from './page'
 import { Factory } from './factory'
-import { ImageNode } from './image'
+import { ResourceNode } from './resource'
 import { BookNode } from './book'
 import { ILoadable } from './fileish'
 
@@ -70,7 +70,7 @@ export interface TocPage<T> { type: TocNodeKind.Page, readonly page: T }
 
 export interface Bundleish extends ILoadable {
   allPages: Factory<PageNode>
-  allImages: Factory<ImageNode>
+  allResources: Factory<ResourceNode>
   books: I.Set<BookNode>
   workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
