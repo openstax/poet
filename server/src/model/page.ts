@@ -201,8 +201,10 @@ export class PageNode extends Fileish {
               n.children.forEach(walker)
             }
           }
-          
-          this.bundle.books.toArray()[0].toc.forEach(walker)
+
+          if (this.bundle.isLoaded) {
+            this.bundle.books.forEach(b => b.toc.forEach(walker))
+          }
 
           return ret
         }

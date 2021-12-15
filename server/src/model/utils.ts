@@ -73,6 +73,8 @@ export interface Bundleish {
   books: I.Set<BookNode>
   workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
+  exists: boolean
+  isLoaded: boolean
 }
 
 export enum PathKind {
