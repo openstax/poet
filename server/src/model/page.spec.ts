@@ -43,7 +43,7 @@ export interface PageInfo {
   imageHrefs?: string[]
   pageLinks?: Array<{targetPage?: string, targetId?: string, url?: string}>
   extraCnxml?: string
-  pageClass?: string
+  pageClass?: string | null
 }
 export function pageMaker(info: PageInfo) {
   const i = {
@@ -56,7 +56,8 @@ export function pageMaker(info: PageInfo) {
     pageClass: info.pageClass !== undefined ? info.pageClass : 'introduction'
   }
   const titleElement = i.title === null ? '' : `<title>${i.title}</title>`
-  return `<document xmlns="http://cnx.rice.edu/cnxml" class="${i.pageClass}">
+  const classAttribute = i.pageClass === null ? '' : ` class="${i.pageClass}"`
+  return `<document xmlns="http://cnx.rice.edu/cnxml"${classAttribute}>
   ${titleElement}
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
     <md:uuid>${i.uuid}</md:uuid>

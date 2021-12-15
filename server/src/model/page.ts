@@ -155,8 +155,9 @@ export class PageNode extends Fileish {
     })))
 
     const docRoot = selectOne('//cnxml:document', doc)
-    const docClass = docRoot.getAttribute('class')
-    const hasIntroduction = docClass?.includes('introduction') ?? false
+    // istanbul ignore next : Implementation returns '' instead of null, hence the code coverage ignores `?? []`
+    const docClasses = docRoot.getAttribute('class')?.split(' ') ?? []
+    const hasIntroduction = docClasses.includes('introduction')
     const introRange = calculateElementPositions(docRoot)
     this._hasIntroduction.set({
       range: introRange,
