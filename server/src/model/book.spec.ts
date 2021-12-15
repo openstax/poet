@@ -51,6 +51,10 @@ describe('Book validations', () => {
       page.load(pageMaker({ pageClass: 'introduction' }))
       expectErrors(page, [])
     })
+    it('Does not error when the first Page in a Chapter has class="unit-opener"', () => {
+      page.load(pageMaker({ pageClass: 'unit-opener' }))
+      expectErrors(page, [])
+    })
     it('Errors when the first Page in a Chapter does not have the class="introduction"', () => {
       page.load(pageMaker({ pageClass: null }))
       expectErrors(page, [PageValidationKind.MISSING_INTRO])

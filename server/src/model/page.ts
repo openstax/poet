@@ -170,10 +170,12 @@ export class PageNode extends Fileish {
       }
     })))
 
+    const introClasses = ['introduction', 'unit-opener']
     const docRoot = selectOne('//cnxml:document', doc)
     // istanbul ignore next : Implementation returns '' instead of null, hence the code coverage ignores `?? []`
     const docClasses = docRoot.getAttribute('class')?.split(' ') ?? []
-    const hasIntroduction = docClasses.includes('introduction')
+    // Wish javascript had Array.any. Double negatives to the rescue?
+    const hasIntroduction = !introClasses.every(c => !docClasses.includes(c))
     const introRange = calculateElementPositions(docRoot)
     this._hasIntroduction.set({
       range: introRange,
