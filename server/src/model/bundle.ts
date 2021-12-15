@@ -5,10 +5,10 @@ import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
 import { Fileish, ValidationCheck } from './fileish'
-import { ImageNode } from './image'
+import { ResourceNode } from './resource'
 
 export class Bundle extends Fileish implements Bundleish {
-  public readonly allImages: Factory<ImageNode> = new Factory((absPath: string) => new ImageNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
+  public readonly allResources: Factory<ResourceNode> = new Factory((absPath: string) => new ResourceNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   public readonly allPages: Factory<PageNode> = new Factory((absPath: string) => new PageNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
@@ -32,7 +32,7 @@ export class Bundle extends Fileish implements Bundleish {
   }
 
   public get allNodes() {
-    return I.Set([this]).union(this.allBooks.all).union(this.allPages.all).union(this.allImages.all)
+    return I.Set([this]).union(this.allBooks.all).union(this.allPages.all).union(this.allResources.all)
   }
 
   public get books() {

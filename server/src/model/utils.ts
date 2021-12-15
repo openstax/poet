@@ -3,7 +3,7 @@ import I from 'immutable'
 import * as xpath from 'xpath-ts'
 import { PageNode } from './page'
 import { Factory } from './factory'
-import { ImageNode } from './image'
+import { ResourceNode } from './resource'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -68,7 +68,7 @@ export interface TocPage<T> { type: TocNodeKind.Page, readonly page: T }
 
 export interface Bundleish {
   allPages: Factory<PageNode>
-  allImages: Factory<ImageNode>
+  allResources: Factory<ResourceNode>
   workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
 }

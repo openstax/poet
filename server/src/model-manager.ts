@@ -44,7 +44,7 @@ function findOrCreateNode(bundle: Bundle, absPath: string) {
   if (bundle.absPath === absPath) {
     return bundle
   } else if (IMAGE_RE.test(absPath)) {
-    return bundle.allImages.getOrAdd(absPath)
+    return bundle.allResources.getOrAdd(absPath)
   } else if (PAGE_RE.test(absPath)) {
     return bundle.allPages.getOrAdd(absPath)
   } else if (BOOK_RE.test(absPath)) {
@@ -58,7 +58,7 @@ function findNode(bundle: Bundle, absPath: string) {
     : (
         bundle.allBooks.get(absPath) ??
         bundle.allPages.get(absPath) ??
-        bundle.allImages.get(absPath))
+        bundle.allResources.get(absPath))
 }
 
 export function pageToModuleId(page: PageNode) {
@@ -169,10 +169,10 @@ export class ModelManager {
     return this.bundle.allPages.all.filter(loadedAndExists).subtract(books.flatMap(b => b.pages))
   }
 
-  public get orphanedImages() {
+  public get orphanedResources() {
     const books = this.bundle.books.filter(loadedAndExists)
     const pages = books.flatMap(b => b.pages)
-    return this.bundle.allImages.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.images))
+    return this.bundle.allResources.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.resources))
   }
 
   public async loadEnoughForToc() {
@@ -241,13 +241,13 @@ export class ModelManager {
         // Remove if it was a file
         const removedNode = bundle.allBooks.remove(uri) ??
                   bundle.allPages.remove(uri) ??
-                  bundle.allImages.remove(uri)
+                  bundle.allResources.remove(uri)
         if (removedNode !== undefined) s.add(removedNode)
         // Remove if it was a directory
         const filePathDir = `${uri}${PATH_SEP}`
         s.union(bundle.allBooks.removeByKeyPrefix(filePathDir))
         s.union(bundle.allPages.removeByKeyPrefix(filePathDir))
-        s.union(bundle.allImages.removeByKeyPrefix(filePathDir))
+        s.union(bundle.allResources.removeByKeyPrefix(filePathDir))
       })
       // Unload all removed nodes so users do not think the files still exist
       removedNodes.forEach(n => n.load(undefined))
@@ -328,7 +328,7 @@ export class ModelManager {
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: () => this.bundle.allBooks.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(this.sendFileDiagnostics.bind(this)) } },
       { slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: () => this.bundle.allPages.all.forEach(enqueueLoadJob) },
-      { slow: true, type: 'INITIAL_LOAD_ALL_IMAGES', context: this.bundle, fn: () => this.bundle.allImages.all.forEach(enqueueLoadJob) },
+      { slow: true, type: 'INITIAL_LOAD_ALL_RESOURCES', context: this.bundle, fn: () => this.bundle.allResources.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes.map(f => this.sendFileDiagnostics(f))) }
     ]
     jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
@@ -358,14 +358,14 @@ export class ModelManager {
     jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
   }
 
-  public autocompleteImages(page: PageNode, cursor: Position) {
-    const foundLinks = page.imageLinks.toArray().filter((l) => {
+  public autocompleteResources(page: PageNode, cursor: Position) {
+    const foundLinks = page.resourceLinks.toArray().filter((l) => {
       return inRange(l.range, cursor)
     })
 
     if (foundLinks.length === 0) { return [] }
 
-    // We're inside an <image> element.
+    // We're inside an <image> or <iframe> element.
     // Now check and see if we are right at the src=" point
     const content = expectValue(this.getOpenDocContents(page.absPath), 'BUG: This file should be open and have been sent from the vscode client').split('\n')
     const beforeCursor = content[cursor.line].substring(0, cursor.character)
@@ -377,12 +377,12 @@ export class ModelManager {
         start: { line: cursor.line, character: startQuoteOffset + 'src="'.length },
         end: { line: cursor.line, character: endQuoteOffset + cursor.character }
       }
-      const ret = this.orphanedImages.toArray().map(i => {
+      const ret = this.orphanedResources.toArray().map(i => {
         const insertText = path.relative(path.dirname(page.absPath), i.absPath)
         const item = CompletionItem.create(insertText)
         item.textEdit = TextEdit.replace(range, insertText)
         item.kind = CompletionItemKind.File
-        item.detail = 'Orphaned Image'
+        item.detail = 'Orphaned Resource'
         return item
       })
       return ret
