@@ -1,8 +1,9 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq } from './utils'
-import { Fileish, ValidationCheck } from './fileish'
+import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, TocNodeKind, Range } from './utils'
+import { Fileish, ILoadable, ValidationCheck } from './fileish'
 import { ResourceNode } from './resource'
+import { TocNodeWithRange } from './book'
 
 enum ResourceLinkKind {
   Image,
@@ -61,6 +62,7 @@ export class PageNode extends Fileish {
   private readonly _elementIds = Quarx.observable.box<Opt<I.Set<WithRange<string>>>>(undefined)
   private readonly _resourceLinks = Quarx.observable.box<Opt<I.Set<ResourceLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
+  private readonly _hasIntroduction = Quarx.observable.box<Opt<WithRange<boolean>>>(undefined, { equals: equalsOptWithRange })
   public uuid() { return this.ensureLoaded(this._uuid).v }
   public get optTitle() {
     const t = this._title.get()
@@ -168,6 +170,18 @@ export class PageNode extends Fileish {
       }
     })))
 
+    const introClasses = ['introduction', 'unit-opener']
+    const docRoot = selectOne('//cnxml:document', doc)
+    // istanbul ignore next : Implementation returns '' instead of null, hence the code coverage ignores `?? []`
+    const docClasses = docRoot.getAttribute('class')?.split(' ') ?? []
+    // Wish javascript had Array.any. Double negatives to the rescue?
+    const hasIntroduction = !introClasses.every(c => !docClasses.includes(c))
+    const introRange = calculateElementPositions(docRoot)
+    this._hasIntroduction.set({
+      range: introRange,
+      v: hasIntroduction
+    })
+
     const titleNode = select('//cnxml:title', doc) as Element[]
     if (titleNode.length > 0) {
       this._title.set(textWithRange(titleNode[0]))
@@ -182,7 +196,37 @@ export class PageNode extends Fileish {
   protected getValidationChecks(): ValidationCheck[] {
     const resourceLinks = this.resourceLinks
     const pageLinks = this.pageLinks
+    const preloadTheBundle = this.bundle.isLoaded ? [] : [this.bundle]
     return [
+      {
+        message: PageValidationKind.MISSING_INTRO,
+        nodesToLoad: I.Set<ILoadable>(preloadTheBundle),
+        fn: () => {
+          // Find all the books this page is in
+          // If it's the first page in a chapter then error (return the range) if this page does not have an introduction
+          let ret = I.Set<Range>()
+          const walker = (n: TocNodeWithRange) => {
+            if (n.type === TocNodeKind.Subbook) {
+              const firstChild = n.children[0]
+              if (firstChild.type === TocNodeKind.Page) {
+                // If we are the Page and we don't have introduction then error
+                if (firstChild.page === this) {
+                  const v = expectValue(this._hasIntroduction.get(), 'BUG: This Page should have already been loaded by now')
+                  if (!v.v) {
+                    ret = I.Set([v.range])
+                  }
+                }
+                return
+              }
+              n.children.forEach(walker)
+            }
+          }
+
+          this.bundle.books.forEach(b => b.toc.forEach(walker))
+
+          return ret
+        }
+      },
       {
         message: PageValidationKind.MISSING_RESOURCE,
         nodesToLoad: resourceLinks.map(l => l.target),
@@ -228,6 +272,7 @@ export class PageNode extends Fileish {
 }
 
 export enum PageValidationKind {
+  MISSING_INTRO = 'class="introduction" missing',
   MISSING_RESOURCE = 'Target resource file does not exist',
   MISSING_TARGET = 'Link target does not exist',
   MALFORMED_UUID = 'Malformed UUID',

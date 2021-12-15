@@ -11,7 +11,7 @@ import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubboo
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
-import { Fileish } from './model/fileish'
+import { Fileish, ILoadable } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
 import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
@@ -275,7 +275,7 @@ export class ModelManager {
     return this.openDocuments.get(absPath)
   }
 
-  private async readOrNull(node: Fileish): Promise<Opt<string>> {
+  private async readOrNull(node: ILoadable): Promise<Opt<string>> {
     const uri = node.absPath
     const unsavedContents = this.getOpenDocContents(uri)
     if (unsavedContents !== undefined) {
@@ -290,7 +290,7 @@ export class ModelManager {
     }
   }
 
-  private async readAndLoad(node: Fileish) {
+  private async readAndLoad(node: ILoadable) {
     if (node.isLoaded) { return }
     const fileContent = await this.readOrNull(node)
     node.load(fileContent)

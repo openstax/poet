@@ -17,7 +17,7 @@ import path from 'path'
 import I from 'immutable'
 import { PathHelper } from './utils'
 import { Bundle } from './bundle'
-import { Fileish } from './fileish'
+import { ILoadable } from './fileish'
 import { PageLinkKind } from './page'
 
 console.log('WARN: Manually setting NODE_ENV=production so we get nicer error messages')
@@ -29,7 +29,7 @@ function toRelPath(p: string) {
   return path.relative(process.cwd(), p)
 }
 
-function loadNode(n: Fileish) {
+function loadNode(n: ILoadable) {
   const bits = fs.existsSync(n.absPath) ? fs.readFileSync(n.absPath, 'utf-8') : undefined
   n.load(bits)
 }
@@ -46,7 +46,7 @@ const pathHelper: PathHelper<string> = {
   for (const rootPath of bookDirs) {
     console.log('Validating', toRelPath(rootPath))
     const bundle = new Bundle(pathHelper, rootPath)
-    let nodesToLoad = I.Set<Fileish>()
+    let nodesToLoad = I.Set<ILoadable>()
     do {
       nodesToLoad = bundle.allNodes.flatMap(n => n.validationErrors.nodesToLoad).filter(n => !n.isLoaded && n.validationErrors.errors.size === 0)
       console.log('Loading', nodesToLoad.size, 'file(s)...')

@@ -4,7 +4,7 @@ import { JobRunner, URIPair } from './job-runner'
 JobRunner.debug = () => {} // Turn off logging
 
 describe('Job Runner', () => {
-  const context: URIPair = { workspace: 'aaa', doc: 'bbb' }
+  const context = new URIPair('aaa_workspace', 'bbb_doc')
   let jobRunner = new JobRunner()
   beforeEach(() => {
     jobRunner = new JobRunner()

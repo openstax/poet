@@ -1,6 +1,7 @@
-import { BookValidationKind } from './book'
+import { BookNode, BookValidationKind } from './book'
 import { expectErrors, first, loadSuccess, makeBundle } from './util.spec'
 import { pageMaker } from './page.spec'
+import { PageNode, PageValidationKind } from './page'
 
 describe('Book validations', () => {
   it(BookValidationKind.DUPLICATE_CHAPTER_TITLE, () => {
@@ -32,6 +33,64 @@ describe('Book validations', () => {
     const page = first(book.pages)
     page.load(pageMaker({}))
     expectErrors(book, [BookValidationKind.DUPLICATE_PAGE])
+  })
+  describe('Introductions', () => {
+    let book = null as unknown as BookNode
+    let page = null as unknown as PageNode
+    beforeEach(() => {
+      const bundle = makeBundle()
+      book = first(loadSuccess(bundle).books)
+      const chapterTitle = 'Kinematics'
+      const toc: TocNode[] = [
+        { title: chapterTitle, children: ['m00001'] }
+      ]
+      book.load(bookMaker({ toc }))
+      page = first(book.pages)
+    })
+    it('Does not error when the first Page in a Chapter has class="introduction"', () => {
+      page.load(pageMaker({ pageClass: 'introduction' }))
+      expectErrors(page, [])
+    })
+    it('Does not error when the first Page in a Chapter has class="unit-opener"', () => {
+      page.load(pageMaker({ pageClass: 'unit-opener' }))
+      expectErrors(page, [])
+    })
+    it('Errors when the first Page in a Chapter does not have the class="introduction"', () => {
+      page.load(pageMaker({ pageClass: null }))
+      expectErrors(page, [PageValidationKind.MISSING_INTRO])
+    })
+    it('Errors when the Page loses class="introduction"', () => {
+      page.load(pageMaker({ pageClass: 'introduction' }))
+      expectErrors(page, [])
+      page.load(pageMaker({ pageClass: null }))
+      expectErrors(page, [PageValidationKind.MISSING_INTRO])
+    })
+    it('Does not error when the first Page in a Chapter gains the class="introduction"', () => {
+      page.load(pageMaker({ pageClass: 'definitely-not-intro' }))
+      expectErrors(page, [PageValidationKind.MISSING_INTRO])
+      page.load(pageMaker({ pageClass: 'introduction' }))
+      expectErrors(page, [])
+    })
+    it('Errors when the first Page of a Chapter has class="introduction-foobar"', () => {
+      page.load(pageMaker({ pageClass: 'introduction-foobar' }))
+      expectErrors(page, [PageValidationKind.MISSING_INTRO])
+    })
+    it('handles class="introduction" even when Chapters are in a Unit', () => {
+      const unitTitle = 'One Dimension'
+      const chapterTitle = 'Kinematics'
+      const toc: TocNode[] = [
+        'm00002', // test the else branch of the walker
+        {
+          title: unitTitle,
+          children: [{ title: chapterTitle, children: ['m00001'] }]
+        }
+      ]
+      book.load(bookMaker({ toc }))
+      page.load(pageMaker({ pageClass: 'introduction' }))
+      expectErrors(page, [])
+      page.load(pageMaker({ pageClass: null }))
+      expectErrors(page, [PageValidationKind.MISSING_INTRO])
+    })
   })
 })
 

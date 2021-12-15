@@ -19,13 +19,13 @@ export class WrappedParseError<T extends Error> extends ParseError {
 
 export interface ValidationCheck {
   message: string
-  nodesToLoad: I.Set<Fileish>
-  fn: (loadedNodes?: I.Set<Fileish>) => I.Set<Range>
+  nodesToLoad: I.Set<ILoadable>
+  fn: (loadedNodes?: I.Set<ILoadable>) => I.Set<Range>
 }
 export class ValidationResponse {
-  constructor(public readonly errors: I.Set<ModelError>, public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
+  constructor(public readonly errors: I.Set<ModelError>, public readonly nodesToLoad: I.Set<ILoadable> = I.Set()) {}
 
-  static continueOnlyIfLoaded(nodes: I.Set<Fileish>, next: (nodes: I.Set<Fileish>) => I.Set<ModelError>) {
+  static continueOnlyIfLoaded(nodes: I.Set<ILoadable>, next: (nodes: I.Set<ILoadable>) => I.Set<ModelError>) {
     const unloaded = nodes.filter(n => !n.isLoaded)
     if (unloaded.size > 0) {
       return new ValidationResponse(I.Set(), unloaded)
@@ -39,7 +39,14 @@ function toValidationErrors(node: Fileish, message: string, sources: I.Set<Range
   return sources.map(s => new ModelError(node, message, s))
 }
 
-export abstract class Fileish {
+export interface ILoadable {
+  isLoaded: boolean
+  load: (fileContent: Opt<string>) => void
+  absPath: string
+  workspacePath: string
+  validationErrors: ValidationResponse
+}
+export abstract class Fileish implements ILoadable {
   private readonly _isLoaded = Quarx.observable.box(false)
   private readonly _exists = Quarx.observable.box(false)
   private readonly _parseError = Quarx.observable.box<Opt<ParseError>>(undefined)

@@ -4,6 +4,8 @@ import * as xpath from 'xpath-ts'
 import { PageNode } from './page'
 import { Factory } from './factory'
 import { ResourceNode } from './resource'
+import { BookNode } from './book'
+import { ILoadable } from './fileish'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -66,11 +68,13 @@ export type TocNode<T> = TocSubbook<T> | TocPage<T>
 export interface TocSubbook<T> { type: TocNodeKind.Subbook, readonly title: string, readonly children: Array<TocNode<T>> }
 export interface TocPage<T> { type: TocNodeKind.Page, readonly page: T }
 
-export interface Bundleish {
+export interface Bundleish extends ILoadable {
   allPages: Factory<PageNode>
   allResources: Factory<ResourceNode>
+  books: I.Set<BookNode>
   workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
+  exists: boolean
 }
 
 export enum PathKind {
