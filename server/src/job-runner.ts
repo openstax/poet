@@ -1,11 +1,13 @@
 import path from 'path'
-import { Fileish } from './model/fileish'
+import { ILoadable } from './model/fileish'
 import { expectValue, Opt, profileAsync } from './model/utils'
 
-export interface URIPair { workspace: string, doc: string }
+export class URIPair {
+  constructor(public workspace: string, public doc: string) { }
+}
 export interface Job {
   type: string
-  context: Fileish | URIPair
+  context: ILoadable | URIPair
   fn: () => Promise<any> | any
   slow?: boolean
 }
@@ -68,7 +70,7 @@ export class JobRunner {
     }
   }
 
-  toString(nodeOrString: Fileish | URIPair) {
-    if (nodeOrString instanceof Fileish) { return nodeOrString.workspacePath } else return path.relative(nodeOrString.workspace, nodeOrString.doc)
+  toString(nodeOrString: ILoadable | URIPair) {
+    if (nodeOrString instanceof URIPair) { return path.relative(nodeOrString.workspace, nodeOrString.doc) } else return nodeOrString.workspacePath
   }
 }

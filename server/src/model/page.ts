@@ -1,7 +1,7 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
 import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, TocNodeKind, Range } from './utils'
-import { Fileish, ValidationCheck } from './fileish'
+import { Fileish, ILoadable, ValidationCheck } from './fileish'
 import { ImageNode } from './image'
 import { TocNodeWithRange } from './book'
 
@@ -177,11 +177,11 @@ export class PageNode extends Fileish {
   protected getValidationChecks(): ValidationCheck[] {
     const imageLinks = this.imageLinks
     const pageLinks = this.pageLinks
-    const preloadTheBundle = this.bundle.isLoaded ? [] : [this.bundle as unknown as Fileish]
+    const preloadTheBundle = this.bundle.isLoaded ? [] : [this.bundle]
     return [
       {
         message: PageValidationKind.MISSING_INTRO,
-        nodesToLoad: I.Set<Fileish>(preloadTheBundle),
+        nodesToLoad: I.Set<ILoadable>(preloadTheBundle),
         fn: () => {
           // Find all the books this page is in
           // If it's the first page in a chapter then error (return the range) if this page does not have an introduction
