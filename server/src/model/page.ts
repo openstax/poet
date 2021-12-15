@@ -1,4 +1,4 @@
-import I, { hasIn } from 'immutable'
+import I from 'immutable'
 import * as Quarx from 'quarx'
 import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, TocNodeKind, Range } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
@@ -154,9 +154,9 @@ export class PageNode extends Fileish {
       }
     })))
 
-    const docRoot = selectOne('//cnxml:document', doc) as Element
+    const docRoot = selectOne('//cnxml:document', doc)
     const docClass = docRoot.getAttribute('class')
-    const hasIntroduction = docClass !== null && docClass.indexOf('introduction') >= 0
+    const hasIntroduction = docClass?.includes('introduction') ?? false
     const introRange = calculateElementPositions(docRoot)
     this._hasIntroduction.set({
       range: introRange,
@@ -177,10 +177,11 @@ export class PageNode extends Fileish {
   protected getValidationChecks(): ValidationCheck[] {
     const imageLinks = this.imageLinks
     const pageLinks = this.pageLinks
+    const preloadTheBundle = this.bundle.isLoaded ? [] : [this.bundle as unknown as Fileish]
     return [
       {
         message: PageValidationKind.MISSING_INTRO,
-        nodesToLoad: I.Set<Fileish>(),
+        nodesToLoad: I.Set<Fileish>(preloadTheBundle),
         fn: () => {
           // Find all the books this page is in
           // If it's the first page in a chapter then error (return the range) if this page does not have an introduction
@@ -202,9 +203,7 @@ export class PageNode extends Fileish {
             }
           }
 
-          if (this.bundle.isLoaded) {
-            this.bundle.books.forEach(b => b.toc.forEach(walker))
-          }
+          this.bundle.books.forEach(b => b.toc.forEach(walker))
 
           return ret
         }

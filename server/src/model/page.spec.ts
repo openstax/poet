@@ -1,7 +1,7 @@
 import expect from 'expect'
 import * as path from 'path'
 import { PageNode, PageValidationKind, UNTITLED_FILE } from './page'
-import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
+import { expectErrors, first, FS_PATH_HELPER, loadSuccess, makeBundle } from './util.spec'
 
 describe('Page', () => {
   let page = null as unknown as PageNode
@@ -72,7 +72,9 @@ ${i.extraCnxml}
 
 describe('Page validations', () => {
   it(PageValidationKind.MISSING_IMAGE, () => {
-    const bundle = makeBundle()
+    const bundle = loadSuccess(makeBundle())
+    loadSuccess(first(bundle.books))
+
     const page = bundle.allPages.getOrAdd('somepage/filename')
     const image = bundle.allImages.getOrAdd('someimage')
     const info = { imageHrefs: [path.relative(path.dirname(page.absPath), image.absPath)] }
@@ -88,7 +90,9 @@ describe('Page validations', () => {
     expect(page.validationErrors.errors.size).toBe(0)
   })
   it(PageValidationKind.MISSING_TARGET, () => {
-    const bundle = makeBundle()
+    const bundle = loadSuccess(makeBundle())
+    loadSuccess(first(bundle.books))
+
     const page = bundle.allPages.getOrAdd('modules/m123/index.cnxml')
     const target = bundle.allPages.getOrAdd('modules/m234/index.cnxml')
 
@@ -124,14 +128,18 @@ describe('Page validations', () => {
     expect(page.validationErrors.errors.size).toBe(0)
   })
   it(PageValidationKind.MALFORMED_UUID, () => {
-    const bundle = makeBundle()
+    const bundle = loadSuccess(makeBundle())
+    loadSuccess(first(bundle.books))
+
     const page = bundle.allPages.getOrAdd('somepage/filename')
     const info = { uuid: 'invalid-uuid-value' }
     page.load(pageMaker(info))
     expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MALFORMED_UUID)
   })
   it(PageValidationKind.DUPLICATE_UUID, () => {
-    const bundle = makeBundle()
+    const bundle = loadSuccess(makeBundle())
+    loadSuccess(first(bundle.books))
+
     const page1 = bundle.allPages.getOrAdd('somepage/filename')
     const page2 = bundle.allPages.getOrAdd('somepage2/filename2')
     const info = { /* defaults */ }
@@ -141,7 +149,8 @@ describe('Page validations', () => {
     expectErrors(page2, [PageValidationKind.DUPLICATE_UUID])
   })
   it('Reports multiple validation errors', () => {
-    const bundle = makeBundle()
+    const bundle = loadSuccess(makeBundle())
+    loadSuccess(first(bundle.books))
     const page = bundle.allPages.getOrAdd('somepage')
     page.load(pageMaker({ uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }] }))
     expectErrors(page, [PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET])
