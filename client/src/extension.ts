@@ -1,9 +1,11 @@
+import path from 'path'
+import fs from 'fs'
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { pushContent, tagContent } from './push-content'
 import { TocEditorPanel } from './panel-toc-editor'
 import { CnxmlPreviewPanel } from './panel-cnxml-preview'
-import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles } from './utils'
+import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles, getRootPathUri } from './utils'
 import { OpenstaxCommand } from './extension-types'
 import { ExtensionHostContext, Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
@@ -37,7 +39,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   expect(process.env.GITPOD_HOST != null && process.env.EDITOR?.includes('code') === false ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
 
   client = languageServerLauncher(context)
-  await populateXsdSchemaFiles(resourceRootDir)
+
+  // If this is not a book repo then don't bother writing the XSD files
+  const workspaceRoot = getRootPathUri()
+  if (workspaceRoot !== null && fs.existsSync(path.join(workspaceRoot.fsPath, 'META-INF/books.xml'))) {
+    await populateXsdSchemaFiles(resourceRootDir)
+  }
+
   await client.onReady()
 
   // It is a logic error for anything else to listen to this event from the client.
