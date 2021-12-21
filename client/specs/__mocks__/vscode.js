@@ -36,7 +36,12 @@ const window = {
 
 const workspace = {
   textDocuments: [],
-  getConfiguration: jest.fn(),
+  getConfiguration: jest.fn(() => ({
+    get: jest.fn((section, defaultValue) => defaultValue),
+    has: jest.fn(),
+    inspect: jest.fn(),
+    update: jest.fn()
+  })),
   workspaceFolders: [],
   createFileSystemWatcher: jest.fn(() => ({
     onDidCreate: jest.fn(),
@@ -132,6 +137,8 @@ const ViewColumn = {
     Nine: 9,
 }
 
+const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 }
+
 const vscode = {
   version: REQUIRED_VSCODE_VERSION,
   languages,
@@ -159,6 +166,7 @@ const vscode = {
   CodeActionKind,
   CallHierarchyItem,
   ThemeIcon,
+  ConfigurationTarget,
 };
 
 module.exports = { ...vscode, default: vscode };

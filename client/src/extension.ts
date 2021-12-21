@@ -5,7 +5,7 @@ import { LanguageClient } from 'vscode-languageclient/node'
 import { pushContent, tagContent } from './push-content'
 import { TocEditorPanel } from './panel-toc-editor'
 import { CnxmlPreviewPanel } from './panel-cnxml-preview'
-import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles, getRootPathUri } from './utils'
+import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles, getRootPathUri, configureWorkspaceSettings } from './utils'
 import { OpenstaxCommand } from './extension-types'
 import { ExtensionHostContext, Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
@@ -37,6 +37,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   // detect Theia. Alert the user if they are running Theia
   /* istanbul ignore next */
   expect(process.env.GITPOD_HOST != null && process.env.EDITOR?.includes('code') === false ? undefined : true, 'You seem to be running the Theia editor. Change your Settings in your profile')
+
+  await configureWorkspaceSettings()
 
   client = languageServerLauncher(context)
 

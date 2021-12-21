@@ -174,6 +174,7 @@ suite('Extension Test Suite', function (this: Suite) {
   })
   test('show cnxml preview with no file open', async () => {
     assert.strictEqual(vscode.window.activeTextEditor, undefined)
+    await sleep(500) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
     await withPanelFromCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, async (panel) => {
       assert(panel.webview.html.includes('No resource available to preview'))
     })
