@@ -17,6 +17,8 @@ For debugging, open the webview developer tools by opening the command pallete a
 
 ### Running Tests
 
+Many tests are written to run using the [jest](https://jestjs.io) test runner and can be debugged using the VSCode debugger. To enable this feature, follow the instructions to set the [Auto-Attach setting in VSCode](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_auto-attach) and then run `npm run test:unit` or `npm run test:unit:watch`.
+
 #### Client Tests
 
 The tests for client require running the `npm run build` script beforehand. The client tests can be run via command line as follows:
