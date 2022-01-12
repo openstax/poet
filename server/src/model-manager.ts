@@ -15,7 +15,7 @@ import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
 import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
-import { TocSubbookWithRange } from './model/book'
+import { BookNode, TocSubbookWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
 
@@ -419,6 +419,7 @@ export class ModelManager {
     ModelManager.debug('[MODIFY_TOC]', evt)
 
     const bookToc = this.bookTocs[evt.bookIndex]
+    const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
     const nodeAndParent = this.lookupToken(evt.nodeToken)
 
     if (nodeAndParent !== undefined) {
@@ -434,17 +435,17 @@ export class ModelManager {
           page.load(newXml) // Just speed up the process
         } else {
           node.value.title = evt.newTitle
-          await this.writeBookToc(bookToc)
+          await writeBookToc(book, bookToc)
         }
       } else if (evt.type === TocModificationKind.Remove) {
         removeNode(parent, node)
-        await this.writeBookToc(bookToc)
+        await writeBookToc(book, bookToc)
       } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
         removeNode(parent, node)
         // Add the node
         const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
         newParentChildren.splice(evt.newChildIndex, 0, node)
-        await this.writeBookToc(bookToc)
+        await writeBookToc(book, bookToc)
       }
     } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
       // We are manipulating an orphaned Page (probably moving it into the ToC of a book)
@@ -464,22 +465,13 @@ export class ModelManager {
         /* istanbul ignore next */
         const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
         newParentChildren.splice(evt.newChildIndex, 0, node)
-        await this.writeBookToc(bookToc)
+        await writeBookToc(book, bookToc)
       } else {
         throw new Error(`BUG: The orphaned item being dragged around was not a PageNode. nodeToken='${evt.nodeToken}' That is really unexpected. Maybe the client is stale?`)
       }
     } else {
       throw new Error(`BUG: The operation '${evt.type}' is not yet implemented for the orphaned item with nodeToken='${evt.nodeToken}'`)
     }
-  }
-
-  private async writeBookToc(bookToc: BookToc) {
-    const bookXmlStr = toString(bookToc)
-    const fsPath = URI.parse(bookToc.absPath).fsPath
-    const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
-    await fs.promises.writeFile(fsPath, bookXmlStr)
-    book.load(bookXmlStr) // Just speed up the process
-    return book
   }
 
   private recFind(token: Token, parent: ClientTocNode | BookToc, nodes: ClientTocNode[]): Opt<NodeAndParent> {
@@ -544,11 +536,12 @@ export class ModelManager {
       ModelManager.debug(`[NEW_PAGE] Created: ${pageUri.fsPath}`)
 
       const bookToc = this.bookTocs[bookIndex]
+      const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
       bookToc.tocTree.unshift({
         type: TocNodeKind.Page,
         value: { token: 'unused-when-writing', title: undefined, fileId: newModuleId, absPath: page.absPath }
       })
-      await this.writeBookToc(bookToc)
+      await writeBookToc(book, bookToc)
       ModelManager.debug(`[CREATE_PAGE] Prepended to Book: ${pageUri.fsPath}`)
       return { page, id: newModuleId }
     }
@@ -559,6 +552,7 @@ export class ModelManager {
   public async createSubbook(bookIndex: number, title: string) {
     ModelManager.debug(`[CREATE_SUBBOOK] Creating: ${title}`)
     const bookToc = this.bookTocs[bookIndex]
+    const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
     const tocNode: TocSubbook<ClientSubbookish, ClientPageish> = {
       type: TocNodeKind.Subbook,
       value: { title, token: 'unused-when-writing' },
@@ -566,11 +560,11 @@ export class ModelManager {
     }
     // Prepend new Subbook to top of Book so it is visible to the user
     bookToc.tocTree.unshift(tocNode)
-    await this.writeBookToc(bookToc)
+    await writeBookToc(book, bookToc)
   }
 }
 
-function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
+export function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
   if (parent.type === BookRootNode.Singleton) {
     const before = parent.tocTree.length
     parent.tocTree = parent.tocTree.filter(n => n !== node)
@@ -588,4 +582,12 @@ function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
   } else {
     throw new Error('BUG: Unreachable')
   }
+}
+
+export async function writeBookToc(book: BookNode, bookToc: BookToc) {
+  const bookXmlStr = toString(bookToc)
+  const fsPath = URI.parse(bookToc.absPath).fsPath
+  await fs.promises.writeFile(fsPath, bookXmlStr)
+  book.load(bookXmlStr) // Just speed up the process
+  return book
 }
