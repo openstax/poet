@@ -32,10 +32,24 @@ Validation responses can either be a set of Errors with source line information 
 
 # Demo commandline validator
 
-To show/verify that the model works outside the language server, there is a CLI script that can validate a book repository.
+To show/verify that the model works outside the language server, here are a couple useful CLI scripts:
+
+## Lint a book and find broken redirects
 
 To run it:
 
 ```bash
-npx ts-node@10.1.0 ./src/model/_cli.ts /path/to/book/repo /path/to/another/book/repo
+npx ts-node@10.1.0 ./src/model/_cli.ts lint /path/to/book/repo /path/to/another/book/repo
+```
+
+
+## Create a smaller book
+
+Specify which books and which items in the ToC to keep (chapters/Pages, 0-indexed) and this will delete unused images, pages, and books while keeping the repo valid.
+
+**Note:** If you specify a Page that links to another book, that Page will be included in the set of pages that are kept, even if it is in another book.
+
+```bash
+# Keep the Preface and Chapter 3 of precalc and the Chapter 10 Introduction in Algebra&Trig
+npx ts-node@10.1.0 ./src/model/_cli.ts shrink /path/to/osbooks-college-algebra-bundle precalculus-2e:0,3 algebra-and-trigonometry-2e:10.0
 ```
