@@ -177,8 +177,7 @@
   },
   "extensionDependencies": [
     "redhat.vscode-xml",
-    "vscode.git",
-    "cweijan.git-history-plus"
+    "vscode.git"
   ],
   "devDependencies": {
     "@babel/cli": "^7.12.10",
