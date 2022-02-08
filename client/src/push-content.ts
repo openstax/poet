@@ -106,6 +106,12 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
   }
 }
 
+type GitError = {
+  stdout: string | null,
+  gitErrorCode?: string,
+  message: string
+}
+
 export const _pushContent = (
   _getRepo: () => Repository,
   _getMessage: () => Thenable<string | undefined>,
@@ -123,10 +129,11 @@ export const _pushContent = (
   try {
     await repo.commit(commitMessage, commitOptions)
     commitSucceeded = true
-  } catch (e) {
+  } catch (err) {
+    const e = err as GitError
     /* istanbul ignore if */
     if (e.stdout == null) { throw e }
-    if ((e.stdout as string).includes('nothing to commit')) {
+    if (e.stdout.includes('nothing to commit')) {
       void errorReporter('No changes to push.')
     } else {
       const message: string = e.gitErrorCode === undefined ? e.message : /* istanbul ignore next */ e.gitErrorCode
@@ -145,7 +152,8 @@ export const _pushContent = (
         await repo.push('origin', branchName, true)
       }
       void infoReporter('Successful content push.')
-    } catch (e) {
+    } catch (err) {
+      const e = err as GitError
       /* istanbul ignore if */
       if (e.gitErrorCode == null) { throw e }
       if (e.gitErrorCode === GitErrorCodes.Conflict) {
@@ -178,7 +186,8 @@ export const tagContent = async (): Promise<void> => {
 
   try {
     await (repo as any)._repository.tag(tag) // when VSCode API is updated -> await repo.tag(tag)
-  } catch (e) {
+  } catch (err) {
+    const e = err as GitError
     const message: string = e.gitErrorCode === undefined ? e.message : /* istanbul ignore next */ e.gitErrorCode
     void vscode.window.showErrorMessage(`Tagging failed: ${message}`, { modal: false }) // ${String(e.stderr)}
     return
@@ -188,7 +197,8 @@ export const tagContent = async (): Promise<void> => {
   try {
     await repo.push('origin', tag)
     void vscode.window.showInformationMessage(`Successful tag for ${tagging}.`, { modal: false })
-  } catch (e) {
+  } catch (err) {
+    const e = err as GitError
     const message: string = e.gitErrorCode === undefined ? e.message : /* istanbul ignore next */ e.gitErrorCode
     void vscode.window.showErrorMessage(`Push failed: ${message}`, { modal: false })
   }
