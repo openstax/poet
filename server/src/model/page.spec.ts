@@ -85,6 +85,23 @@ describe('Page validations', () => {
     image.load('somebits')
     expect(page.validationErrors.errors.size).toBe(0)
   })
+  it(`${PageValidationKind.MISSING_RESOURCE} (iframe)`, () => {
+    const bundle = makeBundle()
+    const page = bundle.allPages.getOrAdd('somedir/filename.cnxml')
+    const missingIframe = bundle.allResources.getOrAdd('somedir/invalid-path-to-interactive')
+    missingIframe.load(undefined)
+    const info = {
+      extraCnxml: `
+        <iframe src="https://openstax.org"/>
+        <iframe src="http://openstax.org"/>
+        <iframe src="./invalid-path-to-interactive"/>
+    `
+    }
+    page.load(pageMaker(info))
+    // Expect exactly one validation error
+    expect(page.validationErrors.errors.size).toBe(1)
+    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MISSING_RESOURCE)
+  })
   it(PageValidationKind.MISSING_TARGET, () => {
     const bundle = makeBundle()
     const page = bundle.allPages.getOrAdd('modules/m123/index.cnxml')

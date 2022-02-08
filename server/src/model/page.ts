@@ -138,7 +138,7 @@ export class PageNode extends Fileish {
     }
 
     const imageNodes = select('//cnxml:image/@src', doc) as Attr[]
-    const iframeNodes = select('//cnxml:iframe/@src', doc) as Attr[]
+    const iframeNodes = select('//cnxml:iframe/@src[not(starts-with(., "https://") or starts-with(., "http://"))]', doc) as Attr[]
     const imageLinks = imageNodes.map(n => toResourceLink(ResourceLinkKind.Image, n))
     const iframeLinks = iframeNodes.map(n => toResourceLink(ResourceLinkKind.IFrame, n))
 
