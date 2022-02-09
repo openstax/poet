@@ -42,7 +42,7 @@ export const taggingDialog = async (): Promise<Tag | undefined> => {
   )
 
   if (tagMode === undefined) { return undefined }
-  return tagMode as Tag
+  return tagMode
 }
 
 export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Promise<string | undefined> => {
@@ -106,10 +106,9 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
   }
 }
 
-type GitError = {
-  stdout: string | null,
-  gitErrorCode?: string,
-  message: string
+interface GitError extends Error {
+  stdout: string | null
+  gitErrorCode?: string
 }
 
 export const _pushContent = (
@@ -159,7 +158,7 @@ export const _pushContent = (
       if (e.gitErrorCode === GitErrorCodes.Conflict) {
         void errorReporter('Content conflict, please resolve.')
       } else {
-        void errorReporter(`Push failed: ${e.message as string}`)
+        void errorReporter(`Push failed: ${e.message}`)
       }
     }
   }
