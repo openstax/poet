@@ -53,7 +53,8 @@
     "onCommand:openstax.showImageManager",
     "onCommand:openstax.pushContent",
     "onCommand:openstax.tagContent",
-    "onView:tocTrees"
+    "onView:tocTrees",
+    "onCommand:openstax.validateContent"
   ],
   "contributes": {
     "commands": [
@@ -83,6 +84,11 @@
         "title": "Toggle ToC Filtering",
         "category": "Openstax",
         "icon": "$(filter)"
+      },
+      {
+        "command": "openstax.validateContent",
+        "title": "Validate Content",
+        "category": "Openstax"
       }
     ],
     "viewsContainers": {
@@ -109,7 +115,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)\n[View Git History](command:git.viewHistory)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)\n[View Git History](command:git.viewHistory)\n[Validate Content](command:openstax.validateContent)"
       }
     ],
     "menus": {

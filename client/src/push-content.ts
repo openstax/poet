@@ -9,10 +9,171 @@ export enum Tag {
   candidate = 'Release Candidate'
 }
 
+export enum DocumentsToOpen {
+  all = 'All Content',
+  modified = 'Modified Content'
+}
+
 export const PushValidationModal = {
   cnxmlErrorMsg: 'There are outstanding validation errors that must be resolved before pushing is allowed.',
   xmlErrorMsg: 'There are outstanding schema errors. Are you sure you want to push these changes?',
   xmlErrorIgnoreItem: 'Yes, I know more than you'
+}
+
+export const getOpenDocuments = async (): Promise<Set<string>> => {
+  // People have asked for this for 6 years! https://github.com/Microsoft/vscode/issues/15178
+  const ret = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, cancellable: true },
+    async (progress, token) => {
+      progress.report({ message: 'Discovering open documents...' })
+      const openDocuments: Set<string> = new Set()
+      if (vscode.window.activeTextEditor !== undefined) {
+        const start = vscode.window.activeTextEditor.document.uri.toString()
+        let activeTextEditor: vscode.TextEditor | undefined
+        while (!openDocuments.has(start)) {
+          if (token.isCancellationRequested) {
+            return undefined
+          }
+          await vscode.commands.executeCommand('workbench.action.nextEditor')
+          activeTextEditor = vscode.window.activeTextEditor
+          if (activeTextEditor !== undefined) {
+            openDocuments.add(vscode.window.activeTextEditor.document.uri.toString())
+          }
+        }
+      }
+      return openDocuments
+    }
+  )
+  if (ret === undefined) throw new Error('Canceled')
+  return ret
+}
+
+export const getDocumentsToOpen = async (
+  checkType: DocumentsToOpen,
+  openDocuments: Set<string>
+): Promise<Set<string>> => {
+  const documentsToOpen: Set<string> = new Set()
+  let urisToAdd: string[] = []
+  if (checkType === DocumentsToOpen.modified) {
+    const repo = getRepo()
+    urisToAdd = (await repo.diffWithHEAD()).map(change => change.uri.toString())
+  } else if (checkType === DocumentsToOpen.all) {
+    // TODO: Maybe use extension host context here to get the modules instead of glob
+    urisToAdd = (await vscode.workspace.findFiles('**/*.cnxml')).map(uri => uri.toString())
+  }
+  for (const uri of urisToAdd) {
+    if (!openDocuments.has(uri)) {
+      documentsToOpen.add(uri)
+    }
+  }
+  return documentsToOpen
+}
+
+export const closeValid = async (
+  openedEditors: vscode.TextEditor[],
+  diagnostics: Array<[vscode.Uri, vscode.Diagnostic]>
+) => {
+  const urisWithErrors = new Set(diagnostics.map(t => t[0].toString()))
+  for (const editor of openedEditors) {
+    const editorUri = editor.document.uri
+    if (!urisWithErrors.has(editorUri.toString())) {
+      // Move to the editor with no errors and then close it
+      await vscode.window.showTextDocument(editorUri)
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor')
+    }
+  }
+}
+
+export const progressWithTimeEst = async<T>(
+  message: string,
+  task: (
+    progress: vscode.Progress<{ increment: number }>,
+    token: vscode.CancellationToken
+  ) => Thenable<T>
+) => {
+  const options = {
+    location: vscode.ProgressLocation.Notification,
+    cancellable: true
+  }
+  return await vscode.window.withProgress(options, async (progress, token) => {
+    const startTime = Date.now() - 1 // Prevent division by 0
+    let percentDone = 0
+    // Wrap the vscode progress report in a custom reporter that estimates remaining time
+    const customProgressReporter: vscode.Progress<{ increment: number }> = {
+      report: (value: { increment: number }) => {
+        percentDone += value.increment
+        if (percentDone > 0) {
+          const elapsedMS = Date.now() - startTime
+          const remainingMS = Math.ceil((100 - percentDone) / (percentDone / elapsedMS))
+          const remainingS = Math.floor(remainingMS / 1000) % 60
+          const remainingM = Math.floor(remainingMS / 1000 / 60)
+          progress.report({
+            message: `${message} (${remainingM}m${remainingS}s${remainingMS % 1000}ms remaining)`,
+            increment: value.increment
+          })
+        } else {
+          progress.report({ message: message })
+        }
+      }
+    }
+    return await task(customProgressReporter, token)
+  })
+}
+
+export const openAndValidate = async (checkType: DocumentsToOpen) => {
+  const openDocuments = await getOpenDocuments()
+  const documentsToOpen = await getDocumentsToOpen(checkType, openDocuments)
+  const flatten: <T>(arr: T[][]) => T[] = arr => {
+    const ret = []
+    for (const a of arr) {
+      ret.push(...a)
+    }
+    return ret
+  }
+  const ret = await progressWithTimeEst(
+    'Opening documents with errors...',
+    async (progress, token) => {
+      const openedEditors: vscode.TextEditor[] = []
+      const increment = 1 / documentsToOpen.size * 100
+      const waitTime = 5000
+      let lastIteration = Date.now()
+      progress.report({ increment: 0 })
+      for (const uri of documentsToOpen) {
+        if (token.isCancellationRequested) {
+          return undefined
+        }
+        openedEditors.push(
+          await vscode.window.showTextDocument(vscode.Uri.parse(uri), { preview: false })
+        )
+        if (Date.now() - lastIteration >= waitTime) {
+          const diagnostics = flatten([...getErrorDiagnosticsBySource().values()])
+          await closeValid(openedEditors, diagnostics)
+          progress.report({ increment: increment * openedEditors.length })
+          openedEditors.splice(0) // Clear the array
+          lastIteration = Date.now()
+        }
+      }
+      const errorsBySource = getErrorDiagnosticsBySource()
+      if (openedEditors.length > 0) {
+        await closeValid(openedEditors, flatten([...errorsBySource.values()]))
+      }
+      return errorsBySource
+    }
+  )
+  if (ret === undefined) throw new Error('Canceled')
+  return ret
+}
+
+export const validateContent = async () => {
+  const type = await vscode.window.showInformationMessage(
+    'Validate all content, or just modified content?',
+    { modal: true },
+    DocumentsToOpen.all,
+    DocumentsToOpen.modified
+  )
+  if (type !== undefined) {
+    await openAndValidate(type as DocumentsToOpen)
+  }
 }
 
 export const canPush = async (errorsBySource: Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>): Promise<boolean> => {
@@ -42,7 +203,7 @@ export const taggingDialog = async (): Promise<Tag | undefined> => {
   )
 
   if (tagMode === undefined) { return undefined }
-  return tagMode
+  return tagMode as Tag
 }
 
 export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Promise<string | undefined> => {
@@ -82,7 +243,8 @@ export const getMessage = async (): Promise<string | undefined> => {
 }
 
 export const pushContent = (hostContext: ExtensionHostContext) => async () => {
-  if (await canPush(getErrorDiagnosticsBySource())) {
+  const errorsBySource = await openAndValidate(DocumentsToOpen.modified)
+  if (await canPush(errorsBySource)) {
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Push Content',
