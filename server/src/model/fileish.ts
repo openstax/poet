@@ -88,7 +88,8 @@ export abstract class Fileish {
         } else {
           try {
             fn()
-          } catch (e) {
+          } catch (err) {
+            const e = err as Error
             this._parseError.set(new WrappedParseError(this, e))
           }
         }

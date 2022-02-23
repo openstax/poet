@@ -32,9 +32,10 @@ export async function run(): Promise<void> {
           }
         })
       } catch (err) {
-        console.error(err)
-        console.error('errorstack', err.stack)
-        reject(err)
+        const e = err as Error
+        console.error(e)
+        console.error('errorstack', e.stack)
+        reject(e)
       }
     })
   }).finally(() => {
