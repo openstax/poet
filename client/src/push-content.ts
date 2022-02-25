@@ -30,6 +30,7 @@ export const getOpenDocuments = async (): Promise<Set<string>> => {
       if (vscode.window.activeTextEditor !== undefined) {
         const start = vscode.window.activeTextEditor.document.uri.toString()
         let activeTextEditor: vscode.TextEditor | undefined
+        // Potential for infinite loop if someone closes the editor they started on
         while (!openDocuments.has(start)) {
           if (token.isCancellationRequested) {
             return undefined
@@ -58,7 +59,7 @@ export const getDocumentsToOpen = async (
     const repo = getRepo()
     urisToAdd = (await repo.diffWithHEAD()).map(change => change.uri.toString())
   } else if (checkType === DocumentsToOpen.all) {
-    // TODO: Maybe use extension host context here to get the modules instead of glob
+    // TODO: Consider using extension host context here to get the modules instead of glob
     urisToAdd = (await vscode.workspace.findFiles('**/*.cnxml')).map(uri => uri.toString())
   }
   for (const uri of urisToAdd) {
@@ -69,11 +70,14 @@ export const getDocumentsToOpen = async (
   return documentsToOpen
 }
 
-export const closeValid = async (
+export const closeValidDocuments = async (
   openedEditors: vscode.TextEditor[],
-  diagnostics: Array<[vscode.Uri, vscode.Diagnostic]>
+  errorsBySource: Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>
 ) => {
-  const urisWithErrors = new Set(diagnostics.map(t => t[0].toString()))
+  const urisWithErrors: Set<string> = new Set()
+  for (const errors of errorsBySource.values()) {
+    errors.forEach(e => urisWithErrors.add(e[0].toString()))
+  }
   for (const editor of openedEditors) {
     const editorUri = editor.document.uri
     if (!urisWithErrors.has(editorUri.toString())) {
@@ -120,15 +124,18 @@ export const progressWithTimeEst = async<T>(
   })
 }
 
+export const sleep = async (milliseconds: number) => {
+  await new Promise((resolve, reject) => setTimeout(resolve, milliseconds))
+}
+
 export const openAndValidate = async (checkType: DocumentsToOpen) => {
   const openDocuments = await getOpenDocuments()
   const documentsToOpen = await getDocumentsToOpen(checkType, openDocuments)
-  const flatten: <T>(arr: T[][]) => T[] = arr => {
-    const ret = []
-    for (const a of arr) {
-      ret.push(...a)
-    }
-    return ret
+  // When you open an editor, it can take some time for error diagnostics to be reported.
+  // Give the language server a second to report errors.
+  const getDelayedDiagnostics = async () => {
+    await sleep(1000)
+    return getErrorDiagnosticsBySource()
   }
   const ret = await progressWithTimeEst(
     'Opening documents with errors...',
@@ -146,16 +153,15 @@ export const openAndValidate = async (checkType: DocumentsToOpen) => {
           await vscode.window.showTextDocument(vscode.Uri.parse(uri), { preview: false })
         )
         if (Date.now() - lastIteration >= waitTime) {
-          const diagnostics = flatten([...getErrorDiagnosticsBySource().values()])
-          await closeValid(openedEditors, diagnostics)
+          await closeValidDocuments(openedEditors, await getDelayedDiagnostics())
           progress.report({ increment: increment * openedEditors.length })
           openedEditors.splice(0) // Clear the array
           lastIteration = Date.now()
         }
       }
-      const errorsBySource = getErrorDiagnosticsBySource()
+      const errorsBySource = await getDelayedDiagnostics()
       if (openedEditors.length > 0) {
-        await closeValid(openedEditors, flatten([...errorsBySource.values()]))
+        await closeValidDocuments(openedEditors, errorsBySource)
       }
       return errorsBySource
     }

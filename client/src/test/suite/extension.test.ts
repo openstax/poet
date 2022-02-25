@@ -11,7 +11,6 @@ import { ImageManagerPanel } from './../../panel-image-manager'
 import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
 import { OpenstaxCommand } from '../../extension-types'
 import * as pushContent from '../../push-content'
-import * as utils from '../../utils'
 import { Suite } from 'mocha'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { Substitute } from '@fluffy-spoon/substitute'
@@ -1110,7 +1109,7 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert.strictEqual(openDocuments.size, 3)
     assert.strictEqual(executeCommandStub.callCount, 3)
   })
-  test('getOpenDocuments and openAndValidate canceled', async () => {
+  test('getOpenDocuments or openAndValidate canceled', async () => {
     const activeTextEditorStub = sinon.stub(vscode.window, 'activeTextEditor')
     const executeCommandStub = sinon.stub(vscode.commands, 'executeCommand')
     const withProgressStub = sinon.stub(vscode.window, 'withProgress')
@@ -1162,7 +1161,7 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert.notStrictEqual(error, undefined)
     assert.strictEqual(error?.message, 'Canceled')
   })
-  test('openAndValidate integration', async () => {
+  test('openAndValidate integration test', async () => {
     const dateNowStub = sinon.stub(Date, 'now')
     const withProgressStub = sinon.stub(vscode.window, 'withProgress')
     const getOpenDocumentsStub = sinon.stub(pushContent, 'getOpenDocuments')
@@ -1175,9 +1174,11 @@ suite('Push Button Test Suite', function (this: Suite) {
       })
     const executeCommandStub = sinon.stub(vscode.commands, 'executeCommand').resolves()
     const filesToReturn = [vscode.Uri.file('/a'), vscode.Uri.file('/b'), vscode.Uri.file('/c')]
-    let lastTime = 0
+    let dateNowCallCount = 0
     let progressReportCount = 0
-    dateNowStub.callsFake(() => lastTime++ * 10000)
+    sinon.stub(pushContent, 'sleep').resolves()
+    // Cover situations that take more than 10 seconds
+    dateNowStub.callsFake(() => dateNowCallCount++ * 10000)
     getOpenDocumentsStub.resolves(new Set())
     getDocumentsToOpenStub.resolves(new Set(filesToReturn.map(uri => uri.toString())))
     withProgressStub.callsFake((
@@ -1225,18 +1226,19 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert.strictEqual(progressReportCount, 4) // 1 extra call to get the progress bar spinning
     getOpenDocumentsStub.resetHistory()
     executeCommandStub.resetHistory()
-    dateNowStub.resetHistory()
     withProgressStub.resetHistory()
     showTextDocumentStub.resetHistory()
     progressReportCount = 0
+    dateNowStub.reset()
 
     // Test for cases where errors appear (when documents should not be closed)
-    const getErrorDiagnosticsBySourceStub = sinon.stub(utils, 'getErrorDiagnosticsBySource')
-    getErrorDiagnosticsBySourceStub.returns((() => {
-      const errorsBySource = new Map()
-      errorsBySource.set('xml', [[filesToReturn[0], ['totally a real error']]])
-      return errorsBySource
-    })())
+    const file1Diag1 = { severity: vscode.DiagnosticSeverity.Error, source: 'source1' } as any as vscode.Diagnostic
+    const testDiagnostics: Array<[vscode.Uri, vscode.Diagnostic[]]> = [
+      [filesToReturn[0], [file1Diag1]]
+    ]
+    // Cover situations that take a very small amount of time
+    dateNowStub.callThrough()
+    sinon.stub(vscode.languages, 'getDiagnostics').returns(testDiagnostics)
     errors = await pushContent.openAndValidate(pushContent.DocumentsToOpen.all)
     assert.strictEqual([...errors.values()].flat().length, 1)
     filesToReturn.forEach(uri => {
@@ -1245,8 +1247,8 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert(getOpenDocumentsStub.called)
     assert(executeCommandStub.calledWith('workbench.action.closeActiveEditor'))
     assert.strictEqual(executeCommandStub.callCount, 2) // Close two documents with no errors
-    assert.strictEqual(dateNowStub.callCount, 11)
+    assert.strictEqual(dateNowStub.callCount, 5)
     assert.strictEqual(withProgressStub.callCount, 1)
-    assert.strictEqual(progressReportCount, 4) // 1 extra call to get the progress bar spinning
+    assert.strictEqual(progressReportCount, 1) // Just the 1 to get the progress bar spinning
   })
 })
