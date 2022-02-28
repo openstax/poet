@@ -109,7 +109,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)\n[View Git History](command:git.viewHistory)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)"
       }
     ],
     "menus": {
@@ -177,8 +177,7 @@
   },
   "extensionDependencies": [
     "redhat.vscode-xml",
-    "vscode.git",
-    "cweijan.git-history-plus"
+    "vscode.git"
   ],
   "devDependencies": {
     "@babel/cli": "^7.17.0",
