@@ -525,14 +525,6 @@ suite('Extension Test Suite', function (this: Suite) {
     errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
     assert(!(await pushContent.canPush(errorsBySource)))
     assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
-
-    // XML errors, user overrides
-    errorsBySource.clear()
-    showErrorMsgStub.reset()
-    showErrorMsgStub.returns(Promise.resolve(pushContent.PushValidationModal.xmlErrorIgnoreItem as any as vscode.MessageItem))
-    errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
-    assert(await pushContent.canPush(errorsBySource))
-    assert(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true }))
   })
   test('forwardOnDidChangeWorkspaceFolders simply forwards any argument to client', async () => {
     const mockClient = createMockClient()

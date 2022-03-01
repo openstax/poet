@@ -16,8 +16,7 @@ export enum DocumentsToOpen {
 
 export const PushValidationModal = {
   cnxmlErrorMsg: 'There are outstanding validation errors that must be resolved before pushing is allowed.',
-  xmlErrorMsg: 'There are outstanding schema errors. Are you sure you want to push these changes?',
-  xmlErrorIgnoreItem: 'Yes, I know more than you'
+  xmlErrorMsg: 'There are outstanding schema errors that must be resolved before pushing is allowed.'
 }
 
 export const getOpenDocuments = async (): Promise<Set<string>> => {
@@ -188,8 +187,8 @@ export const canPush = async (errorsBySource: Map<string, Array<[vscode.Uri, vsc
     return false
   }
   if (errorsBySource.has(DiagnosticSource.xml)) {
-    const selectedItem = await vscode.window.showErrorMessage(PushValidationModal.xmlErrorMsg, { modal: true }, PushValidationModal.xmlErrorIgnoreItem)
-    return selectedItem === PushValidationModal.xmlErrorIgnoreItem
+    await vscode.window.showErrorMessage(PushValidationModal.xmlErrorMsg, { modal: true })
+    return false
   }
   return true
 }
