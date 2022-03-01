@@ -845,76 +845,44 @@ suite('Push Button Test Suite', function (this: Suite) {
   test('validateMessage returns null for message that is long enough', async () => {
     assert.strictEqual(pushContent.validateMessage('abc'), null)
   })
-  test('taggingDialog', async () => {
-    const mockDialog = sinon.stub(vscode.window, 'showInformationMessage')
-    mockDialog.resolves(undefined)
-    assert.strictEqual(await pushContent.taggingDialog(), undefined)
-    mockDialog.resolves(pushContent.Tag.release as any as vscode.MessageItem)
-    assert.strictEqual(await pushContent.taggingDialog(), pushContent.Tag.release)
-    mockDialog.resolves(pushContent.Tag.candidate as any as vscode.MessageItem)
-    assert.strictEqual(await pushContent.taggingDialog(), pushContent.Tag.candidate)
-  })
   test('getNewTag', async () => {
     const repoState = {
       refs: [{
         name: 'main',
         type: RefType.Head,
-        commit: 'a'
+        commit: '0123456789'
       }]
     } as any as RepositoryState
     const mockRepo = {
       state: repoState
     } as any as Repository
     const mockHead = {
-      commit: 'a'
+      commit: '0123456789'
     } as any as Branch
 
-    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
-
-    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), '1rc')
+    // getNewTag should return the first 7 characters of the commit sha
+    assert.strictEqual(pushContent.getNewTag(mockRepo, mockHead), '0123456')
     mockRepo.state.refs.push({
-      name: '1rc',
+      name: '0123456',
       type: RefType.Tag,
-      commit: 'b'
+      commit: '0123456789'
     })
 
-    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), '2rc')
-    mockRepo.state.refs.push({
-      name: '2rc',
-      type: RefType.Tag,
-      commit: 'a'
-    })
-    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead), undefined)
-    assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', { modal: false }))
-    showErrorMsgStub.reset()
+    // test for no commits
+    assert.throws(() => pushContent.getNewTag(
+      mockRepo,
+      { commit: undefined } as any as Branch
+    ))
 
-    mockRepo.state.refs.length = 0
-    mockRepo.state.refs.push({
-      name: 'main',
-      type: RefType.Head,
-      commit: 'a'
-    })
-
-    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), '1')
-    mockRepo.state.refs.push({
-      name: '1',
-      type: RefType.Tag,
-      commit: 'b'
-    })
-
-    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), '2')
-    mockRepo.state.refs.push({
-      name: '2',
-      type: RefType.Tag,
-      commit: 'a'
-    })
-    assert.strictEqual(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead), undefined)
-    assert(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', { modal: false }))
+    // test for existing tag
+    assert.throws(() => pushContent.getNewTag(
+      mockRepo,
+      mockHead
+    ))
   })
   test('tagContent', async () => {
     const showInfoMsgStub = sinon.stub(vscode.window, 'showInformationMessage')
     const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
-    const taggingDialogStub = sinon.stub(pushContent, 'taggingDialog')
     const getNewTagStub = sinon.stub(pushContent, 'getNewTag')
     const diffWithHEADStub = sinon.stub()
     const tagStub = sinon.stub()
@@ -947,34 +915,16 @@ suite('Push Button Test Suite', function (this: Suite) {
     fetchStub.reset()
     showErrorMsgStub.reset()
 
-    // test for canceled tagging
-    taggingDialogStub.resolves(undefined)
-    await pushContent.tagContent()
-    assert(fetchStub.calledOnce)
-    assert(getNewTagStub.notCalled)
-    assert(tagStub.notCalled)
-    fetchStub.reset()
-
-    // test for existing tag
     diffWithHEADStub.resolves([])
-    taggingDialogStub.resolves(pushContent.Tag.candidate)
-    getNewTagStub.resolves(undefined)
-    await pushContent.tagContent()
-    assert(fetchStub.calledOnce)
-    assert(getNewTagStub.calledOnce)
-    assert(tagStub.notCalled)
-    fetchStub.reset()
-    getNewTagStub.reset()
 
     // test for valid tag
-    taggingDialogStub.resolves(pushContent.Tag.candidate)
     getNewTagStub.resolves('1rc')
     await pushContent.tagContent()
     assert(fetchStub.calledOnce)
     assert(getNewTagStub.calledOnce)
     assert(tagStub.calledOnce)
     assert(pushStub.calledOnce)
-    assert(showInfoMsgStub.calledOnceWith('Successful tag for Release Candidate.', { modal: false }))
+    assert(showInfoMsgStub.calledOnceWith('Successfully queued CORGI job.', { modal: false }))
     fetchStub.reset()
     getNewTagStub.reset()
     tagStub.reset()
@@ -984,8 +934,6 @@ suite('Push Button Test Suite', function (this: Suite) {
 
     // test for unknown tag error message
     tagStub.throws()
-    taggingDialogStub.resolves(pushContent.Tag.candidate)
-    getNewTagStub.resolves('1rc')
     await pushContent.tagContent()
     assert(showErrorMsgStub.calledOnceWith('Tagging failed: Error', { modal: false }))
     fetchStub.reset()
@@ -998,10 +946,9 @@ suite('Push Button Test Suite', function (this: Suite) {
     // test for unknown push error message
     tagStub.resolves()
     pushStub.throws()
-    taggingDialogStub.resolves(pushContent.Tag.candidate)
     getNewTagStub.resolves('1rc')
     await pushContent.tagContent()
-    assert(showErrorMsgStub.calledOnceWith('Push failed: Error', { modal: false }))
+    assert(showErrorMsgStub.calledOnceWith('Failed to queue CORGI job: Error', { modal: false }))
     fetchStub.reset()
     getNewTagStub.reset()
     tagStub.reset()

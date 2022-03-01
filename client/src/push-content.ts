@@ -4,11 +4,6 @@ import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref } 
 import { ExtensionHostContext } from './panel'
 import { DiagnosticSource, requestEnsureIds } from '../../common/src/requests'
 
-export enum Tag {
-  release = 'Release',
-  candidate = 'Release Candidate'
-}
-
 export const PushValidationModal = {
   cnxmlErrorMsg: 'There are outstanding validation errors that must be resolved before pushing is allowed.',
   xmlErrorMsg: 'There are outstanding schema errors that must be resolved before pushing is allowed.'
@@ -33,38 +28,18 @@ export const getRepo = (): Repository => {
   return result
 }
 
-export const taggingDialog = async (): Promise<Tag | undefined> => {
-  const tagMode = await vscode.window.showInformationMessage(
-    'Tag for release candidate or release?',
-    { modal: true },
-    ...[Tag.release, Tag.candidate]
-  )
-
-  if (tagMode === undefined) { return undefined }
-  return tagMode
-}
-
-export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Promise<string | undefined> => {
-  const tags: number[] = []
-  const release = tagMode === Tag.release
-  const regex = release ? /^\d+$/ : /^\d+rc$/
-
-  const validTags = repo.state.refs.filter((ref, i) => {
-    return (ref.type === RefType.Tag && regex.test(ref.name as string))
-  })
-
-  for (const ref of validTags) {
-    if (ref.commit === head.commit) {
-      void vscode.window.showErrorMessage('Tag of this type already exists for this content version.', { modal: false })
-      return undefined
-    }
-
-    const versionNumberString = expect(ref.name, '').replace('rc', '')
-    tags.push(Number(versionNumberString))
+export const getNewTag = (repo: Repository, head: Ref): string => {
+  const shortSha = head.commit?.slice(0, 7)
+  if (shortSha === undefined) {
+    throw new Error('Could not get commit at head.')
   }
-
-  const previousVersion = tags.length > 0 ? Math.max(...tags) : 0
-  return `${previousVersion + 1}${release ? '' : 'rc'}`
+  const repeatCount = repo.state.refs.filter((ref, _) => {
+    return (ref.type === RefType.Tag && ref.commit === head.commit)
+  }).length
+  if (repeatCount > 0) {
+    throw new Error('A build already exists for this content version.')
+  }
+  return shortSha
 }
 
 export const validateMessage = (message: string): string | null => {
@@ -166,6 +141,7 @@ export const _pushContent = (
 export const tagContent = async (): Promise<void> => {
   const repo = getRepo()
   const head = expect(repo.state.HEAD, 'This does not appear to be a git repository. Create one first')
+  let tag: string
   expect(head.name, 'You do not appear to have a branch checked out. Maybe you checked out a commit or are in the middle of rebasing?')
   await repo.fetch()
 
@@ -174,15 +150,8 @@ export const tagContent = async (): Promise<void> => {
     return
   }
 
-  const tagging = await taggingDialog()
-  /* istanbul ignore if */
-  if (tagging === undefined) { return }
-
-  const tag = await getNewTag(repo, tagging, head)
-
-  if (tag === undefined) { return }
-
   try {
+    tag = getNewTag(repo, head)
     await (repo as any)._repository.tag(tag) // when VSCode API is updated -> await repo.tag(tag)
   } catch (err) {
     const e = err as GitError
@@ -194,10 +163,10 @@ export const tagContent = async (): Promise<void> => {
   // push
   try {
     await repo.push('origin', tag)
-    void vscode.window.showInformationMessage(`Successful tag for ${tagging}.`, { modal: false })
+    void vscode.window.showInformationMessage('Successfully queued CORGI job.', { modal: false })
   } catch (err) {
     const e = err as GitError
     const message: string = e.gitErrorCode === undefined ? e.message : /* istanbul ignore next */ e.gitErrorCode
-    void vscode.window.showErrorMessage(`Push failed: ${message}`, { modal: false })
+    void vscode.window.showErrorMessage(`Failed to queue CORGI job: ${message}`, { modal: false })
   }
 }
