@@ -173,8 +173,8 @@ export const validateContent = async () => {
   const type = await vscode.window.showInformationMessage(
     'Validate all content, or just modified content?',
     { modal: true },
-    DocumentsToOpen.all,
-    DocumentsToOpen.modified
+    DocumentsToOpen.modified,
+    DocumentsToOpen.all
   )
   if (type !== undefined) {
     await openAndValidate(type as DocumentsToOpen)
