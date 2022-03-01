@@ -177,7 +177,7 @@ export const validateContent = async () => {
     DocumentsToOpen.all
   )
   if (type !== undefined) {
-    await openAndValidate(type as DocumentsToOpen)
+    await openAndValidate(type)
   }
 }
 
@@ -208,7 +208,7 @@ export const taggingDialog = async (): Promise<Tag | undefined> => {
   )
 
   if (tagMode === undefined) { return undefined }
-  return tagMode as Tag
+  return tagMode
 }
 
 export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Promise<string | undefined> => {
