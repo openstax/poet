@@ -123,6 +123,7 @@ export const progressWithTimeEst = async<T>(
   })
 }
 
+/* istanbul ignore next */
 export const sleep = async (milliseconds: number) => {
   await new Promise((resolve, reject) => setTimeout(resolve, milliseconds))
 }
