@@ -58,8 +58,8 @@ export const getDocumentsToOpen = async (
     const repo = getRepo()
     urisToAdd = (await repo.diffWithHEAD()).map(change => change.uri.toString())
   } else if (checkType === DocumentsToOpen.all) {
-    // TODO: Consider using extension host context here to get the modules instead of glob
-    urisToAdd = (await vscode.workspace.findFiles('**/*.cnxml')).map(uri => uri.toString())
+    // Open all *.*x*ml (could be xml, cnxml, xhtml, etc.)
+    urisToAdd = (await vscode.workspace.findFiles('**/*.*x*ml')).map(uri => uri.toString())
   }
   for (const uri of urisToAdd) {
     if (!openDocuments.has(uri)) {
