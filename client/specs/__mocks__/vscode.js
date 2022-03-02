@@ -32,6 +32,9 @@ const window = {
     }
   })),
   showInputBox: jest.fn(() => Promise.resolve()),
+  activeTextEditor: undefined,
+  withProgress: jest.fn(),
+  showTextDocument: jest.fn()
 };
 
 const workspace = {
@@ -55,6 +58,7 @@ const workspace = {
   onWillSaveTextDocument: jest.fn(),
   onDidCloseTextDocument: jest.fn(),
   onDidSaveTextDocument: jest.fn(),
+  findFiles: jest.fn(),
 };
 
 const extensions = {
@@ -139,6 +143,24 @@ const ViewColumn = {
 
 const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 }
 
+const ProgressLocation = {
+  /**
+   * Show progress for the source control viewlet, as overlay for the icon and as progress bar
+   * inside the viewlet (when visible). Neither supports cancellation nor discrete progress.
+   */
+  SourceControl: 1,
+
+  /**
+   * Show progress in the status bar of the editor. Neither supports cancellation nor discrete progress.
+   */
+  Window: 10,
+
+  /**
+   * Show progress as notification with an optional cancel button. Supports to show infinite and discrete progress.
+   */
+  Notification: 15
+}
+
 const vscode = {
   version: REQUIRED_VSCODE_VERSION,
   languages,
@@ -167,6 +189,7 @@ const vscode = {
   CallHierarchyItem,
   ThemeIcon,
   ConfigurationTarget,
+  ProgressLocation,
 };
 
 module.exports = { ...vscode, default: vscode };
