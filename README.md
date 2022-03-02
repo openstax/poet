@@ -178,43 +178,26 @@ end
 
 ## Editing Files and Interaction
 
+The Language Server directs all updates. VSCode even sends updates to files before they are saved so the Language Server can react to individual keystrokes. [Quarx](https://github.com/dmaevsky/quarx) is used to detect when models have changed.
+
 ```mermaid
 sequenceDiagram
 
 actor User
-participant FS as File System
+participant VSCode
 participant Server as Language Server
+participant Quarx
 participant Host as LSP Client/Extension Host
 participant Consumer as Webview/Treeview
 
-alt via full-source editor, other extension, or direct fs action
-User->>FS: modifies watched file
-else via POET webview
-User->>Consumer: interacts
-activate Consumer
-Consumer->>Host: request action
-deactivate Consumer
-activate Host
-Host->>FS: modifies watched file
-deactivate Host
-end
-activate FS
-FS->>Host: forward
-deactivate FS
-activate Host
-Host->>Server: forward
-activate Server
-note over Server: async validation for each affected bundle item
-deactivate Server
-Host->>Consumer: suggest refresh
-deactivate Host
-activate Consumer
-Consumer->>Host: request non-stale data
-deactivate Consumer
-activate Host
-note over Host: bundle info request
-Host->>Consumer: post fresh data
-deactivate Host
+User-->>VSCode: modifies watched file
+VSCode-->>Server: Sends document update
+Server-->>Server: Updates Model
+note over Quarx: Notices Model Changed
+Quarx-->>Host: Send updated BooksAndOrphans message
+Host-->>Consumer: Sends BooksAndOrphans message
+Consumer-->>Consumer: Updates webview panel
+Server-->>Host: Sends Diagnostic message with validation errors for the updated file
 ```
 
 # Generating XSD schema files
