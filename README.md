@@ -8,8 +8,6 @@
 Table of Contents
 =================
 
-* [VSCode Extension to edit textbooks <a href="https://gitpod.io/from-referrer/" rel="nofollow">in gitpod</a>](#vscode-extension-to-edit-textbooks-in-gitpod)
-* [Table of Contents](#table-of-contents)
 * [Development](#development)
    * [Setup](#setup)
    * [Tests](#tests)
@@ -19,8 +17,12 @@ Table of Contents
       * [Debugging JavaScript in Webviews](#debugging-javascript-in-webviews)
       * [Debugging Unit Tests](#debugging-unit-tests)
 * [Publishing](#publishing)
-   * [How to create the .vsix extension locally](#how-to-create-the-vsix-extension-locally)
-   * [Generating XSD schema files](#generating-xsd-schema-files)
+   * [Local .vsix](#local-vsix)
+* [Design](#design)
+   * [Extension Activation](#extension-activation)
+   * [Opening a Webview](#opening-a-webview)
+   * [Editing Files and Interaction](#editing-files-and-interaction)
+* [Generating XSD schema files](#generating-xsd-schema-files)
 
 
 # Development
@@ -76,12 +78,12 @@ The unit tests can be debugged using the VSCode debugger. There are 2 ways to ru
 
 # Publishing
 
-We rely on [This Concourse Pipeline](https://github.com/openstax/concourse-pipelines/tree/master/release-poet) to publish a new version to the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=openstax.editor) and [OpenVSX.org marketplace](https://open-vsx.org/extension/openstax/editor) whenever a new tag is created on this repo.
+We rely on [this Concourse pipeline](https://github.com/openstax/concourse-pipelines/tree/master/release-poet) to publish a new version to the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=openstax.editor) and [OpenVSX.org marketplace](https://open-vsx.org/extension/openstax/editor) whenever a new tag is created on this repo.
 
 The Major version will _eventually_ track the repo schema verion that is supported so try to bump minor/patch versions.
 
 
-## How to create the .vsix extension locally
+## Local .vsix
 
 Update the version in `package.json` if desired (e.g. to associate with an issue, `0.0.0-dev-cnx1234`). Then:
 
@@ -90,7 +92,132 @@ npm run build:production
 npm run package
 ```
 
-## Generating XSD schema files
+# Design
+
+## Extension Activation
+
+```mermaid
+sequenceDiagram
+
+actor User
+participant FS as File System
+participant Server as Language Server
+participant Host as LSP Client/Extension Host
+
+User->>Host: activate extension
+activate Host
+Host->>Server:init
+activate Server
+Server->>FS: list bundle items
+activate FS
+FS-->>Server: bundle items
+deactivate FS
+Server-->>Host: ready
+deactivate Host
+
+loop async validation for each bundle item
+opt if not cached
+Server->>FS: get bundle item contents
+activate FS
+FS-->>Server: bundle item contents
+deactivate FS
+end
+note over Server: validate and cache
+Server->>Host: validation diagnostics
+deactivate Server
+end
+```
+
+## Opening a Webview
+
+```mermaid
+sequenceDiagram
+
+actor User
+participant FS as File System
+participant Server as Language Server
+participant Host as LSP Client/Extension Host
+participant Consumer as Webview/Treeview
+
+User->>Host: open webview/treeview
+activate Host
+alt handshake
+Host->>Consumer: create
+activate Consumer
+Host->Consumer: send html
+Consumer->>Host: loaded, request initial data
+deactivate Consumer
+Host->>Server: bundle info request
+opt if not cached
+Server->>FS: get bundle item contents
+activate FS
+FS-->>Server: bundle item contents
+deactivate FS
+end
+Server-->>Host: bundle info
+Host->>Consumer: initial data
+else injection
+Host->>Consumer: create
+activate Consumer
+opt
+Host->>Consumer: send html with loading message
+end
+Host->>Server: bundle info request
+opt if not cached
+Server->>FS: get bundle item contents
+activate FS
+FS-->>Server: bundle item contents
+deactivate FS
+end
+Server-->>Host: bundle info
+Host->>Consumer: send html with injected initial data
+deactivate Host
+deactivate Consumer
+end
+```
+
+## Editing Files and Interaction
+
+```mermaid
+sequenceDiagram
+
+actor User
+participant FS as File System
+participant Server as Language Server
+participant Host as LSP Client/Extension Host
+participant Consumer as Webview/Treeview
+
+alt via full-source editor, other extension, or direct fs action
+User->>FS: modifies watched file
+else via POET webview
+User->>Consumer: interacts
+activate Consumer
+Consumer->>Host: request action
+deactivate Consumer
+activate Host
+Host->>FS: modifies watched file
+deactivate Host
+end
+activate FS
+FS->>Host: forward
+deactivate FS
+activate Host
+Host->>Server: forward
+activate Server
+note over Server: async validation for each affected bundle item
+deactivate Server
+Host->>Consumer: suggest refresh
+deactivate Host
+activate Consumer
+Consumer->>Host: request non-stale data
+deactivate Consumer
+activate Host
+note over Host: bundle info request
+Host->>Consumer: post fresh data
+deactivate Host
+```
+
+# Generating XSD schema files
 
 The CNXML schema validation in the extension is performed using XSD files generated using the RelaxNG schema files in the `poet-schema` branch of the [cnxml repo](https://github.com/openstax/cnxml). The XSD files can be regenerated using [jing-trang](https://github.com/relaxng/jing-trang.git). You can clone that repo and follow the instructions to build `trang.jar` and `jing.jar`. The following steps assume:
 
