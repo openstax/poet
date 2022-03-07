@@ -76,7 +76,7 @@
       },
       {
         "command": "openstax.tagContent",
-        "title": "Tag Content",
+        "title": "Build in CORGI",
         "category": "Openstax"
       },
       {
@@ -115,7 +115,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Tag Content](command:openstax.tagContent)\n[Validate Content](command:openstax.validateContent)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Build in CORGI](command:openstax.tagContent)\n[Validate Content](command:openstax.validateContent)"
       }
     ],
     "menus": {
