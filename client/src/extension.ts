@@ -2,7 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { pushContent, tagContent } from './push-content'
+import { pushContent, tagContent, validateContent } from './push-content'
 import { TocEditorPanel } from './panel-toc-editor'
 import { CnxmlPreviewPanel } from './panel-cnxml-preview'
 import { expect, ensureCatch, launchLanguageServer, populateXsdSchemaFiles, getRootPathUri, configureWorkspaceSettings } from './utils'
@@ -81,6 +81,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   vscode.commands.registerCommand('openstax.tagContent', ensureCatch(tagContent))
   tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
+  vscode.commands.registerCommand('openstax.validateContent', ensureCatch(validateContent))
 
   const extExports: ExtensionExports = {
     [OpenstaxCommand.SHOW_TOC_EDITOR]: tocPanelManager,
