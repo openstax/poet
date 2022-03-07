@@ -934,9 +934,7 @@ suite('Push Button Test Suite', function (this: Suite) {
       fetch: fetchStub,
       diffWithHEAD: diffWithHEADStub,
       push: pushStub,
-      _repository: {
-        tag: tagStub
-      }
+      tag: tagStub
     } as any as Repository
 
     sinon.stub(pushContent, 'getRepo').returns(stubRepo)
