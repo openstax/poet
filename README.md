@@ -4,141 +4,203 @@
 
 ![installing and enabling the preview](./editor.gif)
 
-## Dev instructions
-1. open this directory in VSCode.
-1. Run `npm install`
-1. Run `npm run watch:webpack` (this will continue running / recompiling as you make changes)
-1. Launch the "Run Extension" task
-1. Open an XML file
-1. Click the Show Preview button on the top-right of the editor
-    - If you do not see it that is because it is invisible because we have not created an icon. Open a Markdown file, take note of where the icon is, and then click in the same area when viewing the CNXML file
 
-For debugging, open the webview developer tools by opening the command pallete and selecting `Developer: Open Webview Developer Tools`. This will allow you to inspect the webview contents. **Note:** It can only be opened when the webview is open.
+Table of Contents
+=================
 
-### Running Tests
+* [Development](#development)
+   * [Setup](#setup)
+   * [Tests](#tests)
+      * [Why 3 test frameworks?](#why-3-test-frameworks)
+   * [Quick Startup](#quick-startup)
+   * [Debugging](#debugging)
+      * [Debugging JavaScript in Webviews](#debugging-javascript-in-webviews)
+      * [Debugging Unit Tests](#debugging-unit-tests)
+* [Publishing](#publishing)
+   * [Local .vsix](#local-vsix)
+* [Design](#design)
+   * [Extension Activation](#extension-activation)
+   * [Opening a Webview](#opening-a-webview)
+   * [Editing Files and Interaction](#editing-files-and-interaction)
+* [Generating XSD schema files](#generating-xsd-schema-files)
 
-Many tests are written to run using the [jest](https://jestjs.io) test runner and can be debugged using the VSCode debugger. To enable this feature, follow the instructions to set the [Auto-Attach setting in VSCode](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_auto-attach) and then run `npm run test:unit` or `npm run test:unit:watch`.
 
-#### Client Tests
+# Development
 
-The tests for client require running the `npm run build` script beforehand. The client tests can be run via command line as follows:
+## Setup
 
-```bash
-$ npm install
-$ npm run build
-$ npm run test:client
+```sh
+npm install
+npm run build
 ```
 
-The Language Server tests do not require building beforehand. To run them:
+## Tests
 
-```bash
-$ npm run test:unit
+Run all/some of the tests:
 
-# To automatically re-build and re-run only the tests affected by uncommitted changes
-$ npm run test:unit:watch
+```sh
+npm run test
+# Or: npm run test:unit
+# Or: npm run test:client
+# Or: npm run test:cypress
+# Or: npm run test:unit:watch
 ```
 
-If you use the launch configuration to invoke the client tests from VS Code, the `build` will be run automatically.
+### Why 3 test frameworks?
 
-#### Language Server Tests
+1. `npm run test:unit`: Try to use this first. Jest is fast, works with VSCode's debugger so you can set breakpoints in tests or code, and only reruns tests that are affected by your uncommitted files.
+1. `npm run test:client`: Use this when you cannot mock VSCode. It is really slow and hard to debug because it starts up a real VSCode instance and the TypeScript must be pre-built into JavaScript.
+1. `npm run test:cypress`: Use this when you test webviews. It is really slow because it starts up a real browser.
 
-The Language Server tests do not require building beforehand. To run them:
 
-```bash
-$ npm run test:unit
+## Quick Startup
 
-# To automatically re-build and re-run only the tests affected by the change
-$ npm run test:unit:watch
+1. Run `npm run build`
+1. Launch the `[Run Extension]` task in the VSCode _Run and Debug_ panel
+1. Open a CNXML file (in [./modules/](./modules) for example)
+1. Click the Preview button on the top-right of the editor
+1. Launch the `[Attach to Language Server]` from the _Run and Debug_ panel
+
+
+
+## Debugging
+
+### Debugging JavaScript in Webviews
+
+Open the Webview Developer Tools by opening the command pallete and selecting `Developer: Open Webview Developer Tools`. This will allow you to inspect the webview contents. **Note:** It can only be opened when the webview is open.
+
+### Debugging Unit Tests
+
+The unit tests can be debugged using the VSCode debugger. There are 2 ways to run the tests:
+
+1. If you run the Unit tests from the `[Run and Debug]` VSCode panel then breakpoints will work.
+1. If you want to run the tests from a terminal, follow the instructions to set the [Auto-Attach setting in VSCode](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_auto-attach) and then run `npm run test:unit` or `npm run test:unit:watch`.
+
+# Publishing
+
+We rely on [this Concourse pipeline](https://github.com/openstax/concourse-pipelines/tree/master/release-poet) to publish a new version to the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=openstax.editor) and [OpenVSX.org marketplace](https://open-vsx.org/extension/openstax/editor) whenever a new tag is created on this repo.
+
+The Major version will _eventually_ track the repo schema verion that is supported so try to bump minor/patch versions.
+
+
+## Local .vsix
+
+Update the version in `package.json` if desired (e.g. to associate with an issue, `0.0.0-dev-cnx1234`). Then:
+
+```sh
+npm run build:production
+npm run package
 ```
 
-Additionally, you can step through the server tests by setting a breakpoint in VSCode and launching the ["Language Server Tests"](./launch.json) in the Debugging panel.
+# Design
 
+## Extension Activation
 
-## Enabling the Code editor for Gitpod
+```mermaid
+sequenceDiagram
 
-Go to your [settings](https://gitpod.io/settings/) view and select "Enable Feature Preview". Then, you can choose Code as your Default IDE (or switch back to Theia). The change will be reflected in any new workspace you create.
+actor User
+participant FS as File System
+participant Server as Language Server
+participant Host as LSP Client/Extension Host
 
-## How to create the .vsix extension for Theia or gitpod
+User->>Host: activate extension
+activate Host
+Host->>Server:init
+activate Server
+Server->>FS: list bundle items
+activate FS
+FS-->>Server: bundle items
+deactivate FS
+Server-->>Host: ready
+deactivate Host
 
-1. Update the version in `package.json` if desired (e.g. to associate with an issue, `0.0.0-dev-cnx1234`)
-1. `npm run build:production`
-
-## How to upload the .vsix extension to gitpod (Code editor)
-
-If you are using the Code editor, the manual package update steps are:
-
-1. Upload the `.vsix` file to your workspace
-1. Right click on the uploaded file, and select "Install Extension VSIX"
-1. If prompted to do so, reload the browser
-1. Delete the package file from your workspace
-
-## Activating the extension
-
-Currently our extension will activate when it detects an XML file. If it doesn't exist already, you can populate the following in your `settings.json` to associate `.cnxml` files as XML:
-
-```json
-{
-    "files.associations": {
-        "*.cnxml": "xml"
-    }
-}
+loop async validation for each bundle item
+opt if not cached
+Server->>FS: get bundle item contents
+activate FS
+FS-->>Server: bundle item contents
+deactivate FS
+end
+note over Server: validate and cache
+Server->>Host: validation diagnostics
+deactivate Server
+end
 ```
 
-In a Theia editor, this file should be `.theia/settings.json` in your workspace, and for VS code it should be `.vscode/settings.json`. Once set, you can open any CNXML file and the extension should load.
+## Opening a Webview
 
-## Diagram of POET server/client/webview communication
+```mermaid
+sequenceDiagram
 
-![poet-communication](./docs/poet-communication.png)
-[Link to Diagram](https://sequencediagram.org/index.html#initialData=C4S2BsFMAIAUHkCiAVaBhA9gWywVwHYgDGAhqBvgFCUlHAYBO0AqgM6QOUAOJDoRIHvmDQARADEQUaAGUAnq2CQso6CVbRxM7r36CSwsQBkDAc1wlTMGRwBuHVetl2OOvsX2HRRmbHTgQSGEAekQADyV8VhAKaAAJDEVHDQTFNz0hEVEAdUgAI1tAgHdg5AZISELIIuT0ClZcLFdKfAwlaAx7JjYOAC5oAEE0ZABJADUB0fgAOUoehgBaAD4l1OB+2lBbMhhICKDoiho6EG32tco15ZsGLt6QQmBjrZ3nW9cbruWtfoDFaDyBAAJtIwMpWM9Tq8tJQtAtri4GP1AfgQTAwVgIUDIJsoe0YZ8OPDVol1tByiQgXJKNjcWcYBdKOAMBguGpWHJ8ERoNsAkCyDF8NAAGaMaA4ogACwBwNBSiwlFZIhAwugrREpClkCBlEJiyWP2gVhEKLR0Ax0CIFEiwAhdOh2jhCPeSJlqLlykt1qCtppEpe+O0QR16pgnQ4bzuPJIfNeBiBltoksgusRyxJin6vJA-PIQqBIEsrUUxCx-rx1kRlGD1FDHS6LHYrvgsEQ0xG0wA4tBsogAEJjEaIbJzJvptb9VlBaBFfJVErAcqVYqQ+nxUk0cAiSXx1g7gDWKauS0wUUafUtFKUq9ep4aTU4x7v59d7FR0ElwCw4Eoz4fywnaBmUpbUABpyUgABHXBIH+B4wELcBoFzEg-Xtdo-1cY89WRWV0XwUUIOg2CniVc1VXVRMtR1PVvhkfpjTdM0LStYQfTtE41xhJ0lhwpiPSwL02OEMt0JgGEa1ogDSVw918NFS5SXTTDXXg0AY2QshUMgcB2HNfAACtIBOI4n3qF9+iIK8UzEuozwfRUuCeMz7IvN8E0-b8ZzAaVgILfBTGgJpWFYSwUxrbDEVk5iCIwIiYLSMiVTVNoqOTGi0wNeijUgE08PNeUhJtDiA3Ex0ZGJPjTQEor2LQziHWrVFUxdYlAOq+SMEUxRlhU-p3I-L8kKKHz9KMuhtX0hCNJQ+rSvXNJaQajDzIcmsWjaMMG3mfpEAAERGUYu0GaY9ugDtkEQAAlIYplmGMREKEgRVwcBwAWVgMFwBgiF2At6AYcC2mTJg9kiQ58CBpgC3KOgRQ0XEjnmdNDSwDAC2FQINCKMhqJFKRwt0mAnrgJBUFnAoV2RlY+v0pQGE2EqKzs+9XBU8cZPiki1BMqglvmlSb3ODdjyy-o0YxrGZ1x9L8agObmYuGtbO4iqVkA0UGBxhgdX55mYVsi5Rb4zXtZ1Wy9UocpVXDJg+PUTluWzXNBRFMUJWlEhhWFYylATDqCuUBW10t0XaYaUwrH+a3yj3YPXguWzBfZ9XOfKYj-lafAPuAGMYFmvW10Fw2N2t+sI3a-KHkI9OEucpSadWi8uFJEVY+lAvyzXC4gA)
+actor User
+participant FS as File System
+participant Server as Language Server
+participant Host as LSP Client/Extension Host
+participant Consumer as Webview/Treeview
 
-## Developing / Debugging with the language server
-
-Our extension incorporates a [language server](./server/) which can be debugged using:
-
-* Debug / console messages which get displayed in the editor after being passed to the extension over the language server protocol
-* Collecting and analyzing traces of the language server protocol communication between the extension and language server (refer to the [LSP specification](https://microsoft.github.io/language-server-protocol/specifications/specification-current/))
-* Debugging in a local VS code environment by attaching to the language server, setting breakpoints, etc.
-
-### Language server console messages
-
-The language server code can be instrumented with `connection.console.log()` to send logging / debug output to the extension. This information can be inspected by opening the Output window labeled "CNXML Language Server" once the extension is activated. This works when running the extension in a local VS Code debug environment or on gitpod.
-
-### LSP traces
-
-The `vscode-languageclient` library supports generating traces of the language server protocol communication between the extension and language server. By default, this output is disabled. It can be enabled in any environment by adding the following to the `settings.json` configuration where the extension is running (e.g. in a gitpod workspace or the workspace opened in a local extension session):
-
-```json
-"languageServerCnxml.trace.server": "verbose"
+User->>Host: open webview/treeview
+activate Host
+alt handshake
+Host->>Consumer: create
+activate Consumer
+Host->Consumer: send html
+Consumer->>Host: loaded, request initial data
+deactivate Consumer
+Host->>Server: bundle info request
+opt if not cached
+Server->>FS: get bundle item contents
+activate FS
+FS-->>Server: bundle item contents
+deactivate FS
+end
+Server-->>Host: bundle info
+Host->>Consumer: initial data
+else injection
+Host->>Consumer: create
+activate Consumer
+opt
+Host->>Consumer: send html with loading message
+end
+Host->>Server: bundle info request
+opt if not cached
+Server->>FS: get bundle item contents
+activate FS
+FS-->>Server: bundle item contents
+deactivate FS
+end
+Server-->>Host: bundle info
+Host->>Consumer: send html with injected initial data
+deactivate Host
+deactivate Consumer
+end
 ```
 
-The trace data is then added to the Output window labeled "CNXML Language Server". It can be visualized using the [language-server-protocol-inspector](https://github.com/Microsoft/language-server-protocol-inspector). The following steps assume:
+## Editing Files and Interaction
 
-1. You have copied the output data into a local `trace.log` file
-2. You are using node <= 10 (more recent versions of node seem to be problematic)
+The Language Server directs all updates. VSCode even sends updates to files before they are saved so the Language Server can react to individual keystrokes. [Quarx](https://github.com/dmaevsky/quarx) is used to detect when models have changed.
 
-```bash
-$ git clone https://github.com/Microsoft/language-server-protocol-inspector
-$ cd language-server-protocol-inspector/lsp-inspector
-$ yarn
-$ yarn serve
+```mermaid
+sequenceDiagram
+
+actor User
+participant VSCode
+participant Server as Language Server
+participant Quarx
+participant Host as LSP Client/Extension Host
+participant Consumer as Webview/Treeview
+
+User-->>VSCode: modifies watched file
+VSCode-->>Server: Sends document update
+Server-->>Server: Updates Model
+note over Quarx: Notices Model Changed
+Quarx-->>Host: Send updated BooksAndOrphans message
+Host-->>Consumer: Sends BooksAndOrphans message
+Consumer-->>Consumer: Updates webview panel
+Server-->>Host: Sends Diagnostic message with validation errors for the updated file
 ```
 
-You can then open `http://localhost:8082/` in your browser, upload your `trace.log` file, and select it to view the visualized / parsed output.
-
-### Debugging language server code with VS Code
-
-There is a launch configuration to attach to the language server which can be used during local development. Since the language server is launched by the extension itself, the following sequence of steps should be used:
-
-1. Execute "Run Extension" from the Run view
-1. Once the extension is launched, execute "Attach to Language Server" from the Run view
-
-You can now set breakpoints, etc. in the server source code.
-
-## Releasing the extension to open-vsx.org
-
-[This Concourse Pipeline](https://github.com/openstax/concourse-pipelines/tree/master/release-poet) uploads to https://open-vsx.org/extension/openstax/editor whenever a new tag is created on this repository.
-
-## Generating XSD schema files
+# Generating XSD schema files
 
 The CNXML schema validation in the extension is performed using XSD files generated using the RelaxNG schema files in the `poet-schema` branch of the [cnxml repo](https://github.com/openstax/cnxml). The XSD files can be regenerated using [jing-trang](https://github.com/relaxng/jing-trang.git). You can clone that repo and follow the instructions to build `trang.jar` and `jing.jar`. The following steps assume:
 
