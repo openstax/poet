@@ -352,7 +352,7 @@ export const tagContent = async (): Promise<void> => {
   if (tag === undefined) { return }
 
   try {
-    await (repo as any)._repository.tag(tag) // when VSCode API is updated -> await repo.tag(tag)
+    await repo.tag(tag, 'Build in CORGI')
   } catch (err) {
     const e = err as GitError
     const message: string = e.gitErrorCode === undefined ? e.message : /* istanbul ignore next */ e.gitErrorCode
