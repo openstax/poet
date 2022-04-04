@@ -11,6 +11,7 @@
 // (10.2 has a bug: https://github.com/TypeStrong/ts-node/issues/1426)
 // -------------------------
 
+import glob from 'glob'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import http from 'http' // easier to use node-fetch but didn't want to add a dependency
 import https from 'https'
@@ -58,8 +59,9 @@ function loadRepo(repoPath: string) {
   return bundle
 }
 
-async function lint(bookDirs: string[]) {
+async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
   let errorCount = 0
+  const bundles = []
   for (const rootPath of bookDirs) {
     console.log('Validating', toRelPath(rootPath))
     const bundle = loadRepo(rootPath)
@@ -78,6 +80,20 @@ async function lint(bookDirs: string[]) {
       const { range } = e
       console.log(toRelPath(e.node.absPath), `${range.start.line}:${range.start.character}`, e.message)
     })
+    bundles.push(bundle)
+    errorCount += validationErrors.size
+  }
+  return [errorCount > 0, bundles]
+}
+
+async function lint(bookDirs: string[]) {
+  const [hasErrors] = await load(bookDirs)
+  process.exit(hasErrors ? 111 : 0)
+}
+
+async function lintLinks(bookDirs: string[]) {
+  let [hasErrors, bundles] = await load(bookDirs)
+  for (const bundle of bundles) {
     for (const page of bundle.allPages.all.filter(page => page.isLoaded && page.exists)) {
       for (const link of page.pageLinks) {
         if (link.type === PageLinkKind.URL) {
@@ -97,7 +113,7 @@ async function lint(bookDirs: string[]) {
             // eslint-disable-next-line no-new
             new URL(url)
           } catch {
-            errorCount++
+            hasErrors = true
             console.error(`Error: Could not parse URL '${url}' and urlEncoded to show any odd unicode characters`, encodeURI(url))
             continue
           }
@@ -123,17 +139,17 @@ async function lint(bookDirs: string[]) {
                       if (res.statusCode >= 200 && res.statusCode < 300) {
                         console.log('Ok:', res.statusCode, link.url, 'to', destUrl)
                       } else if (res.statusCode >= 300 && res.statusCode < 400) {
-                        errorCount++
+                        hasErrors = true
                         console.error('Double Redirect:', res.statusCode, link.url, 'to', destUrl, 'to', res.headers.location)
                       } else {
-                        errorCount++
+                        hasErrors = true
                         console.error('Error:', res.statusCode, link.url, 'to', destUrl)
                       }
                     }
                   })
                 }
               } else {
-                errorCount++
+                hasErrors = true
                 console.error('Error:', res.statusCode, link.url)
               }
             }
@@ -141,11 +157,33 @@ async function lint(bookDirs: string[]) {
         }
       }
     }
-    console.log('----------------------------')
-    errorCount += validationErrors.size
   }
+  console.log('----------------------------')
   await sleep(10 * 1000)
-  process.exit(errorCount)
+  process.exit(hasErrors ? 111 : 0)
+}
+
+async function orphans(bookDirs: string[]) {
+  let [hasErrors, bundles] = await load(bookDirs)
+
+  for (const bundle of bundles) {
+    const repoRoot = path.join(path.dirname(bundle.absPath), '..')
+    const allFiles = I.Set(glob.sync('**/*', { cwd: repoRoot, absolute: true }))
+    const books = bundle.books
+    const pages = books.flatMap(b => b.pages).filter(o => o.exists)
+    const images = pages.flatMap(p => p.resources).filter(o => o.exists)
+
+    const referencedNodes = books.union(pages).union(images)
+    const referencedFiles = referencedNodes.map(o => o.absPath)
+
+    const orphans = allFiles.subtract(referencedFiles)
+
+    orphans.forEach(o => console.log('Orphan', o))
+    console.log('Found orphans', orphans.size)
+
+    hasErrors = hasErrors || orphans.size > 0
+  }
+  process.exit(hasErrors ? 111 : 0)
 }
 
 function recFindLeafPages(acc: TocPageWithRange[], node: TocSubbookWithRange) {
@@ -299,6 +337,16 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
       await lint(bookDirs)
       break
     }
+    case 'links': {
+      const bookDirs = process.argv.length >= 4 ? process.argv.slice(3) : [process.cwd()]
+      await lintLinks(bookDirs)
+      break
+    }
+    case 'orphans': {
+      const bookDirs = process.argv.length >= 4 ? process.argv.slice(3) : [process.cwd()]
+      await orphans(bookDirs)
+      break
+    }
     case 'shrink': {
       const repoDir = process.argv[3]
       const args = process.argv.slice(4)
@@ -315,6 +363,8 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
       console.log(`Unsupported command '${process.argv[2]}'. Expected one of 'lint' or 'shrink'`)
       console.log('Help: specify the command followed by arguments:')
       console.log('./_cli.ts lint /path/to/book/repo')
+      console.log('./_cli.ts links /path/to/book/repo')
+      console.log('./_cli.ts orphans /path/to/book/repo')
       console.log('./_cli.ts shrink /path/to/book/repo bookslug:0,9.0,9.7 bookslug2:13.0')
     }
   }

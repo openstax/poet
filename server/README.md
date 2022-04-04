@@ -42,6 +42,14 @@ To run it:
 npx ts-node@10.1.0 ./src/model/_cli.ts lint /path/to/book/repo /path/to/another/book/repo
 ```
 
+## Find orphaned files
+
+To run it:
+
+```bash
+npx ts-node@10.1.0 ./src/model/_cli.ts orphans /path/to/book/repo /path/to/another/book/repo
+```
+
 
 ## Create a smaller book
 
