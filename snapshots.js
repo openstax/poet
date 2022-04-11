@@ -1,5 +1,5 @@
 module.exports = {
-  "__version": "6.5.0",
+  "__version": "9.4.1",
   "toc-editor Webview Tests": {
     "drag-n-drop": {
       "allows dnd from uneditable to editable": {

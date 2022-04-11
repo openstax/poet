@@ -1,11 +1,12 @@
 import expect from 'expect'
 import Sinon from 'sinon'
 import mockfs from 'mock-fs'
-import vscode, { Uri, Webview } from 'vscode'
-import { addBaseHref, fixResourceReferences, fixCspSourceReferences, ensureCatch, ensureCatchPromise, expect as expectOrig, getErrorDiagnosticsBySource, populateXsdSchemaFiles, configureWorkspaceSettings } from '../src/utils'
+import vscode, { ExtensionContext, Uri, Webview } from 'vscode'
+import { addBaseHref, fixResourceReferences, fixCspSourceReferences, ensureCatch, ensureCatchPromise, expect as expectOrig, getErrorDiagnosticsBySource, populateXsdSchemaFiles, configureWorkspaceSettings, launchLanguageServer } from '../src/utils'
 import { Panel } from '../src/panel'
 import { join } from 'path'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { LanguageClient } from 'vscode-languageclient/node'
 
 const TEST_OUT_DIR = join(__dirname, '../static') // contains 'xsd/' dir
 
@@ -197,5 +198,20 @@ describe('tests with sinon', () => {
       expect(updateStub.alwaysCalledWith('files.associations')).toBe(true)
       expect(getStub.alwaysCalledWith('files.associations')).toBe(true)
     })
+  })
+})
+
+describe('languageServer launcher', () => {
+  let client: LanguageClient | undefined
+  test('languageServer will launch and become ready', async () => {
+    const extensionContext = {
+      asAbsolutePath: (p: string) => join(__dirname, '..', '..', p)
+    } as unknown as ExtensionContext
+
+    client = launchLanguageServer(extensionContext)
+    await client.onReady()
+  })
+  afterEach(async () => {
+    await client?.stop()
   })
 })
