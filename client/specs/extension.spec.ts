@@ -32,7 +32,7 @@ describe('Extension', () => {
       onNotificationStub = sinon.stub()
       const mockClient = {
         stop: sinon.stub(),
-        onReady: sinon.stub(),
+        onReady: async () => {},
         onRequest: sinon.stub(),
         onNotification: onNotificationStub,
         sendRequest: sendRequestStub
