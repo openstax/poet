@@ -120,7 +120,9 @@ export async function populateXsdSchemaFiles(resourceRootDir: string): Promise<v
 
   // Delete any existing directory and create a new one to ensure no old
   // schema files are kept around
-  fs.rmdirSync(targetPath, { recursive: true })
+  if (fs.existsSync(targetPath)) {
+    fs.rmdirSync(targetPath, { recursive: true })
+  }
   fs.mkdirSync(targetPath)
 
   // Copy all schema files
