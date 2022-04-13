@@ -51,9 +51,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   }
 
   /* istanbul ignore next */
-  const extExports = doRest(client)
-  /* istanbul ignore next */
   await client.onReady()
+  /* istanbul ignore next */
+  const extExports = doRest(client)
   /* istanbul ignore next */
   return extExports
 }
