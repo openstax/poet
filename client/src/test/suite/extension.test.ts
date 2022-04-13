@@ -6,10 +6,9 @@ import SinonRoot from 'sinon'
 import { GitErrorCodes, Repository, CommitOptions, RepositoryState, Branch, RefType } from '../../git-api/git.d'
 import 'source-map-support/register'
 import { expect as expectOrig, getRootPathUri } from './../../utils'
-import { activate, deactivate, forwardOnDidChangeWorkspaceFolders } from './../../extension'
+import { forwardOnDidChangeWorkspaceFolders } from './../../extension'
 import { ImageManagerPanel } from './../../panel-image-manager'
 import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
-import { OpenstaxCommand } from '../../extension-types'
 import * as pushContent from '../../push-content'
 import { Suite } from 'mocha'
 import { DOMParser, XMLSerializer } from 'xmldom'
@@ -27,9 +26,6 @@ const ORIGIN_DATA_DIR = ROOT_DIR_ABS
 const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
 const TEST_OUT_DIR = path.join(__dirname, '../../')
 
-const contextStub = {
-  asAbsolutePath: (relPath: string) => path.resolve(ROOT_DIR_ABS, relPath)
-}
 const resourceRootDir = TEST_OUT_DIR
 const createMockClient = (): LanguageClient => {
   return {
@@ -51,18 +47,6 @@ const createMockEvents = (): { emitters: ExtensionEventEmitters, events: Extensi
   return { emitters, events }
 }
 
-const fakeXmlExtension: vscode.Extension<any> = {
-  activate: SinonRoot.stub().resolves({
-    addXMLCatalogs: (catalogs: string[]): void => {}
-  })
-} as any as vscode.Extension<any>
-
-// Stub the XML extension temporarily for this test helper setup so activate()
-// doesn't error
-SinonRoot.stub(vscode.extensions, 'getExtension').withArgs('redhat.vscode-xml').returns(fakeXmlExtension)
-const extensionExports = activate(contextStub as any)
-SinonRoot.restore()
-
 async function sleep(ms: number): Promise<void> {
   return await new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -81,16 +65,6 @@ async function replaceUriDocumentContent(uri: vscode.Uri, content: string): Prom
   edit.replace(uri, fullRange, content)
   await vscode.workspace.applyEdit(edit)
   await document.save()
-}
-
-const withPanelFromCommand = async (command: OpenstaxCommand, func: (arg0: vscode.WebviewPanel) => Promise<void>): Promise<void> => {
-  await vscode.commands.executeCommand(command)
-  // Wait for panel to load
-  await sleep(1000)
-  const panelManager = expect((await extensionExports)[command])
-  const panel = expect(panelManager.panel())
-  await func((panel as any).panel)
-  panel.dispose()
 }
 
 const resetTestData = async (): Promise<void> => {
@@ -112,7 +86,6 @@ suite('Extension Test Suite', function (this: Suite) {
 
   this.beforeEach(() => {
     sinon.spy(CnxmlPreviewPanel.prototype, 'postMessage')
-    sinon.stub(vscode.extensions, 'getExtension').withArgs('redhat.vscode-xml').returns(fakeXmlExtension)
   })
 
   this.afterEach(async () => {
@@ -140,24 +113,6 @@ suite('Extension Test Suite', function (this: Suite) {
      * assert.strictEqual(uriAgain.fsPath, TEST_DATA_DIR)
      */
   })
-  // test('show toc editor', async () => {
-  //   await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => {
-  //     const html = panel.webview.html
-  //     assert.notStrictEqual(html, null)
-  //     assert.notStrictEqual(html, undefined)
-  //     assert.notStrictEqual(html.indexOf('html'), -1)
-  //   })
-  // }).timeout(5000)
-
-  // TODO: image upload test is commented because image upload UX is not finished.
-  // test('show image upload', async () => {
-  //   await withPanelFromCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, async (panel) => {
-  //     const html = panel.webview.html
-  //     assert.notStrictEqual(html, null)
-  //     assert.notStrictEqual(html, undefined)
-  //     assert.notStrictEqual(html.indexOf('html'), -1)
-  //   })
-  // }).timeout(5000)
   test('image upload handle message', async () => {
     const data = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     const panel = new ImageManagerPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
@@ -172,25 +127,6 @@ suite('Extension Test Suite', function (this: Suite) {
     const newData = fs.readFileSync(path.join(TEST_DATA_DIR, 'media/urgent.jpg'), { encoding: 'base64' })
     assert.strictEqual(data, newData)
   })
-  test('show cnxml preview with no file open', async () => {
-    assert.strictEqual(vscode.window.activeTextEditor, undefined)
-    await sleep(500) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
-    await withPanelFromCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, async (panel) => {
-      assert(panel.webview.html.includes('No resource available to preview'))
-    })
-  }).timeout(5000)
-  test('show cnxml preview with a file open', async () => {
-    const uri = expect(getRootPathUri())
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const document = await vscode.workspace.openTextDocument(resource)
-    await vscode.window.showTextDocument(document)
-    await withPanelFromCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, async (panel) => {
-      const html = panel.webview.html
-      assert.notStrictEqual(html, null)
-      assert.notStrictEqual(html, undefined)
-      assert.notStrictEqual(html.indexOf('html'), -1)
-    })
-  }).timeout(5000)
   test('cnxml preview rebinds to resource in the active editor', async () => {
     const uri = expect(getRootPathUri())
     const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
@@ -464,31 +400,6 @@ suite('Extension Test Suite', function (this: Suite) {
     const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     await assert.rejects(panel.handleMessage({ type: 'bad-type' } as any))
   })
-  test('panel disposed and refocused', async () => {
-    await assert.doesNotReject(async () => {
-      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
-      await withPanelFromCommand(OpenstaxCommand.SHOW_TOC_EDITOR, async (panel) => { })
-    })
-  }).timeout(5000)
-  test('panel hidden and refocused', async () => {
-    const command = OpenstaxCommand.SHOW_IMAGE_MANAGER
-    await vscode.commands.executeCommand(command)
-    await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
-    const panelManager = expect((await extensionExports)[command])
-
-    // Hide panel by opening another tab
-    const uri = expect(getRootPathUri())
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const document = await vscode.workspace.openTextDocument(resource)
-    await vscode.window.showTextDocument(document)
-
-    // Refocus
-    await vscode.commands.executeCommand(command)
-    // Give the panel time to load
-    await sleep(500)
-    assert(panelManager.panel()?.visible())
-  }).timeout(5000)
-
   test('canPush returns correct values', async () => {
     const fileUri = { path: '/test.cnxml', scheme: 'file' } as any as vscode.Uri
     const cnxmlError = {
@@ -532,10 +443,6 @@ suite('Extension Test Suite', function (this: Suite) {
     await forwarder('test_event' as unknown as vscode.WorkspaceFoldersChangeEvent)
     const expected = ['onDidChangeWorkspaceFolders', 'test_event']
     assert((mockClient.sendRequest as SinonRoot.SinonStub).calledOnceWith(...expected))
-  })
-
-  this.afterAll(async () => {
-    await deactivate()
   })
 })
 

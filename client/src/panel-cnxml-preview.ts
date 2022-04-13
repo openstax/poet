@@ -152,7 +152,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
       return
     }
     const bindingChanged = resource?.fsPath !== this.resourceBinding?.fsPath
-    await this.rebindToResource(resource)
+    this.rebindToResource(resource)
     const activeEditor = vscode.window.activeTextEditor
     if (activeEditor != null) {
       await this.scrollToRangeStartOfEditor(activeEditor)
@@ -199,7 +199,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
     return resource?.fsPath === this.resourceBinding?.fsPath
   }
 
-  private async rebindToResource(resource: vscode.Uri | null): Promise<void> {
+  private rebindToResource(resource: vscode.Uri | null): void {
     const oldBinding = this.resourceBinding
     this.resourceBinding = resource
     if (this.resourceBinding == null) {
@@ -207,15 +207,15 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
       return
     }
     if (oldBinding == null) {
-      const html = await this.reboundWebviewHtmlForResource(this.resourceBinding)
+      const html = this.reboundWebviewHtmlForResource(this.resourceBinding)
       this.panel.webview.html = html
     } else {
       void this.sendState()
     }
   }
 
-  private async reboundWebviewHtmlForResource(resource: vscode.Uri): Promise<string> {
-    let html = await fs.promises.readFile(path.join(this.context.resourceRootDir, 'cnxml-preview.html'), 'utf-8')
+  private reboundWebviewHtmlForResource(resource: vscode.Uri): string {
+    let html = fs.readFileSync(path.join(this.context.resourceRootDir, 'cnxml-preview.html'), 'utf-8')
     html = this.injectInitialState(html, this.getState())
     html = addBaseHref(this.panel.webview, resource, html)
     html = fixResourceReferences(this.panel.webview, html, this.context.resourceRootDir)

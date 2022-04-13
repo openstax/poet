@@ -34,7 +34,9 @@ const window = {
   showInputBox: jest.fn(() => Promise.resolve()),
   activeTextEditor: undefined,
   withProgress: jest.fn(),
-  showTextDocument: jest.fn()
+  showTextDocument: jest.fn(),
+  onDidChangeActiveTextEditor: jest.fn(),
+  onDidChangeTextEditorVisibleRanges: jest.fn(),
 };
 
 const workspace = {
