@@ -202,6 +202,9 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
   private rebindToResource(resource: vscode.Uri | null): void {
     const oldBinding = this.resourceBinding
     this.resourceBinding = resource
+    if (this.disposed()) {
+      return
+    }
     if (this.resourceBinding == null) {
       this.panel.webview.html = rawTextHtml('No resource available to preview')
       return
