@@ -83,6 +83,9 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
     this._onDidInnerPanelReload = new vscode.EventEmitter()
     void ensureCatchPromise(this.tryRebindToActiveResource(true))
     this.registerDisposable(vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor?.document.uri.fsPath === this.resourceBinding?.fsPath) {
+        return
+      }
       void ensureCatchPromise(this.tryRebindToActiveResource(false))
     }))
     this.registerDisposable(this.context.events.onDidChangeWatchedFiles(ensureCatch(async () => {
@@ -152,9 +155,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
       return
     }
     const bindingChanged = resource?.fsPath !== this.resourceBinding?.fsPath
-    if (bindingChanged || this.resourceBinding == null) {
-      this.rebindToResource(resource)
-    }
+    this.rebindToResource(resource)
     const activeEditor = vscode.window.activeTextEditor
     if (activeEditor != null) {
       await this.scrollToRangeStartOfEditor(activeEditor)

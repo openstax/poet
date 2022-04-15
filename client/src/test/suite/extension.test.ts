@@ -394,7 +394,7 @@ suite('Extension Test Suite', function (this: Suite) {
     await panelBindingChanged
     const refreshCount = rebindingStub.callCount
     await watchedFilesSpy.getCall(0).args[0]()
-    assert.strictEqual(rebindingStub.callCount, refreshCount)
+    assert.strictEqual(rebindingStub.callCount, refreshCount + 1)
   })
   test('cnxml preview throws upon unexpected message', async () => {
     const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
