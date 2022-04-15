@@ -152,7 +152,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
       return
     }
     const bindingChanged = resource?.fsPath !== this.resourceBinding?.fsPath
-    if (bindingChanged) {
+    if (bindingChanged || this.resourceBinding == null) {
       this.rebindToResource(resource)
     }
     const activeEditor = vscode.window.activeTextEditor

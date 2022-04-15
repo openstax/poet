@@ -106,7 +106,7 @@ describe('Extension', () => {
         const pm = extensions[OpenstaxCommand.SHOW_CNXML_PREVIEW] as PanelManager<CnxmlPreviewPanel>
         const panel1 = pm.revealOrNew()
         const panel = (panel1 as any).panel as WebviewPanel // `.panel` is a protected field
-        expect(panel.webview.html.includes('No resource available to preview')).toBeTruthy()
+        expect(panel.webview.html).toEqual(expect.stringContaining('No resource available to preview'))
       })
 
       it('show cnxml preview with a file open', async () => {
@@ -134,7 +134,7 @@ describe('Extension', () => {
         const pm = extensions[OpenstaxCommand.SHOW_CNXML_PREVIEW] as PanelManager<CnxmlPreviewPanel>
         const panel1 = pm.revealOrNew()
         const panel = (panel1 as any).panel as WebviewPanel // `.panel` is a protected field
-        expect(panel.webview.html.includes('<html')).toBeTruthy()
+        expect(panel.webview.html).toEqual(expect.stringContaining('<html'))
       })
     })
   })

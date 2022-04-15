@@ -64,13 +64,13 @@ describe('tests with sinon', () => {
       // eslint-disable-next-line no-template-curly-in-string
       const html = '<document><base href="${BASE_URI}"/></document>'
       const modified = addBaseHref(webview, resource, html)
-      expect(modified.includes('vscode-webview')).toBe(true)
+      expect(modified).toEqual(expect.stringContaining('vscode-webview'))
     })
     it('fixResourceReferences relative', () => {
       const resourceRootDir = '/fake/path'
       const html = '<document><a href="./media/some-image.jpg"></a></document>'
       const modified = fixResourceReferences(webview, html, resourceRootDir)
-      expect(modified.includes('vscode-webview')).toBe(true)
+      expect(modified).toEqual(expect.stringContaining('vscode-webview'))
     })
     it('fixResourceReferences non-relative', () => {
       const resourceRootDir = '/fake/path'
@@ -82,7 +82,7 @@ describe('tests with sinon', () => {
       // eslint-disable-next-line no-template-curly-in-string
       const html = '<document><meta content="${WEBVIEW_CSPSOURCE}"</meta></document>'
       const modified = fixCspSourceReferences(webview, html)
-      expect(modified.includes('vscode-webview')).toBe(true)
+      expect(modified).toEqual(expect.stringContaining('vscode-webview'))
     })
     it('injectEnsuredMessages no body is noop', () => {
       const html = '<html></html>'
@@ -91,8 +91,8 @@ describe('tests with sinon', () => {
     it('injectEnsuredMessages injects messages', () => {
       const html = '<html><body></body></html>'
       const result = Panel.prototype.injectInitialState(html, { test: 'abc' })
-      expect(result.includes('script')).toBe(true)
-      expect(result.includes('{"test":"abc"}')).toBe(true)
+      expect(result).toEqual(expect.stringContaining('script'))
+      expect(result).toEqual(expect.stringContaining('{"test":"abc"}'))
     })
   })
 
