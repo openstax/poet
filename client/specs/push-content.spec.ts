@@ -51,15 +51,14 @@ describe('tests with sinon', () => {
         renameUri: undefined,
         status: i === 0 ? Status.DELETED : Status.MODIFIED
       }))
-      const diffWithHEADStub = sinon.stub()
       const stubRepo = {
-        diffWithHEAD: diffWithHEADStub
+        state: {
+          workingTreeChanges: changesToReturn
+        }
       } as any as Repository
       sinon.stub(pushContent, 'getRepo').returns(stubRepo)
 
-      diffWithHEADStub.resolves(changesToReturn)
       const toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.modified)
-      expect(diffWithHEADStub.calledOnce).toBe(true)
       changesToReturn
         .filter(c => c.status !== Status.DELETED)
         .forEach(c => expect(toOpen.has(c.uri.toString())).toBe(true))

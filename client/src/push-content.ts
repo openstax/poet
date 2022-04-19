@@ -23,11 +23,13 @@ export const getDocumentsToOpen = async (checkType: DocumentsToOpen): Promise<Se
   if (checkType === DocumentsToOpen.modified) {
     const repo = getRepo()
     return new Set(
-      (await repo.diffWithHEAD())
-        .filter(change => ![
-          Status.INDEX_DELETED, Status.DELETED, Status.DELETED_BY_THEM,
-          Status.DELETED_BY_US, Status.BOTH_DELETED
-        ].includes(change.status))
+      repo.state.workingTreeChanges
+        .filter(change =>
+          change.status !== Status.DELETED &&
+          change.status !== Status.DELETED_BY_THEM &&
+          change.status !== Status.DELETED_BY_US &&
+          change.status !== Status.BOTH_DELETED
+        )
         .map(change => change.uri.toString())
         .filter(uriString =>
           uriString.endsWith('.xml') || uriString.endsWith('.cnxml') || uriString.endsWith('.xhtml')
