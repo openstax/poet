@@ -1,6 +1,6 @@
 import Sinon from 'sinon'
 import * as pushContent from '../src/push-content'
-import { Repository } from '../src/git-api/git.d'
+import { Repository, Change, Status } from '../src/git-api/git.d'
 import vscode from 'vscode'
 import expect from 'expect'
 
@@ -27,9 +27,8 @@ describe('tests with sinon', () => {
     it('returns all files', async () => {
       const findFilesStub = sinon.stub(vscode.workspace, 'findFiles')
       const filesToReturn = [vscode.Uri.file('/a'), vscode.Uri.file('/b'), vscode.Uri.file('/c')]
-      const openDocuments = [vscode.Uri.file('/b').toString()]
       findFilesStub.resolves(filesToReturn)
-      let toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.all, new Set())
+      let toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.all)
       expect(findFilesStub.calledOnce).toBe(true)
       filesToReturn.forEach(uri => {
         expect(toOpen.has(uri.toString())).toBe(true)
@@ -37,41 +36,41 @@ describe('tests with sinon', () => {
 
       // We do not need to open documents that are already open
       toOpen = await pushContent.getDocumentsToOpen(
-        pushContent.DocumentsToOpen.all,
-        new Set(openDocuments)
+        pushContent.DocumentsToOpen.all
       )
-      expect(!toOpen.has(openDocuments[0])).toBe(true)
+      expect(toOpen.size === filesToReturn.length)
     })
     it('returns changed files', async () => {
-      const filesToReturn = [
-        { uri: vscode.Uri.file('/a') },
-        { uri: vscode.Uri.file('/b') },
-        { uri: vscode.Uri.file('/c') }
-      ]
-      const openDocuments = [vscode.Uri.file('/b').toString()]
+      const changesToReturn: Change[] = [
+        vscode.Uri.file('/a.xml'),
+        vscode.Uri.file('/b.xml'),
+        vscode.Uri.file('/c.xml')
+      ].map((uri, i) => ({
+        originalUri: uri,
+        uri: uri,
+        renameUri: undefined,
+        status: i === 0 ? Status.DELETED : Status.MODIFIED
+      }))
       const diffWithHEADStub = sinon.stub()
       const stubRepo = {
         diffWithHEAD: diffWithHEADStub
       } as any as Repository
       sinon.stub(pushContent, 'getRepo').returns(stubRepo)
 
-      diffWithHEADStub.resolves(filesToReturn)
-      let toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.modified, new Set())
+      diffWithHEADStub.resolves(changesToReturn)
+      const toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.modified)
       expect(diffWithHEADStub.calledOnce).toBe(true)
-      filesToReturn.forEach(o => {
-        expect(toOpen.has(o.uri.toString())).toBe(true)
-      })
-
-      // We do not need to open documents that are already open
-      toOpen = await pushContent.getDocumentsToOpen(
-        pushContent.DocumentsToOpen.modified,
-        new Set(openDocuments)
-      )
-      expect(!toOpen.has(openDocuments[0])).toBe(true)
+      changesToReturn
+        .filter(c => c.status !== Status.DELETED)
+        .forEach(c => expect(toOpen.has(c.uri.toString())).toBe(true))
+      changesToReturn
+        .filter(c => c.status === Status.DELETED)
+        .forEach(c => expect(toOpen.has(c.uri.toString())).toBe(false))
+      expect(toOpen.size === 2)
     })
   })
   describe('Cancellation', () => {
-    it('Cancels getOpenDocuments or openAndValidate', async () => {
+    it('Cancels openAndValidate', async () => {
       const activeTextEditorStub = sinon.stub(vscode.window, 'activeTextEditor')
       const executeCommandStub = sinon.stub(vscode.commands, 'executeCommand')
       const withProgressStub = sinon.stub(vscode.window, 'withProgress')
@@ -96,22 +95,8 @@ describe('tests with sinon', () => {
           }
         })
       })
-      try {
-        await pushContent.getOpenDocuments()
-      } catch (e) {
-        error = e as Error
-      }
-      expect(error).not.toBe(undefined)
-      expect(error?.message).toBe('Canceled')
-      expect(withProgressStub.calledOnce).toBe(true)
-      expect(executeCommandStub.notCalled).toBe(true)
-      withProgressStub.resetHistory()
-      executeCommandStub.reset()
-      error = undefined
 
-      const getOpenDocumentsStub = sinon.stub(pushContent, 'getOpenDocuments')
       const getDocumentsToOpenStub = sinon.stub(pushContent, 'getDocumentsToOpen')
-      getOpenDocumentsStub.resolves(new Set())
       getDocumentsToOpenStub.resolves(new Set(['not', 'used', 'here']))
       try {
         await pushContent.openAndValidate(pushContent.DocumentsToOpen.modified)
@@ -124,67 +109,10 @@ describe('tests with sinon', () => {
       expect(error?.message).toBe('Canceled')
     })
   })
-  describe('getOpenDocuments', () => {
-    it('returns expected values', async () => {
-      const activeTextEditorStub = sinon.stub(vscode.window, 'activeTextEditor')
-      const executeCommandStub = sinon.stub(vscode.commands, 'executeCommand')
-      const withProgressStub = sinon.stub(vscode.window, 'withProgress')
-
-      withProgressStub.callsFake((
-        options: vscode.ProgressOptions,
-        task: (
-          progress: vscode.Progress<{ message?: string, increment?: number }>,
-          token: vscode.CancellationToken
-        ) => Thenable<unknown>
-      ): Thenable<unknown> => {
-        return new Promise((resolve, reject) => {
-          try {
-            resolve(task(
-              { report: (_: { message?: string, increment?: number }) => {} },
-              { isCancellationRequested: false, onCancellationRequested: sinon.stub() }
-            ))
-          } catch (e) {
-            reject(e)
-          }
-        })
-      })
-
-      activeTextEditorStub.get(() => undefined)
-      let openDocuments = await pushContent.getOpenDocuments()
-      expect(executeCommandStub.notCalled).toBe(true)
-      expect(openDocuments.size).toBe(0)
-      executeCommandStub.reset()
-      activeTextEditorStub.reset()
-
-      // The expected behavior is for workbench.action.nextEditor to loop around to the first editor.
-      // After it loops around, the document that getOpenDocuments started on will be added to the
-      // set and the function will return.
-      activeTextEditorStub.get(() => {
-        // NOTE: executeCommandStub could be called with something other than nextEditor
-        // Could this cause unexpected behavior? Stay tuned to find out!
-        switch (executeCommandStub.callCount) {
-          case 0:
-          case 3:
-            return { document: { uri: vscode.Uri.file('/a') } }
-          case 1:
-            return { document: { uri: vscode.Uri.file('/b') } }
-          case 2:
-            return { document: { uri: vscode.Uri.file('/c') } }
-          default:
-            throw new Error('Something went wrong when looking for documents')
-        }
-      })
-      executeCommandStub.resolves()
-      openDocuments = await pushContent.getOpenDocuments()
-      expect(openDocuments.size).toBe(3)
-      expect(executeCommandStub.callCount).toBe(3)
-    })
-  })
   describe('openAndValidate', () => {
     it('integrates', async () => {
       const dateNowStub = sinon.stub(Date, 'now')
       const withProgressStub = sinon.stub(vscode.window, 'withProgress')
-      const getOpenDocumentsStub = sinon.stub(pushContent, 'getOpenDocuments')
       const getDocumentsToOpenStub = sinon.stub(pushContent, 'getDocumentsToOpen')
       const showTextDocumentStub = sinon.stub(vscode.window, 'showTextDocument')
         .callsFake((uri: vscode.Uri, options?: vscode.TextDocumentShowOptions): Thenable<vscode.TextEditor> => {
@@ -200,7 +128,6 @@ describe('tests with sinon', () => {
       sinon.stub(pushContent, 'sleep').resolves()
       // Cover situations that take more than 10 seconds
       dateNowStub.callsFake(() => dateNowCallCount++ * 10000)
-      getOpenDocumentsStub.resolves(new Set())
       getDocumentsToOpenStub.resolves(new Set(filesToReturn.map(uri => uri.toString())))
       withProgressStub.callsFake((
         options: vscode.ProgressOptions,
@@ -240,13 +167,11 @@ describe('tests with sinon', () => {
       filesToReturn.forEach(uri => {
         expect(showTextDocumentStub.calledWith(uri)).toBe(true)
       })
-      expect(getOpenDocumentsStub.called).toBe(true)
       expect(executeCommandStub.calledWith('workbench.action.closeActiveEditor')).toBe(true)
       expect(executeCommandStub.callCount).toBe(3) // Close three documents with no errors
       expect(dateNowStub.callCount).toBe(11)
       expect(withProgressStub.callCount).toBe(1)
       expect(progressReportCount).toBe(4) // 1 extra call to get the progress bar spinning
-      getOpenDocumentsStub.resetHistory()
       executeCommandStub.resetHistory()
       withProgressStub.resetHistory()
       showTextDocumentStub.resetHistory()
@@ -267,7 +192,6 @@ describe('tests with sinon', () => {
       filesToReturn.forEach(uri => {
         expect(showTextDocumentStub.calledWith(uri)).toBe(true)
       })
-      expect(getOpenDocumentsStub.called).toBe(true)
       expect(executeCommandStub.calledWith('workbench.action.closeActiveEditor')).toBe(true)
       expect(executeCommandStub.callCount).toBe(2) // Close two documents with no errors
       expect(dateNowStub.callCount).toBe(5)

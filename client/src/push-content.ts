@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
-import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref } from './git-api/git'
+import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref, Status } from './git-api/git'
 import { ExtensionHostContext } from './panel'
 import { DiagnosticSource, requestEnsureIds } from '../../common/src/requests'
 
@@ -48,25 +48,24 @@ export const getOpenDocuments = async (): Promise<Set<string>> => {
   return ret
 }
 
-export const getDocumentsToOpen = async (
-  checkType: DocumentsToOpen,
-  openDocuments: Set<string>
-): Promise<Set<string>> => {
-  const documentsToOpen: Set<string> = new Set()
-  let urisToAdd: string[] = []
+export const getDocumentsToOpen = async (checkType: DocumentsToOpen): Promise<Set<string>> => {
   if (checkType === DocumentsToOpen.modified) {
     const repo = getRepo()
-    urisToAdd = (await repo.diffWithHEAD()).map(change => change.uri.toString())
-  } else if (checkType === DocumentsToOpen.all) {
+    return new Set(
+      (await repo.diffWithHEAD())
+        .filter(change => ![
+          Status.INDEX_DELETED, Status.DELETED, Status.DELETED_BY_THEM,
+          Status.DELETED_BY_US, Status.BOTH_DELETED
+        ].includes(change.status))
+        .map(change => change.uri.toString())
+        .filter(uriString =>
+          uriString.endsWith('.xml') || uriString.endsWith('.cnxml') || uriString.endsWith('.xhtml')
+        )
+    )
+  } else {
     // Open all *.*x*ml (could be xml, cnxml, xhtml, etc.)
-    urisToAdd = (await vscode.workspace.findFiles('**/*.*x*ml')).map(uri => uri.toString())
+    return new Set((await vscode.workspace.findFiles('**/*.*x*ml')).map(uri => uri.toString()))
   }
-  for (const uri of urisToAdd) {
-    if (!openDocuments.has(uri)) {
-      documentsToOpen.add(uri)
-    }
-  }
-  return documentsToOpen
 }
 
 export const closeValidDocuments = async (
@@ -129,8 +128,7 @@ export const sleep = async (milliseconds: number) => {
 }
 
 export const openAndValidate = async (checkType: DocumentsToOpen) => {
-  const openDocuments = await getOpenDocuments()
-  const documentsToOpen = await getDocumentsToOpen(checkType, openDocuments)
+  const documentsToOpen = await getDocumentsToOpen(checkType)
   // When you open an editor, it can take some time for error diagnostics to be reported.
   // Give the language server a second to report errors.
   const getDelayedDiagnostics = async () => {
