@@ -19,35 +19,6 @@ export const PushValidationModal = {
   xmlErrorMsg: 'There are outstanding schema errors that must be resolved before pushing is allowed.'
 }
 
-export const getOpenDocuments = async (): Promise<Set<string>> => {
-  // People have asked for this for 6 years! https://github.com/Microsoft/vscode/issues/15178
-  const ret = await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, cancellable: true },
-    async (progress, token) => {
-      progress.report({ message: 'Discovering open documents...' })
-      const openDocuments: Set<string> = new Set()
-      if (vscode.window.activeTextEditor !== undefined) {
-        const start = vscode.window.activeTextEditor.document.uri.toString()
-        let activeTextEditor: vscode.TextEditor | undefined
-        // Potential for infinite loop if someone closes the editor they started on
-        while (!openDocuments.has(start)) {
-          if (token.isCancellationRequested) {
-            return undefined
-          }
-          await vscode.commands.executeCommand('workbench.action.nextEditor')
-          activeTextEditor = vscode.window.activeTextEditor
-          if (activeTextEditor !== undefined) {
-            openDocuments.add(vscode.window.activeTextEditor.document.uri.toString())
-          }
-        }
-      }
-      return openDocuments
-    }
-  )
-  if (ret === undefined) throw new Error('Canceled')
-  return ret
-}
-
 export const getDocumentsToOpen = async (checkType: DocumentsToOpen): Promise<Set<string>> => {
   if (checkType === DocumentsToOpen.modified) {
     const repo = getRepo()
