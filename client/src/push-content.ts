@@ -220,8 +220,14 @@ export const getMessage = async (): Promise<string | undefined> => {
 }
 
 export const pushContent = (hostContext: ExtensionHostContext) => async () => {
-  const errorsBySource = await openAndValidate(DocumentsToOpen.modified)
-  if (await canPush(errorsBySource)) {
+  // Do a precursory check for known errors (fast!)
+  if (await canPush(await getErrorDiagnosticsBySource())) {
+    const commitMessage = await getMessage()
+    // Do a more complete check for errors if a commit message is given
+    /* istanbul ignore if */
+    if (commitMessage == null || !(await canPush(await openAndValidate(DocumentsToOpen.modified)))) {
+      return
+    }
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Push Content',
@@ -240,7 +246,12 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
       // push content
       progress.report({ message: 'Pushing...' })
-      await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+      await _pushContent(
+        getRepo,
+        async () => commitMessage, // This needs to be a `Thenable`
+        vscode.window.showInformationMessage,
+        vscode.window.showErrorMessage
+      )()
     })
   }
 }
