@@ -10,6 +10,7 @@ import { forwardOnDidChangeWorkspaceFolders } from './../../extension'
 import { ImageManagerPanel } from './../../panel-image-manager'
 import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
 import * as pushContent from '../../push-content'
+import * as utils from '../../utils'
 import { Suite } from 'mocha'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { Substitute } from '@fluffy-spoon/substitute'
@@ -696,6 +697,8 @@ suite('Push Button Test Suite', function (this: Suite) {
     assert(sendRequestMock.notCalled)
   })
   test('pushContent invokes _pushContent when canPush is true', async () => {
+    sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+    sinon.stub(pushContent, 'getMessage').resolves('poet commit')
     sinon.stub(pushContent, 'openAndValidate').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(pushContent, 'canPush').resolves(true)
     const stubPushContentHelperInner = sinon.stub()
