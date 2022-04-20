@@ -53,5 +53,9 @@ export async function fixModule(p: PageNode): Promise<void> {
   fixDocument(doc)
   // == save xml ==
   const out = new XMLSerializer().serializeToString(doc)
+  /* istanbul ignore if */
+  if (out === data) {
+    throw new Error(`BUG! We wrote a file that did not change: ${fsPath}`)
+  }
   await fs.promises.writeFile(fsPath, out, { encoding: 'utf-8' })
 }
