@@ -140,7 +140,7 @@ describe('Element ID creation', () => {
       const pagePath = FS_PATH_HELPER.join(rootUri, 'modules/m2468/index.cnxml')
       const page = bundle.allPages.getOrAdd(pagePath)
       // Start with 0 element ids
-      loadSuccess(page)
+      loadSuccess(page, false, 1)
       expect(page.elementIds.toArray()).toEqual([])
 
       await fixModule(page)

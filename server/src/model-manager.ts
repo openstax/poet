@@ -10,7 +10,7 @@ import { URI, Utils } from 'vscode-uri'
 import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode, TocPage } from '../../common/src/toc'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
-import { PageLinkKind, PageNode } from './model/page'
+import { PageLinkKind, PageNode, PageValidationKind } from './model/page'
 import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
@@ -25,6 +25,15 @@ const PAGE_RE = /\/modules\/[^/]+\/index\.cnxml$/
 const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 
 const PATH_SEP = path.sep
+
+function getSeverity(errMessage: string) {
+  switch (errMessage) {
+    case PageValidationKind.MISSING_ID:
+      return DiagnosticSeverity.Warning
+    default:
+      return DiagnosticSeverity.Error
+  }
+}
 
 interface NodeAndParent {node: ClientTocNode, parent: BookToc|ClientTocNode}
 function childrenOf(n: ClientTocNode) {
@@ -306,7 +315,8 @@ export class ModelManager {
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
       const diagnostics = errors.toSet().map(err => {
-        return Diagnostic.create(err.range, err.message, DiagnosticSeverity.Error, undefined, DiagnosticSource.cnxml)
+        const severity = getSeverity(err.message)
+        return Diagnostic.create(err.range, err.message, severity, undefined, DiagnosticSource.cnxml)
       }).toArray()
       this.conn.sendDiagnostics({
         uri,

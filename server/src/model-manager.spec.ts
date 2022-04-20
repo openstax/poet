@@ -4,7 +4,7 @@ import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
 import I from 'immutable'
 import { createConnection, WatchDog } from 'vscode-languageserver'
-import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
+import { DiagnosticSeverity, FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
 import xmlFormat from 'xml-formatter'
 import { expectValue, Opt, join, PathKind } from './model/utils'
 import { Bundle } from './model/bundle'
@@ -13,7 +13,7 @@ import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle }
 import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
 
-import { PageNode } from './model/page'
+import { PageNode, PageValidationKind } from './model/page'
 import { TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc'
 import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { bookMaker } from './model/book.spec'
@@ -129,6 +129,15 @@ describe('Bundle Manager', () => {
     manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.cnxml)
+  })
+  it(`sends a warning when the Diagnostics message is '${PageValidationKind.MISSING_ID}'`, () => {
+    // Load the pages
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+    const page = loadSuccess(first(book.pages))
+
+    manager.updateFileContents(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
+    expect(sendDiagnosticsStub.callCount).toBe(1)
+    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Warning)
   })
 })
 

@@ -1,6 +1,6 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq } from './utils'
+import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, Range } from './utils'
 import { Fileish, ValidationCheck } from './fileish'
 import { ResourceNode } from './resource'
 
@@ -55,12 +55,35 @@ export const UNTITLED_FILE = 'UntitledFile'
 const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+export const ELEMENT_TO_PREFIX = new Map<string, string>()
+ELEMENT_TO_PREFIX.set('para', 'para')
+ELEMENT_TO_PREFIX.set('equation', 'eq')
+ELEMENT_TO_PREFIX.set('list', 'list')
+ELEMENT_TO_PREFIX.set('section', 'sect')
+ELEMENT_TO_PREFIX.set('problem', 'prob')
+ELEMENT_TO_PREFIX.set('solution', 'sol')
+ELEMENT_TO_PREFIX.set('exercise', 'exer')
+ELEMENT_TO_PREFIX.set('example', 'exam')
+ELEMENT_TO_PREFIX.set('figure', 'fig')
+ELEMENT_TO_PREFIX.set('definition', 'def')
+ELEMENT_TO_PREFIX.set('term', 'term') // This should just be added to terms in the normal text, not inside a definition
+ELEMENT_TO_PREFIX.set('table', 'table')
+ELEMENT_TO_PREFIX.set('quote', 'quote')
+ELEMENT_TO_PREFIX.set('note', 'note')
+ELEMENT_TO_PREFIX.set('footnote', 'foot')
+ELEMENT_TO_PREFIX.set('cite', 'cite')
+
+const ELEMENTS_MISSING_IDS_SEL = `//cnxml:*[${Array.from(ELEMENT_TO_PREFIX.keys()).map(tagname => `self::cnxml:${tagname}`).join(' or ')}][not(@id)]`
+
 export class PageNode extends Fileish {
   private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _elementIds = Quarx.observable.box<Opt<I.Set<WithRange<string>>>>(undefined)
   private readonly _resourceLinks = Quarx.observable.box<Opt<I.Set<ResourceLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
+  private readonly _elementsMissingIds = Quarx.observable.box<Opt<I.Set<Range>>>(undefined)
+
   public uuid() { return this.ensureLoaded(this._uuid).v }
   public get optTitle() {
     const t = this._title.get()
@@ -127,6 +150,8 @@ export class PageNode extends Fileish {
     this._uuid.set(textWithRange(selectOne('//md:uuid', doc)))
 
     this._elementIds.set(I.Set((select('//cnxml:*[@id]', doc) as Element[]).map(el => textWithRange(el, 'id'))))
+    const missing = select(ELEMENTS_MISSING_IDS_SEL, doc) as Element[]
+    this._elementsMissingIds.set(I.Set(missing.map(el => calculateElementPositions(el))))
 
     const toResourceLink = (type: ResourceLinkKind, attr: Attr): ResourceLink => {
       const src = expectValue(attr.nodeValue, 'BUG: Attribute does not have a value')
@@ -222,6 +247,13 @@ export class PageNode extends Fileish {
             return I.Set()
           }
         }
+      },
+      {
+        message: PageValidationKind.MISSING_ID,
+        nodesToLoad: I.Set(),
+        fn: () => {
+          return this.ensureLoaded(this._elementsMissingIds)
+        }
       }
     ]
   }
@@ -232,4 +264,5 @@ export enum PageValidationKind {
   MISSING_TARGET = 'Link target does not exist',
   MALFORMED_UUID = 'Malformed UUID',
   DUPLICATE_UUID = 'Duplicate Page/Module UUID',
+  MISSING_ID = 'Missing id attribute',
 }

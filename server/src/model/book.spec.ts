@@ -12,7 +12,7 @@ describe('Book validations', () => {
       { title: chapterTitle, children: [] }
     ]
     book.load(bookMaker({ toc }))
-    expectErrors(book, [BookValidationKind.DUPLICATE_CHAPTER_TITLE])
+    expectErrors(book, [BookValidationKind.DUPLICATE_CHAPTER_TITLE, BookValidationKind.DUPLICATE_CHAPTER_TITLE])
   })
   it(BookValidationKind.MISSING_PAGE, () => {
     const bundle = makeBundle()
@@ -31,7 +31,7 @@ describe('Book validations', () => {
     book.load(bookMaker({ toc }))
     const page = first(book.pages)
     page.load(pageMaker({}))
-    expectErrors(book, [BookValidationKind.DUPLICATE_PAGE])
+    expectErrors(book, [BookValidationKind.DUPLICATE_PAGE, BookValidationKind.DUPLICATE_PAGE])
   })
 })
 

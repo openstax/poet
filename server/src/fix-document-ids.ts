@@ -1,28 +1,10 @@
 import fs from 'fs'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { URI } from 'vscode-uri'
-import { PageNode } from './model/page'
+import { ELEMENT_TO_PREFIX, PageNode } from './model/page'
 import { expectValue, select } from './model/utils'
 
 const ID_PADDING_CHARS = 5
-
-const ELEMENT_TO_PREFIX = new Map<string, string>()
-ELEMENT_TO_PREFIX.set('para', 'para')
-ELEMENT_TO_PREFIX.set('equation', 'eq')
-ELEMENT_TO_PREFIX.set('list', 'list')
-ELEMENT_TO_PREFIX.set('section', 'sect')
-ELEMENT_TO_PREFIX.set('problem', 'prob')
-ELEMENT_TO_PREFIX.set('solution', 'sol')
-ELEMENT_TO_PREFIX.set('exercise', 'exer')
-ELEMENT_TO_PREFIX.set('example', 'exam')
-ELEMENT_TO_PREFIX.set('figure', 'fig')
-ELEMENT_TO_PREFIX.set('definition', 'def')
-ELEMENT_TO_PREFIX.set('term', 'term') // This should just be added to terms in the normal text, not inside a definition
-ELEMENT_TO_PREFIX.set('table', 'table')
-ELEMENT_TO_PREFIX.set('quote', 'quote')
-ELEMENT_TO_PREFIX.set('note', 'note')
-ELEMENT_TO_PREFIX.set('footnote', 'foot')
-ELEMENT_TO_PREFIX.set('cite', 'cite')
 
 export function padLeft(text: string, padChar: string, size: number): string {
   if (text.length < size) {

@@ -1,6 +1,6 @@
 import expect from 'expect'
 import * as path from 'path'
-import { PageNode, PageValidationKind, UNTITLED_FILE } from './page'
+import { ELEMENT_TO_PREFIX, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
 import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
 
 describe('Page', () => {
@@ -160,5 +160,16 @@ describe('Page validations', () => {
     const page = bundle.allPages.getOrAdd('somepage')
     page.load(pageMaker({ uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }] }))
     expectErrors(page, [PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET])
+  })
+  it(PageValidationKind.MISSING_ID, () => {
+    const bundle = makeBundle()
+    const page = bundle.allPages.getOrAdd('somepage/filename')
+    const elementsThatRequireId = Array.from(ELEMENT_TO_PREFIX.keys()).map(tagName => `<${tagName}/>`)
+    const expectedErrors = Array.from(ELEMENT_TO_PREFIX.keys()).map(_ => PageValidationKind.MISSING_ID)
+    const info = {
+      extraCnxml: elementsThatRequireId.join('')
+    }
+    page.load(pageMaker(info))
+    expectErrors(page, expectedErrors)
   })
 })
