@@ -1,7 +1,5 @@
-import fs from 'fs'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { URI } from 'vscode-uri'
-import { ELEMENT_TO_PREFIX, PageNode } from './model/page'
+import { ELEMENT_TO_PREFIX } from './model/page'
 import { expectValue, select } from './model/utils'
 
 const ID_PADDING_CHARS = 5
@@ -42,20 +40,15 @@ export function fixDocument(doc: Document): void {
   }
 }
 
-export async function fixModule(p: PageNode): Promise<void> {
-  const fsPath = URI.parse(p.absPath).fsPath
-  // 3 steps necessary for element id creation: check, fix, save
-  // == check xml ==
-  // TODO: use cached book-bundle doc data in future for performance increase?
-  const data = await fs.promises.readFile(fsPath, { encoding: 'utf-8' })
-  const doc = new DOMParser().parseFromString(data)
+export function idFixer(input: string) {
+  const doc = new DOMParser().parseFromString(input)
   // == fix xml ==
   fixDocument(doc)
   // == save xml ==
   const out = new XMLSerializer().serializeToString(doc)
   /* istanbul ignore if */
-  if (out === data) {
-    throw new Error(`BUG! We wrote a file that did not change: ${fsPath}`)
+  if (out === input) {
+    throw new Error('BUG! We wrote a file that did not change')
   }
-  await fs.promises.writeFile(fsPath, out, { encoding: 'utf-8' })
+  return out
 }

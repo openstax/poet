@@ -11,7 +11,7 @@ import { ExtensionHostContext, Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
 import { toggleTocTreesFilteringHandler } from './toc-trees-provider'
 import { BookOrTocNode, TocsTreeProvider } from './book-tocs'
-import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
+import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification, requestEnsureIds } from '../../common/src/requests'
 
 let tocTreesView: vscode.TreeView<BookOrTocNode>
 let tocTreesProvider: TocsTreeProvider
@@ -81,6 +81,11 @@ function createExports(tocPanelManager: PanelManager<TocEditorPanel>, cnxmlPrevi
   }
 }
 
+const autoIdContent = (hostContext: ExtensionHostContext) => async () => {
+  const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
+  await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
+}
+
 function doRest(client: LanguageClient): ExtensionExports {
   const hostContext = createHostContext(client)
   const tocPanelManager = new PanelManager(hostContext, TocEditorPanel)
@@ -100,6 +105,7 @@ function doRest(client: LanguageClient): ExtensionExports {
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, imageManagerPanelManager.revealOrNew.bind(imageManagerPanelManager))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent(hostContext)))
+  vscode.commands.registerCommand('openstax.autoIdContent', ensureCatch(autoIdContent(hostContext)))
   vscode.commands.registerCommand('openstax.tagContent', ensureCatch(tagContent))
   tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))

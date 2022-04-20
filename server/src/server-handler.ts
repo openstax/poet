@@ -1,5 +1,5 @@
 import { BundleEnsureIdsParams } from '../../common/src/requests'
-import { fixModule } from './fix-document-ids'
+import { idFixer } from './fix-document-ids'
 import { bundleFactory } from './server'
 import { ModelManager } from './model-manager'
 import { CompletionItem, CompletionParams } from 'vscode-languageserver/node'
@@ -14,7 +14,7 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsParams) => Pr
       const errorTypes = p.validationErrors.errors.map(e => e.message)
       return errorTypes.has(PageValidationKind.MISSING_ID)
     })
-    await Promise.all(pagesWithMissingIds.map(async p => await fixModule(p)))
+    await Promise.all(pagesWithMissingIds.map(async p => await manager.modifyFileish(p, idFixer)))
   }
 }
 

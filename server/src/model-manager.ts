@@ -572,6 +572,18 @@ export class ModelManager {
     bookToc.tocTree.unshift(tocNode)
     await writeBookToc(book, bookToc)
   }
+
+  public async modifyFileish(node: Fileish, fn: (input: string) => string) {
+    const fileContents = expectValue(await this.readOrNull(node), `BUG? This file should exist right? ${node.absPath}`)
+    const out = fn(fileContents)
+
+    ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
+    node.load(out)
+    this.sendFileDiagnostics(node)
+
+    const fsPath = URI.parse(node.absPath).fsPath
+    await fs.promises.writeFile(fsPath, out)
+  }
 }
 
 export function removeNode(parent: ClientTocNode | BookToc, node: ClientTocNode) {
