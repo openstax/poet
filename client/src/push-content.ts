@@ -248,6 +248,7 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       progress.report({ message: 'Pushing...' })
       await _pushContent(
         getRepo,
+        /* istanbul ignore next (hopefully this is a temporary hotfix) */
         async () => commitMessage, // This needs to be a `Thenable`
         vscode.window.showInformationMessage,
         vscode.window.showErrorMessage
