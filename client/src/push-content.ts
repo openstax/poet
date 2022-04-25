@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
-import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref } from './git-api/git'
+import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref, Status } from './git-api/git'
 import { ExtensionHostContext } from './panel'
 import { DiagnosticSource, requestEnsureIds } from '../../common/src/requests'
 
@@ -19,54 +19,26 @@ export const PushValidationModal = {
   xmlErrorMsg: 'There are outstanding schema errors that must be resolved before pushing is allowed.'
 }
 
-export const getOpenDocuments = async (): Promise<Set<string>> => {
-  // People have asked for this for 6 years! https://github.com/Microsoft/vscode/issues/15178
-  const ret = await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, cancellable: true },
-    async (progress, token) => {
-      progress.report({ message: 'Discovering open documents...' })
-      const openDocuments: Set<string> = new Set()
-      if (vscode.window.activeTextEditor !== undefined) {
-        const start = vscode.window.activeTextEditor.document.uri.toString()
-        let activeTextEditor: vscode.TextEditor | undefined
-        // Potential for infinite loop if someone closes the editor they started on
-        while (!openDocuments.has(start)) {
-          if (token.isCancellationRequested) {
-            return undefined
-          }
-          await vscode.commands.executeCommand('workbench.action.nextEditor')
-          activeTextEditor = vscode.window.activeTextEditor
-          if (activeTextEditor !== undefined) {
-            openDocuments.add(vscode.window.activeTextEditor.document.uri.toString())
-          }
-        }
-      }
-      return openDocuments
-    }
-  )
-  if (ret === undefined) throw new Error('Canceled')
-  return ret
-}
-
-export const getDocumentsToOpen = async (
-  checkType: DocumentsToOpen,
-  openDocuments: Set<string>
-): Promise<Set<string>> => {
-  const documentsToOpen: Set<string> = new Set()
-  let urisToAdd: string[] = []
+export const getDocumentsToOpen = async (checkType: DocumentsToOpen): Promise<Set<string>> => {
   if (checkType === DocumentsToOpen.modified) {
     const repo = getRepo()
-    urisToAdd = (await repo.diffWithHEAD()).map(change => change.uri.toString())
-  } else if (checkType === DocumentsToOpen.all) {
+    return new Set(
+      repo.state.workingTreeChanges
+        .filter(change =>
+          change.status !== Status.DELETED &&
+          change.status !== Status.DELETED_BY_THEM &&
+          change.status !== Status.DELETED_BY_US &&
+          change.status !== Status.BOTH_DELETED
+        )
+        .map(change => change.uri.toString())
+        .filter(uriString =>
+          uriString.endsWith('.xml') || uriString.endsWith('.cnxml') || uriString.endsWith('.xhtml')
+        )
+    )
+  } else {
     // Open all *.*x*ml (could be xml, cnxml, xhtml, etc.)
-    urisToAdd = (await vscode.workspace.findFiles('**/*.*x*ml')).map(uri => uri.toString())
+    return new Set((await vscode.workspace.findFiles('**/*.*x*ml')).map(uri => uri.toString()))
   }
-  for (const uri of urisToAdd) {
-    if (!openDocuments.has(uri)) {
-      documentsToOpen.add(uri)
-    }
-  }
-  return documentsToOpen
 }
 
 export const closeValidDocuments = async (
@@ -129,8 +101,7 @@ export const sleep = async (milliseconds: number) => {
 }
 
 export const openAndValidate = async (checkType: DocumentsToOpen) => {
-  const openDocuments = await getOpenDocuments()
-  const documentsToOpen = await getDocumentsToOpen(checkType, openDocuments)
+  const documentsToOpen = await getDocumentsToOpen(checkType)
   // When you open an editor, it can take some time for error diagnostics to be reported.
   // Give the language server a second to report errors.
   const getDelayedDiagnostics = async () => {
@@ -249,8 +220,14 @@ export const getMessage = async (): Promise<string | undefined> => {
 }
 
 export const pushContent = (hostContext: ExtensionHostContext) => async () => {
-  const errorsBySource = await openAndValidate(DocumentsToOpen.modified)
-  if (await canPush(errorsBySource)) {
+  // Do a precursory check for known errors (fast!)
+  if (await canPush(await getErrorDiagnosticsBySource())) {
+    const commitMessage = await getMessage()
+    // Do a more complete check for errors if a commit message is given
+    /* istanbul ignore if */
+    if (commitMessage == null || !(await canPush(await openAndValidate(DocumentsToOpen.modified)))) {
+      return
+    }
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Push Content',
@@ -269,7 +246,13 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
       // push content
       progress.report({ message: 'Pushing...' })
-      await _pushContent(getRepo, getMessage, vscode.window.showInformationMessage, vscode.window.showErrorMessage)()
+      await _pushContent(
+        getRepo,
+        /* istanbul ignore next (hopefully this is a temporary hotfix) */
+        async () => commitMessage, // This needs to be a `Thenable`
+        vscode.window.showInformationMessage,
+        vscode.window.showErrorMessage
+      )()
     })
   }
 }

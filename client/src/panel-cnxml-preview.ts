@@ -83,6 +83,9 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
     this._onDidInnerPanelReload = new vscode.EventEmitter()
     void ensureCatchPromise(this.tryRebindToActiveResource(true))
     this.registerDisposable(vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor?.document.uri.fsPath === this.resourceBinding?.fsPath) {
+        return
+      }
       void ensureCatchPromise(this.tryRebindToActiveResource(false))
     }))
     this.registerDisposable(this.context.events.onDidChangeWatchedFiles(ensureCatch(async () => {
@@ -202,6 +205,9 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
   private rebindToResource(resource: vscode.Uri | null): void {
     const oldBinding = this.resourceBinding
     this.resourceBinding = resource
+    if (this.disposed()) {
+      return
+    }
     if (this.resourceBinding == null) {
       this.panel.webview.html = rawTextHtml('No resource available to preview')
       return
