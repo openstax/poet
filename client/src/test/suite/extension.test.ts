@@ -110,53 +110,6 @@ suite('Extension Test Suite', function (this: Suite) {
      * assert.strictEqual(uriAgain.fsPath, TEST_DATA_DIR)
      */
   })
-  test('cnxml preview rebinds to resource in the active editor', async () => {
-    const uri = expect(getRootPathUri())
-    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
-    assert.strictEqual((panel as any).resourceBinding, null)
-
-    const resourceFirst = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const resourceBindingChangedExpectedFirst: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding((event) => {
-        if (event != null && event.fsPath === resourceFirst.fsPath) {
-          resolve(event)
-        }
-      })
-    })
-    const resourceSecond = uri.with({ path: path.join(uri.path, 'modules', 'm00002', 'index.cnxml') })
-    const resourceBindingChangedExpectedSecond: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding((event) => {
-        if (event != null && event.fsPath === resourceSecond.fsPath) {
-          resolve(event)
-        }
-      })
-    })
-
-    const documentFirst = await vscode.workspace.openTextDocument(resourceFirst)
-    await vscode.window.showTextDocument(documentFirst, vscode.ViewColumn.Two)
-    const contentFromFsBecauseVscodeLiesAboutDocumentContentFirst = await fs.promises.readFile(resourceFirst.fsPath, { encoding: 'utf-8' })
-    const documentDomFirst = new DOMParser().parseFromString(contentFromFsBecauseVscodeLiesAboutDocumentContentFirst)
-    tagElementsWithLineNumbers(documentDomFirst)
-    const xmlExpectedFirst = new XMLSerializer().serializeToString(documentDomFirst)
-    await resourceBindingChangedExpectedFirst
-    assert((panel as any).panel.webview.html.includes(JSON.stringify(xmlExpectedFirst)))
-    assert.strictEqual((panel as any).resourceBinding.fsPath, resourceFirst.fsPath)
-
-    const documentSecond = await vscode.workspace.openTextDocument(resourceSecond)
-    await vscode.window.showTextDocument(documentSecond, vscode.ViewColumn.Two)
-    const contentFromFsBecauseVscodeLiesAboutDocumentContentSecond = await fs.promises.readFile(resourceSecond.fsPath, { encoding: 'utf-8' })
-    const documentDomSecond = new DOMParser().parseFromString(contentFromFsBecauseVscodeLiesAboutDocumentContentSecond)
-    tagElementsWithLineNumbers(documentDomSecond)
-    const xmlExpectedSecond = new XMLSerializer().serializeToString(documentDomSecond)
-    await resourceBindingChangedExpectedSecond
-    const xsl = await fs.promises.readFile(
-      path.join(resourceRootDir, 'cnxml-to-html5.xsl'),
-      'utf-8'
-    )
-    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: PanelStateMessageType.Response, state: { xml: xmlExpectedSecond, xsl: xsl } }))
-    assert.strictEqual((panel as any).resourceBinding.fsPath, resourceSecond.fsPath)
-  }).timeout(5000)
   test('cnxml preview only rebinds to cnxml', async () => {
     const uri = expect(getRootPathUri())
     const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })

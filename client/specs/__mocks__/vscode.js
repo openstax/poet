@@ -63,6 +63,7 @@ const workspace = {
       throw new FileSystemError('EntryNotFound')
     }),
   },
+  openTextDocument: jest.fn(() => { throw new Error('Mocked. Implement me since you seem to use openTextDocument')}),
   onDidChangeConfiguration: jest.fn(),
   onDidChangeWorkspaceFolders: jest.fn(),
   onDidOpenTextDocument: jest.fn(),

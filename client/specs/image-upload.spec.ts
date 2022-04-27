@@ -26,7 +26,7 @@ const createMockEvents = (): { emitters: ExtensionEventEmitters, events: Extensi
 
 describe('image-upload Panel', () => {
   const fakeWorkspacePath = '/tmp/fakeworkspace'
-  const resourceRootDir = 'mockedresourcerootdir'
+  const resourceRootDir = 'fakeresourcerootdir'
   const sinon = SinonRoot.createSandbox()
   const createMockClient = (): LanguageClient => {
     return {
