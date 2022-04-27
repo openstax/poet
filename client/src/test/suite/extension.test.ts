@@ -111,16 +111,6 @@ suite('Extension Test Suite', function (this: Suite) {
      */
   })
 
-  test('cnxml preview refuses refresh if no resource bound', async () => {
-    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    assert(panel.isPreviewOf(null))
-    await (panel as any).tryRebindToResource(null)
-    await (panel as any).rebindToResource(null)
-    const refreshCalls = (panel.postMessage as SinonRoot.SinonSpy)
-      .getCalls()
-      .filter(call => call.args.some(arg => arg.type != null && arg.type === 'refresh'))
-    assert.strictEqual(refreshCalls.length, 0)
-  })
   test('cnxml preview messaged upon visible range change', async () => {
     const uri = expect(getRootPathUri())
 

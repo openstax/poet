@@ -184,5 +184,17 @@ describe('cnxml-preview', () => {
       expect(refreshCalls.length).toBe(2)
       expect((panel as any).resourceBinding.fsPath).toBe(resourceSecond.fsPath)
     })
+
+    it('cnxml preview refuses refresh if no resource bound', async () => {
+      const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+      const postMessage = sinon.spy(panel, 'postMessage')
+      expect(panel.isPreviewOf(null)).toBe(true)
+      await (panel as any).tryRebindToResource(null)
+      await (panel as any).rebindToResource(null)
+      const refreshCalls = postMessage
+        .getCalls()
+        .filter(call => call.args.some(arg => arg.type != null && arg.type === PanelStateMessageType.Response))
+      expect(refreshCalls.length).toBe(0)
+    })
   })
 })
