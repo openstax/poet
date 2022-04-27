@@ -10,6 +10,9 @@ const languages = {
 };
 
 const StatusBarAlignment = {};
+class FileSystemError extends Error {
+  name = 'EntryNotFound'
+}
 
 const window = {
   createOutputChannel: (() => ({
@@ -53,6 +56,13 @@ const workspace = {
     onDidChange: jest.fn(),
     onDidDelete: jest.fn(),
   })),
+  fs: {
+    writeFile: jest.fn(),
+    stat: jest.fn(() => {
+      // By default, throw an error which means the file was not found
+      throw new FileSystemError('EntryNotFound')
+    }),
+  },
   onDidChangeConfiguration: jest.fn(),
   onDidChangeWorkspaceFolders: jest.fn(),
   onDidOpenTextDocument: jest.fn(),
@@ -192,6 +202,7 @@ const vscode = {
   ThemeIcon,
   ConfigurationTarget,
   ProgressLocation,
+  FileSystemError,
 };
 
 module.exports = { ...vscode, default: vscode };
