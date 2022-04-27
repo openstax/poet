@@ -110,42 +110,7 @@ suite('Extension Test Suite', function (this: Suite) {
      * assert.strictEqual(uriAgain.fsPath, TEST_DATA_DIR)
      */
   })
-  test('cnxml preview only rebinds to cnxml', async () => {
-    const uri = expect(getRootPathUri())
-    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
 
-    const resourceFirst = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const resourceBindingChangedExpectedFirst: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding((event) => {
-        if (event != null && event.fsPath === resourceFirst.fsPath) {
-          resolve(event)
-        }
-      })
-    })
-
-    const documentFirst = await vscode.workspace.openTextDocument(resourceFirst)
-    await vscode.window.showTextDocument(documentFirst, vscode.ViewColumn.Two)
-    const documentDomFirst = new DOMParser().parseFromString(documentFirst.getText())
-    tagElementsWithLineNumbers(documentDomFirst)
-    const xmlExpectedFirst = new XMLSerializer().serializeToString(documentDomFirst)
-    await resourceBindingChangedExpectedFirst
-
-    const resourceSecond = uri.with({ path: path.join(uri.path, 'collections', 'test.collection.xml') })
-    const documentSecond = await vscode.workspace.openTextDocument(resourceSecond)
-    await vscode.window.showTextDocument(documentSecond, vscode.ViewColumn.Two)
-
-    const resourceThird = uri.with({ path: path.join(uri.path, 'media', 'README.md') })
-    const documentThird = await vscode.workspace.openTextDocument(resourceThird)
-    await vscode.window.showTextDocument(documentThird, vscode.ViewColumn.Two)
-
-    assert((panel as any).panel.webview.html.includes(JSON.stringify(xmlExpectedFirst)))
-    const refreshCalls = (panel.postMessage as SinonRoot.SinonSpy)
-      .getCalls()
-      .filter(call => call.args.some(arg => arg.type != null && arg.type === 'refresh'))
-    assert.strictEqual(refreshCalls.length, 0)
-    assert.strictEqual((panel as any).resourceBinding.fsPath, resourceFirst.fsPath)
-  })
   test('cnxml preview refuses refresh if no resource bound', async () => {
     const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
     assert(panel.isPreviewOf(null))
