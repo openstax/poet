@@ -209,7 +209,7 @@ The CNXML schema validation in the extension is performed using XSD files genera
 
 ```bash
 $ git -C ../cnxml checkout poet-schema
-$ java -jar ../jing-trang/build/jing.jar -s ../cnxml/cnxml/xml/poet/schema/rng/poet-jing.rng > poet-simplified.rng
+$ java -jar ../jing-trang/build/jing.jar -i -s ../cnxml/cnxml/xml/poet/schema/rng/poet-jing.rng > poet-simplified.rng
 $ java -jar ../jing-trang/build/trang.jar -I rng -O xsd poet-simplified.rng client/static/xsd/mathml.xsd
 $ patch -p1 < client/static/xsd/trang.patch
 $ rm poet-simplified.rng
