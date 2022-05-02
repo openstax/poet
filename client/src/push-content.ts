@@ -2,7 +2,7 @@ import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref, Status } from './git-api/git'
 import { ExtensionHostContext } from './panel'
-import { DiagnosticSource, requestEnsureIds } from './common/requests'
+import { DiagnosticSource, ExtensionServerRequest } from './common/requests'
 
 export enum Tag {
   release = 'Release',
@@ -243,7 +243,8 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
       // fix ids
       // TODO: better ui in future. Add `increment` value in `progress.report` and use a callback to update real progress
-      await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
+      await hostContext.client.sendRequest(ExtensionServerRequest.BundleEnsureIds, { workspaceUri: uri.toString() })
+
       // push content
       progress.report({ message: 'Pushing...' })
       await _pushContent(

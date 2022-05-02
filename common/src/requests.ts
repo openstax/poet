@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { BookToc, ClientPageish } from './toc'
 
 export enum DiagnosticSource {
@@ -42,16 +43,6 @@ export interface BooksAndOrphans {
 
 export const EMPTY_BOOKS_AND_ORPHANS: BooksAndOrphans = { books: [], orphans: [] }
 
-// Mock out the basic need of the LanguageClient for common,
-// since we can't import the client lib.
-interface LanguageClient {
-  sendRequest: <R>(method: string, param: any) => Promise<R>
-}
-
 export interface BundleEnsureIdsParams {
   workspaceUri: string
-}
-
-export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsParams): Promise<void> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleEnsureIds, args)
 }
