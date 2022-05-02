@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 export enum PanelType {
   TOC_EDITOR = 'openstax.tocEditor',
   IMAGE_MANAGER = 'openstax.imageManager',

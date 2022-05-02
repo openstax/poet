@@ -1,4 +1,6 @@
-import { h, Fragment, render, createContext } from 'preact' // eslint-disable-line no-unused-vars
+/** @jsx PreactCreateElement */
+/** @jsxFrag PreactCreateFragment */
+import { h as PreactCreateElement, Fragment as PreactCreateFragment, render, createContext } from 'preact' // eslint-disable-line no-unused-vars
 import { useState, useContext, useEffect, useRef } from 'preact/hooks'
 import 'react-sortable-tree/style.css'
 import SortableTree from 'react-sortable-tree'

@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See LICENSE in this directory for license information.
  *-------------------------------------------------------------------------------------------- */
+/* istanbul ignore file */
 
 import { Uri, Event, Disposable, ProviderResult } from 'vscode'
 export { ProviderResult } from 'vscode'

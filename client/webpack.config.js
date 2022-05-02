@@ -41,9 +41,9 @@ const viewConfig = {
   context: path.join(__dirname),
   devtool: 'source-map',
   entry: {
-    'toc-editor': './src/webview-js/toc-editor/toc-editor.jsx',
-    'image-upload': './src/webview-js/image-upload/image-upload.ts',
-    'cnxml-preview': './src/webview-js/cnxml-preview/cnxml-preview.js'
+    'toc-editor': './out/webview-js/toc-editor/toc-editor.js',
+    'image-upload': './out/webview-js/image-upload/image-upload.js',
+    'cnxml-preview': './out/webview-js/cnxml-preview/cnxml-preview.js'
   },
   output: {
     path: path.resolve(__dirname, 'out/static-resources/'),

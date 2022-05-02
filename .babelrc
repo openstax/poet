@@ -9,7 +9,7 @@
               {
                 "exclude": [
                   "node_modules/",
-                  "client/out/client/src/test/**/*"
+                  "client/src/test/suite/index.ts"
                 ]
               }
             ]

@@ -5,7 +5,6 @@ set -xeo pipefail
 test_repo_dest=./client/out/test/data/test-repo
 
 echo '==> Move directories'
-cp -r ./client/dist/* ./client/out/
 [[ -d "${test_repo_dest}" ]] || mkdir -p "${test_repo_dest}"
 cp -r ./collections "${test_repo_dest}"
 cp -r ./media "${test_repo_dest}"
