@@ -8,7 +8,7 @@
   "description": "An editor for OpenStax-organized books.",
   "author": "phil@openstax.org",
   "repository": {
-    "url": "https://github.com/openstax/pro-editing-tool/"
+    "url": "https://github.com/openstax/poet"
   },
   "engines": {
     "vscode": "^1.39.0"
@@ -35,7 +35,7 @@
     "lint:fix": "npm run lint -- --fix",
     "pretest:client": "./scripts/pre-test-client.bash",
     "test:client": "node --unhandled-rejections=strict ./client/out/test/runTest.js",
-    "pretest:cypress": "./scripts/pre-test-cypress.sh",
+    "pretest:cypress": "./scripts/pre-test-cypress.bash",
     "test:cypress": "cypress run --quiet --config-file ./cypress.json",
     "test:unit": "jest --coverage --coverageDirectory ./.nyc_output/",
     "test:unit:watch": "npm run test:unit -- --watch --updateSnapshot",
@@ -45,9 +45,6 @@
     "test": "npm run test:only",
     "posttest": "nyc merge ./.nyc_output/ ./.nyc_output/coverage-final.json && nyc report --reporter=lcov --reporter=text --reporter=html",
     "postinstall": "cd ./client/ && npm install && cd ../server/ && npm install"
-  },
-  "nyc": {
-    "sourceMap": true
   },
   "activationEvents": [
     "onLanguage:xml",
@@ -193,6 +190,7 @@
     "@babel/plugin-transform-react-jsx": "^7.16.7",
     "@babel/plugin-transform-runtime": "^7.17.10",
     "@babel/preset-typescript": "^7.16.7",
+    "@babel/runtime": "^7.17.9",
     "@cypress/code-coverage": "^3.9.12",
     "@cypress/snapshot": "^2.1.7",
     "@fluffy-spoon/substitute": "^1.208.0",
@@ -233,8 +231,5 @@
     "vscode-languageserver": "^7.0.0",
     "webpack": "^5.68.0",
     "webpack-cli": "^4.9.2"
-  },
-  "dependencies": {
-    "@babel/runtime": "^7.17.9"
   }
 }

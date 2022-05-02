@@ -63,9 +63,7 @@ const viewConfig = {
     rules: [{
       test: /\.m?tsx?$/,
       exclude: /node_modules/,
-      use: {
-        loader: 'ts-loader'
-      }
+      use: ['ts-loader']
     }, {
       test: /\.css$/i,
       use: ['style-loader', 'css-loader']
