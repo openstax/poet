@@ -19,7 +19,7 @@ let client: LanguageClient
 const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter()
 const onDidChangeWatchedFiles = onDidChangeWatchedFilesEmitter.event
 
-let resourceRootDir = path.join(__dirname, 'static-resources') // extension is running in dist/
+let resourceRootDir = path.join(__dirname, 'static-resources')
 let languageServerLauncher = launchLanguageServer
 // setters for testing
 export function setResourceRootDir(d: string) {

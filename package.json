@@ -18,9 +18,9 @@
     "Linters",
     "Visualization"
   ],
-  "main": "./client/dist/client/src/extension.js",
+  "main": "./client/out/extension.bundle.js",
   "scripts": {
-    "clean": "rimraf *.vsix ./coverage/ ./.nyc_output/ ./client/dist/ ./client/out/ ./server/dist/ ./server/out/",
+    "clean": "rimraf *.vsix ./coverage/ ./.nyc_output/ ./client/out/ ./server/dist/ ./server/out/",
     "cypress:open": "cypress open",
     "package": "vsce package",
     "build:ts": "NODE_ENV=test babel --config-file $(pwd)/.babelrc --source-maps inline --extensions '.js,.jsx,.ts,.tsx' client/src/ -d client/out/",

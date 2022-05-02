@@ -12,8 +12,8 @@ const extensionConfig = {
   context: path.join(__dirname),
   entry: './src/extension.ts',
   output: {
-    path: path.resolve(__dirname, 'dist', 'client', 'src'),
-    filename: 'extension.js',
+    path: path.resolve(__dirname, 'out'),
+    filename: 'extension.bundle.js',
     libraryTarget: 'commonjs2',
     devtoolModuleFilenameTemplate: '../../../[resource-path]'
   },

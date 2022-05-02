@@ -10,7 +10,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}"
       ],
       "outFiles": [
-        "${workspaceFolder}/client/dist/**/*.js"
+        "${workspaceFolder}/client/out/**/*.js"
       ]
     },
     {

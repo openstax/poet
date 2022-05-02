@@ -16,5 +16,4 @@ modules
 cypress
 cypress.json
 collections
-!client/dist
 !server/dist

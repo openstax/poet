@@ -7,7 +7,6 @@ node_modules/
 /.nyc_output/
 
 /client/out/
-/client/dist/
 /server/out/
 /server/dist/
 
