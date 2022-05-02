@@ -11,7 +11,7 @@ import { ExtensionHostContext, Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
 import { toggleTocTreesFilteringHandler } from './toc-trees-provider'
 import { BookOrTocNode, TocsTreeProvider } from './book-tocs'
-import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
+import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from './common/requests'
 
 let tocTreesView: vscode.TreeView<BookOrTocNode>
 let tocTreesProvider: TocsTreeProvider
@@ -19,7 +19,7 @@ let client: LanguageClient
 const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter()
 const onDidChangeWatchedFiles = onDidChangeWatchedFilesEmitter.event
 
-let resourceRootDir = __dirname // extension is running in dist/
+let resourceRootDir = path.join(__dirname, 'static-resources') // extension is running in dist/
 let languageServerLauncher = launchLanguageServer
 // setters for testing
 export function setResourceRootDir(d: string) {

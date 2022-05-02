@@ -1,5 +1,5 @@
 import vscode, { ThemeIcon } from 'vscode'
-import { BookRootNode, ClientTocNode, TocNodeKind } from '../../common/src/toc'
+import { BookRootNode, ClientTocNode, TocNodeKind } from './common/toc'
 import { TocsTreeProvider, BookOrTocNode } from './book-tocs'
 import { ExtensionHostContext } from './panel'
 

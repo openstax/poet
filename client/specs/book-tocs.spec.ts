@@ -1,6 +1,6 @@
 import expect from 'expect'
 
-import { BookRootNode, BookToc, ClientTocNode, TocNodeKind } from '../../common/src/toc'
+import { BookRootNode, BookToc, ClientTocNode, TocNodeKind } from '../src/common/toc'
 import { TocsTreeProvider } from '../src/book-tocs'
 
 const testTocPage: ClientTocNode = {

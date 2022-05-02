@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { BooksAndOrphans } from '../../common/src/requests'
-import { PanelStateMessageType, PanelStateMessage } from '../../common/src/webview-constants'
+import { BooksAndOrphans } from './common/requests'
+import { PanelStateMessageType, PanelStateMessage } from './common/webview-constants'
 import { ensureCatchPromise, genNonce, injectCspNonce } from './utils'
 
 // Modified from https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/src/util/dispose.ts

@@ -46,7 +46,7 @@ const viewConfig = {
     'cnxml-preview': './src/webview-js/cnxml-preview/cnxml-preview.js'
   },
   output: {
-    path: path.resolve(__dirname, 'dist/client/src'),
+    path: path.resolve(__dirname, 'out/static-resources/'),
     filename: '[name].bundle.js',
     devtoolModuleFilenameTemplate: '../../../[resource-path]'
   },

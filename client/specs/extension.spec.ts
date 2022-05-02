@@ -10,7 +10,7 @@ import Sinon from 'sinon'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { OpenstaxCommand } from '../src/extension-types'
 import { TocEditorPanel } from '../src/panel-toc-editor'
-import { BooksAndOrphans, ExtensionServerNotification } from '../../common/src/requests'
+import { BooksAndOrphans, ExtensionServerNotification } from '../src/common/requests'
 import { PanelManager } from '../src/panel'
 import { CnxmlPreviewPanel } from '../src/panel-cnxml-preview'
 

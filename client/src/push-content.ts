@@ -2,7 +2,7 @@ import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref, Status } from './git-api/git'
 import { ExtensionHostContext } from './panel'
-import { DiagnosticSource, requestEnsureIds } from '../../common/src/requests'
+import { DiagnosticSource, requestEnsureIds } from './common/requests'
 
 export enum Tag {
   release = 'Release',

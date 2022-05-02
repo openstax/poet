@@ -8,13 +8,13 @@ async function main(): Promise<void> {
 
     // The folder containing the Extension Manifest package.json
     // Passed to `--extensionDevelopmentPath`
-    const extensionDevelopmentPath = path.resolve(__dirname, '../../')
+    const extensionDevelopmentPath = path.resolve(__dirname, '../../../')
 
     // The path to test runner
     // Passed to --extensionTestsPath
     const extensionTestsPath = path.resolve(__dirname, './suite/index')
 
-    const testDataFolder = path.resolve(extensionDevelopmentPath, 'src/test/data/test-repo')
+    const testDataFolder = path.resolve(__dirname, './data/test-repo')
 
     // Download VS Code, unzip it and run the integration test
     await runTests({ version, extensionDevelopmentPath, extensionTestsPath, launchArgs: [testDataFolder, '--disable-extensions'] })

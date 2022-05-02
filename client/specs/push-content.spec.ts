@@ -6,7 +6,7 @@ import vscode from 'vscode'
 import expect from 'expect'
 import { Substitute } from '@fluffy-spoon/substitute'
 import { ExtensionHostContext } from '../src/panel'
-import { DiagnosticSource, ExtensionServerRequest } from '../../common/src/requests'
+import { DiagnosticSource, ExtensionServerRequest } from '../src/common/requests'
 
 const makeCaptureMessage = (messages: string[]): (message: string) => Promise<string | undefined> => {
   return async (message: string): Promise<string | undefined> => {

@@ -3,15 +3,15 @@ import expect from 'expect'
 import SinonRoot, { SinonStub } from 'sinon'
 
 import vscode, { Disposable, Event, EventEmitter, Uri, ViewColumn, WebviewPanel } from 'vscode'
-import { BookRootNode, BookToc, TocNodeKind, TocModificationKind } from '../../common/src/toc'
+import { BookRootNode, BookToc, TocNodeKind, TocModificationKind } from '../src/common/toc'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees-provider'
 import { PanelIncomingMessage, TocEditorPanel } from '../src/panel-toc-editor'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest } from '../../common/src/requests'
+import { EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest } from '../src/common/requests'
 import { ExtensionEvents, ExtensionHostContext } from '../src/panel'
 import { BookOrTocNode, TocsTreeProvider } from '../src/book-tocs'
-import { PanelStateMessage, PanelStateMessageType } from '../../common/src/webview-constants'
+import { PanelStateMessage, PanelStateMessageType } from '../src/common/webview-constants'
 
 const TEST_OUT_DIR = join(__dirname, '../src')
 const resourceRootDir = TEST_OUT_DIR

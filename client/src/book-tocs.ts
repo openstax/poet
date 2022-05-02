@@ -1,6 +1,6 @@
 import { EventEmitter, TreeItemCollapsibleState, Uri, TreeDataProvider } from 'vscode'
 
-import { BookToc, ClientTocNode, BookRootNode, TocNodeKind } from '../../common/src/toc'
+import { BookToc, ClientTocNode, BookRootNode, TocNodeKind } from './common/toc'
 import { TocItemIcon } from './toc-trees-provider'
 
 export type BookOrTocNode = BookToc | ClientTocNode

@@ -1,5 +1,5 @@
 import Sinon from 'sinon'
-import { requestEnsureIds } from '../../common/src/requests'
+import { requestEnsureIds } from '../src/common/requests'
 import expect from 'expect'
 
 describe('ensureIds', () => {

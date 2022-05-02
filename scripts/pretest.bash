@@ -2,7 +2,7 @@
 
 set -xeo pipefail
 
-test_repo_dest=./client/out/client/src/test/data/test-repo
+test_repo_dest=./client/out/test/data/test-repo
 
 echo '==> Move directories'
 cp -r ./client/dist/* ./client/out/

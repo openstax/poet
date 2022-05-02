@@ -11,19 +11,19 @@ import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './..
 import { Suite } from 'mocha'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { EMPTY_BOOKS_AND_ORPHANS } from '../../../../common/src/requests'
-import { PanelStateMessageType } from '../../../../common/src/webview-constants'
+import { EMPTY_BOOKS_AND_ORPHANS } from '../../common/requests'
+import { PanelStateMessageType } from '../../common/webview-constants'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
 
-const ROOT_DIR_REL = '../../../../../../'
+const ROOT_DIR_REL = '../../../../'
 const ROOT_DIR_ABS = path.resolve(__dirname, ROOT_DIR_REL)
 
 // Test runs in out/client/src/test/suite, not src/client/src/test/suite
 const ORIGIN_DATA_DIR = ROOT_DIR_ABS
 const TEST_DATA_DIR = path.join(__dirname, '../data/test-repo')
-const TEST_OUT_DIR = path.join(__dirname, '../../')
+const RESOURCE_ROOT_DIR = path.join(__dirname, '../../static-resources')
 
-const resourceRootDir = TEST_OUT_DIR
+const resourceRootDir = RESOURCE_ROOT_DIR
 const createMockClient = (): LanguageClient => {
   return {
     sendRequest: SinonRoot.stub().returns([]),
