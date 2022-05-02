@@ -12,7 +12,7 @@ const extensionConfig = {
   context: path.join(__dirname),
   entry: './src/extension.ts',
   output: {
-    path: path.resolve(__dirname, 'out'),
+    path: path.resolve(__dirname, 'dist'),
     filename: 'extension.bundle.js',
     libraryTarget: 'commonjs2',
     devtoolModuleFilenameTemplate: '../../../[resource-path]'
@@ -65,20 +65,6 @@ const viewConfig = {
       exclude: /node_modules/,
       use: {
         loader: 'ts-loader'
-      }
-    }, {
-      test: /\.m?jsx?$/,
-      exclude: /node_modules/,
-      use: {
-        loader: 'babel-loader',
-        options: {
-          plugins: [
-            ['@babel/plugin-transform-react-jsx', {
-              pragma: 'h',
-              pragmaFrag: 'Fragment'
-            }]
-          ]
-        }
       }
     }, {
       test: /\.css$/i,
