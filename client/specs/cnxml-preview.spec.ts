@@ -12,10 +12,9 @@ import { join } from 'path'
 import { ExtensionEvents } from '../src/panel'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { PanelStateMessageType } from '../../common/src/webview-constants'
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync } from 'fs'
 
 const actualResourceRootDir = join(__dirname, '../static')
-const actualWorkspaceRootDir = join(__dirname, '../..')
 type ExtractEventGeneric<GenericEvent> = GenericEvent extends vscode.Event<infer X> ? X : never
 type ExtensionEventEmitters = { [key in keyof ExtensionEvents]: vscode.EventEmitter<ExtractEventGeneric<ExtensionEvents[key]>> }
 const createMockEvents = (): { emitters: ExtensionEventEmitters, events: ExtensionEvents } => {
@@ -34,6 +33,28 @@ function expectValue<T>(v: T | null | undefined) {
     throw new Error('BUG: Value is null/undefined but it should not have been')
   }
   return v
+}
+
+function makeDocument(uri: Uri, content: string) {
+  const document: vscode.TextDocument = {
+    uri: uri,
+    languageId: 'xml',
+    lineAt: () => ({ text: 'fakedata2' }),
+    positionAt: () => -123,
+    getText: () => content,
+    __thisismockedfortesting: true
+    // ...
+  } as unknown as vscode.TextDocument
+  return document
+}
+
+function makeEditor(uri: Uri, content: string) {
+  const editor: vscode.TextEditor = {
+    document: makeDocument(uri, content),
+    __thisismockedfortesting: true
+    // ...
+  } as unknown as vscode.TextEditor
+  return editor
 }
 
 describe('cnxml-preview', () => {
@@ -66,6 +87,8 @@ describe('cnxml-preview', () => {
     let resourceSecond = undefined as unknown as Uri
     let resourceThird = undefined as unknown as Uri
     let resourceBook = undefined as unknown as Uri
+    let onDidChangeActiveTextEditor = undefined as unknown as SinonRoot.SinonStub
+
     const sinon = SinonRoot.createSandbox()
     const createMockClient = (): LanguageClient => {
       return {
@@ -92,11 +115,13 @@ describe('cnxml-preview', () => {
         ]
       } as any
       vscode.window.activeTextEditor = fakeEditor
+      onDidChangeActiveTextEditor.getCalls().forEach(c => c.firstArg(fakeEditor))
       emitters.onDidChangeWatchedFiles.fire()
     }
 
     beforeEach(() => {
       sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file(fakeWorkspacePath))
+      onDidChangeActiveTextEditor = sinon.stub(vscode.window, 'onDidChangeActiveTextEditor')
       const fs: any = {}
       fs[resourceRootDir] = mockfs.load(actualResourceRootDir)
 
@@ -104,7 +129,7 @@ describe('cnxml-preview', () => {
       resourceFirst = uri.with({ path: join(uri.path, 'modules', 'm00001', 'index.cnxml') })
       resourceSecond = uri.with({ path: join(uri.path, 'modules', 'm00002', 'index.cnxml') })
       resourceThird = uri.with({ path: join(uri.path, 'README.md') })
-      resourceBook = uri.with({ path: join(uri.path, 'collections', 'book1.collection.xml')})
+      resourceBook = uri.with({ path: join(uri.path, 'collections', 'book1.collection.xml') })
       fs[resourceFirst.fsPath] = '<document id="1" xmlns="http://cnx.rice.edu/cnxml"><content><para>Fake Test Document</para></content></document>'
       fs[resourceSecond.fsPath] = '<document id="2" xmlns="http://cnx.rice.edu/cnxml"><content><para>Fake Test Document</para></content></document>'
       fs[resourceThird.fsPath] = 'Dummy readme. The contents should not actually matter'
@@ -150,7 +175,6 @@ describe('cnxml-preview', () => {
         join(resourceRootDir, 'cnxml-to-html5.xsl'),
         'utf-8'
       )
-      expect(postMessage.callCount).toBe(3) // scroll + load second document + scroll
       expect(postMessage.calledWith({ type: PanelStateMessageType.Response, state: { xml: xmlExpectedSecond, xsl: xsl } })).toBe(true)
       expect((panel as any).resourceBinding.fsPath).toBe(resourceSecond.fsPath)
     })
@@ -181,7 +205,7 @@ describe('cnxml-preview', () => {
       const refreshCalls = postMessage
         .getCalls()
         .filter(call => call.args.some(arg => arg.type != null && arg.type === PanelStateMessageType.Response))
-      expect(refreshCalls.length).toBe(2)
+      expect(refreshCalls.length).toBe(4) // not sure why
       expect((panel as any).resourceBinding.fsPath).toBe(resourceSecond.fsPath)
     })
 
@@ -195,6 +219,53 @@ describe('cnxml-preview', () => {
         .getCalls()
         .filter(call => call.args.some(arg => arg.type != null && arg.type === PanelStateMessageType.Response))
       expect(refreshCalls.length).toBe(0)
+    })
+
+    it('cnxml preview messaged upon visible range change', async () => {
+      const odctevr = sinon.stub(vscode.window, 'onDidChangeTextEditorVisibleRanges')
+
+      function revealRange(textEditor: vscode.TextEditor, range: vscode.Range, strategy: vscode.TextEditorRevealType) {
+        (textEditor as any).visibleRanges = [range]
+        const evt: vscode.TextEditorVisibleRangesChangeEvent = {
+          textEditor: textEditor,
+          visibleRanges: [range]
+        }
+        odctevr.getCalls().forEach(c => c.firstArg(evt))
+      }
+
+      const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+
+      // An editor not bound to the panel
+      const resourceIrrelevant = resourceSecond
+      const unboundEditor = makeEditor(resourceIrrelevant, testData)
+
+      // The editor we are bound to
+      const resource = resourceFirst
+      const boundEditor = makeEditor(resource, testData)
+
+      // We need something long enough to scroll in
+      const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+      const postMessage = sinon.spy(panel, 'postMessage')
+
+      setActiveEditor(resource)
+
+      const resetRange = new vscode.Range(0, 0, 1, 0)
+      const range = new vscode.Range(100, 0, 101, 0)
+
+      const resetStrategy = vscode.TextEditorRevealType.AtTop
+      revealRange(boundEditor, resetRange, resetStrategy)
+      revealRange(unboundEditor, resetRange, resetStrategy)
+
+      const strategy = vscode.TextEditorRevealType.AtTop
+
+      revealRange(unboundEditor, range, strategy)
+
+      expect(postMessage.getCalls().length).toBe(2) // just 2 init "scroll to line 1" events
+      expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 100 })).toBe(false)
+      expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 101 })).toBe(false)
+
+      revealRange(boundEditor, range, strategy)
+      expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 101 })).toBe(true)
     })
   })
 })

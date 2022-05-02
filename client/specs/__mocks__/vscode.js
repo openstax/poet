@@ -83,7 +83,17 @@ const commands = {
   registerCommand: jest.fn(),
 }
 
-const Range = jest.fn();
+class Range {
+  constructor(startLine, startCharacter, endLine, endCharacter) {
+    if (typeof endLine === undefined) {
+      this.start = start
+      this.end = end
+    } else {
+      this.start = { line: startLine, character: startCharacter }
+      this.end = { line: endLine, character: endCharacter }
+    }
+  }
+}
 const Diagnostic = jest.fn();
 const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 };
 
@@ -174,6 +184,8 @@ const ProgressLocation = {
   Notification: 15
 }
 
+const TextEditorRevealType = { AtTop: 1 }
+
 const vscode = {
   version: REQUIRED_VSCODE_VERSION,
   languages,
@@ -204,6 +216,7 @@ const vscode = {
   ConfigurationTarget,
   ProgressLocation,
   FileSystemError,
+  TextEditorRevealType,
 };
 
 module.exports = { ...vscode, default: vscode };

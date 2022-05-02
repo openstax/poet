@@ -6,13 +6,10 @@ import SinonRoot from 'sinon'
 import 'source-map-support/register'
 import { expect as expectOrig, getRootPathUri } from './../../utils'
 import { forwardOnDidChangeWorkspaceFolders } from './../../extension'
-import { ImageManagerPanel } from './../../panel-image-manager'
-import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from './../../panel-cnxml-preview'
+import { CnxmlPreviewPanel, rawTextHtml } from './../../panel-cnxml-preview'
 import { Suite } from 'mocha'
-import { DOMParser, XMLSerializer } from 'xmldom'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { EMPTY_BOOKS_AND_ORPHANS } from '../../../../common/src/requests'
-import { PanelStateMessageType } from '../../../../common/src/webview-constants'
 import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../../panel'
 
 const ROOT_DIR_REL = '../../../../../../'
@@ -111,66 +108,6 @@ suite('Extension Test Suite', function (this: Suite) {
      */
   })
 
-  test('cnxml preview messaged upon visible range change', async () => {
-    const uri = expect(getRootPathUri())
-
-    // An editor not bound to the panel
-    const resourceIrrelevant = uri.with({ path: path.join(uri.path, 'modules', 'm00002', 'index.cnxml') })
-    const documentIrrelevant = await vscode.workspace.openTextDocument(resourceIrrelevant)
-    const unboundEditor = await vscode.window.showTextDocument(documentIrrelevant, vscode.ViewColumn.One)
-
-    // The editor we are bound to
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const document = await vscode.workspace.openTextDocument(resource)
-    const boundEditor = await vscode.window.showTextDocument(document, vscode.ViewColumn.Two)
-
-    // We need something long enough to scroll in
-    const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
-    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding((event) => {
-        if (event != null && event.fsPath === resource.fsPath) {
-          resolve(event)
-        }
-      })
-    })
-    await resourceBindingChanged
-
-    // reset revealed range
-    const visualRangeResetBound = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === boundEditor) { resolve(undefined) } })
-    })
-    const visualRangeResetUnbound = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === unboundEditor) { resolve(undefined) } })
-    })
-    const resetRange = new vscode.Range(0, 0, 1, 0)
-    const resetStrategy = vscode.TextEditorRevealType.AtTop
-    boundEditor.revealRange(resetRange, resetStrategy)
-    unboundEditor.revealRange(resetRange, resetStrategy)
-    // Promise.race in case the visual range was already correct
-    await Promise.race([Promise.all([visualRangeResetBound, visualRangeResetUnbound]), sleep(500)])
-
-    await replaceUriDocumentContent(resource, testData)
-    await replaceUriDocumentContent(resourceIrrelevant, testData)
-
-    const range = new vscode.Range(100, 0, 101, 0)
-    const strategy = vscode.TextEditorRevealType.AtTop
-
-    const visualRangeChangedFirst = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
-    })
-    unboundEditor.revealRange(range, strategy)
-    await visualRangeChangedFirst
-    assert(!(panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 100 }))
-    assert(!(panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 101 }))
-
-    const visualRangeChangedSecond = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
-    })
-    boundEditor.revealRange(range, strategy)
-    await visualRangeChangedSecond
-    assert((panel.postMessage as SinonRoot.SinonSpy).calledWith({ type: 'scroll-in-preview', line: 101 }))
-  })
   test('cnxml preview scroll sync in editor updates visible range', async () => {
     const uri = expect(getRootPathUri())
 
