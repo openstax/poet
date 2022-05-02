@@ -1,7 +1,7 @@
 import Sinon from 'sinon'
 import * as pushContent from '../src/push-content'
 import * as utils from '../src/utils'
-import { Repository, Change, Status, CommitOptions, GitExtension, GitErrorCodes, Branch, RepositoryState, RefType } from '../src/git-api/git.d'
+import { Repository, Change, Status, CommitOptions, GitExtension, GitErrorCodes, Branch, RepositoryState, RefType } from '../src/git-api/git'
 import vscode from 'vscode'
 import expect from 'expect'
 import { Substitute } from '@fluffy-spoon/substitute'
