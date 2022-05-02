@@ -52,7 +52,7 @@ const viewConfig = {
   },
   resolve: {
     alias: {
-      '~common-api~': path.resolve(__dirname, 'out/common/src'),
+      '~common-api~': path.resolve(__dirname, 'out/common'),
       react: 'preact/compat',
       'react-dom/test-utils': 'preact/test-utils',
       'react-dom': 'preact/compat'
