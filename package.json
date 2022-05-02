@@ -44,7 +44,15 @@
     "postinstall": "cd ./client/ && npm install && cd ../server/ && npm install"
   },
   "nyc": {
-    "sourceMap": true
+    "require": [
+      "babel-register"
+    ],
+    "reporter": [
+      "lcov",
+      "text"
+    ],
+    "sourceMap": false,
+    "instrument": false
   },
   "activationEvents": [
     "onLanguage:xml",
@@ -194,6 +202,10 @@
   "devDependencies": {
     "@babel/cli": "^7.17.0",
     "@babel/plugin-transform-react-jsx": "^7.16.7",
+    "@babel/register": "^7.16.7",
+    "@babel/core": "^7.16.7",
+    "@babel/preset-env": "^7.16.7",
+    "babel-plugin-istanbul": "^6.1.1",
     "@cypress/code-coverage": "^3.9.12",
     "@cypress/snapshot": "^2.1.7",
     "@fluffy-spoon/substitute": "^1.208.0",

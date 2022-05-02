@@ -82,7 +82,9 @@ function createExports(tocPanelManager: PanelManager<TocEditorPanel>, cnxmlPrevi
 }
 
 const autoIdContent = (hostContext: ExtensionHostContext) => async () => {
+  /* istanbul ignore next */
   const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
+  /* istanbul ignore next */
   await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
 }
 

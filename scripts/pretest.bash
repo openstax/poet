@@ -13,7 +13,7 @@ cp -r ./modules "${test_repo_dest}"
 cp -r ./.vscode "${test_repo_dest}"
 
 echo '==> Instrument the client source files'
-$(npm bin)/nyc instrument \
+NODE_ENV=test $(npm bin)/nyc instrument \
     --exclude 'client/out/client/src/test/**/*' \
     --exclude-node-modules \
     --compact=false \

@@ -81,6 +81,7 @@ export abstract class Panel<InMessage, OutMessage, State> implements DisposableS
 
     this.registerDisposable(this.panel.webview.onDidReceiveMessage((message) => {
       if (message.type === PanelStateMessageType.Request) {
+        /* istanbul ignore next */
         void ensureCatchPromise(this.sendState())
       } else {
         void ensureCatchPromise(this.handleMessage(message))

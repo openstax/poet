@@ -1,0 +1,20 @@
+{
+  "env": {
+    "test": {
+      "plugins": [
+        [
+          "istanbul",
+          {
+            "exclude": [
+              "node_modules/",
+              "client/out/client/src/test/**/*",
+            ]
+          },
+          {
+            "useInlineSourceMaps": false
+          }
+        ]
+      ]
+    }
+  }
+}
