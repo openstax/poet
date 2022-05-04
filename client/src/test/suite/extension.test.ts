@@ -90,60 +90,6 @@ suite('Extension Test Suite', function (this: Suite) {
     sinon.resetHistory()
   })
 
-  test('getRootPathUri', () => {
-    const uri = expect(getRootPathUri())
-    assert.strictEqual(uri.fsPath, TEST_DATA_DIR)
-    /*
-     * Can't test null case, due to some issues with VSCode
-     * reloading extensions when the root workspace is removed
-     * even if it is re-added. Here is the rest of this test:
-     *
-     * vscode.workspace.updateWorkspaceFolders(0, 1)
-     * const uriNull = getRootPathUri()
-     * assert.strictEqual(uriNull, null)
-     * // Add the original workspace folder back
-     * vscode.workspace.updateWorkspaceFolders(0, 0, { uri: expect(uri) })
-     * const uriAgain = expect(getRootPathUri())
-     * assert.strictEqual(uriAgain.fsPath, TEST_DATA_DIR)
-     */
-  })
-
-  test('cnxml preview scroll sync does not update editor visible range if editor is scrolling (anti-jitter)', async () => {
-    const uri = expect(getRootPathUri())
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const document = await vscode.workspace.openTextDocument(resource)
-    await vscode.window.showTextDocument(document)
-
-    // We need something long enough to scroll to
-    const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
-    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    const boundEditor = expect(vscode.window.visibleTextEditors.find(editor => panel.isPreviewOf(editor.document.uri)))
-
-    // reset revealed range
-    const visualRangeReset = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
-    })
-    const range = new vscode.Range(0, 0, 1, 0)
-    const strategy = vscode.TextEditorRevealType.AtTop
-    boundEditor.revealRange(range, strategy)
-    // Promise.race in case the visual range was already correct
-    await Promise.race([visualRangeReset, sleep(500)])
-
-    await replaceUriDocumentContent(resource, testData);
-
-    // editor is scrolling
-    (panel as any).resourceIsScrolling = true
-    const visualRangeChanged = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
-    })
-    await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
-    await Promise.race([visualRangeChanged, sleep(500)])
-
-    const firstVisiblePosition = boundEditor.visibleRanges[0].start
-    const lineNumber = firstVisiblePosition.line
-    assert.strictEqual((panel as any).resourceBinding.fsPath, resource.fsPath)
-    assert.strictEqual(lineNumber, 0)
-  })
   test('cnxml preview refreshes when server watched file changes', async () => {
     const uri = expect(getRootPathUri())
     const mockEvents = createMockEvents()

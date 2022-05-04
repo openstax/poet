@@ -40,6 +40,7 @@ const window = {
   showTextDocument: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   onDidChangeTextEditorVisibleRanges: jest.fn(),
+  visibleTextEditors: [],
 };
 
 const workspace = {

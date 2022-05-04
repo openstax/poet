@@ -55,6 +55,8 @@ function makeEditor(uri: Uri, content: string) {
     __thisismockedfortesting: true
     // ...
   } as unknown as vscode.TextEditor
+
+  vscode.window.visibleTextEditors = [...vscode.window.visibleTextEditors, editor] // add the editor
   return editor
 }
 
@@ -286,7 +288,6 @@ describe('cnxml-preview', () => {
         const boundEditor = makeEditor(resource, testData)
 
         setActiveEditor(resource)
-        vscode.window.visibleTextEditors = [unboundEditor, boundEditor]
 
         // reset revealed range
         const range = new vscode.Range(0, 0, 1, 0)
@@ -300,6 +301,28 @@ describe('cnxml-preview', () => {
         await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
         expect(rr.getCalls()).not.toEqual([])
         expect(rr.firstCall.args[0]).toEqual({ end: { character: 0, line: 101 }, start: { character: 0, line: 100 } })
+      })
+
+      test('cnxml preview scroll sync does not update editor visible range if editor is scrolling (anti-jitter)', async () => {
+        // We need something long enough to scroll to
+        const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+        const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+
+        const resource = resourceFirst
+        const boundEditor = makeEditor(resource, testData)
+
+        const range = new vscode.Range(0, 0, 1, 0)
+        const strategy = vscode.TextEditorRevealType.AtTop
+        revealRange(boundEditor, range, strategy)
+
+        // editor is scrolling
+        ;(panel as any).resourceIsScrolling = true
+        await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
+
+        const firstVisiblePosition = boundEditor.visibleRanges[0].start
+        const lineNumber = firstVisiblePosition.line
+        expect((panel as any).resourceBinding.fsPath).toBe(resource.fsPath)
+        expect(lineNumber).toBe(0)
       })
     })
   })
