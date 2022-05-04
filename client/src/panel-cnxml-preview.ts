@@ -42,6 +42,7 @@ export const tagElementsWithLineNumbers = (doc: Document): void => {
 
 const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {
   const editor = vscode.window.activeTextEditor
+  /* istanbul ignore next */
   const resourceColumn = editor?.viewColumn ?? vscode.ViewColumn.One
   const previewColumn = resourceColumn + 1
   const localResourceRoots = [vscode.Uri.file(context.resourceRootDir), expect(getRootPathUri(), 'workspace must be open to preview')]
@@ -75,14 +76,13 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
   private webviewIsScrolling: boolean = false
   private resourceIsScrolling: boolean = false
   private xsl: string = ''
-  private readonly _onDidChangeResourceBinding: vscode.EventEmitter<vscode.Uri | null>
   private readonly _onDidInnerPanelReload: vscode.EventEmitter<void>
   constructor(private readonly context: ExtensionHostContext) {
     super(initPanel(context))
-    this._onDidChangeResourceBinding = new vscode.EventEmitter()
     this._onDidInnerPanelReload = new vscode.EventEmitter()
     void ensureCatchPromise(this.tryRebindToActiveResource(true))
     this.registerDisposable(vscode.window.onDidChangeActiveTextEditor((editor) => {
+      /* istanbul ignore next */
       if (editor?.document.uri.fsPath === this.resourceBinding?.fsPath) {
         return
       }
@@ -96,11 +96,8 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
     }))
   }
 
-  readonly onDidChangeResourceBinding: vscode.Event<vscode.Uri | null> = (...args) => {
-    return this._onDidChangeResourceBinding.event(...args)
-  }
-
   async handleMessage(message: PanelIncomingMessage): Promise<void> {
+    /* istanbul ignore else */
     if (message.type === 'scroll-in-editor') {
       for (const editor of vscode.window.visibleTextEditors) {
         if (!this.isPreviewOf(editor.document.uri)) {
@@ -129,6 +126,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
     if (!this.isPreviewOf(editor.document.uri)) {
       return
     }
+    /* istanbul ignore if */
     if (this.webviewIsScrolling) {
       this.webviewIsScrolling = false
       return
@@ -154,14 +152,10 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
     if (resource == null && !force) {
       return
     }
-    const bindingChanged = resource?.fsPath !== this.resourceBinding?.fsPath
     this.rebindToResource(resource)
     const activeEditor = vscode.window.activeTextEditor
     if (activeEditor != null) {
       await this.scrollToRangeStartOfEditor(activeEditor)
-    }
-    if (bindingChanged || force) {
-      this._onDidChangeResourceBinding.fire(resource)
     }
   }
 
@@ -175,6 +169,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
       return null
     }
     const activeUri = activeDocument.uri
+    /* istanbul ignore if */
     if (!(path.extname(activeUri.fsPath) === '.cnxml')) {
       return null
     }
@@ -205,6 +200,7 @@ export class CnxmlPreviewPanel extends Panel<PanelIncomingMessage, ScrollToLineO
   private rebindToResource(resource: vscode.Uri | null): void {
     const oldBinding = this.resourceBinding
     this.resourceBinding = resource
+    /* istanbul ignore if */
     if (this.disposed()) {
       return
     }

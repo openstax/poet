@@ -324,6 +324,18 @@ describe('cnxml-preview', () => {
         expect((panel as any).resourceBinding.fsPath).toBe(resource.fsPath)
         expect(lineNumber).toBe(0)
       })
+
+      test('cnxml preview refreshes when server watched file changes', async () => {
+        const mockEvents = createMockEvents()
+        const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
+        const resource = resourceFirst
+        const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: mockEvents.events })
+        const rebindingStub = sinon.spy(panel as any, 'rebindToResource')
+        setActiveEditor(resource)
+        const refreshCount = rebindingStub.callCount
+        await watchedFilesSpy.getCall(0).args[0]()
+        expect(rebindingStub.callCount).toBe(refreshCount + 1)
+      })
     })
   })
 })

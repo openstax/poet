@@ -4,9 +4,8 @@ import path from 'path'
 import vscode from 'vscode'
 import SinonRoot from 'sinon'
 import 'source-map-support/register'
-import { expect as expectOrig, getRootPathUri } from './../../utils'
 import { forwardOnDidChangeWorkspaceFolders } from './../../extension'
-import { CnxmlPreviewPanel, rawTextHtml } from './../../panel-cnxml-preview'
+import { rawTextHtml } from './../../panel-cnxml-preview'
 import { Suite } from 'mocha'
 import { LanguageClient } from 'vscode-languageclient/node'
 import { EMPTY_BOOKS_AND_ORPHANS } from '../../../../common/src/requests'
@@ -41,26 +40,6 @@ const createMockEvents = (): { emitters: ExtensionEventEmitters, events: Extensi
   return { emitters, events }
 }
 
-async function sleep(ms: number): Promise<void> {
-  return await new Promise(resolve => setTimeout(resolve, ms))
-}
-
-function expect<T>(value: T | null | undefined): T {
-  return expectOrig(value, 'test_assertion')
-}
-
-async function replaceUriDocumentContent(uri: vscode.Uri, content: string): Promise<void> {
-  const document = await vscode.workspace.openTextDocument(uri)
-  const fullRange = new vscode.Range(
-    document.positionAt(0),
-    document.positionAt(document.getText().length)
-  )
-  const edit = new vscode.WorkspaceEdit()
-  edit.replace(uri, fullRange, content)
-  await vscode.workspace.applyEdit(edit)
-  await document.save()
-}
-
 const resetTestData = async (): Promise<void> => {
   await vscode.workspace.saveAll(true)
   for (const subdir of ['META-INF', 'collections', 'media', 'modules']) {
@@ -78,10 +57,6 @@ suite('Extension Test Suite', function (this: Suite) {
     await resetTestData()
   })
 
-  this.beforeEach(() => {
-    sinon.spy(CnxmlPreviewPanel.prototype, 'postMessage')
-  })
-
   this.afterEach(async () => {
     await resetTestData()
     sinon.restore()
@@ -90,32 +65,6 @@ suite('Extension Test Suite', function (this: Suite) {
     sinon.resetHistory()
   })
 
-  test('cnxml preview refreshes when server watched file changes', async () => {
-    const uri = expect(getRootPathUri())
-    const mockEvents = createMockEvents()
-    const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: mockEvents.events })
-    await sleep(100) // FIXME: Make me go away (see https://github.com/openstax/cnx/issues/1569)
-    const rebindingStub = sinon.spy(panel as any, 'rebindToResource')
-    const panelBindingChanged = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding((event) => {
-        if (event != null && event.fsPath === resource.fsPath) {
-          resolve(event)
-        }
-      })
-    })
-    const document = await vscode.workspace.openTextDocument(resource)
-    await vscode.window.showTextDocument(document, vscode.ViewColumn.Two)
-    await panelBindingChanged
-    const refreshCount = rebindingStub.callCount
-    await watchedFilesSpy.getCall(0).args[0]()
-    assert.strictEqual(rebindingStub.callCount, refreshCount + 1)
-  })
-  test('cnxml preview throws upon unexpected message', async () => {
-    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    await assert.rejects(panel.handleMessage({ type: 'bad-type' } as any))
-  })
   test('forwardOnDidChangeWorkspaceFolders simply forwards any argument to client', async () => {
     const mockClient = createMockClient()
     const forwarder = forwardOnDidChangeWorkspaceFolders(mockClient)
