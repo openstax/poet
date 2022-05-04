@@ -2,8 +2,6 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "../",
-    "outDir": "out",
-    "tsBuildInfoFile": "out/tsbuildinfo.json"
   },
   "include": [
     "specs/**/*.spec.ts",

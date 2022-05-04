@@ -51,8 +51,9 @@ const viewConfig = {
     devtoolModuleFilenameTemplate: '../../../[resource-path]'
   },
   resolve: {
+    extensions: ['.js', '.ts'],
     alias: {
-      '~common-api~': path.resolve(__dirname, 'out/common/src'),
+      '~common-api~': path.resolve(__dirname, '../common/src'),
       react: 'preact/compat',
       'react-dom/test-utils': 'preact/test-utils',
       'react-dom': 'preact/compat'

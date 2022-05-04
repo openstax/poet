@@ -3,8 +3,6 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "rootDir": "../",
-    "outDir": "out",
-    "tsBuildInfoFile": "out/tsbuildinfo.json"
   },
   "include": [
     "src/**/*.ts",
@@ -12,7 +10,6 @@
     "jest.config.js"
   ],
   "exclude": [
-    "node_modules",
-    "out"
+    "node_modules"
   ]
 }
