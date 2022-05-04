@@ -65,7 +65,15 @@ const viewConfig = {
       test: /\.m?tsx?$/,
       exclude: /node_modules/,
       use: {
-        loader: 'ts-loader'
+        loader: 'babel-loader',
+        options: {
+          presets: ['@babel/preset-typescript'],
+          env: {
+            'development': {
+              plugins: ['babel-plugin-istanbul']
+            }
+          }
+        }
       }
     }, {
       test: /\.m?jsx?$/,
@@ -73,12 +81,12 @@ const viewConfig = {
       use: {
         loader: 'babel-loader',
         options: {
-          plugins: [
-            ['@babel/plugin-transform-react-jsx', {
-              pragma: 'h',
-              pragmaFrag: 'Fragment'
-            }]
-          ]
+          plugins: ['@babel/plugin-transform-react-jsx'],
+          env: {
+            'development': {
+              plugins: ['babel-plugin-istanbul']
+            }
+          }
         }
       }
     }, {
