@@ -108,64 +108,6 @@ suite('Extension Test Suite', function (this: Suite) {
      */
   })
 
-  test('cnxml preview scroll sync in editor updates visible range', async () => {
-    const uri = expect(getRootPathUri())
-
-    // An editor we should not scroll in
-    const resourceIrrelevant = uri.with({ path: path.join(uri.path, 'modules', 'm00002', 'index.cnxml') })
-    const documentIrrelevant = await vscode.workspace.openTextDocument(resourceIrrelevant)
-    const unboundEditor = await vscode.window.showTextDocument(documentIrrelevant, vscode.ViewColumn.One)
-
-    // The actual editor we are scrolling in
-    const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })
-    const document = await vscode.workspace.openTextDocument(resource)
-    const boundEditor = await vscode.window.showTextDocument(document, vscode.ViewColumn.Two)
-
-    // We need something long enough to scroll to
-    const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
-    const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-    const resourceBindingChanged: Promise<vscode.Uri | null> = new Promise((resolve, reject) => {
-      panel.onDidChangeResourceBinding((event) => {
-        if (event != null && event.fsPath === resource.fsPath) {
-          resolve(event)
-        }
-      })
-    })
-    await resourceBindingChanged
-
-    // reset revealed range
-    const visualRangeResetBound = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === boundEditor) { resolve(undefined) } })
-    })
-    const visualRangeResetUnbound = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeTextEditorVisibleRanges((event) => { if (event.textEditor === unboundEditor) { resolve(undefined) } })
-    })
-    const range = new vscode.Range(0, 0, 1, 0)
-    const strategy = vscode.TextEditorRevealType.AtTop
-    boundEditor.revealRange(range, strategy)
-    unboundEditor.revealRange(range, strategy)
-    // Promise.race in case the visual range was already correct
-    await Promise.race([Promise.all([visualRangeResetBound, visualRangeResetUnbound]), sleep(500)])
-
-    await replaceUriDocumentContent(resource, testData)
-    await replaceUriDocumentContent(resourceIrrelevant, testData);
-
-    // ensure scrollable
-    (panel as any).resourceIsScrolling = false
-    const visualRangeChanged = new Promise((resolve, reject) => {
-      vscode.window.onDidChangeTextEditorVisibleRanges(() => { resolve(undefined) })
-    })
-    await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
-    await Promise.race([visualRangeChanged, sleep(500)])
-
-    const firstVisiblePosition = boundEditor.visibleRanges[0].start
-    const lineNumber = firstVisiblePosition.line
-    assert.strictEqual((panel as any).resourceBinding.fsPath, resource.fsPath)
-    assert.strictEqual(lineNumber + 1, 101)
-    const firstVisiblePositionUnbound = unboundEditor.visibleRanges[0].start
-    const lineNumberUnbound = firstVisiblePositionUnbound.line
-    assert.strictEqual(lineNumberUnbound, 0)
-  })
   test('cnxml preview scroll sync does not update editor visible range if editor is scrolling (anti-jitter)', async () => {
     const uri = expect(getRootPathUri())
     const resource = uri.with({ path: path.join(uri.path, 'modules', 'm00001', 'index.cnxml') })

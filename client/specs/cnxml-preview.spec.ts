@@ -51,6 +51,7 @@ function makeDocument(uri: Uri, content: string) {
 function makeEditor(uri: Uri, content: string) {
   const editor: vscode.TextEditor = {
     document: makeDocument(uri, content),
+    revealRange: () => { },
     __thisismockedfortesting: true
     // ...
   } as unknown as vscode.TextEditor
@@ -221,9 +222,11 @@ describe('cnxml-preview', () => {
       expect(refreshCalls.length).toBe(0)
     })
 
-    it('cnxml preview messaged upon visible range change', async () => {
-      const odctevr = sinon.stub(vscode.window, 'onDidChangeTextEditorVisibleRanges')
-
+    describe('using onDidChangeTextEditorVisibleRanges', () => {
+      let odctevr = undefined as unknown as SinonRoot.SinonSpy<[listener: (e: vscode.TextEditorVisibleRangesChangeEvent) => any, thisArgs?: any, disposables?: vscode.Disposable[] | undefined], vscode.Disposable>
+      beforeEach(() => {
+        odctevr = sinon.spy(vscode.window, 'onDidChangeTextEditorVisibleRanges')
+      })
       function revealRange(textEditor: vscode.TextEditor, range: vscode.Range, strategy: vscode.TextEditorRevealType) {
         (textEditor as any).visibleRanges = [range]
         const evt: vscode.TextEditorVisibleRangesChangeEvent = {
@@ -233,39 +236,71 @@ describe('cnxml-preview', () => {
         odctevr.getCalls().forEach(c => c.firstArg(evt))
       }
 
-      const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+      it('cnxml preview messaged upon visible range change', async () => {
+        const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
 
-      // An editor not bound to the panel
-      const resourceIrrelevant = resourceSecond
-      const unboundEditor = makeEditor(resourceIrrelevant, testData)
+        // An editor not bound to the panel
+        const resourceIrrelevant = resourceSecond
+        const unboundEditor = makeEditor(resourceIrrelevant, testData)
 
-      // The editor we are bound to
-      const resource = resourceFirst
-      const boundEditor = makeEditor(resource, testData)
+        // The editor we are bound to
+        const resource = resourceFirst
+        const boundEditor = makeEditor(resource, testData)
 
-      // We need something long enough to scroll in
-      const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
-      const postMessage = sinon.spy(panel, 'postMessage')
+        // We need something long enough to scroll in
+        const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+        const postMessage = sinon.spy(panel, 'postMessage')
 
-      setActiveEditor(resource)
+        setActiveEditor(resource)
 
-      const resetRange = new vscode.Range(0, 0, 1, 0)
-      const range = new vscode.Range(100, 0, 101, 0)
+        const resetRange = new vscode.Range(0, 0, 1, 0)
+        const range = new vscode.Range(100, 0, 101, 0)
 
-      const resetStrategy = vscode.TextEditorRevealType.AtTop
-      revealRange(boundEditor, resetRange, resetStrategy)
-      revealRange(unboundEditor, resetRange, resetStrategy)
+        const resetStrategy = vscode.TextEditorRevealType.AtTop
+        revealRange(boundEditor, resetRange, resetStrategy)
+        revealRange(unboundEditor, resetRange, resetStrategy)
 
-      const strategy = vscode.TextEditorRevealType.AtTop
+        const strategy = vscode.TextEditorRevealType.AtTop
 
-      revealRange(unboundEditor, range, strategy)
+        revealRange(unboundEditor, range, strategy)
 
-      expect(postMessage.getCalls().length).toBe(2) // just 2 init "scroll to line 1" events
-      expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 100 })).toBe(false)
-      expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 101 })).toBe(false)
+        expect(postMessage.getCalls().length).toBe(2) // just 2 init "scroll to line 1" events
+        expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 100 })).toBe(false)
+        expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 101 })).toBe(false)
 
-      revealRange(boundEditor, range, strategy)
-      expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 101 })).toBe(true)
+        revealRange(boundEditor, range, strategy)
+        expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 101 })).toBe(true)
+      })
+
+      test('cnxml preview scroll sync in editor updates visible range', async () => {
+        // We need something long enough to scroll to
+        const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
+        const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
+
+        // An editor we should not scroll in
+        const resourceIrrelevant = resourceSecond
+        const unboundEditor = makeEditor(resourceIrrelevant, testData)
+
+        // The actual editor we are scrolling in
+        const resource = resourceFirst
+        const boundEditor = makeEditor(resource, testData)
+
+        setActiveEditor(resource)
+        vscode.window.visibleTextEditors = [unboundEditor, boundEditor]
+
+        // reset revealed range
+        const range = new vscode.Range(0, 0, 1, 0)
+        const strategy = vscode.TextEditorRevealType.AtTop
+        revealRange(boundEditor, range, strategy)
+        revealRange(unboundEditor, range, strategy)
+
+        // ensure scrollable
+        ;(panel as any).resourceIsScrolling = false
+        const rr = sinon.stub(boundEditor, 'revealRange').returns(undefined)
+        await panel.handleMessage({ type: 'scroll-in-editor', line: 101 })
+        expect(rr.getCalls()).not.toEqual([])
+        expect(rr.firstCall.args[0]).toEqual({ end: { character: 0, line: 101 }, start: { character: 0, line: 100 } })
+      })
     })
   })
 })
