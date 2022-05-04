@@ -4,7 +4,7 @@ import { TocNodeKind } from '../../common/src/toc'
 import { PanelStateMessageType } from '../../common/src/webview-constants'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
-  const htmlPath = './client/out/client/src/toc-editor.html'
+  const htmlPath = './client/dist/static-resources/toc-editor.html'
 
   const DO_NOT_INCREMENT = -1
 

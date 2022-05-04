@@ -18,9 +18,9 @@
     "Linters",
     "Visualization"
   ],
-  "main": "./client/dist/client/src/extension.js",
+  "main": "./client/dist/extension.bundle.js",
   "scripts": {
-    "clean": "rimraf *.vsix ./coverage/ ./.nyc_output/ ./client/dist/ ./client/out/ ./server/dist/ ./server/out/",
+    "clean": "rimraf *.vsix ./coverage/ ./.nyc_output/ ./client/dist/ ./server/dist/ ./server/out/",
     "cypress:open": "cypress open",
     "package": "vsce package",
     "build:ts": "tsc --build",
@@ -31,14 +31,13 @@
     "watch:ts": "npm run build:ts -- -watch",
     "lint": "eslint . --ext ts,js,jsx,tsx,json",
     "lint:fix": "npm run lint -- --fix",
-    "pretest:client": "./scripts/pretest.bash",
-    "test:client": "node --unhandled-rejections=strict ./client/out/client/src/test/runTest.js",
+    "pretest:cypress": "./scripts/pre-cypress.bash",
     "test:cypress": "cypress run --quiet --config-file ./cypress.json",
     "test:unit": "jest --coverage --coverageDirectory ./.nyc_output/",
     "test:unit:watch": "npm run test:unit -- --watch --updateSnapshot",
     "posttest:unit": "mv ./.nyc_output/coverage-final.json ./.nyc_output/coverage-jest.json",
     "pretest": "npm run clean && npm run build",
-    "test:only": "npm run test:unit && npm run test:client && npm run test:cypress",
+    "test:only": "npm run test:unit && npm run test:cypress",
     "test": "npm run test:only",
     "posttest": "nyc merge ./.nyc_output/ ./.nyc_output/coverage-final.json && nyc report --reporter=lcov --reporter=text --reporter=html",
     "postinstall": "cd ./client/ && npm install && cd ../server/ && npm install"

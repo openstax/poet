@@ -12,8 +12,8 @@ const extensionConfig = {
   context: path.join(__dirname),
   entry: './src/extension.ts',
   output: {
-    path: path.resolve(__dirname, 'dist', 'client', 'src'),
-    filename: 'extension.js',
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'extension.bundle.js',
     libraryTarget: 'commonjs2',
     devtoolModuleFilenameTemplate: '../../../[resource-path]'
   },
@@ -46,7 +46,7 @@ const viewConfig = {
     'cnxml-preview': './src/webview-js/cnxml-preview/cnxml-preview.js'
   },
   output: {
-    path: path.resolve(__dirname, 'dist/client/src'),
+    path: path.resolve(__dirname, 'dist/static-resources/'),
     filename: '[name].bundle.js',
     devtoolModuleFilenameTemplate: '../../../[resource-path]'
   },
