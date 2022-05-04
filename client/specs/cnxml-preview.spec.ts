@@ -148,7 +148,7 @@ describe('cnxml-preview', () => {
       sinon.restore()
     })
 
-    it('cnxml preview rebinds to resource in the active editor', async () => {
+    it('rebinds to resource in the active editor', async () => {
       const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: events })
       const postMessage = sinon.spy(panel, 'postMessage')
       expect((panel as any).resourceBinding).toBe(null)
@@ -182,7 +182,7 @@ describe('cnxml-preview', () => {
       expect((panel as any).resourceBinding.fsPath).toBe(resourceSecond.fsPath)
     })
 
-    it('cnxml preview only rebinds to cnxml', async () => {
+    it('only rebinds to cnxml', async () => {
       const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: events })
       const postMessage = sinon.spy(panel, 'postMessage')
 
@@ -212,7 +212,7 @@ describe('cnxml-preview', () => {
       expect((panel as any).resourceBinding.fsPath).toBe(resourceSecond.fsPath)
     })
 
-    it('cnxml preview refuses refresh if no resource bound', async () => {
+    it('refuses refresh if no resource bound', async () => {
       const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
       const postMessage = sinon.spy(panel, 'postMessage')
       expect(panel.isPreviewOf(null)).toBe(true)
@@ -238,7 +238,7 @@ describe('cnxml-preview', () => {
         odctevr.getCalls().forEach(c => c.firstArg(evt))
       }
 
-      it('cnxml preview messaged upon visible range change', async () => {
+      it('messaged upon visible range change', async () => {
         const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
 
         // An editor not bound to the panel
@@ -274,7 +274,7 @@ describe('cnxml-preview', () => {
         expect(postMessage.calledWith({ type: 'scroll-in-preview', line: 101 })).toBe(true)
       })
 
-      test('cnxml preview scroll sync in editor updates visible range', async () => {
+      it('scroll sync in editor updates visible range', async () => {
         // We need something long enough to scroll to
         const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
         const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
@@ -303,7 +303,7 @@ describe('cnxml-preview', () => {
         expect(rr.firstCall.args[0]).toEqual({ end: { character: 0, line: 101 }, start: { character: 0, line: 100 } })
       })
 
-      test('cnxml preview scroll sync does not update editor visible range if editor is scrolling (anti-jitter)', async () => {
+      it('scroll sync does not update editor visible range if editor is scrolling (anti-jitter)', async () => {
         // We need something long enough to scroll to
         const testData = `<document><pre>${'\n'.repeat(100)}</pre>Test<pre>${'\n'.repeat(100)}</pre></document>`
         const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: createMockEvents().events })
@@ -325,7 +325,7 @@ describe('cnxml-preview', () => {
         expect(lineNumber).toBe(0)
       })
 
-      test('cnxml preview refreshes when server watched file changes', async () => {
+      it('refreshes when server watched file changes', async () => {
         const mockEvents = createMockEvents()
         const watchedFilesSpy = sinon.spy(mockEvents.events, 'onDidChangeWatchedFiles')
         const resource = resourceFirst
