@@ -41,6 +41,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   await configureWorkspaceSettings()
 
   client = languageServerLauncher(context)
+  // Start the client. This will also launch the server
+  client.start()
 
   // If this is not a book repo then don't bother writing the XSD files
   const workspaceRoot = getRootPathUri()
