@@ -263,5 +263,5 @@ export class PageValidationKind extends ValidationKind {
   static MISSING_TARGET = new PageValidationKind('Link target does not exist')
   static MALFORMED_UUID = new PageValidationKind('Malformed UUID')
   static DUPLICATE_UUID = new PageValidationKind('Duplicate Page/Module UUID')
-  static MISSING_ID = new PageValidationKind('Missing id attribute', ValidationSeverity.WARNING)
+  static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.HINT)
 }
