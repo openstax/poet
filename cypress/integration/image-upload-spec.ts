@@ -42,8 +42,8 @@
       cy.get('#trigger-upload')
         .click()
       cy.then(() => {
-        expect(messagesFromWidget.length).to.equal(1)
-        expect(messagesFromWidget[0].mediaUploads.length).to.equal(1)
+        expect(messagesFromWidget.length).to.equal(1, 'message-from-widget')
+        expect(messagesFromWidget[0].mediaUploads.length).to.equal(1, 'media-upload')
         expect(messagesFromWidget[0].mediaUploads[0].mediaName).to.equal('urgent.jpg')
         expect(messagesFromWidget[0].mediaUploads[0].data).to.contain('base64')
       })
