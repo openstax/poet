@@ -3,7 +3,7 @@ import { expectErrors, first, loadSuccess, makeBundle } from './util.spec'
 import { pageMaker } from './page.spec'
 
 describe('Book validations', () => {
-  it(BookValidationKind.DUPLICATE_CHAPTER_TITLE, () => {
+  it(BookValidationKind.DUPLICATE_CHAPTER_TITLE.title, () => {
     const bundle = makeBundle()
     const book = first(loadSuccess(bundle).books)
     const chapterTitle = 'Kinematics'
@@ -14,14 +14,14 @@ describe('Book validations', () => {
     book.load(bookMaker({ toc }))
     expectErrors(book, [BookValidationKind.DUPLICATE_CHAPTER_TITLE, BookValidationKind.DUPLICATE_CHAPTER_TITLE])
   })
-  it(BookValidationKind.MISSING_PAGE, () => {
+  it(BookValidationKind.MISSING_PAGE.title, () => {
     const bundle = makeBundle()
     const book = loadSuccess(first(loadSuccess(bundle).books))
     const page = first(book.pages)
     page.load(undefined)
     expectErrors(book, [BookValidationKind.MISSING_PAGE])
   })
-  it(BookValidationKind.DUPLICATE_PAGE, () => {
+  it(BookValidationKind.DUPLICATE_PAGE.title, () => {
     const bundle = makeBundle()
     const book = first(loadSuccess(bundle).books)
     const toc: TocNode[] = [

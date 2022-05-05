@@ -1,7 +1,7 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
 import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, Range } from './utils'
-import { Fileish, ValidationCheck } from './fileish'
+import { Fileish, ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
 import { ResourceNode } from './resource'
 
 enum ResourceLinkKind {
@@ -258,11 +258,10 @@ export class PageNode extends Fileish {
     ]
   }
 }
-
-export enum PageValidationKind {
-  MISSING_RESOURCE = 'Target resource file does not exist',
-  MISSING_TARGET = 'Link target does not exist',
-  MALFORMED_UUID = 'Malformed UUID',
-  DUPLICATE_UUID = 'Duplicate Page/Module UUID',
-  MISSING_ID = 'Missing id attribute',
+export class PageValidationKind extends ValidationKind {
+  static MISSING_RESOURCE = new PageValidationKind('Target resource file does not exist')
+  static MISSING_TARGET = new PageValidationKind('Link target does not exist')
+  static MALFORMED_UUID = new PageValidationKind('Malformed UUID')
+  static DUPLICATE_UUID = new PageValidationKind('Duplicate Page/Module UUID')
+  static MISSING_ID = new PageValidationKind('Missing id attribute', ValidationSeverity.WARNING)
 }

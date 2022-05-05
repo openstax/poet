@@ -24,12 +24,12 @@ ${i.books.map(({ slug, href }) => `<book slug="${slug}" href="${href}" />`).join
 }
 
 describe('Bundle validations', () => {
-  it(BundleValidationKind.NO_BOOKS, () => {
+  it(BundleValidationKind.NO_BOOKS.title, () => {
     const bundle = makeBundle()
     bundle.load(bundleMaker({}))
     expectErrors(bundle, [BundleValidationKind.NO_BOOKS])
   })
-  it(BundleValidationKind.MISSING_BOOK, () => {
+  it(BundleValidationKind.MISSING_BOOK.title, () => {
     const bundle = loadSuccess(makeBundle())
     const book = first(bundle.books)
     book.load(undefined)

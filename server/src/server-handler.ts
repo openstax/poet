@@ -11,7 +11,7 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsParams) => Pr
     // TODO: fix modules in parallel. Problem: Could be a memory hog.
     const pages = manager.bundle.allPages.all.filter(p => p.exists && p.isLoaded)
     const pagesWithMissingIds = pages.filter(p => {
-      const errorTypes = p.validationErrors.errors.map(e => e.message)
+      const errorTypes = p.validationErrors.errors.map(e => e.kind)
       return errorTypes.has(PageValidationKind.MISSING_ID)
     })
     await Promise.all(pagesWithMissingIds.map(async p => await manager.modifyFileish(p, idFixer)))

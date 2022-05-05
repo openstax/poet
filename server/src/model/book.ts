@@ -2,7 +2,7 @@ import I from 'immutable'
 import * as Quarx from 'quarx'
 import { PageNode } from './page'
 import { Opt, WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, TocNodeKind } from './utils'
-import { Fileish, ValidationCheck } from './fileish'
+import { Fileish, ValidationCheck, ValidationKind } from './fileish'
 
 const equalsTocNodeWithRange = (n1: TocNodeWithRange, n2: TocNodeWithRange): boolean => {
   /* istanbul ignore else */
@@ -153,8 +153,8 @@ export class BookNode extends Fileish {
   }
 }
 
-export enum BookValidationKind {
-  MISSING_PAGE = 'Missing Page',
-  DUPLICATE_CHAPTER_TITLE = 'Duplicate chapter title',
-  DUPLICATE_PAGE = 'Duplicate page',
+export class BookValidationKind extends ValidationKind {
+  static MISSING_PAGE = new BookValidationKind('Missing Page')
+  static DUPLICATE_CHAPTER_TITLE = new BookValidationKind('Duplicate chapter title')
+  static DUPLICATE_PAGE = new BookValidationKind('Duplicate page')
 }

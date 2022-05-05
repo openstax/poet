@@ -131,7 +131,7 @@ describe('Bundle Manager', () => {
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.cnxml)
   })
-  it(`sends a warning when the Diagnostics message is '${PageValidationKind.MISSING_ID}'`, () => {
+  it(`sends a warning when the Diagnostics message is '${PageValidationKind.MISSING_ID.title}'`, () => {
     // Load the pages
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     const page = loadSuccess(first(book.pages))
@@ -236,7 +236,7 @@ describe('updating files', () => {
 
     // Verify diagnostics were sent
     expect(sendDiagnosticsStub.callCount).toBe(1)
-    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].message).toBe(BundleValidationKind.NO_BOOKS)
+    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].message).toBe(BundleValidationKind.NO_BOOKS.title)
 
     // Verify the file was saved
     const fsPath = URI.parse(manager.bundle.absPath).fsPath

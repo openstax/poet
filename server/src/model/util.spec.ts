@@ -7,7 +7,7 @@ import { DOMParser } from 'xmldom'
 import I from 'immutable'
 import { PathHelper, calculateElementPositions } from './utils'
 import { Bundle } from './bundle'
-import { Fileish } from './fileish'
+import { Fileish, ValidationKind } from './fileish'
 
 const REPO_ROOT = path.join(__dirname, '..', '..', '..')
 
@@ -112,8 +112,8 @@ export function ignoreConsoleWarnings(fn: () => void) {
   warnStub.restore()
 }
 
-export function expectErrors<T extends Fileish>(node: T, messages: string[]) {
+export function expectErrors<T extends Fileish>(node: T, validationKinds: ValidationKind[]) {
   const v = node.validationErrors
   expect(v.nodesToLoad.size).toBe(0) // Everything should have loaded
-  expect(v.errors.toArray().map(e => e.message).sort()).toEqual(messages.sort())
+  expect(v.errors.toArray().map(e => e.message).sort()).toEqual(validationKinds.map(v => v.title).sort())
 }

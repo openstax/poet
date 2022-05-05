@@ -4,7 +4,7 @@ import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
-import { Fileish, ValidationCheck } from './fileish'
+import { Fileish, ValidationCheck, ValidationKind } from './fileish'
 import { ResourceNode } from './resource'
 
 export class Bundle extends Fileish implements Bundleish {
@@ -66,7 +66,7 @@ export class Bundle extends Fileish implements Bundleish {
   }
 }
 
-export enum BundleValidationKind {
-  MISSING_BOOK = 'Missing book',
-  NO_BOOKS = 'No books defined'
+export class BundleValidationKind extends ValidationKind {
+  static MISSING_BOOK = new BundleValidationKind('Missing book')
+  static NO_BOOKS = new BundleValidationKind('No books defined')
 }
