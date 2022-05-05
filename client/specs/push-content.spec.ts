@@ -1,8 +1,476 @@
 import Sinon from 'sinon'
 import * as pushContent from '../src/push-content'
-import { Repository } from '../src/git-api/git.d'
+import * as utils from '../src/utils'
+import { Repository, Change, Status, CommitOptions, GitExtension, GitErrorCodes, Branch, RepositoryState, RefType } from '../src/git-api/git.d'
 import vscode from 'vscode'
 import expect from 'expect'
+import { Substitute } from '@fluffy-spoon/substitute'
+import { ExtensionHostContext } from '../src/panel'
+import { DiagnosticSource, ExtensionServerRequest } from '../../common/src/requests'
+
+const makeCaptureMessage = (messages: string[]): (message: string) => Promise<string | undefined> => {
+  return async (message: string): Promise<string | undefined> => {
+    messages.push(message)
+    return undefined
+  }
+}
+
+const makeMockDialog = (message: string): () => Promise<string | undefined> => {
+  return async (): Promise<string | undefined> => { return message }
+}
+
+const ignore = async (message: string): Promise<string | undefined> => { return undefined }
+
+describe('Push Button Test Suite', () => {
+  const sinon = Sinon.createSandbox()
+  afterEach(() => sinon.restore())
+  const commitOptions: CommitOptions = { all: true }
+  const sendRequestMock = sinon.stub()
+  const mockHostContext: ExtensionHostContext = {
+    client: {
+      sendRequest: sendRequestMock
+    }
+  } as any as ExtensionHostContext
+  const withProgressNoCancel = (
+    options: vscode.ProgressOptions,
+    task: (
+      progress: vscode.Progress<{ message?: string, increment?: number }>,
+      token: vscode.CancellationToken
+    ) => Thenable<unknown>
+  ): Thenable<unknown> => {
+    return new Promise((resolve, reject) => {
+      try {
+        resolve(
+          task(
+            { report: (_: { message?: string, increment?: number }) => {} },
+            { isCancellationRequested: false, onCancellationRequested: sinon.stub() }
+          )
+        )
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+  // This was once an integration test, now it is kind of pointless.
+  test('getRepo returns a repository', async () => {
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
+    const repo = pushContent.getRepo()
+    expect(repo.rootUri).toBeDefined()
+  })
+  test('pushContent pushes with no conflict', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockDialog('poet commit')
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await pushContent._pushContent(
+      getRepo,
+      mockMessageInput,
+      captureMessage,
+      ignore
+    )()
+
+    expect(messages.length).toBe(1)
+    expect(messages[0]).toBe('Successful content push.')
+  })
+  test('push with merge conflict', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockDialog('poet commit')
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
+
+    error.gitErrorCode = GitErrorCodes.Conflict
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().rejects(error)
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await pushContent._pushContent(
+      getRepo,
+      mockMessageInput,
+      ignore,
+      captureMessage
+    )()
+
+    expect(messages.length).toBe(1)
+    expect(messages[0]).toBe('Content conflict, please resolve.')
+  })
+  test('unknown commit error', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockDialog('poet commit')
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
+
+    error.gitErrorCode = ''
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).resolves()
+      stubRepo.pull().rejects(error)
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await pushContent._pushContent(
+      getRepo,
+      mockMessageInput,
+      ignore,
+      captureMessage
+    )()
+
+    expect(messages.length).toBe(1)
+    expect(messages[0]).toBe('Push failed: ')
+  })
+  test('push with no changes', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockDialog('poet commit')
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
+
+    error.stdout = 'nothing to commit.'
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+      stubRepo.diffWithHEAD().resolves([])
+      stubRepo.commit('poet commit', commitOptions).rejects(error)
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await pushContent._pushContent(
+      getRepo,
+      mockMessageInput,
+      ignore,
+      captureMessage
+    )()
+
+    expect(messages.length).toBe(1)
+    expect(messages[0]).toBe('No changes to push.')
+  })
+  test('unknown push error', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockDialog('poet commit')
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
+
+    error.stdout = ''
+
+    const getRepo = (): Repository => {
+      const stubRepo = Substitute.for<Repository>()
+
+      stubRepo.commit('poet commit', commitOptions).rejects(error)
+      stubRepo.pull().resolves()
+      stubRepo.push().resolves()
+
+      return stubRepo
+    }
+
+    await pushContent._pushContent(
+      getRepo,
+      mockMessageInput,
+      ignore,
+      captureMessage
+    )()
+
+    expect(messages.length).toBe(1)
+    expect(messages[0]).toBe('Push failed: ')
+  })
+  test('does not invoke _pushContent when canPush is false', async () => {
+    const file1Diag1 = { severity: vscode.DiagnosticSeverity.Error, source: 'source1' } as any as vscode.Diagnostic
+    sinon.stub(vscode.languages, 'getDiagnostics').returns([
+      [vscode.Uri.file('fsdjf'), [file1Diag1]]
+    ])
+    sinon.stub(pushContent, 'openAndValidate').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+    sinon.stub(pushContent, 'canPush').resolves(false)
+    const stubPushContentHelperInner = sinon.stub()
+    sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    await pushContent.pushContent(mockHostContext)()
+    expect(stubPushContentHelperInner.notCalled).toBe(true)
+    expect(sendRequestMock.notCalled).toBe(true)
+  })
+  test('pushContent invokes _pushContent when canPush is true', async () => {
+    sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+    sinon.stub(pushContent, 'getMessage').resolves('poet commit')
+    sinon.stub(pushContent, 'openAndValidate').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+    sinon.stub(pushContent, 'canPush').resolves(true)
+    sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('fjsdlf'))
+    sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
+    const stubPushContentHelperInner = sinon.stub()
+    sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    await pushContent.pushContent(mockHostContext)()
+    expect(stubPushContentHelperInner.calledOnce).toBe(true)
+    expect(sendRequestMock.calledOnceWith(
+      ExtensionServerRequest.BundleEnsureIds
+    )).toBe(true)
+  })
+  test('pushes to new branch', async () => {
+    const messages: string[] = []
+    const captureMessage = makeCaptureMessage(messages)
+    const mockMessageInput = makeMockDialog('poet commit')
+    const pushStub = sinon.stub()
+    const newBranchName = 'newbranch'
+
+    // This is inconsistent with the rest of this test suite, but it seems we can't use
+    // a Substitute mock for this test case because setting return values on properties
+    // requires disabling strict checking.
+    // (https://github.com/ffMathy/FluffySpoon.JavaScript.Testing.Faking#strict-mode)
+    const getRepo = (): Repository => {
+      const repoBranch = {
+        upstream: undefined,
+        name: newBranchName
+      } as any as Branch
+      const repoState = {
+        HEAD: repoBranch
+      } as any as RepositoryState
+      const stubRepo = {
+        state: repoState,
+        pull: sinon.stub(),
+        push: pushStub,
+        commit: sinon.stub()
+      } as any as Repository
+
+      return stubRepo
+    }
+    await pushContent._pushContent(
+      getRepo,
+      mockMessageInput,
+      captureMessage,
+      ignore
+    )()
+
+    expect(messages.length).toBe(1)
+    expect(messages[0]).toBe('Successful content push.')
+    expect(pushStub.calledOnceWith('origin', newBranchName, true)).toBe(true)
+  })
+  test('get message returns showInputBox input', async () => {
+    sinon.stub(vscode.window, 'showInputBox').resolves('test')
+    expect(await pushContent.getMessage()).toBe('test')
+  })
+  test('validateMessage returns "Too short!" for message that is not long enough', async () => {
+    expect(pushContent.validateMessage('a')).toBe('Too short!')
+  })
+  test('validateMessage returns null for message that is long enough', async () => {
+    expect(pushContent.validateMessage('abc')).toBe(null)
+  })
+  test('taggingDialog', async () => {
+    const mockDialog = sinon.stub(vscode.window, 'showInformationMessage')
+    mockDialog.resolves(undefined)
+    expect(await pushContent.taggingDialog()).toBe(undefined)
+    mockDialog.resolves(pushContent.Tag.release as any as vscode.MessageItem)
+    expect(await pushContent.taggingDialog()).toBe(pushContent.Tag.release)
+    mockDialog.resolves(pushContent.Tag.candidate as any as vscode.MessageItem)
+    expect(await pushContent.taggingDialog()).toBe(pushContent.Tag.candidate)
+  })
+  test('getNewTag', async () => {
+    const repoState = {
+      refs: [{
+        name: 'main',
+        type: RefType.Head,
+        commit: 'a'
+      }]
+    } as any as RepositoryState
+    const mockRepo = {
+      state: repoState
+    } as any as Repository
+    const mockHead = {
+      commit: 'a'
+    } as any as Branch
+
+    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
+
+    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead)).toBe('1rc')
+    mockRepo.state.refs.push({
+      name: '1rc',
+      type: RefType.Tag,
+      commit: 'b'
+    })
+
+    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead)).toBe('2rc')
+    mockRepo.state.refs.push({
+      name: '2rc',
+      type: RefType.Tag,
+      commit: 'a'
+    })
+    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead)).toBe(undefined)
+    expect(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', { modal: false })).toBe(true)
+    showErrorMsgStub.reset()
+
+    mockRepo.state.refs.length = 0
+    mockRepo.state.refs.push({
+      name: 'main',
+      type: RefType.Head,
+      commit: 'a'
+    })
+
+    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead)).toBe('1')
+    mockRepo.state.refs.push({
+      name: '1',
+      type: RefType.Tag,
+      commit: 'b'
+    })
+
+    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead)).toBe('2')
+    mockRepo.state.refs.push({
+      name: '2',
+      type: RefType.Tag,
+      commit: 'a'
+    })
+    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead)).toBe(undefined)
+    expect(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', { modal: false })).toBe(true)
+  })
+  test('tagContent', async () => {
+    const showInfoMsgStub = sinon.stub(vscode.window, 'showInformationMessage')
+    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
+    const taggingDialogStub = sinon.stub(pushContent, 'taggingDialog')
+    const getNewTagStub = sinon.stub(pushContent, 'getNewTag')
+    const diffWithHEADStub = sinon.stub()
+    const tagStub = sinon.stub()
+    const pushStub = sinon.stub()
+    const fetchStub = sinon.stub()
+
+    const repoBranch = {
+      name: 'main'
+    } as any as Branch
+    const repoState = {
+      HEAD: repoBranch
+    } as any as RepositoryState
+    const stubRepo = {
+      state: repoState,
+      fetch: fetchStub,
+      diffWithHEAD: diffWithHEADStub,
+      push: pushStub,
+      tag: tagStub
+    } as any as Repository
+
+    sinon.stub(pushContent, 'getRepo').returns(stubRepo)
+
+    // test for dirty workspace
+    diffWithHEADStub.resolves([{}])
+    await pushContent.tagContent()
+    expect(fetchStub.calledOnce).toBe(true)
+    expect(showErrorMsgStub.calledOnceWith('Can\'t tag. Local unpushed changes exist', { modal: false })).toBe(true)
+    fetchStub.reset()
+    showErrorMsgStub.reset()
+
+    // test for canceled tagging
+    taggingDialogStub.resolves(undefined)
+    await pushContent.tagContent()
+    expect(fetchStub.calledOnce).toBe(true)
+    expect(getNewTagStub.notCalled).toBe(true)
+    expect(tagStub.notCalled).toBe(true)
+    fetchStub.reset()
+
+    // test for existing tag
+    diffWithHEADStub.resolves([])
+    taggingDialogStub.resolves(pushContent.Tag.candidate)
+    getNewTagStub.resolves(undefined)
+    await pushContent.tagContent()
+    expect(fetchStub.calledOnce).toBe(true)
+    expect(getNewTagStub.calledOnce).toBe(true)
+    expect(tagStub.notCalled).toBe(true)
+    fetchStub.reset()
+    getNewTagStub.reset()
+
+    // test for valid tag
+    taggingDialogStub.resolves(pushContent.Tag.candidate)
+    getNewTagStub.resolves('1rc')
+    await pushContent.tagContent()
+    expect(fetchStub.calledOnce).toBe(true)
+    expect(getNewTagStub.calledOnce).toBe(true)
+    expect(tagStub.calledOnce).toBe(true)
+    expect(pushStub.calledOnce).toBe(true)
+    expect(showInfoMsgStub.calledOnceWith('Successful tag for Release Candidate.', { modal: false })).toBe(true)
+    fetchStub.reset()
+    getNewTagStub.reset()
+    tagStub.reset()
+    pushStub.reset()
+    showInfoMsgStub.reset()
+    showErrorMsgStub.reset()
+
+    // test for unknown tag error message
+    tagStub.throws()
+    taggingDialogStub.resolves(pushContent.Tag.candidate)
+    getNewTagStub.resolves('1rc')
+    await pushContent.tagContent()
+    expect(showErrorMsgStub.calledOnceWith('Tagging failed: Error', { modal: false })).toBe(true)
+    fetchStub.reset()
+    getNewTagStub.reset()
+    tagStub.reset()
+    pushStub.reset()
+    showInfoMsgStub.reset()
+    showErrorMsgStub.reset()
+
+    // test for unknown push error message
+    tagStub.resolves()
+    pushStub.throws()
+    taggingDialogStub.resolves(pushContent.Tag.candidate)
+    getNewTagStub.resolves('1rc')
+    await pushContent.tagContent()
+    expect(showErrorMsgStub.calledOnceWith('Push failed: Error', { modal: false })).toBe(true)
+    fetchStub.reset()
+    getNewTagStub.reset()
+    tagStub.reset()
+    pushStub.reset()
+    showInfoMsgStub.reset()
+  })
+  test('canPush returns correct values', async () => {
+    const fileUri = { path: '/test.cnxml', scheme: 'file' } as any as vscode.Uri
+    const cnxmlError = {
+      severity: vscode.DiagnosticSeverity.Error,
+      source: DiagnosticSource.cnxml
+    } as any as vscode.Diagnostic
+    const xmlError = {
+      severity: vscode.DiagnosticSeverity.Error,
+      source: DiagnosticSource.xml
+    } as any as vscode.Diagnostic
+    const errorsBySource = new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>()
+    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
+
+    // No errors
+    expect(await pushContent.canPush(errorsBySource)).toBe(true)
+
+    // CNXML errors
+    errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    expect(!(await pushContent.canPush(errorsBySource))).toBe(true)
+    expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)
+
+    // Both CNXML and XML errors
+    errorsBySource.clear()
+    showErrorMsgStub.reset()
+    errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
+    expect(!(await pushContent.canPush(errorsBySource))).toBe(true)
+    expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)
+
+    // XML errors, user cancels
+    errorsBySource.clear()
+    showErrorMsgStub.reset()
+    showErrorMsgStub.returns(Promise.resolve(undefined))
+    errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
+    expect(!(await pushContent.canPush(errorsBySource))).toBe(true)
+    expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true })).toBe(true)
+  })
+})
 
 describe('tests with sinon', () => {
   const sinon = Sinon.createSandbox()
@@ -27,9 +495,8 @@ describe('tests with sinon', () => {
     it('returns all files', async () => {
       const findFilesStub = sinon.stub(vscode.workspace, 'findFiles')
       const filesToReturn = [vscode.Uri.file('/a'), vscode.Uri.file('/b'), vscode.Uri.file('/c')]
-      const openDocuments = [vscode.Uri.file('/b').toString()]
       findFilesStub.resolves(filesToReturn)
-      let toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.all, new Set())
+      let toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.all)
       expect(findFilesStub.calledOnce).toBe(true)
       filesToReturn.forEach(uri => {
         expect(toOpen.has(uri.toString())).toBe(true)
@@ -37,41 +504,40 @@ describe('tests with sinon', () => {
 
       // We do not need to open documents that are already open
       toOpen = await pushContent.getDocumentsToOpen(
-        pushContent.DocumentsToOpen.all,
-        new Set(openDocuments)
+        pushContent.DocumentsToOpen.all
       )
-      expect(!toOpen.has(openDocuments[0])).toBe(true)
+      expect(toOpen.size === filesToReturn.length)
     })
     it('returns changed files', async () => {
-      const filesToReturn = [
-        { uri: vscode.Uri.file('/a') },
-        { uri: vscode.Uri.file('/b') },
-        { uri: vscode.Uri.file('/c') }
-      ]
-      const openDocuments = [vscode.Uri.file('/b').toString()]
-      const diffWithHEADStub = sinon.stub()
+      const changesToReturn: Change[] = [
+        vscode.Uri.file('/a.xml'),
+        vscode.Uri.file('/b.cnxml'),
+        vscode.Uri.file('/c.xhtml')
+      ].map((uri, i) => ({
+        originalUri: uri,
+        uri: uri,
+        renameUri: undefined,
+        status: i === 0 ? Status.DELETED : Status.MODIFIED
+      }))
       const stubRepo = {
-        diffWithHEAD: diffWithHEADStub
+        state: {
+          workingTreeChanges: changesToReturn
+        }
       } as any as Repository
       sinon.stub(pushContent, 'getRepo').returns(stubRepo)
 
-      diffWithHEADStub.resolves(filesToReturn)
-      let toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.modified, new Set())
-      expect(diffWithHEADStub.calledOnce).toBe(true)
-      filesToReturn.forEach(o => {
-        expect(toOpen.has(o.uri.toString())).toBe(true)
-      })
-
-      // We do not need to open documents that are already open
-      toOpen = await pushContent.getDocumentsToOpen(
-        pushContent.DocumentsToOpen.modified,
-        new Set(openDocuments)
-      )
-      expect(!toOpen.has(openDocuments[0])).toBe(true)
+      const toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.modified)
+      changesToReturn
+        .filter(c => c.status !== Status.DELETED)
+        .forEach(c => expect(toOpen.has(c.uri.toString())).toBe(true))
+      changesToReturn
+        .filter(c => c.status === Status.DELETED)
+        .forEach(c => expect(toOpen.has(c.uri.toString())).toBe(false))
+      expect(toOpen.size === 2)
     })
   })
   describe('Cancellation', () => {
-    it('Cancels getOpenDocuments or openAndValidate', async () => {
+    it('Cancels openAndValidate', async () => {
       const activeTextEditorStub = sinon.stub(vscode.window, 'activeTextEditor')
       const executeCommandStub = sinon.stub(vscode.commands, 'executeCommand')
       const withProgressStub = sinon.stub(vscode.window, 'withProgress')
@@ -96,22 +562,8 @@ describe('tests with sinon', () => {
           }
         })
       })
-      try {
-        await pushContent.getOpenDocuments()
-      } catch (e) {
-        error = e as Error
-      }
-      expect(error).not.toBe(undefined)
-      expect(error?.message).toBe('Canceled')
-      expect(withProgressStub.calledOnce).toBe(true)
-      expect(executeCommandStub.notCalled).toBe(true)
-      withProgressStub.resetHistory()
-      executeCommandStub.reset()
-      error = undefined
 
-      const getOpenDocumentsStub = sinon.stub(pushContent, 'getOpenDocuments')
       const getDocumentsToOpenStub = sinon.stub(pushContent, 'getDocumentsToOpen')
-      getOpenDocumentsStub.resolves(new Set())
       getDocumentsToOpenStub.resolves(new Set(['not', 'used', 'here']))
       try {
         await pushContent.openAndValidate(pushContent.DocumentsToOpen.modified)
@@ -124,67 +576,10 @@ describe('tests with sinon', () => {
       expect(error?.message).toBe('Canceled')
     })
   })
-  describe('getOpenDocuments', () => {
-    it('returns expected values', async () => {
-      const activeTextEditorStub = sinon.stub(vscode.window, 'activeTextEditor')
-      const executeCommandStub = sinon.stub(vscode.commands, 'executeCommand')
-      const withProgressStub = sinon.stub(vscode.window, 'withProgress')
-
-      withProgressStub.callsFake((
-        options: vscode.ProgressOptions,
-        task: (
-          progress: vscode.Progress<{ message?: string, increment?: number }>,
-          token: vscode.CancellationToken
-        ) => Thenable<unknown>
-      ): Thenable<unknown> => {
-        return new Promise((resolve, reject) => {
-          try {
-            resolve(task(
-              { report: (_: { message?: string, increment?: number }) => {} },
-              { isCancellationRequested: false, onCancellationRequested: sinon.stub() }
-            ))
-          } catch (e) {
-            reject(e)
-          }
-        })
-      })
-
-      activeTextEditorStub.get(() => undefined)
-      let openDocuments = await pushContent.getOpenDocuments()
-      expect(executeCommandStub.notCalled).toBe(true)
-      expect(openDocuments.size).toBe(0)
-      executeCommandStub.reset()
-      activeTextEditorStub.reset()
-
-      // The expected behavior is for workbench.action.nextEditor to loop around to the first editor.
-      // After it loops around, the document that getOpenDocuments started on will be added to the
-      // set and the function will return.
-      activeTextEditorStub.get(() => {
-        // NOTE: executeCommandStub could be called with something other than nextEditor
-        // Could this cause unexpected behavior? Stay tuned to find out!
-        switch (executeCommandStub.callCount) {
-          case 0:
-          case 3:
-            return { document: { uri: vscode.Uri.file('/a') } }
-          case 1:
-            return { document: { uri: vscode.Uri.file('/b') } }
-          case 2:
-            return { document: { uri: vscode.Uri.file('/c') } }
-          default:
-            throw new Error('Something went wrong when looking for documents')
-        }
-      })
-      executeCommandStub.resolves()
-      openDocuments = await pushContent.getOpenDocuments()
-      expect(openDocuments.size).toBe(3)
-      expect(executeCommandStub.callCount).toBe(3)
-    })
-  })
   describe('openAndValidate', () => {
     it('integrates', async () => {
       const dateNowStub = sinon.stub(Date, 'now')
       const withProgressStub = sinon.stub(vscode.window, 'withProgress')
-      const getOpenDocumentsStub = sinon.stub(pushContent, 'getOpenDocuments')
       const getDocumentsToOpenStub = sinon.stub(pushContent, 'getDocumentsToOpen')
       const showTextDocumentStub = sinon.stub(vscode.window, 'showTextDocument')
         .callsFake((uri: vscode.Uri, options?: vscode.TextDocumentShowOptions): Thenable<vscode.TextEditor> => {
@@ -200,7 +595,6 @@ describe('tests with sinon', () => {
       sinon.stub(pushContent, 'sleep').resolves()
       // Cover situations that take more than 10 seconds
       dateNowStub.callsFake(() => dateNowCallCount++ * 10000)
-      getOpenDocumentsStub.resolves(new Set())
       getDocumentsToOpenStub.resolves(new Set(filesToReturn.map(uri => uri.toString())))
       withProgressStub.callsFake((
         options: vscode.ProgressOptions,
@@ -240,13 +634,11 @@ describe('tests with sinon', () => {
       filesToReturn.forEach(uri => {
         expect(showTextDocumentStub.calledWith(uri)).toBe(true)
       })
-      expect(getOpenDocumentsStub.called).toBe(true)
       expect(executeCommandStub.calledWith('workbench.action.closeActiveEditor')).toBe(true)
       expect(executeCommandStub.callCount).toBe(3) // Close three documents with no errors
       expect(dateNowStub.callCount).toBe(11)
       expect(withProgressStub.callCount).toBe(1)
       expect(progressReportCount).toBe(4) // 1 extra call to get the progress bar spinning
-      getOpenDocumentsStub.resetHistory()
       executeCommandStub.resetHistory()
       withProgressStub.resetHistory()
       showTextDocumentStub.resetHistory()
@@ -267,7 +659,6 @@ describe('tests with sinon', () => {
       filesToReturn.forEach(uri => {
         expect(showTextDocumentStub.calledWith(uri)).toBe(true)
       })
-      expect(getOpenDocumentsStub.called).toBe(true)
       expect(executeCommandStub.calledWith('workbench.action.closeActiveEditor')).toBe(true)
       expect(executeCommandStub.callCount).toBe(2) // Close two documents with no errors
       expect(dateNowStub.callCount).toBe(5)

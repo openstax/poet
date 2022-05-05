@@ -184,9 +184,6 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
     clientOptions
   )
 
-  // Start the client. This will also launch the server
-  client.start()
-
   return client
 }
 

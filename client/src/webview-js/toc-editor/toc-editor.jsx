@@ -1,4 +1,6 @@
-import { h, Fragment, render, createContext } from 'preact' // eslint-disable-line no-unused-vars
+/** @jsx PreactCreateElement */
+/** @jsxFrag PreactCreateFragment */
+import { h as PreactCreateElement, Fragment as PreactCreateFragment, render, createContext } from 'preact' // eslint-disable-line no-unused-vars
 import { useState, useContext, useEffect, useRef } from 'preact/hooks'
 import 'react-sortable-tree/style.css'
 import SortableTree from 'react-sortable-tree'
@@ -160,7 +162,7 @@ const ContentTree = (props) => {
       }
     }
     // We can change the title by just force rewriting the collection tree with the modified title
-    // Subcollections don't have persistent identifiers, so changing them in the base part of the
+    // Subbooks don't have persistent identifiers, so changing them in the base part of the
     // extension would be tougher to do.
     typeToRenameAction[TocNodeKind.Subbook] = (value) => {
       /* istanbul ignore else */
@@ -342,7 +344,7 @@ const EditorPanel = (props) => {
                     : <></>
                 }
                 {
-                  props.canAddSubcollections
+                  props.canAddSubbooks
                     ? <button className='subbook-create' onClick={handleAddSubbook}>Add Subcollection</button>
                     : <></>
                 }
@@ -403,7 +405,7 @@ const App = (props) => (
       treesData={props.treesData.editable}
       selectionIndex={props.selectionIndices.editable}
       editable={true}
-      canAddSubcollections
+      canAddSubbooks
       canAddModules
     />
     <EditorPanel

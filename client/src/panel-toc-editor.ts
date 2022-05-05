@@ -173,18 +173,18 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, never, PanelStat
 
     const allModulesSorted = Array.from(allModules).sort(fileIdSorter)
     const orphanModulesSorted = orphanModules.sort(fileIdSorter)
-    const collectionAllModules = {
+    const bookAllModules = {
       title: 'All Modules',
       slug: 'mock-slug__source-only',
       tocTree: allModulesSorted.map(toClientTocNode).map(toTreeItem)
     }
-    const collectionOrphanModules = {
+    const bookOrphanModules = {
       title: 'Orphan Modules',
       slug: 'mock-slug__source-only',
       tocTree: orphanModulesSorted.map(toClientTocNode).map(toTreeItem)
     }
     return {
-      uneditable: [collectionAllModules, collectionOrphanModules],
+      uneditable: [bookAllModules, bookOrphanModules],
       editable: this.state.books.map(b => ({ ...b, tocTree: b.tocTree.map(toTreeItem) }))
     }
   }

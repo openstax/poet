@@ -6,7 +6,6 @@ node_modules/
 /cypress/screenshots/
 /.nyc_output/
 
-/client/out/
 /client/dist/
 /server/out/
 /server/dist/

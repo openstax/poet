@@ -1,17 +1,11 @@
 {
   "compilerOptions": {
-    "composite": true,
     "target": "ES2019",
     "module": "commonjs",
     "strict": true,
-    "declaration": true,
-    "declarationMap": true,
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
     "esModuleInterop": true
-  },
-  "exclude": [
-    "out"
-  ]
+  }
 }

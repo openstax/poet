@@ -4,7 +4,7 @@ import { TocNodeKind } from '../../common/src/toc'
 import { PanelStateMessageType } from '../../common/src/webview-constants'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
-  const htmlPath = './client/out/client/src/toc-editor.html'
+  const htmlPath = './client/dist/static-resources/toc-editor.html'
 
   const DO_NOT_INCREMENT = -1
 
@@ -31,12 +31,12 @@ import { PanelStateMessageType } from '../../common/src/webview-constants'
     } else if (Array.isArray(node)) {
       return {
         type: TocNodeKind.Subbook,
-        title: 'subcollection',
+        title: 'subbook',
         token: 'subbook-token',
         children: node.map(recBuildSubtree)
       }
     } else {
-      const title = node.title ?? 'subcollection'
+      const title = node.title ?? 'subbook'
       const ret: TreeItemWithToken = {
         type: TocNodeKind.Subbook,
         title,
@@ -167,7 +167,7 @@ import { PanelStateMessageType } from '../../common/src/webview-constants'
       const book2 = buildBook([{ expanded: true, children: ['Introduction'] }, ['Introduction'], ['Introduction']], { startAt: DO_NOT_INCREMENT })
       sendStateMessage({ editable: [book2], uneditable: [] })
 
-      // Would be 3 if the expanded subcollection was not preserved
+      // Would be 3 if the expanded subbook was not preserved
       // Would be 4 if new nodes were initially collapsed
       cy.get('.panel-editable .rst__node').should('have.length', 6)
     })

@@ -260,7 +260,7 @@ describe('processFilesystemChange()', () => {
     const pageId = 'm1234'
     mockfs({
       'META-INF/books.xml': bundleMaker({ books: [bookSlug] }),
-      'collections/slug2.collection.xml': bookMaker({ slug: bookSlug, toc: [{ title: 'subcollection', children: [pageId] }] }),
+      'collections/slug2.collection.xml': bookMaker({ slug: bookSlug, toc: [{ title: 'subbook', children: [pageId] }] }),
       'modules/m1234/index.cnxml': pageMaker({})
     })
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
@@ -485,7 +485,7 @@ describe('modifyToc()', () => {
 
     mockfs({
       'META-INF/books.xml': bundleMaker({ books: [bookSlug] }),
-      'collections/slug2.collection.xml': bookMaker({ slug: bookSlug, toc: [{ title: 'subcollection', children: [pageId] }] }),
+      'collections/slug2.collection.xml': bookMaker({ slug: bookSlug, toc: [{ title: 'subbook', children: [pageId] }] }),
       'modules/m1234/index.cnxml': pageMaker({})
     })
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())

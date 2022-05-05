@@ -3,7 +3,7 @@ import { PanelIncomingMessage, ScrollInEditorIncoming, ScrollToLineOutgoing } fr
 import { PanelStateMessage, PanelStateMessageType } from '../../common/src/webview-constants'
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
-  const htmlPath = './client/out/client/src/cnxml-preview.html'
+  const htmlPath = './client/dist/static-resources/cnxml-preview.html'
 
   describe('cnxml-preview Webview Tests', () => {
     function sendMessage(msg: ScrollToLineOutgoing | PanelStateMessage<any>): void {

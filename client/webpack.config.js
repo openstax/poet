@@ -12,8 +12,8 @@ const extensionConfig = {
   context: path.join(__dirname),
   entry: './src/extension.ts',
   output: {
-    path: path.resolve(__dirname, 'dist', 'client', 'src'),
-    filename: 'extension.js',
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'extension.bundle.js',
     libraryTarget: 'commonjs2',
     devtoolModuleFilenameTemplate: '../../../[resource-path]'
   },
@@ -46,13 +46,14 @@ const viewConfig = {
     'cnxml-preview': './src/webview-js/cnxml-preview/cnxml-preview.js'
   },
   output: {
-    path: path.resolve(__dirname, 'dist/client/src'),
+    path: path.resolve(__dirname, 'dist/static-resources/'),
     filename: '[name].bundle.js',
-    devtoolModuleFilenameTemplate: '../../../[resource-path]'
+    devtoolModuleFilenameTemplate: '../../[resource-path]'
   },
   resolve: {
+    extensions: ['.js', '.ts'],
     alias: {
-      '~common-api~': path.resolve(__dirname, 'out/common/src'),
+      '~common-api~': path.resolve(__dirname, '../common/src'),
       react: 'preact/compat',
       'react-dom/test-utils': 'preact/test-utils',
       'react-dom': 'preact/compat'
@@ -64,7 +65,15 @@ const viewConfig = {
       test: /\.m?tsx?$/,
       exclude: /node_modules/,
       use: {
-        loader: 'ts-loader'
+        loader: 'babel-loader',
+        options: {
+          presets: ['@babel/preset-typescript'],
+          env: {
+            'development': {
+              plugins: ['babel-plugin-istanbul']
+            }
+          }
+        }
       }
     }, {
       test: /\.m?jsx?$/,
@@ -72,12 +81,12 @@ const viewConfig = {
       use: {
         loader: 'babel-loader',
         options: {
-          plugins: [
-            ['@babel/plugin-transform-react-jsx', {
-              pragma: 'h',
-              pragmaFrag: 'Fragment'
-            }]
-          ]
+          plugins: ['@babel/plugin-transform-react-jsx'],
+          env: {
+            'development': {
+              plugins: ['babel-plugin-istanbul']
+            }
+          }
         }
       }
     }, {
