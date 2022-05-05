@@ -48,7 +48,7 @@ const viewConfig = {
   output: {
     path: path.resolve(__dirname, 'dist/static-resources/'),
     filename: '[name].bundle.js',
-    devtoolModuleFilenameTemplate: '../../../[resource-path]'
+    devtoolModuleFilenameTemplate: '../../[resource-path]'
   },
   resolve: {
     extensions: ['.js', '.ts'],
