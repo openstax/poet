@@ -41,15 +41,13 @@ Run all/some of the tests:
 ```sh
 npm run test
 # Or: npm run test:unit
-# Or: npm run test:client
-# Or: npm run test:cypress
 # Or: npm run test:unit:watch
+# Or: npm run test:cypress
 ```
 
-### Why 3 test frameworks?
+### Why 2 test frameworks?
 
 1. `npm run test:unit`: Try to use this first. Jest is fast, works with VSCode's debugger so you can set breakpoints in tests or code, and only reruns tests that are affected by your uncommitted files.
-1. `npm run test:client`: Use this when you cannot mock VSCode. It is really slow and hard to debug because it starts up a real VSCode instance and the TypeScript must be pre-built into JavaScript.
 1. `npm run test:cypress`: Use this when you test webviews. It is really slow because it starts up a real browser.
 
 

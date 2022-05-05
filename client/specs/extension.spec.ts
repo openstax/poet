@@ -35,7 +35,8 @@ describe('Extension', () => {
         onReady: async () => {},
         onRequest: sinon.stub(),
         onNotification: onNotificationStub,
-        sendRequest: sendRequestStub
+        sendRequest: sendRequestStub,
+        start: sinon.stub()
       } as unknown as LanguageClient
       setLanguageServerLauncher(() => mockClient)
     })

@@ -10,6 +10,9 @@ const languages = {
 };
 
 const StatusBarAlignment = {};
+class FileSystemError extends Error {
+  name = 'EntryNotFound'
+}
 
 const window = {
   createOutputChannel: (() => ({
@@ -37,6 +40,7 @@ const window = {
   showTextDocument: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   onDidChangeTextEditorVisibleRanges: jest.fn(),
+  visibleTextEditors: [],
 };
 
 const workspace = {
@@ -53,6 +57,14 @@ const workspace = {
     onDidChange: jest.fn(),
     onDidDelete: jest.fn(),
   })),
+  fs: {
+    writeFile: jest.fn(),
+    stat: jest.fn(() => {
+      // By default, throw an error which means the file was not found
+      throw new FileSystemError('EntryNotFound')
+    }),
+  },
+  openTextDocument: jest.fn(() => { throw new Error('Mocked. Implement me since you seem to use openTextDocument')}),
   onDidChangeConfiguration: jest.fn(),
   onDidChangeWorkspaceFolders: jest.fn(),
   onDidOpenTextDocument: jest.fn(),
@@ -72,7 +84,17 @@ const commands = {
   registerCommand: jest.fn(),
 }
 
-const Range = jest.fn();
+class Range {
+  constructor(startLine, startCharacter, endLine, endCharacter) {
+    if (typeof endLine === undefined) {
+      this.start = start
+      this.end = end
+    } else {
+      this.start = { line: startLine, character: startCharacter }
+      this.end = { line: endLine, character: endCharacter }
+    }
+  }
+}
 const Diagnostic = jest.fn();
 const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 };
 
@@ -163,6 +185,8 @@ const ProgressLocation = {
   Notification: 15
 }
 
+const TextEditorRevealType = { AtTop: 1 }
+
 const vscode = {
   version: REQUIRED_VSCODE_VERSION,
   languages,
@@ -192,6 +216,8 @@ const vscode = {
   ThemeIcon,
   ConfigurationTarget,
   ProgressLocation,
+  FileSystemError,
+  TextEditorRevealType,
 };
 
 module.exports = { ...vscode, default: vscode };

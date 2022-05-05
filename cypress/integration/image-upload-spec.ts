@@ -1,7 +1,7 @@
 // Shares a namespace with the other specfiles if not scoped
 {
   // The HTML file that cypress should load when running tests (relative to the project root)
-  const htmlPath = './client/out/client/src/image-upload.html'
+  const htmlPath = './client/dist/static-resources/image-upload.html'
 
   interface WidgetMessage {
     mediaUploads: Array<{
@@ -42,8 +42,8 @@
       cy.get('#trigger-upload')
         .click()
       cy.then(() => {
-        expect(messagesFromWidget.length).to.equal(1)
-        expect(messagesFromWidget[0].mediaUploads.length).to.equal(1)
+        expect(messagesFromWidget.length).to.equal(1, 'message-from-widget')
+        expect(messagesFromWidget[0].mediaUploads.length).to.equal(1, 'media-upload')
         expect(messagesFromWidget[0].mediaUploads[0].mediaName).to.equal('urgent.jpg')
         expect(messagesFromWidget[0].mediaUploads[0].data).to.contain('base64')
       })
