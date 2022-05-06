@@ -205,7 +205,7 @@ describe('Push Button Test Suite', () => {
     sinon.stub(vscode.languages, 'getDiagnostics').returns([
       [vscode.Uri.file('fsdjf'), [file1Diag1]]
     ])
-    sinon.stub(pushContent, 'canPush').resolves(false)
+    sinon.stub(pushContent, 'canPush').returns(false)
     const stubPushContentHelperInner = sinon.stub()
     sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
     await pushContent.pushContent(mockHostContext)()
@@ -215,7 +215,7 @@ describe('Push Button Test Suite', () => {
   test('pushContent invokes _pushContent when canPush is true', async () => {
     sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(pushContent, 'getMessage').resolves('poet commit')
-    sinon.stub(pushContent, 'canPush').resolves(true)
+    sinon.stub(pushContent, 'canPush').returns(true)
     sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('fjsdlf'))
     sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
     const stubPushContentHelperInner = sinon.stub()
