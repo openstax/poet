@@ -46,9 +46,5 @@ export function idFixer(input: string) {
   fixDocument(doc)
   // == save xml ==
   const out = new XMLSerializer().serializeToString(doc)
-  /* istanbul ignore if */
-  if (out === input) {
-    throw new Error('BUG! We wrote a file that did not change')
-  }
   return out
 }
