@@ -138,7 +138,7 @@ describe('Bundle Manager', () => {
 
     manager.updateFileContents(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
     expect(sendDiagnosticsStub.callCount).toBe(1)
-    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Hint)
+    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Information)
   })
 })
 
@@ -241,6 +241,16 @@ describe('updating files', () => {
     // Verify the file was saved
     const fsPath = URI.parse(manager.bundle.absPath).fsPath
     expect(fs.readFileSync(fsPath, 'utf-8')).toEqual(newContent)
+  })
+
+  it('does not modify a file that has invalid XML', async () => {
+    ignoreConsoleWarnings(() => manager.bundle.load('<invalid xml'))
+    const didChange = await manager.modifyFileish(manager.bundle, (_) => '<root>does not matter</root>')
+    expect(didChange).toBe(false)
+
+    manager.bundle.load('<root>valid XML</root>')
+    const didChange2 = await manager.modifyFileish(manager.bundle, (_) => '<root>does not matter</root>')
+    expect(didChange2).toBe(true)
   })
 })
 

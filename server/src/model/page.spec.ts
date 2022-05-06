@@ -172,4 +172,13 @@ describe('Page validations', () => {
     page.load(pageMaker(info))
     expectErrors(page, expectedErrors)
   })
+  it(`${PageValidationKind.MISSING_ID.title} Terms inside a definition are ignored`, () => {
+    const bundle = makeBundle()
+    const page = bundle.allPages.getOrAdd('somepage/filename')
+    const info = {
+      extraCnxml: '<definition id="test"><term>No id here is okay</term></definition>'
+    }
+    page.load(pageMaker(info))
+    expectErrors(page, [])
+  })
 })

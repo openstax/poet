@@ -74,8 +74,12 @@ ELEMENT_TO_PREFIX.set('note', 'note')
 ELEMENT_TO_PREFIX.set('footnote', 'foot')
 ELEMENT_TO_PREFIX.set('cite', 'cite')
 
-const ELEMENTS_MISSING_IDS_SEL = `//cnxml:*[${Array.from(ELEMENT_TO_PREFIX.keys()).map(tagname => `self::cnxml:${tagname}`).join(' or ')}][not(@id)]`
+// Do not add ids to <term> inside a definition.
+function termSpecificSelector(e: string): string {
+  return e === 'term' ? '[not(parent::cnxml:definition)]' : ''
+}
 
+export const ELEMENTS_MISSING_IDS_SEL = Array.from(ELEMENT_TO_PREFIX.keys()).map(e => `//cnxml:${e}[not(@id)]${termSpecificSelector(e)}`).join('|')
 export class PageNode extends Fileish {
   private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
@@ -263,5 +267,5 @@ export class PageValidationKind extends ValidationKind {
   static MISSING_TARGET = new PageValidationKind('Link target does not exist')
   static MALFORMED_UUID = new PageValidationKind('Malformed UUID')
   static DUPLICATE_UUID = new PageValidationKind('Duplicate Page/Module UUID')
-  static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.HINT)
+  static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.INFORMATION)
 }

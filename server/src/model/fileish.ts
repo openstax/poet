@@ -88,7 +88,7 @@ export abstract class Fileish {
         const parseXML = this.parseXML
         const fn = () => {
           const doc = this.readXML(fileContent)
-          if (this._parseError.get() !== undefined) return
+          if (!this.isValidXML) return
           parseXML(doc)
           this._isLoaded.set(true)
           this._exists.set(true)
@@ -110,6 +110,10 @@ export abstract class Fileish {
       }
     })
     Fileish.debug(this.workspacePath, 'update done')
+  }
+
+  public get isValidXML() {
+    return this._parseError.get() === undefined
   }
 
   private readXML(fileContent: string) {
