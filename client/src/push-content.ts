@@ -268,7 +268,9 @@ export const _pushContent = (
 
   const commitMessage = await _getMessage()
   /* istanbul ignore if */
-  if (commitMessage == null) { return }
+  if (commitMessage == null || !(await canPush(await openAndValidate(DocumentsToOpen.modified)))) {
+    return
+  }
   try {
     await repo.commit(commitMessage, commitOptions)
     commitSucceeded = true
