@@ -138,7 +138,7 @@ describe('Bundle Manager', () => {
 
     manager.updateFileContents(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
     expect(sendDiagnosticsStub.callCount).toBe(1)
-    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Hint)
+    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Information)
   })
 })
 

@@ -563,13 +563,9 @@ export class ModelManager {
     await writeBookToc(book, bookToc)
   }
 
-  public async modifyFileish(node: Fileish, fn: (input: string) => string) {
+  public async modifyFileish(node: Fileish, fn: (input: string, absPath: string /* Just for debugging */) => string) {
     const fileContents = expectValue(await this.readOrNull(node), `BUG? This file should exist right? ${node.absPath}`)
-    const out = fn(fileContents)
-    /* istanbul ignore if */
-    if (out === fileContents) {
-      throw new Error(`BUG! We wrote a file that did not change: ${node.absPath}`)
-    }
+    const out = fn(fileContents, node.absPath)
 
     ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
     node.load(out)
