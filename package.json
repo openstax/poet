@@ -44,7 +44,6 @@
     "onCommand:openstax.showTocEditor",
     "onCommand:openstax.showImageManager",
     "onCommand:openstax.pushContent",
-    "onCommand:openstax.autoIdContent",
     "onCommand:openstax.tagContent",
     "onView:tocTrees",
     "onCommand:openstax.validateContent"
@@ -65,11 +64,6 @@
       {
         "command": "openstax.pushContent",
         "title": "Push Content",
-        "category": "Openstax"
-      },
-      {
-        "command": "openstax.autoIdContent",
-        "title": "Auto-ID Content",
         "category": "Openstax"
       },
       {
@@ -113,7 +107,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Build in CORGI](command:openstax.tagContent)\n[Validate Content](command:openstax.validateContent)\n[Auto-ID Content](command:openstax.autoIdContent)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Build in CORGI](command:openstax.tagContent)\n[Validate Content](command:openstax.validateContent)"
       }
     ],
     "menus": {
