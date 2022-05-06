@@ -23,6 +23,11 @@ const ignore = async (message: string): Promise<string | undefined> => { return 
 
 describe('Push Button Test Suite', () => {
   const sinon = Sinon.createSandbox()
+  beforeEach(() => {
+    // openAndValidate is tested fully later in this file
+    sinon.stub(pushContent, 'openAndValidate')
+      .resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+  })
   afterEach(() => sinon.restore())
   const commitOptions: CommitOptions = { all: true }
   const sendRequestMock = sinon.stub()
@@ -200,7 +205,6 @@ describe('Push Button Test Suite', () => {
     sinon.stub(vscode.languages, 'getDiagnostics').returns([
       [vscode.Uri.file('fsdjf'), [file1Diag1]]
     ])
-    sinon.stub(pushContent, 'openAndValidate').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(pushContent, 'canPush').resolves(false)
     const stubPushContentHelperInner = sinon.stub()
     sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
@@ -211,7 +215,6 @@ describe('Push Button Test Suite', () => {
   test('pushContent invokes _pushContent when canPush is true', async () => {
     sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(pushContent, 'getMessage').resolves('poet commit')
-    sinon.stub(pushContent, 'openAndValidate').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(pushContent, 'canPush').resolves(true)
     sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('fjsdlf'))
     sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
