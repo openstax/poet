@@ -1,6 +1,6 @@
 import expect from 'expect'
 import * as path from 'path'
-import { PageNode, PageValidationKind, UNTITLED_FILE } from './page'
+import { ELEMENT_TO_PREFIX, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
 import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
 
 describe('Page', () => {
@@ -69,7 +69,7 @@ ${i.extraCnxml}
 }
 
 describe('Page validations', () => {
-  it(PageValidationKind.MISSING_RESOURCE, () => {
+  it(PageValidationKind.MISSING_RESOURCE.title, () => {
     const bundle = makeBundle()
     const page = bundle.allPages.getOrAdd('somepage/filename')
     const image = bundle.allResources.getOrAdd('someimage')
@@ -80,12 +80,12 @@ describe('Page validations', () => {
     expect(first(page.validationErrors.nodesToLoad)).toBe(image)
     // At first the image does not exist:
     image.load(undefined)
-    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MISSING_RESOURCE)
+    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MISSING_RESOURCE)
     // And then it does:
     image.load('somebits')
     expect(page.validationErrors.errors.size).toBe(0)
   })
-  it(`${PageValidationKind.MISSING_RESOURCE} (iframe)`, () => {
+  it(`${PageValidationKind.MISSING_RESOURCE.title} (iframe)`, () => {
     const bundle = makeBundle()
     const page = bundle.allPages.getOrAdd('somedir/filename.cnxml')
     const missingIframe = bundle.allResources.getOrAdd('somedir/invalid-path-to-interactive')
@@ -100,9 +100,9 @@ describe('Page validations', () => {
     page.load(pageMaker(info))
     // Expect exactly one validation error
     expect(page.validationErrors.errors.size).toBe(1)
-    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MISSING_RESOURCE)
+    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MISSING_RESOURCE)
   })
-  it(PageValidationKind.MISSING_TARGET, () => {
+  it(PageValidationKind.MISSING_TARGET.title, () => {
     const bundle = makeBundle()
     const page = bundle.allPages.getOrAdd('modules/m123/index.cnxml')
     const target = bundle.allPages.getOrAdd('modules/m234/index.cnxml')
@@ -126,7 +126,7 @@ describe('Page validations', () => {
 
     // At first the target does not exist:
     target.load(undefined)
-    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MISSING_TARGET)
+    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MISSING_TARGET)
     // And then it does:
     target.load(pageMaker({ uuid: '11111111-1111-4111-1111-111111111111' }))
     expect(page.validationErrors.errors.size).toBe(0)
@@ -138,14 +138,14 @@ describe('Page validations', () => {
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'elementId1' }] }))
     expect(page.validationErrors.errors.size).toBe(0)
   })
-  it(PageValidationKind.MALFORMED_UUID, () => {
+  it(PageValidationKind.MALFORMED_UUID.title, () => {
     const bundle = makeBundle()
     const page = bundle.allPages.getOrAdd('somepage/filename')
     const info = { uuid: 'invalid-uuid-value' }
     page.load(pageMaker(info))
-    expect(first(page.validationErrors.errors).message).toBe(PageValidationKind.MALFORMED_UUID)
+    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MALFORMED_UUID)
   })
-  it(PageValidationKind.DUPLICATE_UUID, () => {
+  it(PageValidationKind.DUPLICATE_UUID.title, () => {
     const bundle = makeBundle()
     const page1 = bundle.allPages.getOrAdd('somepage/filename')
     const page2 = bundle.allPages.getOrAdd('somepage2/filename2')
@@ -160,5 +160,16 @@ describe('Page validations', () => {
     const page = bundle.allPages.getOrAdd('somepage')
     page.load(pageMaker({ uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }] }))
     expectErrors(page, [PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET])
+  })
+  it(PageValidationKind.MISSING_ID.title, () => {
+    const bundle = makeBundle()
+    const page = bundle.allPages.getOrAdd('somepage/filename')
+    const elementsThatRequireId = Array.from(ELEMENT_TO_PREFIX.keys()).map(tagName => `<${tagName}/>`)
+    const expectedErrors = Array.from(ELEMENT_TO_PREFIX.keys()).map(_ => PageValidationKind.MISSING_ID)
+    const info = {
+      extraCnxml: elementsThatRequireId.join('')
+    }
+    page.load(pageMaker(info))
+    expectErrors(page, expectedErrors)
   })
 })

@@ -39,8 +39,10 @@
     it('uploads images', () => {
       cy.get('#drop-area')
         .dropFile('urgent.jpg')
+      cy.get('#preview > div').should('have.length', 1)
       cy.get('#trigger-upload')
         .click()
+      cy.get('#preview > div').should('have.length', 0)
       cy.then(() => {
         expect(messagesFromWidget.length).to.equal(1, 'message-from-widget')
         expect(messagesFromWidget[0].mediaUploads.length).to.equal(1, 'media-upload')

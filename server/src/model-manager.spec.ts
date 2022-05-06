@@ -1,19 +1,20 @@
 import expect from 'expect'
+import fs from 'fs'
 import path from 'path'
 import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
 import I from 'immutable'
 import { createConnection, WatchDog } from 'vscode-languageserver'
-import { FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
+import { DiagnosticSeverity, FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
 import xmlFormat from 'xml-formatter'
 import { expectValue, Opt, join, PathKind } from './model/utils'
-import { Bundle } from './model/bundle'
+import { Bundle, BundleValidationKind } from './model/bundle'
 import { ModelManager } from './model-manager'
 import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/util.spec'
 import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
 
-import { PageNode } from './model/page'
+import { PageNode, PageValidationKind } from './model/page'
 import { TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc'
 import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { bookMaker } from './model/book.spec'
@@ -130,6 +131,15 @@ describe('Bundle Manager', () => {
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.cnxml)
   })
+  it(`sends a warning when the Diagnostics message is '${PageValidationKind.MISSING_ID.title}'`, () => {
+    // Load the pages
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+    const page = loadSuccess(first(book.pages))
+
+    manager.updateFileContents(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
+    expect(sendDiagnosticsStub.callCount).toBe(1)
+    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Hint)
+  })
 })
 
 describe('Unexpected files/directories', () => {
@@ -198,6 +208,39 @@ describe('Find orphaned files', () => {
     // Run again to verify we do not perform the expensive fetch again (via code coverage)
     await manager.loadEnoughForOrphans()
     expect(manager.orphanedPages.size).toBe(2)
+  })
+})
+
+describe('updating files', () => {
+  const sinon = SinonRoot.createSandbox()
+  let manager = null as unknown as ModelManager
+  let sendDiagnosticsStub = null as unknown as SinonRoot.SinonStub<[params: PublishDiagnosticsParams], void>
+
+  beforeEach(() => {
+    mockfs({
+      'META-INF/books.xml': bundleMaker({})
+    })
+    const bundle = makeBundle()
+    manager = new ModelManager(bundle, conn)
+    sendDiagnosticsStub = sinon.stub(conn, 'sendDiagnostics')
+  })
+  afterEach(() => {
+    mockfs.restore()
+    sinon.restore()
+  })
+
+  it('Updates the filesystem when a fileish node is modified', async () => {
+    expect(sendDiagnosticsStub.callCount).toBe(0)
+    const newContent = bundleMaker({ version: -12345 })
+    await manager.modifyFileish(manager.bundle, (_) => newContent)
+
+    // Verify diagnostics were sent
+    expect(sendDiagnosticsStub.callCount).toBe(1)
+    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].message).toBe(BundleValidationKind.NO_BOOKS.title)
+
+    // Verify the file was saved
+    const fsPath = URI.parse(manager.bundle.absPath).fsPath
+    expect(fs.readFileSync(fsPath, 'utf-8')).toEqual(newContent)
   })
 })
 

@@ -5,7 +5,7 @@ import * as path from 'path'
 import I from 'immutable'
 import * as Quarx from 'quarx'
 import { Connection } from 'vscode-languageserver'
-import { CompletionItem, CompletionItemKind, Diagnostic, DiagnosticSeverity, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
+import { CompletionItem, CompletionItemKind, Diagnostic, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
 import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode, TocPage } from '../../common/src/toc'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
@@ -306,7 +306,7 @@ export class ModelManager {
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
       const diagnostics = errors.toSet().map(err => {
-        return Diagnostic.create(err.range, err.message, DiagnosticSeverity.Error, undefined, DiagnosticSource.cnxml)
+        return Diagnostic.create(err.range, err.message, err.kind.severity, undefined, DiagnosticSource.cnxml)
       }).toArray()
       this.conn.sendDiagnostics({
         uri,
@@ -561,6 +561,18 @@ export class ModelManager {
     // Prepend new Subbook to top of Book so it is visible to the user
     bookToc.tocTree.unshift(tocNode)
     await writeBookToc(book, bookToc)
+  }
+
+  public async modifyFileish(node: Fileish, fn: (input: string) => string) {
+    const fileContents = expectValue(await this.readOrNull(node), `BUG? This file should exist right? ${node.absPath}`)
+    const out = fn(fileContents)
+
+    ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
+    node.load(out)
+    this.sendFileDiagnostics(node)
+
+    const fsPath = URI.parse(node.absPath).fsPath
+    await fs.promises.writeFile(fsPath, out)
   }
 }
 

@@ -221,13 +221,7 @@ export const getMessage = async (): Promise<string | undefined> => {
 
 export const pushContent = (hostContext: ExtensionHostContext) => async () => {
   // Do a precursory check for known errors (fast!)
-  if (await canPush(await getErrorDiagnosticsBySource())) {
-    const commitMessage = await getMessage()
-    // Do a more complete check for errors if a commit message is given
-    /* istanbul ignore if */
-    if (commitMessage == null || !(await canPush(await openAndValidate(DocumentsToOpen.modified)))) {
-      return
-    }
+  if (await canPush(getErrorDiagnosticsBySource())) {
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Push Content',
@@ -248,8 +242,7 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       progress.report({ message: 'Pushing...' })
       await _pushContent(
         getRepo,
-        /* istanbul ignore next (hopefully this is a temporary hotfix) */
-        async () => commitMessage, // This needs to be a `Thenable`
+        getMessage,
         vscode.window.showInformationMessage,
         vscode.window.showErrorMessage
       )()

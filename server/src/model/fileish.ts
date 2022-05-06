@@ -4,21 +4,31 @@ import { DOMParser } from 'xmldom'
 import * as Quarx from 'quarx'
 import { Bundleish, Opt, PathHelper, expectValue, Range, HasRange, NOWHERE } from './utils'
 
+export enum ValidationSeverity {
+  ERROR = 1,
+  WARNING = 2,
+  INFORMATION = 3,
+  HINT = 4
+}
+
+export class ValidationKind {
+  constructor(readonly title: string, readonly severity = ValidationSeverity.ERROR) { }
+}
 export class ModelError extends Error implements HasRange {
-  constructor(public readonly node: Fileish, message: string, public readonly range: Range) {
-    super(message)
+  constructor(public readonly node: Fileish, public readonly kind: ValidationKind, public readonly range: Range) {
+    super(kind.title)
     this.name = this.constructor.name
   }
 }
 export class ParseError extends ModelError { }
 export class WrappedParseError<T extends Error> extends ParseError {
   constructor(node: Fileish, originalError: T) {
-    super(node, originalError.message, NOWHERE)
+    super(node, new ValidationKind(originalError.message), NOWHERE)
   }
 }
 
 export interface ValidationCheck {
-  message: string
+  message: ValidationKind
   nodesToLoad: I.Set<Fileish>
   fn: (loadedNodes?: I.Set<Fileish>) => I.Set<Range>
 }
@@ -35,7 +45,7 @@ export class ValidationResponse {
   }
 }
 
-function toValidationErrors(node: Fileish, message: string, sources: I.Set<Range>) {
+function toValidationErrors(node: Fileish, message: ValidationKind, sources: I.Set<Range>) {
   return sources.map(s => new ModelError(node, message, s))
 }
 
@@ -109,7 +119,7 @@ export abstract class Fileish {
         line: locator.lineNumber - 1,
         character: locator.columnNumber - 1
       }
-      this._parseError.set(new ParseError(this, msg, { start: pos, end: pos }))
+      this._parseError.set(new ParseError(this, new ValidationKind(msg), { start: pos, end: pos }))
     }
     const p = new DOMParser({
       locator,
