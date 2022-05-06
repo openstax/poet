@@ -565,6 +565,10 @@ export class ModelManager {
 
   public async modifyFileish(node: Fileish, fn: (input: string, absPath: string /* Just for debugging */) => string) {
     const fileContents = expectValue(await this.readOrNull(node), `BUG? This file should exist right? ${node.absPath}`)
+    /* istanbul ignore if */
+    if (!node.isValidXML) {
+      return false
+    }
     const out = fn(fileContents, node.absPath)
 
     ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
@@ -573,6 +577,7 @@ export class ModelManager {
 
     const fsPath = URI.parse(node.absPath).fsPath
     await fs.promises.writeFile(fsPath, out)
+    return true
   }
 }
 

@@ -242,6 +242,16 @@ describe('updating files', () => {
     const fsPath = URI.parse(manager.bundle.absPath).fsPath
     expect(fs.readFileSync(fsPath, 'utf-8')).toEqual(newContent)
   })
+
+  it('does not modify a file that has invalid XML', async () => {
+    ignoreConsoleWarnings(() => manager.bundle.load('<invalid xml'))
+    const didChange = await manager.modifyFileish(manager.bundle, (_) => '<root>does not matter</root>')
+    expect(didChange).toBe(false)
+
+    manager.bundle.load('<root>valid XML</root>')
+    const didChange2 = await manager.modifyFileish(manager.bundle, (_) => '<root>does not matter</root>')
+    expect(didChange2).toBe(true)
+  })
 })
 
 describe('processFilesystemChange()', () => {
