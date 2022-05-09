@@ -2,15 +2,6 @@
 // Example commandline book validator
 // ----------------------------------
 
-// -------------------------
-// How to run:
-//
-// npx ts-node@10.1.0 ./_cli.ts lint /path/to/book/repo
-// npx ts-node@10.1.0 ./_cli.ts shrink /path/to/book/repo bookslug:0,9.0,9.7 bookslug2:13.0
-//
-// (10.2 has a bug: https://github.com/TypeStrong/ts-node/issues/1426)
-// -------------------------
-
 import glob from 'glob'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import http from 'http' // easier to use node-fetch but didn't want to add a dependency
@@ -89,7 +80,7 @@ async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
   return [errorCount > 0, bundles]
 }
 
-async function lint(bookDirs: string[]) {
+async function validate(bookDirs: string[]) {
   const [hasErrors] = await load(bookDirs)
   process.exit(hasErrors ? 111 : 0)
 }
@@ -335,9 +326,9 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
 
 ;(async function () {
   switch (process.argv[2]) {
-    case 'lint': {
+    case 'validate': {
       const bookDirs = process.argv.length >= 4 ? process.argv.slice(3) : [process.cwd()]
-      await lint(bookDirs)
+      await validate(bookDirs)
       break
     }
     case 'links': {
@@ -364,7 +355,7 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
     }
     default: {
       log(`Unsupported command '${process.argv[2]}'. Expected one of the following:`)
-      log('    lint <directory>')
+      log('    validate <directory>')
       log('    links <directory>')
       log('    orphans <directory>')
       log('    shrink <directory> bookslug:0,9.0,9.7 bookslug2:13.0')
