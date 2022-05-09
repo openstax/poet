@@ -450,11 +450,11 @@ describe('Push Button Test Suite', () => {
     const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
 
     // No errors
-    expect(await pushContent.canPush(errorsBySource)).toBe(true)
+    expect(pushContent.canPush(errorsBySource)).toBe(true)
 
     // CNXML errors
     errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
-    expect(!(await pushContent.canPush(errorsBySource))).toBe(true)
+    expect(!pushContent.canPush(errorsBySource)).toBe(true)
     expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)
 
     // Both CNXML and XML errors
@@ -462,7 +462,7 @@ describe('Push Button Test Suite', () => {
     showErrorMsgStub.reset()
     errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
     errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
-    expect(!(await pushContent.canPush(errorsBySource))).toBe(true)
+    expect(!pushContent.canPush(errorsBySource)).toBe(true)
     expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)
 
     // XML errors, user cancels
@@ -470,7 +470,7 @@ describe('Push Button Test Suite', () => {
     showErrorMsgStub.reset()
     showErrorMsgStub.returns(Promise.resolve(undefined))
     errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
-    expect(!(await pushContent.canPush(errorsBySource))).toBe(true)
+    expect(!pushContent.canPush(errorsBySource)).toBe(true)
     expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true })).toBe(true)
   })
 })
