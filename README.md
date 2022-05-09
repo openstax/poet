@@ -16,6 +16,7 @@ Table of Contents
    * [Debugging](#debugging)
       * [Debugging JavaScript in Webviews](#debugging-javascript-in-webviews)
       * [Debugging Unit Tests](#debugging-unit-tests)
+* [Commandline](#commandline)
 * [Publishing](#publishing)
    * [Local .vsix](#local-vsix)
 * [Design](#design)
@@ -73,6 +74,11 @@ The unit tests can be debugged using the VSCode debugger. There are 2 ways to ru
 
 1. If you run the Unit tests from the `[Run and Debug]` VSCode panel then breakpoints will work.
 1. If you want to run the tests from a terminal, follow the instructions to set the [Auto-Attach setting in VSCode](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_auto-attach) and then run `npm run test:unit` or `npm run test:unit:watch`.
+
+# Commandline
+
+A commandline version of POET is available at [./poet](./poet).
+It can be run just by cloning this repo which means it can be used in containers that have NodeJS.
 
 # Publishing
 

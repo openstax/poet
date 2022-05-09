@@ -363,12 +363,11 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
       break
     }
     default: {
-      log(`Unsupported command '${process.argv[2]}'. Expected one of 'lint' or 'shrink'`)
-      log('Help: specify the command followed by arguments:')
-      log('./_cli.ts lint /path/to/book/repo')
-      log('./_cli.ts links /path/to/book/repo')
-      log('./_cli.ts orphans /path/to/book/repo')
-      log('./_cli.ts shrink /path/to/book/repo bookslug:0,9.0,9.7 bookslug2:13.0')
+      log(`Unsupported command '${process.argv[2]}'. Expected one of the following:`)
+      log('    lint <directory>')
+      log('    links <directory>')
+      log('    orphans <directory>')
+      log('    shrink <directory> bookslug:0,9.0,9.7 bookslug2:13.0')
     }
   }
 })().then(null, (err) => { throw err })

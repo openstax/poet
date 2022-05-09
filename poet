@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# Wraps the POET CLI in a nice bow
+
+set -e
+
+# Trace if TRACE_ON is set
+[[ $TRACE_ON ]] && set -x && export PS4='+ [${BASH_SOURCE##*/}:${LINENO}] '
+
+# If a symlink was used to run this script then detangle the symlink
+if [[ -L $0 ]]; then
+    if [[ $(command -v readlink) ]]; then
+        actual_file=$(readlink -f "$0")
+    else
+        # MacOS may not have readlink
+        actual_file="$(dirname "$0")/$(find "$(dirname "$0")" -name "$(basename "$0")" -ls | awk -F'-> ' '{print $NF}')"
+    fi
+else
+    actual_file=$0
+fi
+readonly root_dir="$(cd "$(dirname "$actual_file")" && pwd)"
+
+# Run npm install if it has not been run yet
+[[ -d "$root_dir/node_modules" ]] || {
+    pushd $root_dir
+    npm install
+    popd
+}
+
+$(cd "$root_dir" && npm bin)/ts-node "$root_dir/server/src/model/_cli.ts" $@
