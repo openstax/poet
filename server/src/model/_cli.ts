@@ -2,15 +2,6 @@
 // Example commandline book validator
 // ----------------------------------
 
-// -------------------------
-// How to run:
-//
-// npx ts-node@10.1.0 ./_cli.ts lint /path/to/book/repo
-// npx ts-node@10.1.0 ./_cli.ts shrink /path/to/book/repo bookslug:0,9.0,9.7 bookslug2:13.0
-//
-// (10.2 has a bug: https://github.com/TypeStrong/ts-node/issues/1426)
-// -------------------------
-
 import glob from 'glob'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import http from 'http' // easier to use node-fetch but didn't want to add a dependency
@@ -27,6 +18,12 @@ import { ResourceNode } from './resource'
 import { removeNode, writeBookToc } from '../model-manager'
 import { BookRootNode, BookToc, ClientTocNode } from '../../../common/src/toc'
 import { fromBook, IdMap } from '../book-toc-utils'
+
+const ALLOWED_FILES = [
+  'LICENSE',
+  'README.md',
+  '.gitpod.yml'
+]
 
 // Print log messages to stderr per convention
 const log = console.error.bind(console.error)
@@ -67,7 +64,7 @@ async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
   const bundles = []
   for (const rootPath of bookDirs) {
     log('Validating', toRelPath(rootPath))
-    const bundle = loadRepo(rootPath)
+    const bundle = loadRepo(path.resolve(rootPath))
 
     log('')
     log('This directory contains:')
@@ -76,6 +73,15 @@ async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
     log('  Images:', bundle.allResources.size)
 
     const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
+    bundles.push(bundle)
+    errorCount += validationErrors.size
+  }
+  return [errorCount > 0, bundles]
+}
+
+function printErrors(bundles: Bundle[]) {
+  bundles.forEach(bundle => {
+    const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
     if (validationErrors.size > 0) {
       log('Validation Errors:', validationErrors.size)
     }
@@ -83,14 +89,12 @@ async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
       const { range } = e
       console.log(toRelPath(e.node.absPath), `${range.start.line}:${range.start.character}`, e.message)
     })
-    bundles.push(bundle)
-    errorCount += validationErrors.size
-  }
-  return [errorCount > 0, bundles]
+  })
 }
 
-async function lint(bookDirs: string[]) {
-  const [hasErrors] = await load(bookDirs)
+async function validate(bookDirs: string[]) {
+  const [hasErrors, bundles] = await load(bookDirs)
+  printErrors(bundles)
   process.exit(hasErrors ? 111 : 0)
 }
 
@@ -171,18 +175,18 @@ async function orphans(bookDirs: string[]) {
 
   for (const bundle of bundles) {
     const repoRoot = path.join(path.dirname(bundle.absPath), '..')
-    const allFiles = I.Set(glob.sync('**/*', { cwd: repoRoot, absolute: true }))
+    const allFiles = I.Set(glob.sync('**/*', { cwd: repoRoot, absolute: true, nodir: true, ignore: ALLOWED_FILES }))
     const books = bundle.books
     const pages = books.flatMap(b => b.pages).filter(o => o.exists)
     const images = pages.flatMap(p => p.resources).filter(o => o.exists)
 
-    const referencedNodes = books.union(pages).union(images)
-    const referencedFiles = referencedNodes.map(o => o.absPath)
+    const referencedNodes = books.union(pages).union(images).union(I.Set([bundle]))
+    const referencedFiles = referencedNodes.map(o => path.resolve(o.absPath))
 
     const orphans = allFiles.subtract(referencedFiles)
 
     log('Found orphans', orphans.size)
-    orphans.forEach(o => console.log(o))
+    orphans.forEach(o => console.log(toRelPath(o)))
 
     hasErrors = hasErrors || orphans.size > 0
   }
@@ -335,9 +339,9 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
 
 ;(async function () {
   switch (process.argv[2]) {
-    case 'lint': {
+    case 'validate': {
       const bookDirs = process.argv.length >= 4 ? process.argv.slice(3) : [process.cwd()]
-      await lint(bookDirs)
+      await validate(bookDirs)
       break
     }
     case 'links': {
@@ -363,12 +367,11 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
       break
     }
     default: {
-      log(`Unsupported command '${process.argv[2]}'. Expected one of 'lint' or 'shrink'`)
-      log('Help: specify the command followed by arguments:')
-      log('./_cli.ts lint /path/to/book/repo')
-      log('./_cli.ts links /path/to/book/repo')
-      log('./_cli.ts orphans /path/to/book/repo')
-      log('./_cli.ts shrink /path/to/book/repo bookslug:0,9.0,9.7 bookslug2:13.0')
+      log(`Unsupported command '${process.argv[2]}'. Expected one of the following:`)
+      log('    validate <directory>')
+      log('    links <directory>')
+      log('    orphans <directory>')
+      log('    shrink <directory> bookslug:0,9.0,9.7 bookslug2:13.0')
     }
   }
 })().then(null, (err) => { throw err })

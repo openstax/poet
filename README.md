@@ -11,11 +11,12 @@ Table of Contents
 * [Development](#development)
    * [Setup](#setup)
    * [Tests](#tests)
-      * [Why 3 test frameworks?](#why-3-test-frameworks)
+      * [Why 2 test frameworks?](#why-2-test-frameworks)
    * [Quick Startup](#quick-startup)
    * [Debugging](#debugging)
       * [Debugging JavaScript in Webviews](#debugging-javascript-in-webviews)
       * [Debugging Unit Tests](#debugging-unit-tests)
+* [Commandline](#commandline)
 * [Publishing](#publishing)
    * [Local .vsix](#local-vsix)
 * [Design](#design)
@@ -73,6 +74,49 @@ The unit tests can be debugged using the VSCode debugger. There are 2 ways to ru
 
 1. If you run the Unit tests from the `[Run and Debug]` VSCode panel then breakpoints will work.
 1. If you want to run the tests from a terminal, follow the instructions to set the [Auto-Attach setting in VSCode](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_auto-attach) and then run `npm run test:unit` or `npm run test:unit:watch`.
+
+# Commandline
+
+A commandline version of POET is available at [./poet](./poet).
+It can be run just by cloning this repo which means it can be used in containers that have NodeJS.
+
+## Validate a book
+
+This runs all of the POET validations on a repository:
+
+```bash
+$ poet validate <directory>
+```
+
+## Find broken links
+
+This finds broken redirects in the content of a book:
+
+```bash
+$ poet links <directory>
+```
+
+
+## Find orphaned files
+
+This finds orphaned files in a repository:
+
+```bash
+$ poet orphans <directory>
+```
+
+
+## Create a smaller book
+
+Specify which books and which items in the ToC to keep (Chapters or Pages, 0-indexed) and this will delete unused images, pages, and books while keeping the repo valid.
+
+**Note:** If you specify a Page that links to another book, that Page will be included in the set of pages that are kept, even if it is in another book.
+
+Here is an example that keeps the Preface (`0`) and Chapter 3 (`3`) of Precalculus and the Chapter 10 Introduction (`10.0`) of Algebra&Trig:
+```bash
+$ poet shrink /path/to/osbooks-college-algebra-bundle precalculus-2e:0,3 algebra-and-trigonometry-2e:10.0
+```
+
 
 # Publishing
 
