@@ -64,7 +64,7 @@ async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
   const bundles = []
   for (const rootPath of bookDirs) {
     log('Validating', toRelPath(rootPath))
-    const bundle = loadRepo(rootPath)
+    const bundle = loadRepo(path.resolve(rootPath))
 
     log('')
     log('This directory contains:')
@@ -73,6 +73,15 @@ async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
     log('  Images:', bundle.allResources.size)
 
     const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
+    bundles.push(bundle)
+    errorCount += validationErrors.size
+  }
+  return [errorCount > 0, bundles]
+}
+
+function printErrors(bundles: Bundle[]) {
+  bundles.forEach(bundle => {
+    const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
     if (validationErrors.size > 0) {
       log('Validation Errors:', validationErrors.size)
     }
@@ -80,14 +89,12 @@ async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
       const { range } = e
       console.log(toRelPath(e.node.absPath), `${range.start.line}:${range.start.character}`, e.message)
     })
-    bundles.push(bundle)
-    errorCount += validationErrors.size
-  }
-  return [errorCount > 0, bundles]
+  })
 }
 
 async function validate(bookDirs: string[]) {
-  const [hasErrors] = await load(bookDirs)
+  const [hasErrors, bundles] = await load(bookDirs)
+  printErrors(bundles)
   process.exit(hasErrors ? 111 : 0)
 }
 
@@ -179,7 +186,7 @@ async function orphans(bookDirs: string[]) {
     const orphans = allFiles.subtract(referencedFiles)
 
     log('Found orphans', orphans.size)
-    orphans.forEach(o => console.log(o))
+    orphans.forEach(o => console.log(toRelPath(o)))
 
     hasErrors = hasErrors || orphans.size > 0
   }
