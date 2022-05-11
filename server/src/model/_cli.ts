@@ -19,6 +19,12 @@ import { removeNode, writeBookToc } from '../model-manager'
 import { BookRootNode, BookToc, ClientTocNode } from '../../../common/src/toc'
 import { fromBook, IdMap } from '../book-toc-utils'
 
+const ALLOWED_FILES = [
+  'LICENSE',
+  'README.md',
+  '.gitpod.yml'
+]
+
 // Print log messages to stderr per convention
 const log = console.error.bind(console.error)
 
@@ -162,13 +168,13 @@ async function orphans(bookDirs: string[]) {
 
   for (const bundle of bundles) {
     const repoRoot = path.join(path.dirname(bundle.absPath), '..')
-    const allFiles = I.Set(glob.sync('**/*', { cwd: repoRoot, absolute: true }))
+    const allFiles = I.Set(glob.sync('**/*', { cwd: repoRoot, absolute: true, nodir: true, ignore: ALLOWED_FILES }))
     const books = bundle.books
     const pages = books.flatMap(b => b.pages).filter(o => o.exists)
     const images = pages.flatMap(p => p.resources).filter(o => o.exists)
 
-    const referencedNodes = books.union(pages).union(images)
-    const referencedFiles = referencedNodes.map(o => o.absPath)
+    const referencedNodes = books.union(pages).union(images).union(I.Set([bundle]))
+    const referencedFiles = referencedNodes.map(o => path.resolve(o.absPath))
 
     const orphans = allFiles.subtract(referencedFiles)
 
