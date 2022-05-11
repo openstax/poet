@@ -23,6 +23,11 @@ const ignore = async (message: string): Promise<string | undefined> => { return 
 
 describe('Push Button Test Suite', () => {
   const sinon = Sinon.createSandbox()
+  beforeEach(() => {
+    // openAndValidate is tested fully later in this file
+    sinon.stub(pushContent, 'openAndValidate')
+      .resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+  })
   afterEach(() => sinon.restore())
   const commitOptions: CommitOptions = { all: true }
   const sendRequestMock = sinon.stub()
@@ -200,8 +205,7 @@ describe('Push Button Test Suite', () => {
     sinon.stub(vscode.languages, 'getDiagnostics').returns([
       [vscode.Uri.file('fsdjf'), [file1Diag1]]
     ])
-    sinon.stub(pushContent, 'openAndValidate').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
-    sinon.stub(pushContent, 'canPush').resolves(false)
+    sinon.stub(pushContent, 'canPush').returns(false)
     const stubPushContentHelperInner = sinon.stub()
     sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
     await pushContent.pushContent(mockHostContext)()
@@ -211,8 +215,7 @@ describe('Push Button Test Suite', () => {
   test('pushContent invokes _pushContent when canPush is true', async () => {
     sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(pushContent, 'getMessage').resolves('poet commit')
-    sinon.stub(pushContent, 'openAndValidate').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
-    sinon.stub(pushContent, 'canPush').resolves(true)
+    sinon.stub(pushContent, 'canPush').returns(true)
     sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('fjsdlf'))
     sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
     const stubPushContentHelperInner = sinon.stub()
@@ -447,11 +450,11 @@ describe('Push Button Test Suite', () => {
     const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
 
     // No errors
-    expect(await pushContent.canPush(errorsBySource)).toBe(true)
+    expect(pushContent.canPush(errorsBySource)).toBe(true)
 
     // CNXML errors
     errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
-    expect(!(await pushContent.canPush(errorsBySource))).toBe(true)
+    expect(!pushContent.canPush(errorsBySource)).toBe(true)
     expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)
 
     // Both CNXML and XML errors
@@ -459,7 +462,7 @@ describe('Push Button Test Suite', () => {
     showErrorMsgStub.reset()
     errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
     errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
-    expect(!(await pushContent.canPush(errorsBySource))).toBe(true)
+    expect(!pushContent.canPush(errorsBySource)).toBe(true)
     expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)
 
     // XML errors, user cancels
@@ -467,7 +470,7 @@ describe('Push Button Test Suite', () => {
     showErrorMsgStub.reset()
     showErrorMsgStub.returns(Promise.resolve(undefined))
     errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
-    expect(!(await pushContent.canPush(errorsBySource))).toBe(true)
+    expect(!pushContent.canPush(errorsBySource)).toBe(true)
     expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.xmlErrorMsg, { modal: true })).toBe(true)
   })
 })

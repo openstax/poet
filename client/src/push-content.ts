@@ -153,13 +153,13 @@ export const validateContent = async () => {
   }
 }
 
-export const canPush = async (errorsBySource: Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>): Promise<boolean> => {
+export const canPush = (errorsBySource: Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>): boolean => {
   if (errorsBySource.has(DiagnosticSource.cnxml)) {
     void vscode.window.showErrorMessage(PushValidationModal.cnxmlErrorMsg, { modal: true })
     return false
   }
   if (errorsBySource.has(DiagnosticSource.xml)) {
-    await vscode.window.showErrorMessage(PushValidationModal.xmlErrorMsg, { modal: true })
+    void vscode.window.showErrorMessage(PushValidationModal.xmlErrorMsg, { modal: true })
     return false
   }
   return true
@@ -221,7 +221,7 @@ export const getMessage = async (): Promise<string | undefined> => {
 
 export const pushContent = (hostContext: ExtensionHostContext) => async () => {
   // Do a precursory check for known errors (fast!)
-  if (await canPush(getErrorDiagnosticsBySource())) {
+  if (canPush(getErrorDiagnosticsBySource())) {
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Push Content',
@@ -268,7 +268,9 @@ export const _pushContent = (
 
   const commitMessage = await _getMessage()
   /* istanbul ignore if */
-  if (commitMessage == null) { return }
+  if (commitMessage == null || !canPush(await openAndValidate(DocumentsToOpen.modified))) {
+    return
+  }
   try {
     await repo.commit(commitMessage, commitOptions)
     commitSucceeded = true
