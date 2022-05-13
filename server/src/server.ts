@@ -120,7 +120,10 @@ documents.onDidClose(({ document }) => {
 
 documents.onDidChangeContent(({ document }) => {
   const manager = getBundleForUri(document.uri)
-  manager.updateFileContents(document.uri, document.getText())
+  const node = manager.updateFileContents(document.uri, document.getText())
+  if (node !== undefined) {
+    manager.sendFileDiagnostics(node)
+  }
 })
 connection.onDidChangeWatchedFiles(({ changes }) => {
   const inner = async (): Promise<void> => {

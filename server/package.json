@@ -4,6 +4,7 @@
     "glob": "^7.2.0",
     "immutable": "^4.0.0",
     "memoize-one": "^6.0.0",
+    "node-fetch": "^3.2.4",
     "quarx": "^3.4.0",
     "source-map-support": "^0.5.21",
     "uuid": "^8.3.2",

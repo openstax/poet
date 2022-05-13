@@ -21,7 +21,8 @@ export interface IFrameLink extends HasRange {
 export enum PageLinkKind {
   URL,
   PAGE,
-  PAGE_ELEMENT
+  PAGE_ELEMENT,
+  EXERCISE
 }
 export type PageLink = HasRange & ({
   type: PageLinkKind.URL
@@ -33,7 +34,50 @@ export type PageLink = HasRange & ({
   type: PageLinkKind.PAGE_ELEMENT
   page: PageNode
   targetElementId: string
+} | {
+  type: PageLinkKind.EXERCISE
+  url: string
+  tagName: string
 })
+
+/**
+ * The fields we care about from a fetched Exercise
+ */
+interface ExerciseJSON {
+  tags: string[]
+  version: number
+  number: number // Identifier for constructing a URL
+}
+export interface ExercisesJSON {
+  items: ExerciseJSON[]
+}
+interface PagesAndTargets {
+  pageUUIDs: string[]
+  elementIDs: string[]
+}
+/*
+  * There are 2 types of exercise tags we care about:
+  * - context-cnxmod:461e16d4-3f6a-4430-86ab-578e2035da57
+  * - context-cnxfeature:CNX_AP_Bio_43_04_02
+  *
+  * Example: https://exercises.openstax.org/api/exercises?q=tag:apbio-ch34-ex038
+  */
+function getContextPagesAndTargets(ex: ExerciseJSON): PagesAndTargets {
+  const pageUUIDs = []
+  const elementIDs = []
+  for (const tag of ex.tags) {
+    const [prefix, value] = tag.split(':')
+    switch (prefix) {
+      case 'context-cnxmod' :
+        pageUUIDs.push(value)
+        break
+      case 'context-cnxfeature':
+        elementIDs.push(value)
+        break
+    }
+  }
+  return { pageUUIDs, elementIDs }
+}
 
 function convertToPos(str: string, cursor: number): Position {
   const lines = str.substring(cursor).split('\n')
@@ -55,6 +99,8 @@ export const UNTITLED_FILE = 'UntitledFile'
 const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+const LINKED_EXERCISE_PREFIX_URLS = ['#ost/api/ex/', '#exercise/']
 
 export const ELEMENT_TO_PREFIX = new Map<string, string>()
 ELEMENT_TO_PREFIX.set('para', 'para')
@@ -87,6 +133,7 @@ export class PageNode extends Fileish {
   private readonly _resourceLinks = Quarx.observable.box<Opt<I.Set<ResourceLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
   private readonly _elementsMissingIds = Quarx.observable.box<Opt<I.Set<Range>>>(undefined)
+  private readonly _exerciseCache = Quarx.observable.box<Opt<I.Map<string, ExercisesJSON>>>(undefined)
 
   public uuid() { return this.ensureLoaded(this._uuid).v }
   public get optTitle() {
@@ -182,6 +229,12 @@ export class PageNode extends Fileish {
       const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
       const toUrl = changeEmptyToNull(linkNode.getAttribute('url'))
       if (toUrl !== undefined) {
+        for (const prefix of LINKED_EXERCISE_PREFIX_URLS) {
+          if (toUrl.startsWith(prefix)) {
+            const tagName = toUrl.substring(prefix.length)
+            return { range, type: PageLinkKind.EXERCISE, tagName, url: `https://exercises.openstax.org/api/exercises?q=tag:${tagName}` }
+          }
+        }
         return { range, type: PageLinkKind.URL, url: toUrl }
       }
       const toPage = toDocument !== undefined ? super.bundle.allPages.getOrAdd(join(this.pathHelper, PathKind.MODULE_TO_MODULEID, this.absPath, toDocument)) : this
@@ -208,7 +261,23 @@ export class PageNode extends Fileish {
     }
   }
 
+  get exerciseUrls() {
+    const pageLinks = this.ensureLoaded(this._pageLinks)
+    const ret: string[] = []
+    for (const l of pageLinks) {
+      if (l.type === PageLinkKind.EXERCISE) {
+        ret.push(l.url)
+      }
+    }
+    return ret
+  }
+
+  setExercises(cache: I.Map<string, ExercisesJSON>) {
+    this._exerciseCache.set(cache)
+  }
+
   protected getValidationChecks(): ValidationCheck[] {
+    const exerciseCache = this.ensureLoaded(this._exerciseCache)
     const resourceLinks = this.resourceLinks
     const pageLinks = this.pageLinks
     return [
@@ -220,16 +289,59 @@ export class PageNode extends Fileish {
       {
         message: PageValidationKind.MISSING_TARGET,
         nodesToLoad: filterNull(pageLinks.map(l => {
-          if (l.type !== PageLinkKind.URL && l.page !== this) {
+          if (l.type !== PageLinkKind.URL && l.type !== PageLinkKind.EXERCISE && l.page !== this) {
             return l.page
           }
           return undefined
         })),
         fn: () => pageLinks.filter(l => {
-          if (l.type === PageLinkKind.URL) return false // URL links are ok
+          if (l.type === PageLinkKind.URL) return l.url.startsWith('#') // URL links are ok
+          if (l.type === PageLinkKind.EXERCISE) return false // We check these in a different validation
           if (!l.page.exists) return true // link to non-existent page are bad
           if (l.type === PageLinkKind.PAGE) return false // linking to the whole page and it exists is ok
           return !l.page.hasElementId(l.targetElementId)
+        }).map(l => l.range)
+      },
+      {
+        message: PageValidationKind.MALFORMED_EXERCISE,
+        nodesToLoad: this.bundle.allPages.all,
+        fn: () => pageLinks.filter(l => {
+          if (l.type === PageLinkKind.EXERCISE) {
+            const exercises = exerciseCache.get(l.url)
+            if (exercises === undefined) {
+              return true // Error: Exercise has not been loaded by now. Could be a bug or an error from server
+            }
+            if (exercises.items.length !== 1) {
+              return true // Error: Expected 1 exercise result but found 0 or at least 2
+            }
+            const { pageUUIDs, elementIDs } = getContextPagesAndTargets(exercises.items[0])
+            // If there is at least one pageUUID then ensure at least one of them is in our book
+            if (pageUUIDs.length > 0) {
+              const contextPages = this.bundle.allPages.all.filter(p => pageUUIDs.includes(p.uuid()))
+              if (contextPages.size < 1) {
+                return true // Error: Did not find any pages in our bundle for the context for this exercise
+              }
+              for (const p of contextPages) {
+                for (const id of elementIDs) {
+                  if (!p.elementIds.has(id)) {
+                    return true // Error: context-feature does not exist in the target page 'p'
+                  }
+                }
+              }
+              if (contextPages.size === 0 || elementIDs.length === 0) {
+                return true // Error: There were no context element IDs
+              }
+              return false
+            }
+            // Check if the ID in the Exercise matches one on this Page
+            const elementIds = Array.from(this.elementIds.keys())
+            for (const targetId of elementIDs) {
+              if (!elementIds.includes(targetId)) {
+                return true // Error: Exercise contains a context element ID but that ID is not available on this Page
+              }
+            }
+          }
+          return false
         }).map(l => l.range)
       },
       {
@@ -265,6 +377,7 @@ export class PageNode extends Fileish {
 export class PageValidationKind extends ValidationKind {
   static MISSING_RESOURCE = new PageValidationKind('Target resource file does not exist')
   static MISSING_TARGET = new PageValidationKind('Link target does not exist')
+  static MALFORMED_EXERCISE = new PageValidationKind('Malformed or Missing Exercise. Probably context-feature tag is not on this page or this page is not in the context-mod tags')
   static MALFORMED_UUID = new PageValidationKind('Malformed UUID')
   static DUPLICATE_UUID = new PageValidationKind('Duplicate Page/Module UUID')
   static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.INFORMATION)

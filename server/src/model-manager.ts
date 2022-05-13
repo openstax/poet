@@ -10,7 +10,7 @@ import { URI, Utils } from 'vscode-uri'
 import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode, TocPage } from '../../common/src/toc'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
-import { PageLinkKind, PageNode } from './model/page'
+import { ExercisesJSON, PageLinkKind, PageNode } from './model/page'
 import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
@@ -18,6 +18,7 @@ import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '
 import { BookNode, TocSubbookWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
+import { FetchMemCache } from './fetch-mem-cache'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -116,6 +117,7 @@ export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
 
   public readonly jobRunner = new JobRunner()
+  private readonly fetchCache = new FetchMemCache<ExercisesJSON>()
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
   private bookTocs: BookToc[] = []
@@ -263,8 +265,8 @@ export class ModelManager {
     }
     ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
     node.load(contents)
-    this.sendFileDiagnostics(node)
     this.openDocuments.set(absPath, contents)
+    return node
   }
 
   public closeDocument(absPath: string) {
@@ -301,7 +303,7 @@ export class ModelManager {
     node.load(fileContent)
   }
 
-  private sendFileDiagnostics(node: Fileish) {
+  public sendFileDiagnostics(node: Fileish) {
     const { errors, nodesToLoad } = node.validationErrors
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
@@ -343,14 +345,16 @@ export class ModelManager {
       {
         type: 'FILEOPENED_SEND_DIAGNOSTICS',
         context,
-        fn: () => {
+        fn: async () => {
           const node = findNode(this.bundle, uri)
           if (node !== undefined) {
             if (content !== undefined) {
               this.updateFileContents(uri, content)
-            } else {
-              this.sendFileDiagnostics(node)
+              if (node instanceof PageNode) {
+                await this.fetchAndSetExercises(node)
+              }
             }
+            this.sendFileDiagnostics(node)
           }
         }
       }
@@ -394,7 +398,7 @@ export class ModelManager {
     await this.readAndLoad(page)
     const ret: DocumentLink[] = []
     for (const pageLink of page.pageLinks) {
-      if (pageLink.type === PageLinkKind.URL) {
+      if (pageLink.type === PageLinkKind.URL || pageLink.type === PageLinkKind.EXERCISE) {
         ret.push(DocumentLink.create(pageLink.range, pageLink.url))
       } else {
         const targetPage = pageLink.page
@@ -578,6 +582,18 @@ export class ModelManager {
     const fsPath = URI.parse(node.absPath).fsPath
     await fs.promises.writeFile(fsPath, out)
     return true
+  }
+
+  async fetchAndSetExercises(node: PageNode) {
+    const urls = node.exerciseUrls
+    const map = new Map<string, ExercisesJSON>()
+    for (const url of urls) {
+      ModelManager.debug('[EXERCISE_LOADER] fetching exercise', url)
+      const ex: ExercisesJSON = await this.fetchCache.get(url)
+      ModelManager.debug('[EXERCISE_LOADER] fetching exercise. Done', url)
+      map.set(url, ex)
+    }
+    node.setExercises(I.Map(map))
   }
 }
 
