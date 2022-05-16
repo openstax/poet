@@ -120,7 +120,7 @@ documents.onDidClose(({ document }) => {
 
 documents.onDidChangeContent(({ document }) => {
   const manager = getBundleForUri(document.uri)
-  const node = manager.updateFileContents(document.uri, document.getText())
+  const node = manager.updateFileContentsOnly(document.uri, document.getText())
   if (node !== undefined) {
     manager.sendFileDiagnostics(node)
   }

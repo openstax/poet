@@ -257,7 +257,7 @@ export class ModelManager {
     }
   }
 
-  public updateFileContents(absPath: string, contents: string) {
+  public updateFileContentsOnly(absPath: string, contents: string) {
     const node = findOrCreateNode(this.bundle, absPath)
     if (node === undefined) {
       ModelManager.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
@@ -267,6 +267,13 @@ export class ModelManager {
     node.load(contents)
     this.openDocuments.set(absPath, contents)
     return node
+  }
+
+  public updateFileContentsAndSendDiagnostics(absPath: string, contents: string) {
+    const node = this.updateFileContentsOnly(absPath, contents)
+    if (node !== undefined) {
+      this.sendFileDiagnostics(node)
+    }
   }
 
   public closeDocument(absPath: string) {
@@ -349,7 +356,7 @@ export class ModelManager {
           const node = findNode(this.bundle, uri)
           if (node !== undefined) {
             if (content !== undefined) {
-              this.updateFileContents(uri, content)
+              this.updateFileContentsOnly(uri, content)
               if (node instanceof PageNode) {
                 await this.fetchAndSetExercises(node)
               }

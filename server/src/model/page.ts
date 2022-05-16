@@ -55,6 +55,10 @@ interface PagesAndTargets {
   pageUUIDs: string[]
   elementIDs: string[]
 }
+
+const LINKED_EXERCISE_PREFIX_URLS = ['#ost/api/ex/', '#exercise/']
+const EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID = 'context-cnxmod'
+const EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID = 'context-cnxfeature'
 /*
   * There are 2 types of exercise tags we care about:
   * - context-cnxmod:461e16d4-3f6a-4430-86ab-578e2035da57
@@ -68,10 +72,10 @@ function getContextPagesAndTargets(ex: ExerciseJSON): PagesAndTargets {
   for (const tag of ex.tags) {
     const [prefix, value] = tag.split(':')
     switch (prefix) {
-      case 'context-cnxmod' :
+      case EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID :
         pageUUIDs.push(value)
         break
-      case 'context-cnxfeature':
+      case EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID:
         elementIDs.push(value)
         break
     }
@@ -99,8 +103,6 @@ export const UNTITLED_FILE = 'UntitledFile'
 const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-
-const LINKED_EXERCISE_PREFIX_URLS = ['#ost/api/ex/', '#exercise/']
 
 export const ELEMENT_TO_PREFIX = new Map<string, string>()
 ELEMENT_TO_PREFIX.set('para', 'para')
@@ -133,7 +135,7 @@ export class PageNode extends Fileish {
   private readonly _resourceLinks = Quarx.observable.box<Opt<I.Set<ResourceLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
   private readonly _elementsMissingIds = Quarx.observable.box<Opt<I.Set<Range>>>(undefined)
-  private readonly _exerciseCache = Quarx.observable.box<Opt<I.Map<string, ExercisesJSON>>>(undefined)
+  private readonly _exerciseCache = Quarx.observable.box<I.Map<string, ExercisesJSON>>(I.Map())
 
   public uuid() { return this.ensureLoaded(this._uuid).v }
   public get optTitle() {
@@ -277,7 +279,7 @@ export class PageNode extends Fileish {
   }
 
   protected getValidationChecks(): ValidationCheck[] {
-    const exerciseCache = this.ensureLoaded(this._exerciseCache)
+    const exerciseCache = this._exerciseCache.get()
     const resourceLinks = this.resourceLinks
     const pageLinks = this.pageLinks
     return [

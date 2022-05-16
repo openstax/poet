@@ -66,12 +66,12 @@ describe('Bundle Manager', () => {
   it('updateFileContents()', () => {
     const enqueueStub = sinon.stub(manager.jobRunner, 'enqueue')
     loadSuccess(manager.bundle)
-    manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
+    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(enqueueStub.callCount).toBe(0)
 
     // Non-existent node
-    manager.updateFileContents('path/to/non-existent/image', 'some bits')
+    manager.updateFileContentsAndSendDiagnostics('path/to/non-existent/image', 'some bits')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(enqueueStub.callCount).toBe(0)
   })
@@ -118,7 +118,7 @@ describe('Bundle Manager', () => {
     expect(manager.bundle.books.toArray()).toEqual([])
   })
   it('calls sendDiagnostics with objects that can be serialized (no cycles)', () => {
-    ignoreConsoleWarnings(() => manager.updateFileContents(manager.bundle.absPath, '<notvalidXML'))
+    ignoreConsoleWarnings(() => manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, '<notvalidXML'))
     expect(sendDiagnosticsStub.callCount).toBe(1)
     const diagnosticsObj = sendDiagnosticsStub.getCall(0).args[0]
     expect(diagnosticsObj.uri).toBeTruthy()
@@ -127,7 +127,7 @@ describe('Bundle Manager', () => {
   })
   it('populates the Diagnostics.source field so that pushContent can filter on it', () => {
     loadSuccess(manager.bundle)
-    manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
+    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.cnxml)
   })
@@ -136,7 +136,7 @@ describe('Bundle Manager', () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     const page = loadSuccess(first(book.pages))
 
-    manager.updateFileContents(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
+    manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Information)
   })
@@ -179,9 +179,9 @@ describe('Open Document contents cache', () => {
 
   it('Updates the cached contents', () => {
     const manager = new ModelManager(makeBundle(), conn)
-    manager.updateFileContents(manager.bundle.absPath, 'value_1')
+    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'value_1')
     expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_1')
-    manager.updateFileContents(manager.bundle.absPath, 'value_2')
+    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'value_2')
     expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_2')
     manager.closeDocument(manager.bundle.absPath)
     expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe(undefined)
@@ -345,7 +345,7 @@ describe('processFilesystemChange()', () => {
     const book = loadSuccess(first(bundle.books))
 
     expect(manager.bundle.books.toArray()).toEqual([book])
-    manager.updateFileContents(manager.bundle.absPath, bundleMaker({}))
+    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, bundleMaker({}))
     expect(manager.bundle.books.toArray()).toEqual([])
     expect((await fireChange(FileChangeType.Changed, 'META-INF/books.xml')).size).toBe(1)
     expect(manager.bundle.books.toArray()).toEqual([]) // Should still be empty because the unsaved changes
@@ -380,7 +380,7 @@ describe('Image Autocomplete', () => {
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
-    manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
+    manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
@@ -402,7 +402,7 @@ describe('Image Autocomplete', () => {
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
-    manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
+    manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
@@ -425,7 +425,7 @@ describe('Image Autocomplete', () => {
     orphanedImage.load('image-bits')
     missingImage.load('')
 
-    manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath, missingPath] }))
+    manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ imageHrefs: [imagePath, missingPath] }))
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
