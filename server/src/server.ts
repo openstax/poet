@@ -119,11 +119,11 @@ documents.onDidClose(({ document }) => {
 })
 
 documents.onDidChangeContent(({ document }) => {
-  const manager = getBundleForUri(document.uri)
-  const node = manager.updateFileContentsOnly(document.uri, document.getText())
-  if (node !== undefined) {
-    manager.sendFileDiagnostics(node)
+  const inner = async (): Promise<void> => {
+    const manager = getBundleForUri(document.uri)
+    await manager.updateFileContentsAndSendDiagnostics(document.uri, document.getText())
   }
+  inner().catch(err => { throw err })
 })
 connection.onDidChangeWatchedFiles(({ changes }) => {
   const inner = async (): Promise<void> => {

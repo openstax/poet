@@ -106,10 +106,11 @@ export function loadSuccess<T extends Fileish>(n: T, skipInitialLoadedCheck = fa
   return n // for daisy-chaining
 }
 
-export function ignoreConsoleWarnings(fn: () => void) {
+export function ignoreConsoleWarnings<T>(fn: () => T): T {
   const warnStub = SinonRoot.stub(console, 'warn')
-  fn()
+  const ret = fn()
   warnStub.restore()
+  return ret
 }
 
 export function expectErrors<T extends Fileish>(node: T, validationKinds: ValidationKind[]) {

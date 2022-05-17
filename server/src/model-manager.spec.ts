@@ -63,15 +63,15 @@ describe('Bundle Manager', () => {
     expect(manager.orphanedPages.size).toBe(1)
     expect(manager.orphanedPages.first()).toBe(orphanedPage)
   })
-  it('updateFileContents()', () => {
+  it('updateFileContents()', async () => {
     const enqueueStub = sinon.stub(manager.jobRunner, 'enqueue')
     loadSuccess(manager.bundle)
-    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
+    await manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(enqueueStub.callCount).toBe(0)
 
     // Non-existent node
-    manager.updateFileContentsAndSendDiagnostics('path/to/non-existent/image', 'some bits')
+    await manager.updateFileContentsAndSendDiagnostics('path/to/non-existent/image', 'some bits')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(enqueueStub.callCount).toBe(0)
   })
@@ -117,26 +117,26 @@ describe('Bundle Manager', () => {
     await manager.jobRunner.done()
     expect(manager.bundle.books.toArray()).toEqual([])
   })
-  it('calls sendDiagnostics with objects that can be serialized (no cycles)', () => {
-    ignoreConsoleWarnings(() => manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, '<notvalidXML'))
+  it('calls sendDiagnostics with objects that can be serialized (no cycles)', async () => {
+    await ignoreConsoleWarnings(async () => await manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, '<notvalidXML'))
     expect(sendDiagnosticsStub.callCount).toBe(1)
     const diagnosticsObj = sendDiagnosticsStub.getCall(0).args[0]
     expect(diagnosticsObj.uri).toBeTruthy()
     expect(diagnosticsObj.diagnostics).toBeTruthy()
     expect(() => JSON.stringify(diagnosticsObj)).not.toThrow()
   })
-  it('populates the Diagnostics.source field so that pushContent can filter on it', () => {
+  it('populates the Diagnostics.source field so that pushContent can filter on it', async () => {
     loadSuccess(manager.bundle)
-    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
+    await manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.cnxml)
   })
-  it(`sends a warning when the Diagnostics message is '${PageValidationKind.MISSING_ID.title}'`, () => {
+  it(`sends a warning when the Diagnostics message is '${PageValidationKind.MISSING_ID.title}'`, async () => {
     // Load the pages
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     const page = loadSuccess(first(book.pages))
 
-    manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
+    await manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Information)
   })
@@ -177,11 +177,11 @@ describe('Open Document contents cache', () => {
     sinon.restore()
   })
 
-  it('Updates the cached contents', () => {
+  it('Updates the cached contents', async () => {
     const manager = new ModelManager(makeBundle(), conn)
-    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'value_1')
+    await manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'value_1')
     expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_1')
-    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'value_2')
+    await manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, 'value_2')
     expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_2')
     manager.closeDocument(manager.bundle.absPath)
     expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe(undefined)
@@ -345,7 +345,7 @@ describe('processFilesystemChange()', () => {
     const book = loadSuccess(first(bundle.books))
 
     expect(manager.bundle.books.toArray()).toEqual([book])
-    manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, bundleMaker({}))
+    await manager.updateFileContentsAndSendDiagnostics(manager.bundle.absPath, bundleMaker({}))
     expect(manager.bundle.books.toArray()).toEqual([])
     expect((await fireChange(FileChangeType.Changed, 'META-INF/books.xml')).size).toBe(1)
     expect(manager.bundle.books.toArray()).toEqual([]) // Should still be empty because the unsaved changes
@@ -369,7 +369,7 @@ describe('Image Autocomplete', () => {
     sinon.restore()
   })
 
-  it('Returns only orphaned images', () => {
+  it('Returns only orphaned images', async () => {
     const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
 
     const imagePath = '../../media/image.png'
@@ -380,7 +380,7 @@ describe('Image Autocomplete', () => {
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
-    manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
+    await manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
@@ -391,7 +391,7 @@ describe('Image Autocomplete', () => {
     expect(results[0].label).toBe(orphanedPath)
   })
 
-  it('Returns no results outside image tag', () => {
+  it('Returns no results outside image tag', async () => {
     const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
 
     const imagePath = '../../media/image.png'
@@ -402,7 +402,7 @@ describe('Image Autocomplete', () => {
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
-    manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
+    await manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
@@ -411,7 +411,7 @@ describe('Image Autocomplete', () => {
     expect(results).toEqual([])
   })
 
-  it('Returns no results outside replacement range', () => {
+  it('Returns no results outside replacement range', async () => {
     const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
 
     const imagePath = '../../media/image.png'
@@ -425,7 +425,7 @@ describe('Image Autocomplete', () => {
     orphanedImage.load('image-bits')
     missingImage.load('')
 
-    manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ imageHrefs: [imagePath, missingPath] }))
+    await manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ imageHrefs: [imagePath, missingPath] }))
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 

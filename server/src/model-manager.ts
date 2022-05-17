@@ -257,7 +257,7 @@ export class ModelManager {
     }
   }
 
-  public updateFileContentsOnly(absPath: string, contents: string) {
+  private updateFileContentsOnly(absPath: string, contents: string) {
     const node = findOrCreateNode(this.bundle, absPath)
     if (node === undefined) {
       ModelManager.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
@@ -269,8 +269,11 @@ export class ModelManager {
     return node
   }
 
-  public updateFileContentsAndSendDiagnostics(absPath: string, contents: string) {
+  public async updateFileContentsAndSendDiagnostics(absPath: string, contents: string) {
     const node = this.updateFileContentsOnly(absPath, contents)
+    if (node instanceof PageNode) {
+      await this.fetchAndSetExercises(node)
+    }
     if (node !== undefined) {
       this.sendFileDiagnostics(node)
     }
@@ -356,12 +359,10 @@ export class ModelManager {
           const node = findNode(this.bundle, uri)
           if (node !== undefined) {
             if (content !== undefined) {
-              this.updateFileContentsOnly(uri, content)
-              if (node instanceof PageNode) {
-                await this.fetchAndSetExercises(node)
-              }
+              await this.updateFileContentsAndSendDiagnostics(uri, content)
+            } else {
+              this.sendFileDiagnostics(node)
             }
-            this.sendFileDiagnostics(node)
           }
         }
       }
@@ -596,9 +597,8 @@ export class ModelManager {
     const map = new Map<string, ExercisesJSON>()
     for (const url of urls) {
       ModelManager.debug('[EXERCISE_LOADER] fetching exercise', url)
-      const ex: ExercisesJSON = await this.fetchCache.get(url)
+      map.set(url, await this.fetchCache.get(url))
       ModelManager.debug('[EXERCISE_LOADER] fetching exercise. Done', url)
-      map.set(url, ex)
     }
     node.setExerciseCache(I.Map(map))
   }
