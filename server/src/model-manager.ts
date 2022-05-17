@@ -50,6 +50,15 @@ function findOrCreateNode(bundle: Bundle, absPath: string) {
     return bundle.allPages.getOrAdd(absPath)
   } else if (BOOK_RE.test(absPath)) {
     return bundle.allBooks.getOrAdd(absPath)
+  } else {
+    // Check each of the factories to see if the node exists
+    const book = bundle.allBooks.get(absPath)
+    /* istanbul ignore if */
+    if (book !== undefined) return book
+    const page = bundle.allPages.get(absPath)
+    if (page !== undefined) return page
+    const resource = bundle.allResources.get(absPath)
+    return resource
   }
 }
 

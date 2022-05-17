@@ -11,9 +11,11 @@ class NotFoundError extends Error {
  * To make this cache more robust it should use ETags when making a request.
  */
 export class FetchMemCache<T> {
+  public static fetchImpl = fetch // Allow tests to swap it out
+
   private readonly cache = new Map<string, T>()
   private async fetchOrThrow<T>(url: string): Promise<T> {
-    const resp = await fetch(url)
+    const resp = await FetchMemCache.fetchImpl(url)
     if (resp.status !== 200) {
       throw new NotFoundError(`Problem fetching '${url}'. Error: ${resp.statusText}`, url, resp.status)
     }

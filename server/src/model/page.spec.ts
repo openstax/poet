@@ -179,7 +179,7 @@ describe('Page validations', () => {
   })
   it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Exercise has not been loaded by now. Could be a bug or an error from server`, () => {
     expectPageErrors([PageValidationKind.MALFORMED_EXERCISE], {
-      extraCnxml: '<link url="#ost/api/ex/ex1234" />'
+      pageLinks: [{ url: '#ost/api/ex/ex1234' }]
     })
   })
 
@@ -188,7 +188,7 @@ describe('Page validations', () => {
     const page = bundle.allPages.getOrAdd('somepage/filename')
     page.load(pageMaker({
       uuid,
-      extraCnxml: `<link url="#ost/api/ex/${exTag}" />`
+      pageLinks: [{ url: `#ost/api/ex/${exTag}` }]
     }))
     expect(page.exerciseURLs.size).toBe(1)
     expect(page.exerciseURLs.first()).toEqual(exerciseTagToUrl(exTag))

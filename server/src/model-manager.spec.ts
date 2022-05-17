@@ -4,13 +4,14 @@ import path from 'path'
 import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
 import I from 'immutable'
+import fetch, * as fetchModule from 'node-fetch'
 import { createConnection, WatchDog } from 'vscode-languageserver'
 import { DiagnosticSeverity, FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
 import xmlFormat from 'xml-formatter'
 import { expectValue, Opt, join, PathKind } from './model/utils'
 import { Bundle, BundleValidationKind } from './model/bundle'
 import { ModelManager } from './model-manager'
-import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/util.spec'
+import { expectErrors, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/util.spec'
 import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
 
@@ -20,6 +21,7 @@ import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { bookMaker } from './model/book.spec'
 import { bundleMaker } from './model/bundle.spec'
 import { URI, Utils } from 'vscode-uri'
+import { FetchMemCache } from './fetch-mem-cache'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
@@ -131,7 +133,7 @@ describe('Bundle Manager', () => {
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.cnxml)
   })
-  it(`sends a warning when the Diagnostics message is '${PageValidationKind.MISSING_ID.title}'`, async () => {
+  it(`sends a hint when the Diagnostics message is '${PageValidationKind.MISSING_ID.title}'`, async () => {
     // Load the pages
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     const page = loadSuccess(first(book.pages))
@@ -139,6 +141,31 @@ describe('Bundle Manager', () => {
     await manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Information)
+  })
+
+  describe('Fetching exercises', () => {
+    const sinon = SinonRoot.createSandbox()
+    afterEach(() => sinon.restore())
+    it('fetches an exercise', async () => {
+      const exTag = 'ex1234'
+      loadSuccess(manager.bundle)
+      const page = manager.bundle.allPages.getOrAdd('somepath/filename')
+
+      const fetchResponse = {
+        items: [] // 0 items should cause a validation error
+      }
+
+      const fetchImpl = sinon.spy(async (url: string) => {
+        return new fetchModule.Response(JSON.stringify(fetchResponse), { status: 200 })
+      })
+      FetchMemCache.fetchImpl = fetchImpl as unknown as typeof fetch
+
+      await manager.updateFileContentsAndSendDiagnostics(page.absPath, pageMaker({
+        pageLinks: [{ url: `#ost/api/ex/${exTag}` }]
+      }))
+      expect(fetchImpl.callCount).toBe(1)
+      expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE]) // Malformed Exercise because 0 items were in the response
+    })
   })
 })
 
