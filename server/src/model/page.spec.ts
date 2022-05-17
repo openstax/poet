@@ -1,6 +1,8 @@
 import expect from 'expect'
+import Immutable from 'immutable'
 import * as path from 'path'
-import { ELEMENT_TO_PREFIX, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
+import { ValidationKind } from './fileish'
+import { ELEMENT_TO_PREFIX, exerciseTagToUrl, EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID, EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
 import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
 
 describe('Page', () => {
@@ -66,6 +68,13 @@ ${i.elementIds.map(id => `<para id="${id}"/>`).join('\n')}
 ${i.extraCnxml}
   </content>
 </document>`
+}
+
+function expectPageErrors(expectedErrors: ValidationKind[], info: PageInfo) {
+  const bundle = makeBundle()
+  const page = bundle.allPages.getOrAdd('somepage/filename')
+  page.load(pageMaker(info))
+  expectErrors(page, expectedErrors)
 }
 
 describe('Page validations', () => {
@@ -139,11 +148,7 @@ describe('Page validations', () => {
     expect(page.validationErrors.errors.size).toBe(0)
   })
   it(PageValidationKind.MALFORMED_UUID.title, () => {
-    const bundle = makeBundle()
-    const page = bundle.allPages.getOrAdd('somepage/filename')
-    const info = { uuid: 'invalid-uuid-value' }
-    page.load(pageMaker(info))
-    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MALFORMED_UUID)
+    expectPageErrors([PageValidationKind.MALFORMED_UUID], { uuid: 'invalid-uuid-value' })
   })
   it(PageValidationKind.DUPLICATE_UUID.title, () => {
     const bundle = makeBundle()
@@ -156,29 +161,107 @@ describe('Page validations', () => {
     expectErrors(page2, [PageValidationKind.DUPLICATE_UUID])
   })
   it('Reports multiple validation errors', () => {
-    const bundle = makeBundle()
-    const page = bundle.allPages.getOrAdd('somepage')
-    page.load(pageMaker({ uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }] }))
-    expectErrors(page, [PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET])
+    expectPageErrors([PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET], {
+      uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }]
+    })
   })
   it(PageValidationKind.MISSING_ID.title, () => {
-    const bundle = makeBundle()
-    const page = bundle.allPages.getOrAdd('somepage/filename')
     const elementsThatRequireId = Array.from(ELEMENT_TO_PREFIX.keys()).map(tagName => `<${tagName}/>`)
     const expectedErrors = Array.from(ELEMENT_TO_PREFIX.keys()).map(_ => PageValidationKind.MISSING_ID)
-    const info = {
+    expectPageErrors(expectedErrors, {
       extraCnxml: elementsThatRequireId.join('')
-    }
-    page.load(pageMaker(info))
-    expectErrors(page, expectedErrors)
+    })
   })
   it(`${PageValidationKind.MISSING_ID.title} Terms inside a definition are ignored`, () => {
+    expectPageErrors([], {
+      extraCnxml: '<definition id="test"><term>No id here is okay</term></definition>'
+    })
+  })
+  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Exercise has not been loaded by now. Could be a bug or an error from server`, () => {
+    expectPageErrors([PageValidationKind.MALFORMED_EXERCISE], {
+      extraCnxml: '<link url="#ost/api/ex/ex1234" />'
+    })
+  })
+
+  function buildPageWithExerciseLink(exTag: string, uuid?: string) {
     const bundle = makeBundle()
     const page = bundle.allPages.getOrAdd('somepage/filename')
-    const info = {
-      extraCnxml: '<definition id="test"><term>No id here is okay</term></definition>'
-    }
-    page.load(pageMaker(info))
-    expectErrors(page, [])
+    page.load(pageMaker({
+      uuid,
+      extraCnxml: `<link url="#ost/api/ex/${exTag}" />`
+    }))
+    return page
+  }
+  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Expected 1 exercise result but found 0 or at least 2`, () => {
+    const exTag = 'ex1234'
+    const page = buildPageWithExerciseLink(exTag)
+    // 0 Results
+    page.setExercises(Immutable.Map([[exerciseTagToUrl(exTag), { items: [] }]]))
+    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+
+    // 2 Results
+    const exerciseJSON = { tags: [] }
+    page.setExercises(Immutable.Map([[exerciseTagToUrl(exTag), {
+      items: [
+        exerciseJSON,
+        exerciseJSON
+      ]
+    }]]))
+    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+  })
+  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Did not find any pages in our bundle for the context for this exercise`, () => {
+    const exTag = 'ex1234'
+    const page = buildPageWithExerciseLink(exTag)
+    page.setExercises(Immutable.Map([[exerciseTagToUrl(exTag), {
+      items: [{ tags: [`${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:uuid-that-is-not-in-our-bundle`] }]
+    }]]))
+    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+  })
+  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: context-feature does not exist in the target page`, () => {
+    const exTag = 'ex1234'
+    const uuid = '88888888-8888-4888-8888-888888888888'
+    const page = buildPageWithExerciseLink(exTag, uuid)
+    page.setExercises(Immutable.Map([[exerciseTagToUrl(exTag), {
+      items: [{
+        // Exercise JSON
+        tags: [
+          `${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:${uuid}`,
+          `${EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID}:element-id-that-is-not-in-the-target-page-which-is-our-page`
+        ]
+      }]
+    }]]))
+    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+  })
+  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Exercise contains a context element ID but that ID is not available on this Page`, () => {
+    const exTag = 'ex1234'
+    const page = buildPageWithExerciseLink(exTag)
+    page.setExercises(Immutable.Map([[exerciseTagToUrl(exTag), {
+      items: [{
+        // Exercise JSON
+        tags: [
+          `${EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID}:element-id-that-is-not-in-our-page`
+        ]
+      }]
+    }]]))
+    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+  })
+  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: There were no context element IDs`, () => {
+    const exTag = 'ex1234'
+    const uuid = '88888888-8888-4888-8888-888888888888'
+    const page = buildPageWithExerciseLink(exTag, uuid)
+    page.setExercises(Immutable.Map([[exerciseTagToUrl(exTag), {
+      items: [{
+        // Exercise JSON
+        tags: [
+          `${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:${uuid}`
+        ]
+      }]
+    }]]))
+    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+  })
+  it('gets exercise URLs', () => {
+    const exTag = 'ex1234'
+    const page = buildPageWithExerciseLink(exTag)
+    expect(page.exerciseUrls).toEqual([exerciseTagToUrl(exTag)])
   })
 })

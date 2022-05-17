@@ -45,8 +45,8 @@ export type PageLink = HasRange & ({
  */
 interface ExerciseJSON {
   tags: string[]
-  version: number
-  number: number // Identifier for constructing a URL
+  // version: number
+  // number: number // Identifier for constructing a URL
 }
 export interface ExercisesJSON {
   items: ExerciseJSON[]
@@ -57,8 +57,11 @@ interface PagesAndTargets {
 }
 
 const LINKED_EXERCISE_PREFIX_URLS = ['#ost/api/ex/', '#exercise/']
-const EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID = 'context-cnxmod'
-const EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID = 'context-cnxfeature'
+export const EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID = 'context-cnxmod'
+export const EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID = 'context-cnxfeature'
+export function exerciseTagToUrl(tagName: string) {
+  return `https://exercises.openstax.org/api/exercises?q=tag:${tagName}`
+}
 /*
   * There are 2 types of exercise tags we care about:
   * - context-cnxmod:461e16d4-3f6a-4430-86ab-578e2035da57
@@ -234,7 +237,7 @@ export class PageNode extends Fileish {
         for (const prefix of LINKED_EXERCISE_PREFIX_URLS) {
           if (toUrl.startsWith(prefix)) {
             const tagName = toUrl.substring(prefix.length)
-            return { range, type: PageLinkKind.EXERCISE, tagName, url: `https://exercises.openstax.org/api/exercises?q=tag:${tagName}` }
+            return { range, type: PageLinkKind.EXERCISE, tagName, url: exerciseTagToUrl(tagName) }
           }
         }
         return { range, type: PageLinkKind.URL, url: toUrl }
@@ -333,13 +336,13 @@ export class PageNode extends Fileish {
               if (contextPages.size === 0 || elementIDs.length === 0) {
                 return true // Error: There were no context element IDs
               }
-              return false
-            }
-            // Check if the ID in the Exercise matches one on this Page
-            const elementIds = Array.from(this.elementIds.keys())
-            for (const targetId of elementIDs) {
-              if (!elementIds.includes(targetId)) {
-                return true // Error: Exercise contains a context element ID but that ID is not available on this Page
+            } else {
+              // Check if the ID in the Exercise matches one on this Page
+              const elementIds = Array.from(this.elementIds.keys())
+              for (const targetId of elementIDs) {
+                if (!elementIds.includes(targetId)) {
+                  return true // Error: Exercise contains a context element ID but that ID is not available on this Page
+                }
               }
             }
           }
