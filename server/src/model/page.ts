@@ -266,7 +266,7 @@ export class PageNode extends Fileish {
     }
   }
 
-  get exerciseUrls() {
+  get exerciseURLs() {
     const pageLinks = this.ensureLoaded(this._pageLinks)
     const ret = I.Set<string>().withMutations(s => {
       for (const l of pageLinks) {
@@ -278,7 +278,7 @@ export class PageNode extends Fileish {
     return ret
   }
 
-  setExercises(cache: I.Map<string, ExercisesJSON>) {
+  setExerciseCache(cache: I.Map<string, ExercisesJSON>) {
     this._exerciseCache.set(cache)
   }
 

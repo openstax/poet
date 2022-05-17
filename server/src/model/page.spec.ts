@@ -190,20 +190,20 @@ describe('Page validations', () => {
       uuid,
       extraCnxml: `<link url="#ost/api/ex/${exTag}" />`
     }))
-    expect(page.exerciseUrls.size).toBe(1)
-    expect(page.exerciseUrls.first()).toEqual(exerciseTagToUrl(exTag))
+    expect(page.exerciseURLs.size).toBe(1)
+    expect(page.exerciseURLs.first()).toEqual(exerciseTagToUrl(exTag))
     return page
   }
   it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Expected 1 exercise result but found 0 or at least 2`, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
     // 0 Results
-    page.setExercises(Immutable.Map([[page.exerciseUrls.first(), { items: [] }]]))
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), { items: [] }]]))
     expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
 
     // 2 Results
     const exerciseJSON = { tags: [] }
-    page.setExercises(Immutable.Map([[page.exerciseUrls.first(), {
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
       items: [
         exerciseJSON,
         exerciseJSON
@@ -214,7 +214,7 @@ describe('Page validations', () => {
   it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Did not find any pages in our bundle for the context for this exercise`, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
-    page.setExercises(Immutable.Map([[page.exerciseUrls.first(), {
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
       items: [{ tags: [`${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:uuid-that-is-not-in-our-bundle`] }]
     }]]))
     expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
@@ -223,7 +223,7 @@ describe('Page validations', () => {
     const exTag = 'ex1234'
     const uuid = '88888888-8888-4888-8888-888888888888'
     const page = buildPageWithExerciseLink(exTag, uuid)
-    page.setExercises(Immutable.Map([[page.exerciseUrls.first(), {
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
       items: [{
         // Exercise JSON
         tags: [
@@ -237,7 +237,7 @@ describe('Page validations', () => {
   it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Exercise contains a context element ID but that ID is not available on this Page`, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
-    page.setExercises(Immutable.Map([[page.exerciseUrls.first(), {
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
       items: [{
         // Exercise JSON
         tags: [
@@ -251,7 +251,7 @@ describe('Page validations', () => {
     const exTag = 'ex1234'
     const uuid = '88888888-8888-4888-8888-888888888888'
     const page = buildPageWithExerciseLink(exTag, uuid)
-    page.setExercises(Immutable.Map([[page.exerciseUrls.first(), {
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
       items: [{
         // Exercise JSON
         tags: [

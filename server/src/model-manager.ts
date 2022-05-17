@@ -592,7 +592,7 @@ export class ModelManager {
   }
 
   async fetchAndSetExercises(node: PageNode) {
-    const urls = node.exerciseUrls
+    const urls = node.exerciseURLs
     const map = new Map<string, ExercisesJSON>()
     for (const url of urls) {
       ModelManager.debug('[EXERCISE_LOADER] fetching exercise', url)
@@ -600,7 +600,7 @@ export class ModelManager {
       ModelManager.debug('[EXERCISE_LOADER] fetching exercise. Done', url)
       map.set(url, ex)
     }
-    node.setExercises(I.Map(map))
+    node.setExerciseCache(I.Map(map))
   }
 }
 
