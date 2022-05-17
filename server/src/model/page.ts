@@ -268,12 +268,13 @@ export class PageNode extends Fileish {
 
   get exerciseUrls() {
     const pageLinks = this.ensureLoaded(this._pageLinks)
-    const ret: string[] = []
-    for (const l of pageLinks) {
-      if (l.type === PageLinkKind.EXERCISE) {
-        ret.push(l.url)
+    const ret = I.Set<string>().withMutations(s => {
+      for (const l of pageLinks) {
+        if (l.type === PageLinkKind.EXERCISE) {
+          s.add(l.url)
+        }
       }
-    }
+    })
     return ret
   }
 
