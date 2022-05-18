@@ -278,7 +278,7 @@ export class ModelManager {
     return node
   }
 
-  public async updateFileContentsAndSendDiagnostics(absPath: string, contents: string) {
+  public async updateFileContents(absPath: string, contents: string) {
     const node = this.updateFileContentsOnly(absPath, contents)
     if (node instanceof PageNode) {
       await this.fetchAndSetExercises(node)
@@ -322,7 +322,7 @@ export class ModelManager {
     node.load(fileContent)
   }
 
-  public sendFileDiagnostics(node: Fileish) {
+  private sendFileDiagnostics(node: Fileish) {
     const { errors, nodesToLoad } = node.validationErrors
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
@@ -368,7 +368,7 @@ export class ModelManager {
           const node = findNode(this.bundle, uri)
           if (node !== undefined) {
             if (content !== undefined) {
-              await this.updateFileContentsAndSendDiagnostics(uri, content)
+              await this.updateFileContents(uri, content)
             } else {
               this.sendFileDiagnostics(node)
             }

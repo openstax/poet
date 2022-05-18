@@ -121,7 +121,7 @@ documents.onDidClose(({ document }) => {
 documents.onDidChangeContent(({ document }) => {
   const inner = async (): Promise<void> => {
     const manager = getBundleForUri(document.uri)
-    await manager.updateFileContentsAndSendDiagnostics(document.uri, document.getText())
+    await manager.updateFileContents(document.uri, document.getText())
   }
   inner().catch(err => { throw err })
 })
