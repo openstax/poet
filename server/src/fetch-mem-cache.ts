@@ -1,10 +1,6 @@
 import fetch from 'node-fetch'
 
-class NotFoundError extends Error {
-  constructor(message: string, public url: string, public httpStatus: number) {
-    super(message)
-  }
-}
+class FetchMemCacheError extends Error { }
 
 /**
  * This only makes an HTTP request if the value is not in the cache.
@@ -17,12 +13,12 @@ export class FetchMemCache<T> {
   private async fetchOrThrow<T>(url: string): Promise<T> {
     const resp = await FetchMemCache.fetchImpl(url)
     if (resp.status !== 200) {
-      throw new NotFoundError(`Problem fetching '${url}'. Error: ${resp.statusText}`, url, resp.status)
+      throw new FetchMemCacheError(`Problem fetching '${url}'. Error: ${resp.status} ${resp.statusText}`)
     }
     try {
       return await resp.json() as T
     } catch (err) {
-      throw new NotFoundError(`This URL does not yield JSON: ${url}`, url, -1234)
+      throw new FetchMemCacheError(`This URL does not yield JSON: ${url}`)
     }
   }
 
