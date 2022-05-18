@@ -2,7 +2,7 @@ import expect from 'expect'
 import * as xpath from 'xpath-ts'
 import { DOMParser } from 'xmldom'
 import { calculateElementPositions } from './utils'
-import { ignoreConsoleWarnings, loadSuccess, makeBundle } from './spec-helpers'
+import { ignoreConsoleWarnings, loadSuccess, makeBundle } from './spec-helpers.spec'
 
 describe('calculateElementPositions', function () {
   it('should return start and end positions using siblings when available', () => {

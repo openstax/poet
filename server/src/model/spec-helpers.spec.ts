@@ -6,6 +6,12 @@ import I from 'immutable'
 import { Bundle } from './bundle'
 import { Fileish, ValidationKind } from './fileish'
 
+describe('spec-helpers Dummy', () => {
+  it('trivially passes because Jest requires every spec file to have at least one test', () => {
+    expect(true).toBe(true)
+  })
+})
+
 export const REPO_ROOT = path.join(__dirname, '..', '..', '..')
 
 export const read = (filePath: string) => readFileSync(filePath, 'utf-8')

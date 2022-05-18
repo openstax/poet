@@ -10,7 +10,7 @@ import xmlFormat from 'xml-formatter'
 import { expectValue, Opt, join, PathKind } from './model/utils'
 import { Bundle, BundleValidationKind } from './model/bundle'
 import { ModelManager } from './model-manager'
-import { bookMaker, bundleMaker, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle, PageInfo, pageMaker } from './model/spec-helpers'
+import { bookMaker, bundleMaker, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle, PageInfo, pageMaker } from './model/spec-helpers.spec'
 import { Job, JobRunner } from './job-runner'
 
 import { PageNode, PageValidationKind } from './model/page'

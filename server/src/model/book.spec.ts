@@ -1,5 +1,5 @@
 import { BookValidationKind } from './book'
-import { bookMaker, BookMakerTocNode, expectErrors, first, loadSuccess, makeBundle, pageMaker } from './spec-helpers'
+import { bookMaker, BookMakerTocNode, expectErrors, first, loadSuccess, makeBundle, pageMaker } from './spec-helpers.spec'
 
 describe('Book validations', () => {
   it(BookValidationKind.DUPLICATE_CHAPTER_TITLE.title, () => {
