@@ -1,8 +1,7 @@
 import expect from 'expect'
 import * as Quarx from 'quarx'
 import { TocNode, TocNodeKind } from './utils'
-import { first, loadSuccess, makeBundle, read } from './spec-helpers'
-import { bookMaker } from './book.spec'
+import { bookMaker, first, loadSuccess, makeBundle, read } from './spec-helpers'
 import { PageNode } from './page'
 
 describe('Quarx.autorun code', () => {

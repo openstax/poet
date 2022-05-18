@@ -4,8 +4,7 @@ import * as xpath from 'xpath-ts'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { fixDocument, idFixer, padLeft } from './fix-document-ids'
 import mockfs from 'mock-fs'
-import { pageMaker } from './model/page.spec'
-import { bundleMaker } from './model/bundle.spec'
+import { bundleMaker, pageMaker } from './model/spec-helpers'
 
 describe('Element ID creation', () => {
   describe('fixDocument', () => {

@@ -10,15 +10,12 @@ import xmlFormat from 'xml-formatter'
 import { expectValue, Opt, join, PathKind } from './model/utils'
 import { Bundle, BundleValidationKind } from './model/bundle'
 import { ModelManager } from './model-manager'
-import { first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle } from './model/spec-helpers'
+import { bookMaker, bundleMaker, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle, PageInfo, pageMaker } from './model/spec-helpers'
 import { Job, JobRunner } from './job-runner'
-import { PageInfo, pageMaker } from './model/page.spec'
 
 import { PageNode, PageValidationKind } from './model/page'
 import { TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc'
 import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
-import { bookMaker } from './model/book.spec'
-import { bundleMaker } from './model/bundle.spec'
 import { URI, Utils } from 'vscode-uri'
 
 ModelManager.debug = () => {} // Turn off logging

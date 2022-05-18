@@ -51,3 +51,103 @@ export function expectErrors<T extends Fileish>(node: T, validationKinds: Valida
   expect(v.nodesToLoad.size).toBe(0) // Everything should have loaded
   expect(v.errors.toArray().map(e => e.message).sort()).toEqual(validationKinds.map(v => v.title).sort())
 }
+
+export interface PageInfo {
+  uuid?: string
+  title?: string | null // null means omit the whole element
+  elementIds?: string[]
+  imageHrefs?: string[]
+  pageLinks?: Array<{targetPage?: string, targetId?: string, url?: string}>
+  extraCnxml?: string
+}
+export function pageMaker(info: PageInfo) {
+  const i = {
+    title: info.title !== undefined ? info.title : 'TestTitle',
+    uuid: info.uuid !== undefined ? info.uuid : '00000000-0000-4000-0000-000000000000',
+    elementIds: info.elementIds !== undefined ? info.elementIds : [],
+    imageHrefs: info.imageHrefs !== undefined ? info.imageHrefs : [],
+    pageLinks: info.pageLinks !== undefined ? info.pageLinks.map(({ targetPage, targetId, url }) => ({ targetPage, targetId, url })) : [],
+    extraCnxml: info.extraCnxml !== undefined ? info.extraCnxml : ''
+  }
+  const titleElement = i.title === null ? '' : `<title>${i.title}</title>`
+  return `<document xmlns="http://cnx.rice.edu/cnxml">
+  ${titleElement}
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:uuid>${i.uuid}</md:uuid>
+  </metadata>
+  <content>
+${i.imageHrefs.map(href => `    <image src="${href}"/>`).join('\n')}
+${i.pageLinks.map(({ targetPage, targetId, url }) => `    <link document="${targetPage ?? ''}" target-id="${targetId ?? ''}" url="${url ?? ''}"/>`).join('\n')}
+${i.elementIds.map(id => `<para id="${id}"/>`).join('\n')}
+${i.extraCnxml}
+  </content>
+</document>`
+}
+
+export type BookMakerTocNode = {
+  title: string
+  children: BookMakerTocNode[]
+} | string
+export interface BookMakerInfo {
+  title?: string
+  slug?: string
+  uuid?: string
+  language?: string
+  licenseUrl?: string
+  toc?: BookMakerTocNode[]
+}
+export function bookMaker(info: BookMakerInfo) {
+  const i = {
+    title: info.title ?? 'test collection',
+    slug: info.slug ?? 'slug1',
+    langauge: info.language ?? 'xxyyzz',
+    licenseUrl: info.licenseUrl ?? 'http://creativecommons.org/licenses/by/4.0/',
+    uuid: info.uuid ?? '00000000-0000-4000-0000-000000000000',
+    toc: info.toc ?? []
+  }
+  return `<col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns="http://cnx.rice.edu/collxml">
+    <col:metadata>
+      <md:title>${i.title}</md:title>
+      <md:slug>${i.slug}</md:slug>
+      <md:uuid>${i.uuid}</md:uuid>
+      <md:language>${i.langauge}</md:language>
+      <md:license url="${i.licenseUrl}"/>
+    </col:metadata>
+    <col:content>
+        ${i.toc.map(tocToString).join('\n')}
+    </col:content>
+</col:collection>`
+}
+function tocToString(node: BookMakerTocNode): string {
+  if (typeof node === 'string') {
+    return `<col:module document="${node}" />`
+  } else {
+    return `<col:subcollection>
+        <md:title>${node.title}</md:title>
+        <col:content>
+            ${node.children.map(tocToString).join('\n')}
+        </col:content>
+    </col:subcollection>`
+  }
+}
+
+interface BundleMakerInfo {
+  version?: number
+  books?: Array<string | {slug: string, href: string}>
+}
+export function bundleMaker(info: BundleMakerInfo) {
+  const i = {
+    version: info.version ?? 1,
+    books: (info.books ?? []).map(b => {
+      if (typeof b === 'string') {
+        const slug = b
+        return { slug, href: `../collections/${slug}.collection.xml` }
+      } else {
+        return b
+      }
+    })
+  }
+  return `<container xmlns="https://openstax.org/namespaces/book-container" version="1">
+${i.books.map(({ slug, href }) => `<book slug="${slug}" href="${href}" />`).join('\n')}
+</container>`
+}
