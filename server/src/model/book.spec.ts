@@ -1,5 +1,5 @@
 import { BookValidationKind } from './book'
-import { expectErrors, first, loadSuccess, makeBundle } from './util.spec'
+import { expectErrors, first, loadSuccess, makeBundle } from './spec-helpers'
 import { pageMaker } from './page.spec'
 
 describe('Book validations', () => {

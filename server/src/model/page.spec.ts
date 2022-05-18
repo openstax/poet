@@ -1,7 +1,7 @@
 import expect from 'expect'
 import * as path from 'path'
 import { ELEMENT_TO_PREFIX, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
-import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
+import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './spec-helpers'
 
 describe('Page', () => {
   let page = null as unknown as PageNode
