@@ -164,7 +164,7 @@ describe('Bundle Manager', () => {
         pageLinks: [{ url: `#ost/api/ex/${exTag}` }]
       }))
       expect(fetchImpl.callCount).toBe(1)
-      expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE]) // Malformed Exercise because 0 items were in the response
+      expectErrors(page, [PageValidationKind.EXERCISE_NOT_ONE]) // Malformed Exercise because 0 items were in the response
     })
   })
 })

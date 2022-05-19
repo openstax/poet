@@ -146,6 +146,10 @@ describe('Page validations', () => {
     expect(page.validationErrors.errors.size).toBe(1)
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'elementId1' }] }))
     expect(page.validationErrors.errors.size).toBe(0)
+
+    expectPageErrors([PageValidationKind.MISSING_TARGET], {
+      pageLinks: [{ url: '#anywhere' }]
+    })
   })
   it(PageValidationKind.MALFORMED_UUID.title, () => {
     expectPageErrors([PageValidationKind.MALFORMED_UUID], { uuid: 'invalid-uuid-value' })
@@ -177,8 +181,8 @@ describe('Page validations', () => {
       extraCnxml: '<definition id="test"><term>No id here is okay</term></definition>'
     })
   })
-  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Exercise has not been loaded by now. Could be a bug or an error from server`, () => {
-    expectPageErrors([PageValidationKind.MALFORMED_EXERCISE], {
+  it(`${PageValidationKind.EXERCISE_MISSING.title}`, () => {
+    expectPageErrors([PageValidationKind.EXERCISE_MISSING], {
       pageLinks: [{ url: '#ost/api/ex/ex1234' }]
     })
   })
@@ -194,12 +198,12 @@ describe('Page validations', () => {
     expect(page.exerciseURLs.first()).toEqual(exerciseTagToUrl(exTag))
     return page
   }
-  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Expected 1 exercise result but found 0 or at least 2`, () => {
+  it(`${PageValidationKind.EXERCISE_NOT_ONE.title}`, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
     // 0 Results
     page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), { items: [] }]]))
-    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+    expectErrors(page, [PageValidationKind.EXERCISE_NOT_ONE])
 
     // 2 Results
     const exerciseJSON = { tags: [] }
@@ -209,17 +213,17 @@ describe('Page validations', () => {
         exerciseJSON
       ]
     }]]))
-    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+    expectErrors(page, [PageValidationKind.EXERCISE_NOT_ONE])
   })
-  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Did not find any pages in our bundle for the context for this exercise`, () => {
+  it(`${PageValidationKind.EXERCISE_NO_PAGES.title}`, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
     page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
       items: [{ tags: [`${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:uuid-that-is-not-in-our-bundle`] }]
     }]]))
-    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+    expectErrors(page, [PageValidationKind.EXERCISE_NO_PAGES])
   })
-  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: context-feature does not exist in the target page`, () => {
+  it(`${PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE.title}`, () => {
     const exTag = 'ex1234'
     const uuid = '88888888-8888-4888-8888-888888888888'
     const page = buildPageWithExerciseLink(exTag, uuid)
@@ -232,9 +236,9 @@ describe('Page validations', () => {
         ]
       }]
     }]]))
-    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+    expectErrors(page, [PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE])
   })
-  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: Exercise contains a context element ID but that ID is not available on this Page`, () => {
+  it(`${PageValidationKind.EXERCISE_NO_CONTEXT_ID.title}`, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
     page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
@@ -245,9 +249,9 @@ describe('Page validations', () => {
         ]
       }]
     }]]))
-    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+    expectErrors(page, [PageValidationKind.EXERCISE_NO_CONTEXT_ID])
   })
-  it(`${PageValidationKind.MALFORMED_EXERCISE.title}: There were no context element IDs`, () => {
+  it(`${PageValidationKind.EXERCISE_MISSING_CONTEXT_ID.title}`, () => {
     const exTag = 'ex1234'
     const uuid = '88888888-8888-4888-8888-888888888888'
     const page = buildPageWithExerciseLink(exTag, uuid)
@@ -259,6 +263,6 @@ describe('Page validations', () => {
         ]
       }]
     }]]))
-    expectErrors(page, [PageValidationKind.MALFORMED_EXERCISE])
+    expectErrors(page, [PageValidationKind.EXERCISE_MISSING_CONTEXT_ID])
   })
 })

@@ -310,34 +310,34 @@ export class PageNode extends Fileish {
           if (l.type === PageLinkKind.EXERCISE) {
             const exercises = exerciseCache.get(l.url)
             if (exercises === undefined) {
-              return PageValidationKind.MALFORMED_EXERCISE // Error: Exercise has not been loaded by now. Could be a bug or an error from server
+              return PageValidationKind.EXERCISE_MISSING
             }
             if (exercises.items.length !== 1) {
-              return PageValidationKind.MALFORMED_EXERCISE // Error: Expected 1 exercise result but found 0 or at least 2
+              return PageValidationKind.EXERCISE_NOT_ONE
             }
             const { pageUUIDs, elementIDs } = getContextPagesAndTargets(exercises.items[0])
             // If there is at least one pageUUID then ensure at least one of them is in our book
             if (pageUUIDs.length > 0) {
               const contextPages = this.bundle.allPages.all.filter(p => pageUUIDs.includes(p.uuid()))
               if (contextPages.size < 1) {
-                return PageValidationKind.MALFORMED_EXERCISE // Error: Did not find any pages in our bundle for the context for this exercise
+                return PageValidationKind.EXERCISE_NO_PAGES
               }
               for (const p of contextPages) {
                 for (const id of elementIDs) {
                   if (!p.elementIds.has(id)) {
-                    return PageValidationKind.MALFORMED_EXERCISE // Error: context-feature does not exist in the target page 'p'
+                    return PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE
                   }
                 }
               }
               if (contextPages.size === 0 || elementIDs.length === 0) {
-                return PageValidationKind.MALFORMED_EXERCISE // Error: There were no context element IDs
+                return PageValidationKind.EXERCISE_MISSING_CONTEXT_ID
               }
             } else {
               // Check if the ID in the Exercise matches one on this Page
               const elementIds = Array.from(this.elementIds.keys())
               for (const targetId of elementIDs) {
                 if (!elementIds.includes(targetId)) {
-                  return PageValidationKind.MALFORMED_EXERCISE // Error: Exercise contains a context element ID but that ID is not available on this Page
+                  return PageValidationKind.EXERCISE_NO_CONTEXT_ID
                 }
               }
             }
@@ -370,8 +370,14 @@ export class PageNode extends Fileish {
 export class PageValidationKind extends ValidationKind {
   static MISSING_RESOURCE = new PageValidationKind('Target resource file does not exist')
   static MISSING_TARGET = new PageValidationKind('Link target does not exist')
-  static MALFORMED_EXERCISE = new PageValidationKind('Malformed or Missing Exercise. Probably context-feature tag is not on this page or this page is not in the context-mod tags')
   static MALFORMED_UUID = new PageValidationKind('Malformed UUID')
   static DUPLICATE_UUID = new PageValidationKind('Duplicate Page/Module UUID')
   static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.INFORMATION)
+
+  static EXERCISE_MISSING = new PageValidationKind('Exercise has not been loaded by now. Could be a bug or an error from server')
+  static EXERCISE_NOT_ONE = new PageValidationKind('Expected 1 exercise result but found 0 or at least 2')
+  static EXERCISE_NO_PAGES = new PageValidationKind('Did not find any pages in our bundle for the context for this exercise')
+  static EXERCISE_MISSING_TARGET_FEATURE = new PageValidationKind('context-feature does not exist in the target page')
+  static EXERCISE_MISSING_CONTEXT_ID = new PageValidationKind('There were no context element IDs')
+  static EXERCISE_NO_CONTEXT_ID = new PageValidationKind('Exercise contains a context element ID but that ID is not available on this Page')
 }
