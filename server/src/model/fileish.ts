@@ -57,7 +57,7 @@ export function buildValidationCheck<T>({ nodesToLoad, itemsToCheck, toRange, va
 }
 
 export class ValidationResponse {
-  constructor(public readonly errors: I.Set<ModelError>, public readonly nodesToLoad: I.Set<Fileish> = I.Set()) { }
+  constructor(public readonly errors: I.Set<ModelError>, public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
 
   static continueOnlyIfLoaded(nodes: I.Set<Fileish>, next: (nodes: I.Set<Fileish>) => I.Set<ModelError>) {
     const unloaded = nodes.filter(n => !n.isLoaded)
@@ -81,6 +81,7 @@ export abstract class Fileish {
   }
 
   static debug = (...args: any[]) => { } // console.debug
+  protected abstract getValidationChecks(): ValidationCheck[]
   public get isLoaded() { return this._isLoaded.get() }
   public get workspacePath() { return path.relative(this.bundle.workspaceRootUri, this.absPath) }
   protected setBundle(bundle: Bundleish) { this._bundle = bundle /* avoid catch-22 */ }
@@ -155,8 +156,6 @@ export abstract class Fileish {
     const doc = p.parseFromString(fileContent)
     return doc
   }
-
-  protected abstract getValidationChecks(): ValidationCheck[]
 
   public get validationErrors(): ValidationResponse {
     const parseError = this._parseError.get()

@@ -70,9 +70,11 @@ ${i.extraCnxml}
 </document>`
 }
 
-function expectPageErrors(expectedErrors: ValidationKind[], info: PageInfo) {
-  const bundle = makeBundle()
-  const page = bundle.allPages.getOrAdd('somepage/filename')
+function expectPageErrors(expectedErrors: ValidationKind[], info: PageInfo, page?: PageNode) {
+  if (page === undefined) {
+    const bundle = makeBundle()
+    page = bundle.allPages.getOrAdd('somepage/filename')
+  }
   page.load(pageMaker(info))
   expectErrors(page, expectedErrors)
 }
@@ -95,21 +97,20 @@ describe('Page validations', () => {
     expect(page.validationErrors.errors.size).toBe(0)
   })
   it(`${PageValidationKind.MISSING_RESOURCE.title} (iframe)`, () => {
-    const bundle = makeBundle()
-    const page = bundle.allPages.getOrAdd('somedir/filename.cnxml')
-    const missingIframe = bundle.allResources.getOrAdd('somedir/invalid-path-to-interactive')
-    missingIframe.load(undefined)
-    const info = {
+    expectPageErrors([], {
       extraCnxml: `
         <iframe src="https://openstax.org"/>
         <iframe src="http://openstax.org"/>
-        <iframe src="./invalid-path-to-interactive"/>
     `
-    }
-    page.load(pageMaker(info))
-    // Expect exactly one validation error
-    expect(page.validationErrors.errors.size).toBe(1)
-    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MISSING_RESOURCE)
+    })
+
+    const bundle = makeBundle()
+    const missingIframe = bundle.allResources.getOrAdd('somepage/invalid-path-to-interactive')
+    missingIframe.load(undefined)
+
+    expectPageErrors([PageValidationKind.MISSING_RESOURCE], {
+      extraCnxml: '<iframe src="./invalid-path-to-interactive"/>'
+    }, bundle.allPages.getOrAdd('somepage/filename'))
   })
   it(PageValidationKind.MISSING_TARGET.title, () => {
     const bundle = makeBundle()
@@ -117,16 +118,15 @@ describe('Page validations', () => {
     const target = bundle.allPages.getOrAdd('modules/m234/index.cnxml')
 
     // Url (always ok)
-    page.load(pageMaker({ pageLinks: [{ url: 'https://openstax.org' }] }))
-    expect(page.validationErrors.errors.size).toBe(0)
+    expectPageErrors([], { pageLinks: [{ url: 'https://openstax.org' }] })
 
     // Local id that does not exist
-    page.load(pageMaker({ pageLinks: [{ targetId: 'nonexistentid' }] }))
-    expect(page.validationErrors.errors.size).toBe(1)
+    expectPageErrors([PageValidationKind.MISSING_TARGET], {
+      pageLinks: [{ targetId: 'nonexistentid' }]
+    })
 
     // Local id that does exist
-    page.load(pageMaker({ elementIds: ['elementId1'], pageLinks: [{ targetId: 'elementId1' }] }))
-    expect(page.validationErrors.errors.size).toBe(0)
+    expectPageErrors([], { elementIds: ['elementId1'], pageLinks: [{ targetId: 'elementId1' }] })
 
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234' }] }))
     // Verify the target needs to be loaded
@@ -181,7 +181,7 @@ describe('Page validations', () => {
       extraCnxml: '<definition id="test"><term>No id here is okay</term></definition>'
     })
   })
-  it(`${PageValidationKind.EXERCISE_MISSING.title}`, () => {
+  it(PageValidationKind.EXERCISE_MISSING.title, () => {
     expectPageErrors([PageValidationKind.EXERCISE_MISSING], {
       pageLinks: [{ url: '#ost/api/ex/ex1234' }]
     })
@@ -198,7 +198,7 @@ describe('Page validations', () => {
     expect(page.exerciseURLs.first()).toEqual(exerciseTagToUrl(exTag))
     return page
   }
-  it(`${PageValidationKind.EXERCISE_NOT_ONE.title}`, () => {
+  it(PageValidationKind.EXERCISE_NOT_ONE.title, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
     // 0 Results
@@ -215,7 +215,7 @@ describe('Page validations', () => {
     }]]))
     expectErrors(page, [PageValidationKind.EXERCISE_NOT_ONE])
   })
-  it(`${PageValidationKind.EXERCISE_NO_PAGES.title}`, () => {
+  it(PageValidationKind.EXERCISE_NO_PAGES.title, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
     page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
@@ -223,7 +223,7 @@ describe('Page validations', () => {
     }]]))
     expectErrors(page, [PageValidationKind.EXERCISE_NO_PAGES])
   })
-  it(`${PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE.title}`, () => {
+  it(PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE.title, () => {
     const exTag = 'ex1234'
     const uuid = '88888888-8888-4888-8888-888888888888'
     const page = buildPageWithExerciseLink(exTag, uuid)
@@ -238,7 +238,7 @@ describe('Page validations', () => {
     }]]))
     expectErrors(page, [PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE])
   })
-  it(`${PageValidationKind.EXERCISE_NO_CONTEXT_ID.title}`, () => {
+  it(PageValidationKind.EXERCISE_NO_CONTEXT_ID.title, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
     page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
@@ -251,7 +251,7 @@ describe('Page validations', () => {
     }]]))
     expectErrors(page, [PageValidationKind.EXERCISE_NO_CONTEXT_ID])
   })
-  it(`${PageValidationKind.EXERCISE_MISSING_CONTEXT_ID.title}`, () => {
+  it(PageValidationKind.EXERCISE_MISSING_CONTEXT_ID.title, () => {
     const exTag = 'ex1234'
     const uuid = '88888888-8888-4888-8888-888888888888'
     const page = buildPageWithExerciseLink(exTag, uuid)
