@@ -9,10 +9,11 @@ import https from 'https'
 import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
+import fetch from 'node-fetch'
 import { expectValue, PathHelper, select, TocNodeKind } from './utils'
 import { Bundle } from './bundle'
 import { Fileish } from './fileish'
-import { PageLinkKind, PageNode } from './page'
+import { ExercisesJSON, PageLinkKind, PageNode } from './page'
 import { BookNode, TocNodeWithRange, TocPageWithRange, TocSubbookWithRange } from './book'
 import { ResourceNode } from './resource'
 import { removeNode, writeBookToc } from '../model-manager'
@@ -71,6 +72,22 @@ async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
     log('  Books:', bundle.allBooks.size)
     log('  Pages:', bundle.allPages.size)
     log('  Images:', bundle.allResources.size)
+
+    const exerciseUrls = I.Set<string>().withMutations(s => {
+      for (const p of bundle.allPages.all) {
+        s.union(p.exerciseURLs)
+      }
+    })
+    if (exerciseUrls.size > 0) {
+      log('Fetching', exerciseUrls.size, 'exercises...')
+      const cache = new Map<string, ExercisesJSON>()
+      for (const url of exerciseUrls) {
+        log('  Fetching:', url)
+        cache.set(url, await (await fetch(url)).json())
+      }
+      const immutableCache = I.Map(cache)
+      bundle.allPages.all.forEach(p => p.setExerciseCache(immutableCache))
+    }
 
     const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
     bundles.push(bundle)

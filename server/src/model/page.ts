@@ -329,9 +329,6 @@ export class PageNode extends Fileish {
                   }
                 }
               }
-              if (contextPages.size === 0 || elementIDs.length === 0) {
-                return PageValidationKind.EXERCISE_MISSING_CONTEXT_ID
-              }
             } else {
               // Check if the ID in the Exercise matches one on this Page
               const elementIds = Array.from(this.elementIds.keys())
@@ -378,6 +375,5 @@ export class PageValidationKind extends ValidationKind {
   static EXERCISE_NOT_ONE = new PageValidationKind('Expected 1 exercise result but found 0 or at least 2')
   static EXERCISE_NO_PAGES = new PageValidationKind('Did not find any pages in our bundle for the context for this exercise')
   static EXERCISE_MISSING_TARGET_FEATURE = new PageValidationKind('context-feature does not exist in the target page')
-  static EXERCISE_MISSING_CONTEXT_ID = new PageValidationKind('There were no context element IDs')
   static EXERCISE_NO_CONTEXT_ID = new PageValidationKind('Exercise contains a context element ID but that ID is not available on this Page')
 }
