@@ -312,8 +312,10 @@ export class PageNode extends Fileish {
             if (exercises === undefined) {
               return PageValidationKind.EXERCISE_MISSING
             }
-            if (exercises.items.length !== 1) {
-              return PageValidationKind.EXERCISE_NOT_ONE
+            if (exercises.items.length === 0) {
+              return PageValidationKind.EXERCISE_COUNT_ZERO
+            } else if (exercises.items.length > 1) {
+              return PageValidationKind.EXERCISE_COUNT_TOO_MANY
             }
             const { pageUUIDs, elementIDs } = getContextPagesAndTargets(exercises.items[0])
             // If there is at least one pageUUID then ensure at least one of them is in our book
@@ -372,7 +374,8 @@ export class PageValidationKind extends ValidationKind {
   static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.INFORMATION)
 
   static EXERCISE_MISSING = new PageValidationKind('Exercise has not been loaded by now. Could be a bug or an error from server')
-  static EXERCISE_NOT_ONE = new PageValidationKind('Expected 1 exercise result but found 0 or at least 2')
+  static EXERCISE_COUNT_ZERO = new PageValidationKind('Expected 1 exercise with this tag but found 0')
+  static EXERCISE_COUNT_TOO_MANY = new PageValidationKind('Expected 1 exercise with this tag but found too many')
   static EXERCISE_NO_PAGES = new PageValidationKind('Did not find any pages in our bundle for the context for this exercise')
   static EXERCISE_MISSING_TARGET_FEATURE = new PageValidationKind('context-feature does not exist in the target page')
   static EXERCISE_NO_CONTEXT_ID = new PageValidationKind('Exercise contains a context element ID but that ID is not available on this Page')

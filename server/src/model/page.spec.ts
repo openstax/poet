@@ -198,14 +198,15 @@ describe('Page validations', () => {
     expect(page.exerciseURLs.first()).toEqual(exerciseTagToUrl(exTag))
     return page
   }
-  it(PageValidationKind.EXERCISE_NOT_ONE.title, () => {
+  it(PageValidationKind.EXERCISE_COUNT_ZERO.title, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
-    // 0 Results
     page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), { items: [] }]]))
-    expectErrors(page, [PageValidationKind.EXERCISE_NOT_ONE])
-
-    // 2 Results
+    expectErrors(page, [PageValidationKind.EXERCISE_COUNT_ZERO])
+  })
+  it(PageValidationKind.EXERCISE_COUNT_TOO_MANY.title, () => {
+    const exTag = 'ex1234'
+    const page = buildPageWithExerciseLink(exTag)
     const exerciseJSON = { tags: [] }
     page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
       items: [
@@ -213,7 +214,7 @@ describe('Page validations', () => {
         exerciseJSON
       ]
     }]]))
-    expectErrors(page, [PageValidationKind.EXERCISE_NOT_ONE])
+    expectErrors(page, [PageValidationKind.EXERCISE_COUNT_TOO_MANY])
   })
   it(PageValidationKind.EXERCISE_NO_PAGES.title, () => {
     const exTag = 'ex1234'
@@ -250,19 +251,5 @@ describe('Page validations', () => {
       }]
     }]]))
     expectErrors(page, [PageValidationKind.EXERCISE_NO_CONTEXT_ID])
-  })
-  it(PageValidationKind.EXERCISE_MISSING_CONTEXT_ID.title, () => {
-    const exTag = 'ex1234'
-    const uuid = '88888888-8888-4888-8888-888888888888'
-    const page = buildPageWithExerciseLink(exTag, uuid)
-    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
-      items: [{
-        // Exercise JSON
-        tags: [
-          `${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:${uuid}`
-        ]
-      }]
-    }]]))
-    expectErrors(page, [PageValidationKind.EXERCISE_MISSING_CONTEXT_ID])
   })
 })
