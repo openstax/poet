@@ -311,15 +311,22 @@ export class ModelManager {
     }
   }
 
+  private async load(node: Fileish, fileContent: Opt<string>) {
+    node.load(fileContent)
+    if (node instanceof PageNode) {
+      await this.fetchAndSetExercises(node)
+    }
+  }
+
   private async readAndLoad(node: Fileish) {
     if (node.isLoaded) { return }
     const fileContent = await this.readOrNull(node)
-    node.load(fileContent)
+    await this.load(node, fileContent)
   }
 
   private async readAndUpdate(node: Fileish) {
     const fileContent = await this.readOrNull(node)
-    node.load(fileContent)
+    await this.load(node, fileContent)
   }
 
   private sendFileDiagnostics(node: Fileish) {
@@ -454,6 +461,7 @@ export class ModelManager {
           const newXml = renameTitle(evt.newTitle, oldXml)
           await fs.promises.writeFile(fsPath, newXml)
           page.load(newXml) // Just speed up the process
+          await this.fetchAndSetExercises(page)
         } else {
           node.value.title = evt.newTitle
           await writeBookToc(book, bookToc)
@@ -593,7 +601,7 @@ export class ModelManager {
     const out = fn(fileContents, node.absPath)
 
     ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
-    node.load(out)
+    await this.load(node, out)
     this.sendFileDiagnostics(node)
 
     const fsPath = URI.parse(node.absPath).fsPath

@@ -303,7 +303,7 @@ export class PageNode extends Fileish {
         }
       }),
       buildValidationCheck({
-        nodesToLoad: this.bundle.allPages.all,
+        nodesToLoad: I.Set(),
         itemsToCheck: pageLinks,
         toRange,
         validator: l => {
@@ -319,7 +319,32 @@ export class PageNode extends Fileish {
             }
             const { pageUUIDs, elementIDs } = getContextPagesAndTargets(exercises.items[0])
             // If there is at least one pageUUID then ensure at least one of them is in our book
-            if (pageUUIDs.length > 0) {
+            if (pageUUIDs.length === 0 || pageUUIDs.includes(this.uuid())) {
+              // Check if the ID in the Exercise matches one on this Page
+              const elementIds = Array.from(this.elementIds.keys())
+              for (const targetId of elementIDs) {
+                if (!elementIds.includes(targetId)) {
+                  return PageValidationKind.EXERCISE_PAGE_MISSING_FEATURE
+                }
+              }
+            }
+          }
+          return undefined
+        }
+      }),
+      buildValidationCheck({
+        nodesToLoad: this.bundle.allPages.all,
+        itemsToCheck: pageLinks,
+        toRange,
+        validator: l => {
+          if (l.type === PageLinkKind.EXERCISE) {
+            const exercises = exerciseCache.get(l.url)
+            if (exercises === undefined || exercises.items.length !== 1) {
+              return undefined // Handled in another validation
+            }
+            const { pageUUIDs, elementIDs } = getContextPagesAndTargets(exercises.items[0])
+            // If there is at least one pageUUID then ensure at least one of them is in our book
+            if (pageUUIDs.length > 0 && !pageUUIDs.includes(this.uuid())) {
               const contextPages = this.bundle.allPages.all.filter(p => pageUUIDs.includes(p.uuid()))
               if (contextPages.size < 1) {
                 return PageValidationKind.EXERCISE_NO_PAGES
@@ -329,14 +354,6 @@ export class PageNode extends Fileish {
                   if (!p.elementIds.has(id)) {
                     return PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE
                   }
-                }
-              }
-            } else {
-              // Check if the ID in the Exercise matches one on this Page
-              const elementIds = Array.from(this.elementIds.keys())
-              for (const targetId of elementIDs) {
-                if (!elementIds.includes(targetId)) {
-                  return PageValidationKind.EXERCISE_NO_CONTEXT_ID
                 }
               }
             }
@@ -377,6 +394,6 @@ export class PageValidationKind extends ValidationKind {
   static EXERCISE_COUNT_ZERO = new PageValidationKind('Expected 1 exercise with this tag but found 0')
   static EXERCISE_COUNT_TOO_MANY = new PageValidationKind('Expected 1 exercise with this tag but found too many')
   static EXERCISE_NO_PAGES = new PageValidationKind('Did not find any pages in our bundle for the context for this exercise')
-  static EXERCISE_MISSING_TARGET_FEATURE = new PageValidationKind('context-feature does not exist in the target page')
-  static EXERCISE_NO_CONTEXT_ID = new PageValidationKind('Exercise contains a context element ID but that ID is not available on this Page')
+  static EXERCISE_PAGE_MISSING_FEATURE = new PageValidationKind('Exercise contains a context element ID but that ID is not available on the current Page because no target Page was specified in the exercise')
+  static EXERCISE_MISSING_TARGET_FEATURE = new PageValidationKind('Exercise contains a context element ID but that ID is not available on the context Page')
 }

@@ -187,8 +187,7 @@ describe('Page validations', () => {
     })
   })
 
-  function buildPageWithExerciseLink(exTag: string, uuid?: string) {
-    const bundle = makeBundle()
+  function buildPageWithExerciseLink(exTag: string, uuid?: string, bundle = makeBundle()) {
     const page = bundle.allPages.getOrAdd('somepage/filename')
     page.load(pageMaker({
       uuid,
@@ -224,10 +223,12 @@ describe('Page validations', () => {
     }]]))
     expectErrors(page, [PageValidationKind.EXERCISE_NO_PAGES])
   })
-  it(PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE.title, () => {
+  it(PageValidationKind.EXERCISE_PAGE_MISSING_FEATURE.title, () => {
     const exTag = 'ex1234'
     const uuid = '88888888-8888-4888-8888-888888888888'
-    const page = buildPageWithExerciseLink(exTag, uuid)
+    const bundle = makeBundle()
+    const page = buildPageWithExerciseLink(exTag, uuid, bundle)
+    expect(bundle.allPages.all.filter(p => !p.isLoaded).toArray()).toEqual([])
     page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
       items: [{
         // Exercise JSON
@@ -237,9 +238,28 @@ describe('Page validations', () => {
         ]
       }]
     }]]))
+    expectErrors(page, [PageValidationKind.EXERCISE_PAGE_MISSING_FEATURE])
+  })
+  it(PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE.title, () => {
+    const exTag = 'ex1234'
+    const uuid = '88888888-8888-4888-8888-888888888888'
+    const otherUUID = '77777777-7777-4777-7777-777777777777'
+    const bundle = makeBundle()
+    const page = buildPageWithExerciseLink(exTag, uuid, bundle)
+    const otherPage = bundle.allPages.getOrAdd('someother/path')
+    otherPage.load(pageMaker({ uuid: otherUUID }))
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
+      items: [{
+        // Exercise JSON
+        tags: [
+          `${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:${otherUUID}`,
+          `${EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID}:element-id-that-is-not-in-the-target-page-which-is-our-page`
+        ]
+      }]
+    }]]))
     expectErrors(page, [PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE])
   })
-  it(PageValidationKind.EXERCISE_NO_CONTEXT_ID.title, () => {
+  it(`${PageValidationKind.EXERCISE_PAGE_MISSING_FEATURE.title}. Because the feature id is missing on the current page`, () => {
     const exTag = 'ex1234'
     const page = buildPageWithExerciseLink(exTag)
     page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
@@ -250,6 +270,6 @@ describe('Page validations', () => {
         ]
       }]
     }]]))
-    expectErrors(page, [PageValidationKind.EXERCISE_NO_CONTEXT_ID])
+    expectErrors(page, [PageValidationKind.EXERCISE_PAGE_MISSING_FEATURE])
   })
 })
