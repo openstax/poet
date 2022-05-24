@@ -21,10 +21,11 @@ import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { bookMaker } from './model/book.spec'
 import { bundleMaker } from './model/bundle.spec'
 import { URI, Utils } from 'vscode-uri'
-import { FetchMemCache } from './fetch-mem-cache'
+import { FetchCache } from './fetch-cache'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
+FetchCache.debug = () => {} // Turn off logging
 
 // xml-formatter calls require('xml-parser-xo') _inside_ the format function
 // so we need require to cache it before we start up mock-fs
@@ -142,30 +143,39 @@ describe('Bundle Manager', () => {
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Information)
   })
+})
 
-  describe('Fetching exercises', () => {
-    const sinon = SinonRoot.createSandbox()
-    afterEach(() => sinon.restore())
-    it('fetches an exercise', async () => {
-      const exTag = 'ex1234'
-      loadSuccess(manager.bundle)
-      const page = manager.bundle.allPages.getOrAdd('somepath/filename')
-
-      const fetchResponse = {
-        items: [] // 0 items should cause a validation error
-      }
-
-      const fetchImpl = sinon.spy(async (url: string) => {
-        return new fetchModule.Response(JSON.stringify(fetchResponse), { status: 200 })
-      })
-      FetchMemCache.fetchImpl = fetchImpl as unknown as typeof fetch
-
-      await manager.updateFileContents(page.absPath, pageMaker({
-        pageLinks: [{ url: `#ost/api/ex/${exTag}` }]
-      }))
-      expect(fetchImpl.callCount).toBe(1)
-      expectErrors(page, [PageValidationKind.EXERCISE_COUNT_ZERO]) // Malformed Exercise because 0 items were in the response
+describe('Fetching exercises', () => {
+  const sinon = SinonRoot.createSandbox()
+  beforeEach(() => {
+    mockfs({
+      'META-INF/books.xml': bundleMaker({ books: ['foobar'] })
     })
+  })
+  afterEach(() => {
+    sinon.restore()
+    mockfs.restore()
+  })
+  it('fetches an exercise', async () => {
+    const exTag = 'poet-test-1234'
+    const manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
+    loadSuccess(manager.bundle)
+    const page = manager.bundle.allPages.getOrAdd('somepath/filename')
+
+    const fetchResponse = {
+      items: [] // 0 items should cause a validation error
+    }
+
+    const fetchImpl = sinon.spy(async (url: string) => {
+      return new fetchModule.Response(JSON.stringify(fetchResponse), { status: 200 })
+    })
+    FetchCache.fetchImpl = fetchImpl as unknown as typeof fetch
+
+    await manager.updateFileContents(page.absPath, pageMaker({
+      pageLinks: [{ url: `#ost/api/ex/${exTag}` }]
+    }))
+    expect(fetchImpl.callCount).toBe(1)
+    expectErrors(page, [PageValidationKind.EXERCISE_COUNT_ZERO]) // Malformed Exercise because 0 items were in the response
   })
 })
 

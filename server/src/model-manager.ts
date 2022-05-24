@@ -18,7 +18,7 @@ import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '
 import { BookNode, TocSubbookWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { FetchMemCache } from './fetch-mem-cache'
+import { FetchCache } from './fetch-cache'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -126,7 +126,7 @@ export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
 
   public readonly jobRunner = new JobRunner()
-  private readonly fetchCache = new FetchMemCache<ExercisesJSON>()
+  private readonly fetchCache = new FetchCache<ExercisesJSON>()
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
   private bookTocs: BookToc[] = []
@@ -613,9 +613,7 @@ export class ModelManager {
     const urls = node.exerciseURLs
     const map = new Map<string, ExercisesJSON>()
     for (const url of urls) {
-      ModelManager.debug('[EXERCISE_LOADER] fetching exercise', url)
       map.set(url, await this.fetchCache.get(url))
-      ModelManager.debug('[EXERCISE_LOADER] fetching exercise. Done', url)
     }
     node.setExerciseCache(I.Map(map))
   }
