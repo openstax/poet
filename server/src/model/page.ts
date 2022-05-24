@@ -391,9 +391,9 @@ export class PageValidationKind extends ValidationKind {
   static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.INFORMATION)
 
   static EXERCISE_MISSING = new PageValidationKind('Exercise has not been loaded by now. Could be a bug or an error from server')
-  static EXERCISE_COUNT_ZERO = new PageValidationKind('Expected 1 exercise with this tag but found 0')
-  static EXERCISE_COUNT_TOO_MANY = new PageValidationKind('Expected 1 exercise with this tag but found too many')
-  static EXERCISE_NO_PAGES = new PageValidationKind('Did not find any pages in our bundle for the context for this exercise')
-  static EXERCISE_PAGE_MISSING_FEATURE = new PageValidationKind('Exercise contains a context element ID but that ID is not available on the current Page because no target Page was specified in the exercise')
-  static EXERCISE_MISSING_TARGET_FEATURE = new PageValidationKind('Exercise contains a context element ID but that ID is not available on the context Page')
+  static EXERCISE_COUNT_ZERO = new PageValidationKind('Expected 1 exercise with this tag but found 0', ValidationSeverity.WARNING)
+  static EXERCISE_COUNT_TOO_MANY = new PageValidationKind('Expected 1 exercise with this tag but found too many', ValidationSeverity.WARNING)
+  static EXERCISE_NO_PAGES = new PageValidationKind('Did not find any pages in our bundle for the context for this exercise', ValidationSeverity.WARNING)
+  static EXERCISE_PAGE_MISSING_FEATURE = new PageValidationKind('Exercise contains a context element ID but that ID is not available on the current Page because no target Page was specified in the exercise', ValidationSeverity.WARNING)
+  static EXERCISE_MISSING_TARGET_FEATURE = new PageValidationKind('Exercise contains a context element ID but that ID is not available on the context Page. If the element ID exists in this file then this error could be because a cnxmod tag is in this book but does not have that feature id. If so, remove the cnxmod tag', ValidationSeverity.WARNING)
 }
