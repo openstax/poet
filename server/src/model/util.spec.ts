@@ -1,15 +1,8 @@
 import expect from 'expect'
-import SinonRoot from 'sinon'
-import { readFileSync } from 'fs'
-import * as path from 'path'
 import * as xpath from 'xpath-ts'
 import { DOMParser } from 'xmldom'
-import I from 'immutable'
-import { PathHelper, calculateElementPositions } from './utils'
-import { Bundle } from './bundle'
-import { Fileish, ValidationKind } from './fileish'
-
-const REPO_ROOT = path.join(__dirname, '..', '..', '..')
+import { calculateElementPositions } from './utils'
+import { ignoreConsoleWarnings, loadSuccess, makeBundle } from './spec-helpers.spec'
 
 describe('calculateElementPositions', function () {
   it('should return start and end positions using siblings when available', () => {
@@ -80,40 +73,3 @@ describe('Bugfixes', () => {
     expect(bundle.validationErrors.errors.size).toBe(0)
   })
 })
-
-export const read = (filePath: string) => readFileSync(filePath, 'utf-8')
-
-export const FS_PATH_HELPER: PathHelper<string> = {
-  join: path.join,
-  dirname: path.dirname,
-  canonicalize: (x) => x
-}
-
-export function first<T>(col: I.Set<T> | I.List<T>) {
-  const f = col.toArray()[0]
-  expect(f).toBeTruthy()
-  return f
-}
-
-export const makeBundle = () => new Bundle(FS_PATH_HELPER, REPO_ROOT)
-
-export function loadSuccess<T extends Fileish>(n: T, skipInitialLoadedCheck = false, expectedErrorCount = 0) {
-  if (!skipInitialLoadedCheck) expect(n.isLoaded).toBeFalsy()
-  n.load(read(n.absPath))
-  expect(n.isLoaded).toBeTruthy()
-  expect(n.exists).toBeTruthy()
-  expect(n.validationErrors.errors.size).toBe(expectedErrorCount)
-  return n // for daisy-chaining
-}
-
-export function ignoreConsoleWarnings(fn: () => void) {
-  const warnStub = SinonRoot.stub(console, 'warn')
-  fn()
-  warnStub.restore()
-}
-
-export function expectErrors<T extends Fileish>(node: T, validationKinds: ValidationKind[]) {
-  const v = node.validationErrors
-  expect(v.nodesToLoad.size).toBe(0) // Everything should have loaded
-  expect(v.errors.toArray().map(e => e.message).sort()).toEqual(validationKinds.map(v => v.title).sort())
-}

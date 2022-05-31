@@ -1,7 +1,7 @@
 import expect from 'expect'
 import * as path from 'path'
 import { ELEMENT_TO_PREFIX, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
-import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
+import { expectErrors, first, FS_PATH_HELPER, makeBundle, pageMaker } from './spec-helpers.spec'
 
 describe('Page', () => {
   let page = null as unknown as PageNode
@@ -35,38 +35,6 @@ describe('Page', () => {
       .toThrow("Expected one but found 2 results that match '//md:uuid'")
   })
 })
-
-export interface PageInfo {
-  uuid?: string
-  title?: string | null // null means omit the whole element
-  elementIds?: string[]
-  imageHrefs?: string[]
-  pageLinks?: Array<{targetPage?: string, targetId?: string, url?: string}>
-  extraCnxml?: string
-}
-export function pageMaker(info: PageInfo) {
-  const i = {
-    title: info.title !== undefined ? info.title : 'TestTitle',
-    uuid: info.uuid !== undefined ? info.uuid : '00000000-0000-4000-0000-000000000000',
-    elementIds: info.elementIds !== undefined ? info.elementIds : [],
-    imageHrefs: info.imageHrefs !== undefined ? info.imageHrefs : [],
-    pageLinks: info.pageLinks !== undefined ? info.pageLinks.map(({ targetPage, targetId, url }) => ({ targetPage, targetId, url })) : [],
-    extraCnxml: info.extraCnxml !== undefined ? info.extraCnxml : ''
-  }
-  const titleElement = i.title === null ? '' : `<title>${i.title}</title>`
-  return `<document xmlns="http://cnx.rice.edu/cnxml">
-  ${titleElement}
-  <metadata xmlns:md="http://cnx.rice.edu/mdml">
-    <md:uuid>${i.uuid}</md:uuid>
-  </metadata>
-  <content>
-${i.imageHrefs.map(href => `    <image src="${href}"/>`).join('\n')}
-${i.pageLinks.map(({ targetPage, targetId, url }) => `    <link document="${targetPage ?? ''}" target-id="${targetId ?? ''}" url="${url ?? ''}"/>`).join('\n')}
-${i.elementIds.map(id => `<para id="${id}"/>`).join('\n')}
-${i.extraCnxml}
-  </content>
-</document>`
-}
 
 describe('Page validations', () => {
   it(PageValidationKind.MISSING_RESOURCE.title, () => {

@@ -1,27 +1,6 @@
 import expect from 'expect'
 import { Bundle, BundleValidationKind } from './bundle'
-import { expectErrors, first, loadSuccess, makeBundle, read } from './util.spec'
-
-interface BundleMakerInfo {
-  version?: number
-  books?: Array<string | {slug: string, href: string}>
-}
-export function bundleMaker(info: BundleMakerInfo) {
-  const i = {
-    version: info.version ?? 1,
-    books: (info.books ?? []).map(b => {
-      if (typeof b === 'string') {
-        const slug = b
-        return { slug, href: `../collections/${slug}.collection.xml` }
-      } else {
-        return b
-      }
-    })
-  }
-  return `<container xmlns="https://openstax.org/namespaces/book-container" version="1">
-${i.books.map(({ slug, href }) => `<book slug="${slug}" href="${href}" />`).join('\n')}
-</container>`
-}
+import { bundleMaker, expectErrors, first, loadSuccess, makeBundle, read } from './spec-helpers.spec'
 
 describe('Bundle validations', () => {
   it(BundleValidationKind.NO_BOOKS.title, () => {
