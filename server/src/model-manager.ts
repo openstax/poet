@@ -117,7 +117,7 @@ export class ModelManager {
 
   public readonly jobRunner = new JobRunner()
   private readonly openDocuments = new Map<string, string>()
-  private didLoadOrphans = false
+  private didEnqueueInitialValidation = false
   private bookTocs: BookToc[] = []
   private tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>(x => {
     /* istanbul ignore next */
@@ -188,7 +188,7 @@ export class ModelManager {
   }
 
   public async loadEnoughForOrphans() {
-    if (this.didLoadOrphans) return
+    if (this.didEnqueueInitialValidation) return
     await this.loadEnoughForToc()
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
     const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
@@ -198,7 +198,6 @@ export class ModelManager {
     // Load everything before we can know where the orphans are
     this.performInitialValidation()
     await this.jobRunner.done()
-    this.didLoadOrphans = true
   }
 
   async processFilesystemChange(evt: FileEvent): Promise<I.Set<Fileish>> {
@@ -322,6 +321,7 @@ export class ModelManager {
   }
 
   performInitialValidation() {
+    if (this.didEnqueueInitialValidation) return
     const enqueueLoadJob = (node: Fileish) => this.jobRunner.enqueue({ slow: true, type: 'INITIAL_LOAD_DEP', context: node, fn: async () => await this.readAndLoad(node) })
     const jobs = [
       { slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
@@ -332,6 +332,7 @@ export class ModelManager {
       { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes.map(f => this.sendFileDiagnostics(f))) }
     ]
     jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
+    this.didEnqueueInitialValidation = true
   }
 
   loadEnoughToSendDiagnostics(workspaceUri: string, uri: string, content?: string) {
