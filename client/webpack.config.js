@@ -15,7 +15,7 @@ const extensionConfig = {
     path: path.resolve(__dirname, 'dist'),
     filename: 'extension.bundle.js',
     libraryTarget: 'commonjs2',
-    devtoolModuleFilenameTemplate: '../../../[resource-path]'
+    devtoolModuleFilenameTemplate: '../[resource-path]'
   },
   devtool: 'source-map',
   externals: {
