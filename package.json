@@ -29,6 +29,7 @@
     "lint:fix": "npm run lint -- --fix",
     "pretest:cypress": "npm run build && ./scripts/pre-cypress.bash",
     "test:cypress": "cypress run --quiet --config-file ./cypress.json",
+    "pretest:unit": "jest --clearCache",
     "test:unit": "jest --coverage --coverageDirectory ./.nyc_output/",
     "test:unit:watch": "npm run test:unit -- --watch --updateSnapshot",
     "posttest:unit": "mv ./.nyc_output/coverage-final.json ./.nyc_output/coverage-jest.json",

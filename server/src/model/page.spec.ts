@@ -3,7 +3,7 @@ import Immutable from 'immutable'
 import * as path from 'path'
 import { ValidationKind } from './fileish'
 import { ELEMENT_TO_PREFIX, exerciseTagToUrl, EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID, EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID, LINKED_EXERCISE_PREFIX_NICK_URL, LINKED_EXERCISE_PREFIX_TAG_URL, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
-import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
+import { expectErrors, first, FS_PATH_HELPER, makeBundle, PageInfo, pageMaker } from './spec-helpers.spec'
 
 describe('Page', () => {
   let page = null as unknown as PageNode
@@ -37,38 +37,6 @@ describe('Page', () => {
       .toThrow("Expected one but found 2 results that match '//md:uuid'")
   })
 })
-
-export interface PageInfo {
-  uuid?: string
-  title?: string | null // null means omit the whole element
-  elementIds?: string[]
-  imageHrefs?: string[]
-  pageLinks?: Array<{targetPage?: string, targetId?: string, url?: string}>
-  extraCnxml?: string
-}
-export function pageMaker(info: PageInfo) {
-  const i = {
-    title: info.title !== undefined ? info.title : 'TestTitle',
-    uuid: info.uuid !== undefined ? info.uuid : '00000000-0000-4000-0000-000000000000',
-    elementIds: info.elementIds !== undefined ? info.elementIds : [],
-    imageHrefs: info.imageHrefs !== undefined ? info.imageHrefs : [],
-    pageLinks: info.pageLinks !== undefined ? info.pageLinks.map(({ targetPage, targetId, url }) => ({ targetPage, targetId, url })) : [],
-    extraCnxml: info.extraCnxml !== undefined ? info.extraCnxml : ''
-  }
-  const titleElement = i.title === null ? '' : `<title>${i.title}</title>`
-  return `<document xmlns="http://cnx.rice.edu/cnxml">
-  ${titleElement}
-  <metadata xmlns:md="http://cnx.rice.edu/mdml">
-    <md:uuid>${i.uuid}</md:uuid>
-  </metadata>
-  <content>
-${i.imageHrefs.map(href => `    <image src="${href}"/>`).join('\n')}
-${i.pageLinks.map(({ targetPage, targetId, url }) => `    <link document="${targetPage ?? ''}" target-id="${targetId ?? ''}" url="${url ?? ''}"/>`).join('\n')}
-${i.elementIds.map(id => `<para id="${id}"/>`).join('\n')}
-${i.extraCnxml}
-  </content>
-</document>`
-}
 
 function expectPageErrors(expectedErrors: ValidationKind[], info: PageInfo, page?: PageNode) {
   if (page === undefined) {
