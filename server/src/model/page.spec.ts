@@ -2,7 +2,7 @@ import expect from 'expect'
 import Immutable from 'immutable'
 import * as path from 'path'
 import { ValidationKind } from './fileish'
-import { ELEMENT_TO_PREFIX, exerciseTagToUrl, EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID, EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
+import { ELEMENT_TO_PREFIX, exerciseTagToUrl, EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID, EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID, LINKED_EXERCISE_PREFIX_NICK_URL, LINKED_EXERCISE_PREFIX_TAG_URL, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
 import { expectErrors, first, FS_PATH_HELPER, makeBundle } from './util.spec'
 
 describe('Page', () => {
@@ -183,7 +183,12 @@ describe('Page validations', () => {
   })
   it(PageValidationKind.EXERCISE_MISSING.title, () => {
     expectPageErrors([PageValidationKind.EXERCISE_MISSING], {
-      pageLinks: [{ url: '#ost/api/ex/ex1234' }]
+      pageLinks: [{ url: `${LINKED_EXERCISE_PREFIX_TAG_URL}ex1234` }]
+    })
+  })
+  it(`${PageValidationKind.EXERCISE_MISSING.title} for a nickname`, () => {
+    expectPageErrors([PageValidationKind.EXERCISE_MISSING], {
+      pageLinks: [{ url: `${LINKED_EXERCISE_PREFIX_NICK_URL}ex1234` }]
     })
   })
 
@@ -191,7 +196,7 @@ describe('Page validations', () => {
     const page = bundle.allPages.getOrAdd('somepage/filename')
     page.load(pageMaker({
       uuid,
-      pageLinks: [{ url: `#ost/api/ex/${exTag}` }]
+      pageLinks: [{ url: `${LINKED_EXERCISE_PREFIX_TAG_URL}${exTag}` }]
     }))
     expect(page.exerciseURLs.size).toBe(1)
     expect(page.exerciseURLs.first()).toEqual(exerciseTagToUrl(exTag))

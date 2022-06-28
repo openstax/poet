@@ -37,7 +37,6 @@ export type PageLink = HasRange & ({
 } | {
   type: PageLinkKind.EXERCISE
   url: string
-  tagName: string
 })
 
 /**
@@ -56,18 +55,23 @@ interface PagesAndTargets {
   elementIDs: string[]
 }
 
-const LINKED_EXERCISE_PREFIX_URLS = ['#ost/api/ex/', '#exercise/']
+export const LINKED_EXERCISE_PREFIX_TAG_URL = '#ost/api/ex/'
+export const LINKED_EXERCISE_PREFIX_NICK_URL = '#exercise/'
 export const EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID = 'context-cnxmod'
 export const EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID = 'context-cnxfeature'
 export function exerciseTagToUrl(tagName: string) {
   return `https://exercises.openstax.org/api/exercises?q=tag:${tagName}`
+}
+export function exerciseNickToUrl(nickName: string) {
+  return `https://exercises.openstax.org/api/exercises?q=nickname:${nickName}`
 }
 /*
   * There are 2 types of exercise tags we care about:
   * - context-cnxmod:461e16d4-3f6a-4430-86ab-578e2035da57
   * - context-cnxfeature:CNX_AP_Bio_43_04_02
   *
-  * Example: https://exercises.openstax.org/api/exercises?q=tag:apbio-ch34-ex038
+  * Example: https://exercises.openstax.org/api/exercises?q=tag:apbio-ch34-ex038       Href: #ost/api/ex/apbio-ch34-ex038
+  * Example: https://exercises.openstax.org/api/exercises?q=nickname:IA_Ch14-Sec4_CTQ3 Href: #exercise/IA_Ch14-Sec4_CTQ3
   */
 function getContextPagesAndTargets(ex: ExerciseJSON): PagesAndTargets {
   const pageUUIDs = []
@@ -224,11 +228,13 @@ export class PageNode extends Fileish {
       const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
       const toUrl = changeEmptyToNull(linkNode.getAttribute('url'))
       if (toUrl !== undefined) {
-        for (const prefix of LINKED_EXERCISE_PREFIX_URLS) {
-          if (toUrl.startsWith(prefix)) {
-            const tagName = toUrl.substring(prefix.length)
-            return { range, type: PageLinkKind.EXERCISE, tagName, url: exerciseTagToUrl(tagName) }
-          }
+        if (toUrl.startsWith(LINKED_EXERCISE_PREFIX_TAG_URL)) {
+          const tagName = toUrl.substring(LINKED_EXERCISE_PREFIX_TAG_URL.length)
+          return { range, type: PageLinkKind.EXERCISE, url: exerciseTagToUrl(tagName) }
+        }
+        if (toUrl.startsWith(LINKED_EXERCISE_PREFIX_NICK_URL)) {
+          const tagName = toUrl.substring(LINKED_EXERCISE_PREFIX_NICK_URL.length)
+          return { range, type: PageLinkKind.EXERCISE, url: exerciseNickToUrl(tagName) }
         }
         return { range, type: PageLinkKind.URL, url: toUrl }
       }

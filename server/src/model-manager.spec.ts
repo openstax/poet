@@ -15,7 +15,7 @@ import { expectErrors, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess
 import { Job, JobRunner } from './job-runner'
 import { PageInfo, pageMaker } from './model/page.spec'
 
-import { PageNode, PageValidationKind } from './model/page'
+import { LINKED_EXERCISE_PREFIX_TAG_URL, PageNode, PageValidationKind } from './model/page'
 import { TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc'
 import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { bookMaker } from './model/book.spec'
@@ -172,7 +172,7 @@ describe('Fetching exercises', () => {
     FetchCache.fetchImpl = fetchImpl as unknown as typeof fetch
 
     await manager.updateFileContents(page.absPath, pageMaker({
-      pageLinks: [{ url: `#ost/api/ex/${exTag}` }]
+      pageLinks: [{ url: `${LINKED_EXERCISE_PREFIX_TAG_URL}${exTag}` }]
     }))
     expect(fetchImpl.callCount).toBe(1)
     expectErrors(page, [PageValidationKind.EXERCISE_COUNT_ZERO]) // Malformed Exercise because 0 items were in the response
