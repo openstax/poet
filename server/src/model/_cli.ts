@@ -104,7 +104,7 @@ function printErrors(bundles: Bundle[]) {
     }
     validationErrors.forEach(e => {
       const { range } = e
-      console.log(toRelPath(e.node.absPath), `${range.start.line}:${range.start.character}`, e.message)
+      console.log(toRelPath(e.node.absPath), `${range.start.line + 1}:${range.start.character}`, e.message)
     })
   })
 }
