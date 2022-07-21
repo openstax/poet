@@ -169,13 +169,13 @@
         <xs:choice maxOccurs="unbounded">
           <xs:group ref="mathml:para_2"/>
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
             <xs:group ref="mathml:quote_2"/>

@@ -47,6 +47,11 @@
     <xs:sequence>
       <xs:element name="title">
         <xs:complexType mixed="true">
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup"/>
+          </xs:choice>
           <xs:attribute ref="cmlnle:case"/>
           <xs:attribute ref="cmlnle:reference"/>
           <xs:attribute ref="cxlxt:born"/>
@@ -188,6 +193,76 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
+  <xs:group name="emphasis">
+    <xs:sequence>
+      <xs:element name="emphasis">
+        <xs:complexType mixed="true">
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup"/>
+          </xs:choice>
+          <xs:attribute name="effect">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:NMTOKEN">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="bold"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="italics"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="underline"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="normal"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="smallcaps"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="sub">
+    <xs:sequence>
+      <xs:element name="sub">
+        <xs:complexType mixed="true">
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup"/>
+          </xs:choice>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="sup">
+    <xs:sequence>
+      <xs:element name="sup">
+        <xs:complexType mixed="true">
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup"/>
+          </xs:choice>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:group>
   <xs:group name="link-group1">
     <xs:sequence>
       <xs:element name="link-group">
@@ -270,9 +345,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -448,9 +523,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -472,9 +547,9 @@
                 <xs:group ref="mathml:cite_3"/>
                 <xs:group ref="mathml:cite-title"/>
                 <xs:group ref="mathml:foreign_3"/>
-                <xs:group ref="mathml:emphasis_3"/>
-                <xs:group ref="mathml:sub_3"/>
-                <xs:group ref="mathml:sup_3"/>
+                <xs:group ref="mathml:emphasis_4"/>
+                <xs:group ref="mathml:sub_4"/>
+                <xs:group ref="mathml:sup_4"/>
                 <xs:group ref="mathml:code"/>
                 <xs:group ref="mathml:preformat"/>
                 <xs:group ref="mathml:quote"/>
@@ -532,9 +607,9 @@
                 <xs:group ref="mathml:cite_3"/>
                 <xs:group ref="mathml:cite-title"/>
                 <xs:group ref="mathml:foreign_3"/>
-                <xs:group ref="mathml:emphasis_3"/>
-                <xs:group ref="mathml:sub_3"/>
-                <xs:group ref="mathml:sup_3"/>
+                <xs:group ref="mathml:emphasis_4"/>
+                <xs:group ref="mathml:sub_4"/>
+                <xs:group ref="mathml:sup_4"/>
                 <xs:group ref="mathml:code"/>
                 <xs:group ref="mathml:preformat"/>
                 <xs:group ref="mathml:quote"/>
@@ -568,9 +643,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -625,9 +700,9 @@
                 <xs:group ref="mathml:cite_3"/>
                 <xs:group ref="mathml:cite-title"/>
                 <xs:group ref="mathml:foreign_3"/>
-                <xs:group ref="mathml:emphasis_3"/>
-                <xs:group ref="mathml:sub_3"/>
-                <xs:group ref="mathml:sup_3"/>
+                <xs:group ref="mathml:emphasis_4"/>
+                <xs:group ref="mathml:sub_4"/>
+                <xs:group ref="mathml:sup_4"/>
                 <xs:group ref="mathml:code"/>
                 <xs:group ref="mathml:preformat"/>
                 <xs:group ref="mathml:quote"/>
@@ -663,9 +738,9 @@
                 <xs:group ref="mathml:cite_3"/>
                 <xs:group ref="mathml:cite-title"/>
                 <xs:group ref="mathml:foreign_3"/>
-                <xs:group ref="mathml:emphasis_3"/>
-                <xs:group ref="mathml:sub_3"/>
-                <xs:group ref="mathml:sup_3"/>
+                <xs:group ref="mathml:emphasis_4"/>
+                <xs:group ref="mathml:sub_4"/>
+                <xs:group ref="mathml:sup_4"/>
                 <xs:group ref="mathml:code"/>
                 <xs:group ref="mathml:preformat"/>
                 <xs:group ref="mathml:quote"/>
@@ -735,9 +810,9 @@
                 <xs:group ref="mathml:cite_3"/>
                 <xs:group ref="mathml:cite-title"/>
                 <xs:group ref="mathml:foreign_3"/>
-                <xs:group ref="mathml:emphasis_3"/>
-                <xs:group ref="mathml:sub_3"/>
-                <xs:group ref="mathml:sup_3"/>
+                <xs:group ref="mathml:emphasis_4"/>
+                <xs:group ref="mathml:sub_4"/>
+                <xs:group ref="mathml:sup_4"/>
                 <xs:group ref="mathml:code"/>
                 <xs:group ref="mathml:preformat"/>
                 <xs:group ref="mathml:quote"/>
@@ -773,9 +848,9 @@
                 <xs:group ref="mathml:cite_3"/>
                 <xs:group ref="mathml:cite-title"/>
                 <xs:group ref="mathml:foreign_3"/>
-                <xs:group ref="mathml:emphasis_3"/>
-                <xs:group ref="mathml:sub_3"/>
-                <xs:group ref="mathml:sup_3"/>
+                <xs:group ref="mathml:emphasis_4"/>
+                <xs:group ref="mathml:sub_4"/>
+                <xs:group ref="mathml:sup_4"/>
                 <xs:group ref="mathml:code"/>
                 <xs:group ref="mathml:preformat"/>
                 <xs:group ref="mathml:quote"/>
@@ -1168,9 +1243,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -1218,13 +1293,13 @@
       <xs:element name="para">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
             <xs:group ref="mathml:quote_2"/>
@@ -1238,18 +1313,18 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="emphasis">
+  <xs:group name="emphasis1">
     <xs:sequence>
       <xs:element name="emphasis">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
           </xs:choice>
@@ -1265,13 +1340,13 @@
       <xs:element name="term">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
           </xs:choice>
@@ -1287,13 +1362,13 @@
       <xs:element name="foreign">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
           </xs:choice>
@@ -1309,13 +1384,13 @@
       <xs:element name="cite">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
           </xs:choice>
@@ -1331,13 +1406,13 @@
       <xs:element name="span">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
           </xs:choice>
@@ -1348,18 +1423,18 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sup">
+  <xs:group name="sup1">
     <xs:sequence>
       <xs:element name="sup">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
           </xs:choice>
@@ -1370,18 +1445,18 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sub">
+  <xs:group name="sub1">
     <xs:sequence>
       <xs:element name="sub">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
           </xs:choice>
@@ -1397,13 +1472,13 @@
       <xs:element name="code">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
           </xs:choice>
@@ -1432,13 +1507,13 @@
           <xs:choice maxOccurs="unbounded">
             <xs:group ref="mathml:para_2"/>
             <xs:choice minOccurs="0" maxOccurs="unbounded">
-              <xs:group ref="mathml:emphasis"/>
+              <xs:group ref="mathml:emphasis_2"/>
               <xs:group ref="mathml:term"/>
               <xs:group ref="mathml:foreign"/>
               <xs:group ref="mathml:cite"/>
               <xs:group ref="mathml:span"/>
-              <xs:group ref="mathml:sup"/>
-              <xs:group ref="mathml:sub"/>
+              <xs:group ref="mathml:sup_2"/>
+              <xs:group ref="mathml:sub_2"/>
               <xs:group ref="mathml:code_2"/>
               <xs:group ref="mathml:math"/>
               <xs:group ref="mathml:quote_2"/>
@@ -1471,13 +1546,13 @@
           <xs:choice maxOccurs="unbounded">
             <xs:group ref="mathml:para_2"/>
             <xs:choice minOccurs="0" maxOccurs="unbounded">
-              <xs:group ref="mathml:emphasis"/>
+              <xs:group ref="mathml:emphasis_2"/>
               <xs:group ref="mathml:term"/>
               <xs:group ref="mathml:foreign"/>
               <xs:group ref="mathml:cite"/>
               <xs:group ref="mathml:span"/>
-              <xs:group ref="mathml:sup"/>
-              <xs:group ref="mathml:sub"/>
+              <xs:group ref="mathml:sup_2"/>
+              <xs:group ref="mathml:sub_2"/>
               <xs:group ref="mathml:code_2"/>
               <xs:group ref="mathml:math"/>
               <xs:group ref="mathml:quote_2"/>
@@ -1544,9 +1619,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -1584,9 +1659,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -1641,13 +1716,13 @@
       <xs:element name="para">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
             <xs:group ref="mathml:quote_3"/>
@@ -1668,18 +1743,18 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="emphasis1">
+  <xs:group name="emphasis2">
     <xs:sequence>
       <xs:element name="emphasis">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
           </xs:choice>
@@ -1702,13 +1777,13 @@
       <xs:element name="term">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
           </xs:choice>
@@ -1731,13 +1806,13 @@
       <xs:element name="foreign">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
           </xs:choice>
@@ -1760,13 +1835,13 @@
       <xs:element name="cite">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
           </xs:choice>
@@ -1789,13 +1864,13 @@
       <xs:element name="span">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
           </xs:choice>
@@ -1813,18 +1888,18 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sup1">
+  <xs:group name="sup2">
     <xs:sequence>
       <xs:element name="sup">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
           </xs:choice>
@@ -1842,18 +1917,18 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sub1">
+  <xs:group name="sub2">
     <xs:sequence>
       <xs:element name="sub">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
           </xs:choice>
@@ -1876,13 +1951,13 @@
       <xs:element name="code">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
           </xs:choice>
@@ -1918,13 +1993,13 @@
           <xs:choice maxOccurs="unbounded">
             <xs:group ref="mathml:para_3"/>
             <xs:choice minOccurs="0" maxOccurs="unbounded">
-              <xs:group ref="mathml:emphasis_2"/>
+              <xs:group ref="mathml:emphasis_3"/>
               <xs:group ref="mathml:term_2"/>
               <xs:group ref="mathml:foreign_2"/>
               <xs:group ref="mathml:cite_2"/>
               <xs:group ref="mathml:span_2"/>
-              <xs:group ref="mathml:sup_2"/>
-              <xs:group ref="mathml:sub_2"/>
+              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:sub_3"/>
               <xs:group ref="mathml:code_3"/>
               <xs:group ref="mathml:math_2"/>
               <xs:group ref="mathml:quote_3"/>
@@ -1964,13 +2039,13 @@
           <xs:choice maxOccurs="unbounded">
             <xs:group ref="mathml:para_3"/>
             <xs:choice minOccurs="0" maxOccurs="unbounded">
-              <xs:group ref="mathml:emphasis_2"/>
+              <xs:group ref="mathml:emphasis_3"/>
               <xs:group ref="mathml:term_2"/>
               <xs:group ref="mathml:foreign_2"/>
               <xs:group ref="mathml:cite_2"/>
               <xs:group ref="mathml:span_2"/>
-              <xs:group ref="mathml:sup_2"/>
-              <xs:group ref="mathml:sub_2"/>
+              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:sub_3"/>
               <xs:group ref="mathml:code_3"/>
               <xs:group ref="mathml:math_2"/>
               <xs:group ref="mathml:quote_3"/>
@@ -2052,9 +2127,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2093,9 +2168,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2156,9 +2231,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2197,9 +2272,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2269,9 +2344,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2323,9 +2398,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2377,9 +2452,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2438,9 +2513,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2481,7 +2556,7 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="emphasis2">
+  <xs:group name="emphasis3">
     <xs:sequence>
       <xs:element name="emphasis">
         <xs:complexType mixed="true">
@@ -2492,9 +2567,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2553,7 +2628,7 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sub2">
+  <xs:group name="sub3">
     <xs:sequence>
       <xs:element name="sub">
         <xs:complexType mixed="true">
@@ -2564,9 +2639,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2594,7 +2669,7 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sup2">
+  <xs:group name="sup3">
     <xs:sequence>
       <xs:element name="sup">
         <xs:complexType mixed="true">
@@ -2605,9 +2680,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2649,9 +2724,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -2841,9 +2916,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -2928,9 +3003,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -2972,9 +3047,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3031,9 +3106,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3102,9 +3177,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3175,9 +3250,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3279,9 +3354,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3383,9 +3458,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3458,9 +3533,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3582,9 +3657,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3664,9 +3739,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3744,9 +3819,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -3816,9 +3891,9 @@
                 <xs:group ref="mathml:cite_3"/>
                 <xs:group ref="mathml:cite-title"/>
                 <xs:group ref="mathml:foreign_3"/>
-                <xs:group ref="mathml:emphasis_3"/>
-                <xs:group ref="mathml:sub_3"/>
-                <xs:group ref="mathml:sup_3"/>
+                <xs:group ref="mathml:emphasis_4"/>
+                <xs:group ref="mathml:sub_4"/>
+                <xs:group ref="mathml:sup_4"/>
                 <xs:group ref="mathml:code"/>
                 <xs:group ref="mathml:preformat"/>
                 <xs:group ref="mathml:quote"/>
@@ -3851,9 +3926,9 @@
                 <xs:group ref="mathml:cite_3"/>
                 <xs:group ref="mathml:cite-title"/>
                 <xs:group ref="mathml:foreign_3"/>
-                <xs:group ref="mathml:emphasis_3"/>
-                <xs:group ref="mathml:sub_3"/>
-                <xs:group ref="mathml:sup_3"/>
+                <xs:group ref="mathml:emphasis_4"/>
+                <xs:group ref="mathml:sub_4"/>
+                <xs:group ref="mathml:sup_4"/>
                 <xs:group ref="mathml:code"/>
                 <xs:group ref="mathml:preformat"/>
                 <xs:group ref="mathml:quote"/>
@@ -4134,9 +4209,9 @@
               <xs:group ref="mathml:cite_3"/>
               <xs:group ref="mathml:cite-title"/>
               <xs:group ref="mathml:foreign_3"/>
-              <xs:group ref="mathml:emphasis_3"/>
-              <xs:group ref="mathml:sub_3"/>
-              <xs:group ref="mathml:sup_3"/>
+              <xs:group ref="mathml:emphasis_4"/>
+              <xs:group ref="mathml:sub_4"/>
+              <xs:group ref="mathml:sup_4"/>
               <xs:group ref="mathml:code"/>
               <xs:group ref="mathml:preformat"/>
               <xs:group ref="mathml:quote"/>
@@ -4185,13 +4260,13 @@
       <xs:element name="item">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis"/>
+            <xs:group ref="mathml:emphasis_2"/>
             <xs:group ref="mathml:term"/>
             <xs:group ref="mathml:foreign"/>
             <xs:group ref="mathml:cite"/>
             <xs:group ref="mathml:span"/>
-            <xs:group ref="mathml:sup"/>
-            <xs:group ref="mathml:sub"/>
+            <xs:group ref="mathml:sup_2"/>
+            <xs:group ref="mathml:sub_2"/>
             <xs:group ref="mathml:code_2"/>
             <xs:group ref="mathml:math"/>
             <xs:group ref="mathml:quote_2"/>
@@ -4215,9 +4290,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -4286,9 +4361,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -4339,9 +4414,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -4392,9 +4467,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -4452,9 +4527,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -4495,7 +4570,7 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="emphasis3">
+  <xs:group name="emphasis4">
     <xs:sequence>
       <xs:element name="emphasis">
         <xs:complexType mixed="true">
@@ -4505,9 +4580,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -4566,7 +4641,7 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sub3">
+  <xs:group name="sub4">
     <xs:sequence>
       <xs:element name="sub">
         <xs:complexType mixed="true">
@@ -4576,9 +4651,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -4606,7 +4681,7 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sup3">
+  <xs:group name="sup4">
     <xs:sequence>
       <xs:element name="sup">
         <xs:complexType mixed="true">
@@ -4616,9 +4691,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -4657,9 +4732,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -4680,9 +4755,9 @@
                 <xs:group ref="mathml:cite_4"/>
                 <xs:group ref="mathml:cite-title_2"/>
                 <xs:group ref="mathml:foreign_4"/>
-                <xs:group ref="mathml:emphasis_4"/>
-                <xs:group ref="mathml:sub_4"/>
-                <xs:group ref="mathml:sup_4"/>
+                <xs:group ref="mathml:emphasis_5"/>
+                <xs:group ref="mathml:sub_5"/>
+                <xs:group ref="mathml:sup_5"/>
                 <xs:group ref="mathml:code_4"/>
                 <xs:group ref="mathml:preformat_4"/>
                 <xs:group ref="mathml:quote_4"/>
@@ -4739,9 +4814,9 @@
                 <xs:group ref="mathml:cite_4"/>
                 <xs:group ref="mathml:cite-title_2"/>
                 <xs:group ref="mathml:foreign_4"/>
-                <xs:group ref="mathml:emphasis_4"/>
-                <xs:group ref="mathml:sub_4"/>
-                <xs:group ref="mathml:sup_4"/>
+                <xs:group ref="mathml:emphasis_5"/>
+                <xs:group ref="mathml:sub_5"/>
+                <xs:group ref="mathml:sup_5"/>
                 <xs:group ref="mathml:code_4"/>
                 <xs:group ref="mathml:preformat_4"/>
                 <xs:group ref="mathml:quote_4"/>
@@ -4774,9 +4849,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -4830,9 +4905,9 @@
                 <xs:group ref="mathml:cite_4"/>
                 <xs:group ref="mathml:cite-title_2"/>
                 <xs:group ref="mathml:foreign_4"/>
-                <xs:group ref="mathml:emphasis_4"/>
-                <xs:group ref="mathml:sub_4"/>
-                <xs:group ref="mathml:sup_4"/>
+                <xs:group ref="mathml:emphasis_5"/>
+                <xs:group ref="mathml:sub_5"/>
+                <xs:group ref="mathml:sup_5"/>
                 <xs:group ref="mathml:code_4"/>
                 <xs:group ref="mathml:preformat_4"/>
                 <xs:group ref="mathml:quote_4"/>
@@ -4867,9 +4942,9 @@
                 <xs:group ref="mathml:cite_4"/>
                 <xs:group ref="mathml:cite-title_2"/>
                 <xs:group ref="mathml:foreign_4"/>
-                <xs:group ref="mathml:emphasis_4"/>
-                <xs:group ref="mathml:sub_4"/>
-                <xs:group ref="mathml:sup_4"/>
+                <xs:group ref="mathml:emphasis_5"/>
+                <xs:group ref="mathml:sub_5"/>
+                <xs:group ref="mathml:sup_5"/>
                 <xs:group ref="mathml:code_4"/>
                 <xs:group ref="mathml:preformat_4"/>
                 <xs:group ref="mathml:quote_4"/>
@@ -4938,9 +5013,9 @@
                 <xs:group ref="mathml:cite_4"/>
                 <xs:group ref="mathml:cite-title_2"/>
                 <xs:group ref="mathml:foreign_4"/>
-                <xs:group ref="mathml:emphasis_4"/>
-                <xs:group ref="mathml:sub_4"/>
-                <xs:group ref="mathml:sup_4"/>
+                <xs:group ref="mathml:emphasis_5"/>
+                <xs:group ref="mathml:sub_5"/>
+                <xs:group ref="mathml:sup_5"/>
                 <xs:group ref="mathml:code_4"/>
                 <xs:group ref="mathml:preformat_4"/>
                 <xs:group ref="mathml:quote_4"/>
@@ -4975,9 +5050,9 @@
                 <xs:group ref="mathml:cite_4"/>
                 <xs:group ref="mathml:cite-title_2"/>
                 <xs:group ref="mathml:foreign_4"/>
-                <xs:group ref="mathml:emphasis_4"/>
-                <xs:group ref="mathml:sub_4"/>
-                <xs:group ref="mathml:sup_4"/>
+                <xs:group ref="mathml:emphasis_5"/>
+                <xs:group ref="mathml:sub_5"/>
+                <xs:group ref="mathml:sup_5"/>
                 <xs:group ref="mathml:code_4"/>
                 <xs:group ref="mathml:preformat_4"/>
                 <xs:group ref="mathml:quote_4"/>
@@ -5188,9 +5263,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -5238,13 +5313,13 @@
       <xs:element name="item">
         <xs:complexType mixed="true">
           <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:group ref="mathml:emphasis_2"/>
+            <xs:group ref="mathml:emphasis_3"/>
             <xs:group ref="mathml:term_2"/>
             <xs:group ref="mathml:foreign_2"/>
             <xs:group ref="mathml:cite_2"/>
             <xs:group ref="mathml:span_2"/>
-            <xs:group ref="mathml:sup_2"/>
-            <xs:group ref="mathml:sub_2"/>
+            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:sub_3"/>
             <xs:group ref="mathml:code_3"/>
             <xs:group ref="mathml:math_2"/>
             <xs:group ref="mathml:quote_3"/>
@@ -5482,9 +5557,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -5522,9 +5597,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
@@ -5564,9 +5639,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -5622,9 +5697,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -5978,9 +6053,9 @@
                 <xs:group ref="mathml:cite_4"/>
                 <xs:group ref="mathml:cite-title_2"/>
                 <xs:group ref="mathml:foreign_4"/>
-                <xs:group ref="mathml:emphasis_4"/>
-                <xs:group ref="mathml:sub_4"/>
-                <xs:group ref="mathml:sup_4"/>
+                <xs:group ref="mathml:emphasis_5"/>
+                <xs:group ref="mathml:sub_5"/>
+                <xs:group ref="mathml:sup_5"/>
                 <xs:group ref="mathml:code_4"/>
                 <xs:group ref="mathml:preformat_4"/>
                 <xs:group ref="mathml:quote_4"/>
@@ -6012,9 +6087,9 @@
                 <xs:group ref="mathml:cite_4"/>
                 <xs:group ref="mathml:cite-title_2"/>
                 <xs:group ref="mathml:foreign_4"/>
-                <xs:group ref="mathml:emphasis_4"/>
-                <xs:group ref="mathml:sub_4"/>
-                <xs:group ref="mathml:sup_4"/>
+                <xs:group ref="mathml:emphasis_5"/>
+                <xs:group ref="mathml:sub_5"/>
+                <xs:group ref="mathml:sup_5"/>
                 <xs:group ref="mathml:code_4"/>
                 <xs:group ref="mathml:preformat_4"/>
                 <xs:group ref="mathml:quote_4"/>
@@ -6057,9 +6132,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6115,9 +6190,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6185,9 +6260,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6257,9 +6332,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6360,9 +6435,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6463,9 +6538,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6537,9 +6612,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6652,9 +6727,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6733,9 +6808,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6812,9 +6887,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -6947,9 +7022,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -7316,9 +7391,9 @@
               <xs:group ref="mathml:cite_4"/>
               <xs:group ref="mathml:cite-title_2"/>
               <xs:group ref="mathml:foreign_4"/>
-              <xs:group ref="mathml:emphasis_4"/>
-              <xs:group ref="mathml:sub_4"/>
-              <xs:group ref="mathml:sup_4"/>
+              <xs:group ref="mathml:emphasis_5"/>
+              <xs:group ref="mathml:sub_5"/>
+              <xs:group ref="mathml:sup_5"/>
               <xs:group ref="mathml:code_4"/>
               <xs:group ref="mathml:preformat_4"/>
               <xs:group ref="mathml:quote_4"/>
@@ -7374,9 +7449,9 @@
             <xs:group ref="mathml:cite_3"/>
             <xs:group ref="mathml:cite-title"/>
             <xs:group ref="mathml:foreign_3"/>
-            <xs:group ref="mathml:emphasis_3"/>
-            <xs:group ref="mathml:sub_3"/>
-            <xs:group ref="mathml:sup_3"/>
+            <xs:group ref="mathml:emphasis_4"/>
+            <xs:group ref="mathml:sub_4"/>
+            <xs:group ref="mathml:sup_4"/>
             <xs:group ref="mathml:code"/>
             <xs:group ref="mathml:preformat"/>
             <xs:group ref="mathml:quote"/>
@@ -7672,9 +7747,9 @@
             <xs:group ref="mathml:cite_4"/>
             <xs:group ref="mathml:cite-title_2"/>
             <xs:group ref="mathml:foreign_4"/>
-            <xs:group ref="mathml:emphasis_4"/>
-            <xs:group ref="mathml:sub_4"/>
-            <xs:group ref="mathml:sup_4"/>
+            <xs:group ref="mathml:emphasis_5"/>
+            <xs:group ref="mathml:sub_5"/>
+            <xs:group ref="mathml:sup_5"/>
             <xs:group ref="mathml:code_4"/>
             <xs:group ref="mathml:preformat_4"/>
             <xs:group ref="mathml:quote_4"/>
