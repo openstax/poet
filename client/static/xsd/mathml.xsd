@@ -166,6 +166,21 @@
       <xs:group ref="collxml:parameters1"/>
     </xs:sequence>
   </xs:group>
+  <xs:group name="emphasis">
+    <xs:sequence>
+      <xs:group ref="cnxml:emphasis"/>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="sub">
+    <xs:sequence>
+      <xs:group ref="cnxml:sub"/>
+    </xs:sequence>
+  </xs:group>
+  <xs:group name="sup">
+    <xs:sequence>
+      <xs:group ref="cnxml:sup"/>
+    </xs:sequence>
+  </xs:group>
   <xs:group name="content-id_2">
     <xs:sequence>
       <xs:group ref="mdml:content-id1"/>
@@ -421,9 +436,9 @@
       <xs:group ref="cnxml:para1"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="emphasis">
+  <xs:group name="emphasis_2">
     <xs:sequence>
-      <xs:group ref="cnxml:emphasis"/>
+      <xs:group ref="cnxml:emphasis1"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="term">
@@ -446,14 +461,14 @@
       <xs:group ref="cnxml:span"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sup">
+  <xs:group name="sup_2">
     <xs:sequence>
-      <xs:group ref="cnxml:sup"/>
+      <xs:group ref="cnxml:sup1"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sub">
+  <xs:group name="sub_2">
     <xs:sequence>
-      <xs:group ref="cnxml:sub"/>
+      <xs:group ref="cnxml:sub1"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="code_2">
@@ -629,9 +644,9 @@
       <xs:group ref="cnxml:para2"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="emphasis_2">
+  <xs:group name="emphasis_3">
     <xs:sequence>
-      <xs:group ref="cnxml:emphasis1"/>
+      <xs:group ref="cnxml:emphasis2"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="term_2">
@@ -654,14 +669,14 @@
       <xs:group ref="cnxml:span1"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sup_2">
+  <xs:group name="sup_3">
     <xs:sequence>
-      <xs:group ref="cnxml:sup1"/>
+      <xs:group ref="cnxml:sup2"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sub_2">
+  <xs:group name="sub_3">
     <xs:sequence>
-      <xs:group ref="cnxml:sub1"/>
+      <xs:group ref="cnxml:sub2"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="code_3">
@@ -822,19 +837,19 @@
       <xs:group ref="cnxml:foreign2"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="emphasis_3">
+  <xs:group name="emphasis_4">
     <xs:sequence>
-      <xs:group ref="cnxml:emphasis2"/>
+      <xs:group ref="cnxml:emphasis3"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sub_3">
+  <xs:group name="sub_4">
     <xs:sequence>
-      <xs:group ref="cnxml:sub2"/>
+      <xs:group ref="cnxml:sub3"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sup_3">
+  <xs:group name="sup_4">
     <xs:sequence>
-      <xs:group ref="cnxml:sup2"/>
+      <xs:group ref="cnxml:sup3"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="footnote">
@@ -6059,19 +6074,19 @@
       <xs:group ref="cnxml:foreign3"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="emphasis_4">
+  <xs:group name="emphasis_5">
     <xs:sequence>
-      <xs:group ref="cnxml:emphasis3"/>
+      <xs:group ref="cnxml:emphasis4"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sub_4">
+  <xs:group name="sub_5">
     <xs:sequence>
-      <xs:group ref="cnxml:sub3"/>
+      <xs:group ref="cnxml:sub4"/>
     </xs:sequence>
   </xs:group>
-  <xs:group name="sup_4">
+  <xs:group name="sup_5">
     <xs:sequence>
-      <xs:group ref="cnxml:sup3"/>
+      <xs:group ref="cnxml:sup4"/>
     </xs:sequence>
   </xs:group>
   <xs:group name="code_4">
