@@ -226,7 +226,7 @@ export class PageNode extends Fileish {
           return undefined
         })),
         fn: () => pageLinks.filter(l => {
-          if (l.type === PageLinkKind.URL) return false // URL links are ok
+          if (l.type === PageLinkKind.URL) return !/^https?:\/\//.test(l.url) // Ensure the URL attribute is a URL
           if (!l.page.exists) return true // link to non-existent page are bad
           if (l.type === PageLinkKind.PAGE) return false // linking to the whole page and it exists is ok
           return !l.page.hasElementId(l.targetElementId)
@@ -265,6 +265,7 @@ export class PageNode extends Fileish {
 export class PageValidationKind extends ValidationKind {
   static MISSING_RESOURCE = new PageValidationKind('Target resource file does not exist')
   static MISSING_TARGET = new PageValidationKind('Link target does not exist')
+  static LINK_URL_INVALID = new PageValidationKind('Link URL is not formatted correctly')
   static MALFORMED_UUID = new PageValidationKind('Malformed UUID')
   static DUPLICATE_UUID = new PageValidationKind('Duplicate Page/Module UUID')
   static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.INFORMATION)
