@@ -159,7 +159,7 @@ export class PageNode extends Fileish {
 
     const toResourceLink = (type: ResourceLinkKind, attr: Attr): ResourceLink => {
       const src = expectValue(attr.nodeValue, 'BUG: Attribute does not have a value')
-      const target = super.bundle.allResources.getOrAdd(join(this.pathHelper, PathKind.ABS_TO_REL, this.absPath, src))
+      const target = super.bundle().allResources.getOrAdd(join(this.pathHelper, PathKind.ABS_TO_REL, this.absPath, src))
       // Get the line/col position of the <image> tag
       const imageNode = expectValue(attr.ownerElement, 'BUG: attributes always have a parent element')
       const range = calculateElementPositions(imageNode)
@@ -184,7 +184,7 @@ export class PageNode extends Fileish {
       if (toUrl !== undefined) {
         return { range, type: PageLinkKind.URL, url: toUrl }
       }
-      const toPage = toDocument !== undefined ? super.bundle.allPages.getOrAdd(join(this.pathHelper, PathKind.MODULE_TO_MODULEID, this.absPath, toDocument)) : this
+      const toPage = toDocument !== undefined ? super.bundle().allPages.getOrAdd(join(this.pathHelper, PathKind.MODULE_TO_MODULEID, this.absPath, toDocument)) : this
       if (toTargetId !== undefined) {
         return {
           range,
@@ -245,7 +245,7 @@ export class PageNode extends Fileish {
         nodesToLoad: I.Set(),
         fn: () => {
           const uuid = this.ensureLoaded(this._uuid)
-          if (this.bundle.isDuplicateUuid(uuid.v)) {
+          if (this.bundle().isDuplicateUuid(uuid.v)) {
             return I.Set([uuid.range])
           } else {
             return I.Set()
