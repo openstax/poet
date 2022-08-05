@@ -3,6 +3,7 @@ import * as Quarx from 'quarx'
 import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, Range } from './utils'
 import { Fileish, ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
 import { ResourceNode } from './resource'
+import { MMLValidator } from './mathml-validator'
 
 enum ResourceLinkKind {
   Image,
@@ -87,6 +88,7 @@ export class PageNode extends Fileish {
   private readonly _resourceLinks = Quarx.observable.box<Opt<I.Set<ResourceLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
   private readonly _elementsMissingIds = Quarx.observable.box<Opt<I.Set<Range>>>(undefined)
+  private readonly _mmlvalidator = new MMLValidator()
 
   public uuid() { return this.ensureLoaded(this._uuid).v }
   public get optTitle() {
@@ -206,6 +208,7 @@ export class PageNode extends Fileish {
         range: NOWHERE
       })
     }
+    this._mmlvalidator.parseXML(doc)
   }
 
   protected getValidationChecks(): ValidationCheck[] {
@@ -258,7 +261,8 @@ export class PageNode extends Fileish {
         fn: () => {
           return this.ensureLoaded(this._elementsMissingIds)
         }
-      }
+      },
+      ...this._mmlvalidator.getValidationChecks(this)
     ]
   }
 }

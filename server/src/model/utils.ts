@@ -9,12 +9,13 @@ export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
 export const NS_METADATA = 'http://cnx.rice.edu/mdml'
 const NS_CONTAINER = 'https://openstax.org/namespaces/book-container'
+const NS_MATHML = 'http://www.w3.org/1998/Math/MathML'
 
 const NOWHERE_START: Position = { line: 0, character: 0 }
 const NOWHERE_END: Position = { line: 0, character: 0 /* Number.MAX_VALUE */ }
 export const NOWHERE: Range = { start: NOWHERE_START, end: NOWHERE_END }
 
-export const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA, bk: NS_CONTAINER })
+export const select = xpath.useNamespaces({ cnxml: NS_CNXML, col: NS_COLLECTION, md: NS_METADATA, bk: NS_CONTAINER, m: NS_MATHML })
 export const selectOne = (sel: string, doc: Node): Element => {
   const ret = select(sel, doc) as Node[]
   expectValue(ret.length === 1 || null, `ERROR: Expected one but found ${ret.length} results that match '${sel}'`)
