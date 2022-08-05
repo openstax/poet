@@ -1,17 +1,15 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
 
-import { ValidationCheck, ValidationKind } from './fileish'
+import { Fileish, ValidationCheck, ValidationKind } from './fileish'
 import { Opt, WithRange, select, calculateElementPositions, expectValue } from './utils'
-import { ExternalValidator } from './external-validator'
-import { PageNode } from './page'
 
 export class MathValidationKind extends ValidationKind {
   static NEGATIVE_MSPACE_WIDTH = new MathValidationKind('mspace width cannot be negative')
   static EMPTY_MSPACE_WIDTH = new MathValidationKind('mspace width cannot be empty')
 }
 
-export class MMLValidator implements ExternalValidator {
+export class MMLValidator {
   private readonly _mspaceWidths = Quarx.observable.box<Opt<I.Set<WithRange<string>>>>(undefined)
 
   public parseXML(doc: Document): void {
@@ -24,14 +22,14 @@ export class MMLValidator implements ExternalValidator {
     })))
   }
 
-  public getValidationChecks(page: PageNode): ValidationCheck[] {
+  public getValidationChecks(file: Fileish): ValidationCheck[] {
     return [
       {
         message: MathValidationKind.NEGATIVE_MSPACE_WIDTH,
         nodesToLoad: I.Set(),
         fn: () => {
           return I.Set(
-            expectValue(this._mspaceWidths.get(), `mspace not loaded [${page.absPath}]`)
+            expectValue(this._mspaceWidths.get(), `mspace not loaded [${file.absPath}]`)
               .filter(i => {
                 const width = i.v.trim()
                 return width.length !== 0 && width[0] === '-'
@@ -44,7 +42,7 @@ export class MMLValidator implements ExternalValidator {
         nodesToLoad: I.Set(),
         fn: () => {
           return I.Set(
-            expectValue(this._mspaceWidths.get(), `mspace not loaded [${page.absPath}]`)
+            expectValue(this._mspaceWidths.get(), `mspace not loaded [${file.absPath}]`)
               .filter(i => i.v.trim().length === 0)
               .map(i => i.range)
           )
