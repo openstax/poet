@@ -132,6 +132,7 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
       const manager = getBundleForUri(change.uri)
       await manager.processFilesystemChange(change)
     }
+    await connection.sendRequest('onDidChangeWatchedFiles')
   }
   inner().catch(err => { throw err })
 })
