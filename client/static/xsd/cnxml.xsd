@@ -1071,7 +1071,7 @@
             </xs:simpleType>
           </xs:attribute>
           <xs:attribute name="summary"/>
-          <xs:attribute name="screenreader-table-description"/>
+          <xs:attribute name="aria-label"/>
           <xs:attribute name="colsep">
             <xs:simpleType>
               <xs:restriction base="xs:integer">
@@ -5887,7 +5887,7 @@
             </xs:simpleType>
           </xs:attribute>
           <xs:attribute name="summary"/>
-          <xs:attribute name="screenreader-table-description"/>
+          <xs:attribute name="aria-label"/>
           <xs:attribute name="colsep">
             <xs:simpleType>
               <xs:restriction base="xs:integer">
