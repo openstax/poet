@@ -1070,7 +1070,8 @@
               </xs:restriction>
             </xs:simpleType>
           </xs:attribute>
-          <xs:attribute name="summary" use="required"/>
+          <xs:attribute name="summary"/>
+          <xs:attribute name="aria-label"/>
           <xs:attribute name="colsep">
             <xs:simpleType>
               <xs:restriction base="xs:integer">
@@ -5885,7 +5886,8 @@
               </xs:restriction>
             </xs:simpleType>
           </xs:attribute>
-          <xs:attribute name="summary" use="required"/>
+          <xs:attribute name="summary"/>
+          <xs:attribute name="aria-label"/>
           <xs:attribute name="colsep">
             <xs:simpleType>
               <xs:restriction base="xs:integer">
