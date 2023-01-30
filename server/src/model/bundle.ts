@@ -6,6 +6,7 @@ import { PageNode } from './page'
 import { BookNode } from './book'
 import { Fileish, ValidationCheck, ValidationKind } from './fileish'
 import { ResourceNode } from './resource'
+import fs from 'fs'
 
 export class Bundle extends Fileish implements Bundleish {
   public readonly allResources: Factory<ResourceNode> = new Factory((absPath: string) => new ResourceNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
@@ -43,10 +44,50 @@ export class Bundle extends Fileish implements Bundleish {
     return this.ensureLoaded(this._books)
   }
 
+  public isDuplicate(property: string, nodes: I.Set<Fileish>, condition: any) {
+    const duplicates = I.Set(findDuplicates(I.List(nodes).filter(n => n.exists).map(n => condition(n))))
+    return duplicates.has(property)
+  }
+
   public isDuplicateUuid(uuid: string) {
-    const pages = this.allPages.all
-    const duplicateUuids = I.Set(findDuplicates(I.List(pages).filter(p => p.exists).map(p => p.uuid())))
-    return duplicateUuids.has(uuid)
+    return this.isDuplicate(uuid, this.allPages.all, (p: PageNode): string => { return p.uuid() })
+  }
+
+  public isDuplicateFilename(filename: string) {
+    return this.isDuplicate(filename, this.allResources.all, (r: ResourceNode): string => { return r.absPath.toLowerCase() })
+  }
+
+  public unusedResources(nodes: I.Set<ResourceNode>) {
+    const resources = fs.readdirSync(this.pathHelper.join(this.workspaceRootUri, 'media')).map(f => this.pathHelper.join(this.workspaceRootUri, 'media', f)).sort()
+    const referencedResources = nodes.map(node => node.absPath)
+    const unused = resources.filter(file => !referencedResources.includes(file))
+    if (unused.length > 0) {
+      console.error(`${unused.length} file(s) are unused`)
+      return true
+    }
+    return false
+  }
+
+  public checkDuplicateResources() {
+    const mediaFiles = fs.readdirSync(this.pathHelper.join(this.workspaceRootUri, 'media')).sort()
+    const map = new Map<string, I.List<string>|undefined>()
+    mediaFiles.forEach(filename => {
+      const lowercaseFilename = filename.toLowerCase()
+      if (map.has(lowercaseFilename)) {
+        map.set(lowercaseFilename, map.get(lowercaseFilename)?.push(filename))
+      } else {
+        map.set(lowercaseFilename, I.List<string>([this.absPath]))
+      }
+    })
+    let duplicates = false
+
+    for (const [, values] of map) {
+      if (values !== undefined && values.size > 1) {
+        duplicates = true
+        console.error(`${values.join(', ')} are duplicates`)
+      }
+    }
+    return duplicates
   }
 
   protected getValidationChecks(): ValidationCheck[] {
@@ -61,6 +102,16 @@ export class Bundle extends Fileish implements Bundleish {
         message: BundleValidationKind.NO_BOOKS,
         nodesToLoad: I.Set(),
         fn: () => books.isEmpty() ? I.Set([NOWHERE]) : I.Set()
+      },
+      {
+        message: BundleValidationKind.DUPLICATE_RESOURCES,
+        nodesToLoad: I.Set(),
+        fn: () => this.checkDuplicateResources() ? I.Set([NOWHERE]) : I.Set()
+      },
+      {
+        message: BundleValidationKind.UNUSED_RESOURCES,
+        nodesToLoad: I.Set(),
+        fn: () => this.unusedResources(this.allResources.all) ? I.Set([NOWHERE]) : I.Set()
       }
     ]
   }
@@ -69,4 +120,6 @@ export class Bundle extends Fileish implements Bundleish {
 export class BundleValidationKind extends ValidationKind {
   static MISSING_BOOK = new BundleValidationKind('Missing book')
   static NO_BOOKS = new BundleValidationKind('No books defined')
+  static DUPLICATE_RESOURCES = new BundleValidationKind('Resources with same names found')
+  static UNUSED_RESOURCES = new BundleValidationKind('Unused resources found')
 }
