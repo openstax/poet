@@ -4,7 +4,7 @@ import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
-import { Fileish, ValidationCheck, ValidationKind } from './fileish'
+import { Fileish, ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
 import { ResourceNode } from './resource'
 import fs from 'fs'
 
@@ -62,7 +62,6 @@ export class Bundle extends Fileish implements Bundleish {
     const referencedResources = nodes.map(node => node.absPath)
     const unused = resources.filter(file => !referencedResources.includes(file))
     if (unused.length > 0) {
-      console.error(`${unused.length} file(s) are unused`)
       return true
     }
     return false
@@ -76,7 +75,7 @@ export class Bundle extends Fileish implements Bundleish {
       if (map.has(lowercaseFilename)) {
         map.set(lowercaseFilename, map.get(lowercaseFilename)?.push(filename))
       } else {
-        map.set(lowercaseFilename, I.List<string>([this.absPath]))
+        map.set(lowercaseFilename, I.List<string>([filename]))
       }
     })
     let duplicates = false
@@ -121,5 +120,5 @@ export class BundleValidationKind extends ValidationKind {
   static MISSING_BOOK = new BundleValidationKind('Missing book')
   static NO_BOOKS = new BundleValidationKind('No books defined')
   static DUPLICATE_RESOURCES = new BundleValidationKind('Resources with same names found')
-  static UNUSED_RESOURCES = new BundleValidationKind('Unused resources found')
+  static UNUSED_RESOURCES = new BundleValidationKind('Unused resources found', ValidationSeverity.WARNING)
 }
