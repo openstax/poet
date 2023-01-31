@@ -82,18 +82,19 @@ export class Bundle extends Fileish implements Bundleish {
 
   public checkDuplicateResources() {
     // This method list the files in a set of directories and sort them. If two subsequent filenames have the same name in lowercase then they are duplicates.
-    const mediaFiles = this.directoryWalkThrough([this.pathHelper.join(this.workspaceRootUri, 'media')], []).sort()
-    const duplicates = I.Set<string>()
+    const mediaFiles = this.directoryWalkThrough([this.pathHelper.join(this.workspaceRootUri, 'media')], [])
+    mediaFiles.sort()
+    console.log(mediaFiles)
+    let duplicates = false
     if (mediaFiles.length > 1) {
       for (let index = 1; index < mediaFiles.length; index++) {
         if (mediaFiles[index].toLowerCase() === mediaFiles[index - 1].toLowerCase()) {
           console.error(`${mediaFiles[index]} and ${mediaFiles[index - 1]} are duplicates`)
-          duplicates.add(mediaFiles[index])
-          duplicates.add(mediaFiles[index - 1])
+          duplicates = true
         }
       }
     }
-    return duplicates.size > 0
+    return duplicates
   }
 
   protected getValidationChecks(): ValidationCheck[] {
@@ -126,6 +127,6 @@ export class Bundle extends Fileish implements Bundleish {
 export class BundleValidationKind extends ValidationKind {
   static MISSING_BOOK = new BundleValidationKind('Missing book')
   static NO_BOOKS = new BundleValidationKind('No books defined')
-  static DUPLICATE_RESOURCES = new BundleValidationKind('Resources with same names found')
+  static DUPLICATE_RESOURCES = new BundleValidationKind('Some Files with similar names')
   static UNUSED_RESOURCES = new BundleValidationKind('Unused resources found', ValidationSeverity.WARNING)
 }
