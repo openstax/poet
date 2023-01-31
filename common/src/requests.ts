@@ -2,7 +2,7 @@ import { BookToc, ClientPageish } from './toc'
 
 export enum DiagnosticSource {
   xml = 'xml',
-  cnxml = 'cnxml'
+  poet = 'poet'
 }
 
 export type Opt<T> = T | undefined

@@ -438,9 +438,9 @@ describe('Push Button Test Suite', () => {
   })
   test('canPush returns correct values', async () => {
     const fileUri = { path: '/test.cnxml', scheme: 'file' } as any as vscode.Uri
-    const cnxmlError = {
+    const poetError = {
       severity: vscode.DiagnosticSeverity.Error,
-      source: DiagnosticSource.cnxml
+      source: DiagnosticSource.poet
     } as any as vscode.Diagnostic
     const xmlError = {
       severity: vscode.DiagnosticSeverity.Error,
@@ -453,14 +453,14 @@ describe('Push Button Test Suite', () => {
     expect(pushContent.canPush(errorsBySource)).toBe(true)
 
     // CNXML errors
-    errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    errorsBySource.set(DiagnosticSource.poet, [[fileUri, poetError]])
     expect(!pushContent.canPush(errorsBySource)).toBe(true)
     expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)
 
-    // Both CNXML and XML errors
+    // Both Poet and XML errors
     errorsBySource.clear()
     showErrorMsgStub.reset()
-    errorsBySource.set(DiagnosticSource.cnxml, [[fileUri, cnxmlError]])
+    errorsBySource.set(DiagnosticSource.poet, [[fileUri, poetError]])
     errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
     expect(!pushContent.canPush(errorsBySource)).toBe(true)
     expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)

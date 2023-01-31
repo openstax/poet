@@ -126,7 +126,7 @@ describe('Bundle Manager', () => {
     loadSuccess(manager.bundle)
     manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
-    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.cnxml)
+    expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.poet)
   })
   it(`sends a warning when the Diagnostics message is '${PageValidationKind.MISSING_ID.title}'`, () => {
     // Load the pages
