@@ -17,7 +17,7 @@
       "name": "Attach to Language Server",
       "type": "node",
       "request": "attach",
-      "port": 6009,
+      "port": 16009,
       "restart": true,
       "outFiles": [
         "${workspaceRoot}/server/dist/**/*.js"
@@ -41,17 +41,6 @@
         "node_modules"
       ],
       "type": "node"
-    },
-    {
-      "name": "Run Extension <gitpod>. Make sure .vscode-test/ exists by running the client tests. Open port 6080 to see the app inside vnc",
-      "type": "node",
-      "request": "launch",
-      "runtimeExecutable": "${workspaceFolder}/.vscode-test/vscode-linux-x64-1.56.2/VSCode-linux-x64/code",
-      "args": [
-        "${workspaceFolder}",
-        "--no-sandbox",
-        "--extensionDevelopmentPath=${workspaceFolder}"
-      ]
     }
   ]
 }
