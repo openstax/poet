@@ -1,9 +1,8 @@
 import vscode from 'vscode'
-import { expect, getErrorDiagnosticsBySource, getRootPathUri ,findDuplicates} from './utils'
+import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
 import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref, Status } from './git-api/git'
 import { ExtensionHostContext } from './panel'
 import { DiagnosticSource, requestEnsureIds } from '../../common/src/requests'
-import path from 'path'
 
 export enum Tag {
   release = 'Release',
@@ -59,19 +58,6 @@ export const closeValidDocuments = async (
       await vscode.commands.executeCommand('workbench.action.closeActiveEditor')
     }
   }
-}
-
-export const validateResources = async():Promise<boolean> => {
-  let workspaceFolder = getRootPathUri()
-  if(workspaceFolder == null)
-    return true;
-  let mediaFolder = path.normalize(path.dirname(workspaceFolder.path) + '/media');
-  let duplicates = await findDuplicates(mediaFolder)
-  if(duplicates.size > 0){
-    void vscode.window.showErrorMessage(duplicates.values.toString+PushValidationModal.duplicateFileNamesErrorMsg, { modal: true })
-    return false
-  }
-  return true
 }
 
 export const progressWithTimeEst = async<T>(
@@ -235,11 +221,8 @@ export const getMessage = async (): Promise<string | undefined> => {
 }
 
 export const pushContent = (hostContext: ExtensionHostContext) => async () => {
-  //Check Resources for duplicates
-  let validResources = await validateResources()
-  
   // Do a precursory check for known errors (fast!)
-  if (validResources && canPush(getErrorDiagnosticsBySource())) {
+  if (canPush(getErrorDiagnosticsBySource())) {
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Push Content',

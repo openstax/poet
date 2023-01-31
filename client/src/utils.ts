@@ -226,21 +226,3 @@ export async function configureWorkspaceSettings(): Promise<void> {
   await config.update(property, '', target)
   await config.update(property, value, target)
 }
-
-
-export async function findDuplicates(folderPath: string): Promise<Set<string>> {
-  const mediaFiles = fs.readdirSync(folderPath).sort()
-
-    const map = new Map<string, Set<string>|undefined>()
-    const duplicates = new Set<string>()
-    mediaFiles.forEach(filename => {
-      const lowercaseFilename = filename.toLowerCase()
-      if (map.has(lowercaseFilename)) {
-        map.set(lowercaseFilename, map.get(lowercaseFilename)?.add(filename))
-        duplicates.add(filename).add(lowercaseFilename)
-      } else {
-        map.set(lowercaseFilename, new Set(filename))
-      }
-    })
-    return duplicates
-}

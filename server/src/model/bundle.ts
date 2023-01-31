@@ -7,6 +7,7 @@ import { BookNode } from './book'
 import { Fileish, ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
 import { ResourceNode } from './resource'
 import fs from 'fs'
+import { isThrowStatement } from 'typescript'
 
 export class Bundle extends Fileish implements Bundleish {
   public readonly allResources: Factory<ResourceNode> = new Factory((absPath: string) => new ResourceNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
@@ -67,26 +68,32 @@ export class Bundle extends Fileish implements Bundleish {
     return false
   }
 
-  public checkDuplicateResources() {
-    const mediaFiles = fs.readdirSync(this.pathHelper.join(this.workspaceRootUri, 'media')).sort()
-    const map = new Map<string, I.List<string>|undefined>()
-    mediaFiles.forEach(filename => {
-      const lowercaseFilename = filename.toLowerCase()
-      if (map.has(lowercaseFilename)) {
-        map.set(lowercaseFilename, map.get(lowercaseFilename)?.push(filename))
-      } else {
-        map.set(lowercaseFilename, I.List<string>([filename]))
-      }
+  public directoryWalkThrough(folderPaths: string[], files: string[]) {
+    // this method takes a set of folders and recursively list the file children of the different folders
+    folderPaths.forEach(folderPath => {
+      fs.readdirSync(folderPath).forEach(file => {
+        const absolutePath = this.pathHelper.join(folderPath, file)
+        if (fs.statSync(absolutePath).isDirectory()) return this.directoryWalkThrough([absolutePath], files)
+        else return files.push(absolutePath)
+      })
     })
-    let duplicates = false
+    return files
+  }
 
-    for (const [, values] of map) {
-      if (values !== undefined && values.size > 1) {
-        duplicates = true
-        console.error(`${values.join(', ')} are duplicates`)
+  public checkDuplicateResources() {
+    // This method list the files in a set of directories and sort them. If two subsequent filenames have the same name in lowercase then they are duplicates.
+    const mediaFiles = this.directoryWalkThrough([this.pathHelper.join(this.workspaceRootUri, 'media')], []).sort()
+    const duplicates = I.Set<string>()
+    if (mediaFiles.length > 1) {
+      for (let index = 1; index < mediaFiles.length; index++) {
+        if (mediaFiles[index].toLowerCase() === mediaFiles[index - 1].toLowerCase()) {
+          console.error(`${mediaFiles[index]} and ${mediaFiles[index - 1]} are duplicates`)
+          duplicates.add(mediaFiles[index])
+          duplicates.add(mediaFiles[index - 1])
+        }
       }
     }
-    return duplicates
+    return duplicates.size > 0
   }
 
   protected getValidationChecks(): ValidationCheck[] {
