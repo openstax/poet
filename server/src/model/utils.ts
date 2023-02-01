@@ -39,7 +39,6 @@ export interface PathHelper<T> {
 export interface Range {
   readonly start: Position
   readonly end: Position
-  readonly messageParameters?: string
 }
 
 export interface WithRange<T> extends HasRange {

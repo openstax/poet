@@ -1,10 +1,10 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange, calculateElementPositions, expectValue, NOWHERE, join, Range } from './utils'
+import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange, calculateElementPositions, expectValue, NOWHERE, join, formatString } from './utils'
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
-import { Fileish, ValidationCheck, ValidationKind } from './fileish'
+import { Fileish, ModelError, ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
 import { ResourceNode } from './resource'
 import fs from 'fs'
 import path from 'path'
@@ -72,7 +72,7 @@ export class Bundle extends Fileish implements Bundleish {
     return files
   }
 
-  public checkDuplicateResources(): I.Set<Range> {
+  public checkDuplicateResources(): I.Set<ModelError> {
     // This method list the files in a set of directories and sort them. If two subsequent filenames have the same name in lowercase then they are duplicates.
     const x = URI.parse(this.workspaceRootUri)
     const paths = [path.join(x.fsPath, 'media')]
@@ -87,15 +87,8 @@ export class Bundle extends Fileish implements Bundleish {
         }
       }
     }
-    if (duplicates.size === 0) return I.Set<Range>()
-    else {
-      const rangeWithMessage: Range = {
-        start: { line: 0, character: 0 },
-        end: { line: 0, character: 0 },
-        messageParameters: duplicates.join(' ,')
-      }
-      return I.Set([rangeWithMessage])
-    }
+    if (duplicates.size === 0) return I.Set<ModelError>()
+    else return I.Set([new ModelError(this, formatString('{0} have similar names.', duplicates.join(' ,')), ValidationSeverity.ERROR, NOWHERE)])
   }
 
   protected getValidationChecks(): ValidationCheck[] {

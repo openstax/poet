@@ -55,7 +55,7 @@ export function ignoreConsoleWarnings(fn: () => void) {
 export function expectErrors<T extends Fileish>(node: T, validationKinds: ValidationKind[]) {
   const v = node.validationErrors
   expect(v.nodesToLoad.size).toBe(0) // Everything should have loaded
-  expect(v.errors.toArray().map(e => e.message).sort()).toEqual(validationKinds.map(v => v.title).sort())
+  expect(v.errors.toArray().map(e => e.title).sort()).toEqual(validationKinds.map(v => v.title).sort())
 }
 
 export interface PageInfo {
