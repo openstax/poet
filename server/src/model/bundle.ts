@@ -1,13 +1,14 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange, calculateElementPositions, expectValue, NOWHERE, join } from './utils'
+import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange, calculateElementPositions, expectValue, NOWHERE, join, Range } from './utils'
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
-import { Fileish, ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
+import { Fileish, ValidationCheck, ValidationKind } from './fileish'
 import { ResourceNode } from './resource'
 import fs from 'fs'
-import { isThrowStatement } from 'typescript'
+import path from 'path'
+import { URI } from 'vscode-uri'
 
 export class Bundle extends Fileish implements Bundleish {
   public readonly allResources: Factory<ResourceNode> = new Factory((absPath: string) => new ResourceNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
@@ -58,21 +59,12 @@ export class Bundle extends Fileish implements Bundleish {
     return this.isDuplicate(filename, this.allResources.all, (r: ResourceNode): string => { return r.absPath.toLowerCase() })
   }
 
-  public unusedResources(nodes: I.Set<ResourceNode>) {
-    const resources = fs.readdirSync(this.pathHelper.join(this.workspaceRootUri, 'media')).map(f => this.pathHelper.join(this.workspaceRootUri, 'media', f)).sort()
-    const referencedResources = nodes.map(node => node.absPath)
-    const unused = resources.filter(file => !referencedResources.includes(file))
-    if (unused.length > 0) {
-      return true
-    }
-    return false
-  }
-
   public directoryWalkThrough(folderPaths: string[], files: string[]) {
+    Fileish.debug(folderPaths)
     // this method takes a set of folders and recursively list the file children of the different folders
-    folderPaths.forEach(folderPath => {
+    folderPaths.filter(folderPath => fs.existsSync(folderPath)).forEach(folderPath => {
       fs.readdirSync(folderPath).forEach(file => {
-        const absolutePath = this.pathHelper.join(folderPath, file)
+        const absolutePath = path.join(folderPath, file)
         if (fs.statSync(absolutePath).isDirectory()) return this.directoryWalkThrough([absolutePath], files)
         else return files.push(absolutePath)
       })
@@ -80,21 +72,30 @@ export class Bundle extends Fileish implements Bundleish {
     return files
   }
 
-  public checkDuplicateResources() {
+  public checkDuplicateResources(): I.Set<Range> {
     // This method list the files in a set of directories and sort them. If two subsequent filenames have the same name in lowercase then they are duplicates.
-    const mediaFiles = this.directoryWalkThrough([this.pathHelper.join(this.workspaceRootUri, 'media')], [])
-    mediaFiles.sort()
-    console.log(mediaFiles)
-    let duplicates = false
+    const x = URI.parse(this.workspaceRootUri)
+    const paths = [path.join(x.fsPath, 'media')]
+    const mediaFiles = this.directoryWalkThrough(paths, []).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+    const duplicates = I.Set<string>()
     if (mediaFiles.length > 1) {
       for (let index = 1; index < mediaFiles.length; index++) {
         if (mediaFiles[index].toLowerCase() === mediaFiles[index - 1].toLowerCase()) {
-          console.error(`${mediaFiles[index]} and ${mediaFiles[index - 1]} are duplicates`)
-          duplicates = true
+          Fileish.debug(`${mediaFiles[index]} and ${mediaFiles[index - 1]} are duplicates`)
+          duplicates.add(mediaFiles[index])
+          duplicates.add(mediaFiles[index - 1])
         }
       }
     }
-    return duplicates
+    if (duplicates.size === 0) return I.Set<Range>()
+    else {
+      const rangeWithMessage: Range = {
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+        messageParameters: duplicates.join(' ,')
+      }
+      return I.Set([rangeWithMessage])
+    }
   }
 
   protected getValidationChecks(): ValidationCheck[] {
@@ -113,12 +114,7 @@ export class Bundle extends Fileish implements Bundleish {
       {
         message: BundleValidationKind.DUPLICATE_RESOURCES,
         nodesToLoad: I.Set(),
-        fn: () => this.checkDuplicateResources() ? I.Set([NOWHERE]) : I.Set()
-      },
-      {
-        message: BundleValidationKind.UNUSED_RESOURCES,
-        nodesToLoad: I.Set(),
-        fn: () => this.unusedResources(this.allResources.all) ? I.Set([NOWHERE]) : I.Set()
+        fn: () => this.checkDuplicateResources()
       }
     ]
   }
@@ -127,6 +123,5 @@ export class Bundle extends Fileish implements Bundleish {
 export class BundleValidationKind extends ValidationKind {
   static MISSING_BOOK = new BundleValidationKind('Missing book')
   static NO_BOOKS = new BundleValidationKind('No books defined')
-  static DUPLICATE_RESOURCES = new BundleValidationKind('Some Files with similar names')
-  static UNUSED_RESOURCES = new BundleValidationKind('Unused resources found', ValidationSeverity.WARNING)
+  static DUPLICATE_RESOURCES = new BundleValidationKind('{0} have similar names.')
 }

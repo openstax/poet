@@ -2,7 +2,7 @@ import path from 'path'
 import I from 'immutable'
 import { DOMParser } from 'xmldom'
 import * as Quarx from 'quarx'
-import { Bundleish, Opt, PathHelper, expectValue, Range, HasRange, NOWHERE } from './utils'
+import { Bundleish, Opt, PathHelper, expectValue, Range, HasRange, NOWHERE, formatString } from './utils'
 
 export enum ValidationSeverity {
   ERROR = 1,
@@ -46,7 +46,7 @@ export class ValidationResponse {
 }
 
 function toValidationErrors(node: Fileish, message: ValidationKind, sources: I.Set<Range>) {
-  return sources.map(s => new ModelError(node, message, s))
+  return sources.map(s => s.messageParameters == null ? new ModelError(node, message, s) : new ModelError(node, new ValidationKind(formatString(message.title, s.messageParameters)), s))
 }
 
 export abstract class Fileish {

@@ -455,7 +455,7 @@ describe('Push Button Test Suite', () => {
     // CNXML errors
     errorsBySource.set(DiagnosticSource.poet, [[fileUri, poetError]])
     expect(!pushContent.canPush(errorsBySource)).toBe(true)
-    expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)
+    expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.poetErrorMsg, { modal: true })).toBe(true)
 
     // Both Poet and XML errors
     errorsBySource.clear()
@@ -463,7 +463,7 @@ describe('Push Button Test Suite', () => {
     errorsBySource.set(DiagnosticSource.poet, [[fileUri, poetError]])
     errorsBySource.set(DiagnosticSource.xml, [[fileUri, xmlError]])
     expect(!pushContent.canPush(errorsBySource)).toBe(true)
-    expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.cnxmlErrorMsg, { modal: true })).toBe(true)
+    expect(showErrorMsgStub.calledOnceWith(pushContent.PushValidationModal.poetErrorMsg, { modal: true })).toBe(true)
 
     // XML errors, user cancels
     errorsBySource.clear()

@@ -39,6 +39,7 @@ export interface PathHelper<T> {
 export interface Range {
   readonly start: Position
   readonly end: Position
+  readonly messageParameters?: string
 }
 
 export interface WithRange<T> extends HasRange {
@@ -197,4 +198,12 @@ export const tripleEq = <T>(n1: T, n2: T) => {
 }
 export const equalsPos = (n1: Position, n2: Position) => {
   return n1.line === n2.line && n1.character === n2.character
+}
+
+// String Formatter
+export function formatString(str: string, ...val: string[]) {
+  for (let index = 0; index < val.length; index++) {
+    str = str.replace(`{${index}}`, val[index])
+  }
+  return str
 }
