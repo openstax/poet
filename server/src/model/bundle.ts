@@ -77,13 +77,12 @@ export class Bundle extends Fileish implements Bundleish {
     const x = URI.parse(this.workspaceRootUri)
     const paths = [path.join(x.fsPath, 'media')]
     const mediaFiles = this.directoryWalkThrough(paths, []).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-    const duplicates = I.Set<string>()
+    let duplicates = I.Set<string>()
     if (mediaFiles.length > 1) {
       for (let index = 1; index < mediaFiles.length; index++) {
         if (mediaFiles[index].toLowerCase() === mediaFiles[index - 1].toLowerCase()) {
           Fileish.debug(`${mediaFiles[index]} and ${mediaFiles[index - 1]} are duplicates`)
-          duplicates.add(mediaFiles[index])
-          duplicates.add(mediaFiles[index - 1])
+          duplicates = duplicates.add(mediaFiles[index]).add(mediaFiles[index - 1])
         }
       }
     }
