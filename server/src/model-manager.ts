@@ -201,6 +201,14 @@ export class ModelManager {
     this.didLoadOrphans = true
   }
 
+  private sendAllDiagnostics() {
+    for (const node of this.bundle.allNodes) {
+      if (node.isLoaded) {
+        this.sendFileDiagnostics(node)
+      }
+    }
+  }
+
   async processFilesystemChange(evt: FileEvent): Promise<I.Set<Fileish>> {
     const { bundle } = this
     const { type, uri } = evt
@@ -214,6 +222,7 @@ export class ModelManager {
       if (node !== undefined) {
         ModelManager.debug('[FILESYSTEM_EVENT] Adding item')
         await this.readAndLoad(node)
+        this.sendAllDiagnostics()
         return I.Set([node])
       } else {
         // No, we are adding something unknown. Ignore
@@ -225,7 +234,7 @@ export class ModelManager {
       if (item !== undefined) {
         ModelManager.debug('[FILESYSTEM_EVENT] Found item')
         await this.readAndUpdate(item)
-        this.sendFileDiagnostics(item)
+        this.sendAllDiagnostics()
         return I.Set([item])
       } else {
         return I.Set()
@@ -250,7 +259,11 @@ export class ModelManager {
         s.union(bundle.allResources.removeByKeyPrefix(filePathDir))
       })
       // Unload all removed nodes so users do not think the files still exist
-      removedNodes.forEach(n => n.load(undefined))
+      removedNodes.forEach(n => {
+        n.load(undefined)
+        this.sendFileDiagnostics(n)
+      })
+      this.sendAllDiagnostics()
       return removedNodes
     }
   }
