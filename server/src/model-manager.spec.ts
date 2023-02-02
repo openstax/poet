@@ -4,22 +4,25 @@ import path from 'path'
 import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
 import I from 'immutable'
+import fetch, * as fetchModule from 'node-fetch'
 import { createConnection, WatchDog } from 'vscode-languageserver'
 import { DiagnosticSeverity, FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
 import xmlFormat from 'xml-formatter'
 import { expectValue, Opt, join, PathKind } from './model/utils'
 import { Bundle, BundleValidationKind } from './model/bundle'
 import { ModelManager } from './model-manager'
-import { bookMaker, bundleMaker, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle, PageInfo, pageMaker } from './model/spec-helpers.spec'
+import { bookMaker, bundleMaker, expectErrors, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle, PageInfo, pageMaker } from './model/spec-helpers.spec'
 import { Job, JobRunner } from './job-runner'
 
-import { PageNode, PageValidationKind } from './model/page'
+import { LINKED_EXERCISE_PREFIX_TAG_URL, PageNode, PageValidationKind } from './model/page'
 import { TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc'
 import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { URI, Utils } from 'vscode-uri'
+import { FetchCache } from './fetch-cache'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
+FetchCache.debug = () => {} // Turn off logging
 
 // xml-formatter calls require('xml-parser-xo') _inside_ the format function
 // so we need require to cache it before we start up mock-fs
@@ -60,15 +63,15 @@ describe('Bundle Manager', () => {
     expect(manager.orphanedPages.size).toBe(1)
     expect(manager.orphanedPages.first()).toBe(orphanedPage)
   })
-  it('updateFileContents()', () => {
+  it('updateFileContents()', async () => {
     const enqueueStub = sinon.stub(manager.jobRunner, 'enqueue')
     loadSuccess(manager.bundle)
-    manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
+    await manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(enqueueStub.callCount).toBe(0)
 
     // Non-existent node
-    manager.updateFileContents('path/to/non-existent/image', 'some bits')
+    await manager.updateFileContents('path/to/non-existent/image', 'some bits')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(enqueueStub.callCount).toBe(0)
   })
@@ -114,28 +117,62 @@ describe('Bundle Manager', () => {
     await manager.jobRunner.done()
     expect(manager.bundle.books.toArray()).toEqual([])
   })
-  it('calls sendDiagnostics with objects that can be serialized (no cycles)', () => {
-    ignoreConsoleWarnings(() => manager.updateFileContents(manager.bundle.absPath, '<notvalidXML'))
+  it('calls sendDiagnostics with objects that can be serialized (no cycles)', async () => {
+    await ignoreConsoleWarnings(async () => await manager.updateFileContents(manager.bundle.absPath, '<notvalidXML'))
     expect(sendDiagnosticsStub.callCount).toBe(1)
     const diagnosticsObj = sendDiagnosticsStub.getCall(0).args[0]
     expect(diagnosticsObj.uri).toBeTruthy()
     expect(diagnosticsObj.diagnostics).toBeTruthy()
     expect(() => JSON.stringify(diagnosticsObj)).not.toThrow()
   })
-  it('populates the Diagnostics.source field so that pushContent can filter on it', () => {
+  it('populates the Diagnostics.source field so that pushContent can filter on it', async () => {
     loadSuccess(manager.bundle)
-    manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
+    await manager.updateFileContents(manager.bundle.absPath, 'I am not XML so a Parse Error should be sent to diagnostics')
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].source).toBe(DiagnosticSource.cnxml)
   })
-  it(`sends a warning when the Diagnostics message is '${PageValidationKind.MISSING_ID.title}'`, () => {
+  it(`sends a hint when the Diagnostics message is '${PageValidationKind.MISSING_ID.title}'`, async () => {
     // Load the pages
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
     const page = loadSuccess(first(book.pages))
 
-    manager.updateFileContents(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
+    await manager.updateFileContents(page.absPath, pageMaker({ extraCnxml: '<para/>' })) // Element that needs an ID but does not have one
     expect(sendDiagnosticsStub.callCount).toBe(1)
     expect(sendDiagnosticsStub.firstCall.args[0].diagnostics[0].severity).toBe(DiagnosticSeverity.Information)
+  })
+})
+
+describe('Fetching exercises', () => {
+  const sinon = SinonRoot.createSandbox()
+  beforeEach(() => {
+    mockfs({
+      'META-INF/books.xml': bundleMaker({ books: ['foobar'] })
+    })
+  })
+  afterEach(() => {
+    sinon.restore()
+    mockfs.restore()
+  })
+  it('fetches an exercise', async () => {
+    const exTag = 'poet-test-1234'
+    const manager = new ModelManager(new Bundle(FS_PATH_HELPER, process.cwd()), conn)
+    loadSuccess(manager.bundle)
+    const page = manager.bundle.allPages.getOrAdd('somepath/filename')
+
+    const fetchResponse = {
+      items: [] // 0 items should cause a validation error
+    }
+
+    const fetchImpl = sinon.spy(async (url: string) => {
+      return new fetchModule.Response(JSON.stringify(fetchResponse), { status: 200 })
+    })
+    FetchCache.fetchImpl = fetchImpl as unknown as typeof fetch
+
+    await manager.updateFileContents(page.absPath, pageMaker({
+      pageLinks: [{ url: `${LINKED_EXERCISE_PREFIX_TAG_URL}${exTag}` }]
+    }))
+    expect(fetchImpl.callCount).toBe(1)
+    expectErrors(page, [PageValidationKind.EXERCISE_COUNT_ZERO]) // Malformed Exercise because 0 items were in the response
   })
 })
 
@@ -174,11 +211,11 @@ describe('Open Document contents cache', () => {
     sinon.restore()
   })
 
-  it('Updates the cached contents', () => {
+  it('Updates the cached contents', async () => {
     const manager = new ModelManager(makeBundle(), conn)
-    manager.updateFileContents(manager.bundle.absPath, 'value_1')
+    await manager.updateFileContents(manager.bundle.absPath, 'value_1')
     expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_1')
-    manager.updateFileContents(manager.bundle.absPath, 'value_2')
+    await manager.updateFileContents(manager.bundle.absPath, 'value_2')
     expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe('value_2')
     manager.closeDocument(manager.bundle.absPath)
     expect(manager.getOpenDocContents(manager.bundle.absPath)).toBe(undefined)
@@ -342,7 +379,7 @@ describe('processFilesystemChange()', () => {
     const book = loadSuccess(first(bundle.books))
 
     expect(manager.bundle.books.toArray()).toEqual([book])
-    manager.updateFileContents(manager.bundle.absPath, bundleMaker({}))
+    await manager.updateFileContents(manager.bundle.absPath, bundleMaker({}))
     expect(manager.bundle.books.toArray()).toEqual([])
     expect((await fireChange(FileChangeType.Changed, 'META-INF/books.xml')).size).toBe(1)
     expect(manager.bundle.books.toArray()).toEqual([]) // Should still be empty because the unsaved changes
@@ -366,7 +403,7 @@ describe('Image Autocomplete', () => {
     sinon.restore()
   })
 
-  it('Returns only orphaned images', () => {
+  it('Returns only orphaned images', async () => {
     const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
 
     const imagePath = '../../media/image.png'
@@ -377,7 +414,7 @@ describe('Image Autocomplete', () => {
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
-    manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
+    await manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
@@ -388,7 +425,7 @@ describe('Image Autocomplete', () => {
     expect(results[0].label).toBe(orphanedPath)
   })
 
-  it('Returns no results outside image tag', () => {
+  it('Returns no results outside image tag', async () => {
     const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
 
     const imagePath = '../../media/image.png'
@@ -399,7 +436,7 @@ describe('Image Autocomplete', () => {
     existingImage.load('image-bits')
     orphanedImage.load('image-bits')
 
-    manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
+    await manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath] }))
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
@@ -408,7 +445,7 @@ describe('Image Autocomplete', () => {
     expect(results).toEqual([])
   })
 
-  it('Returns no results outside replacement range', () => {
+  it('Returns no results outside replacement range', async () => {
     const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
 
     const imagePath = '../../media/image.png'
@@ -422,7 +459,7 @@ describe('Image Autocomplete', () => {
     orphanedImage.load('image-bits')
     missingImage.load('')
 
-    manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath, missingPath] }))
+    await manager.updateFileContents(page.absPath, pageMaker({ imageHrefs: [imagePath, missingPath] }))
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 

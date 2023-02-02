@@ -4,7 +4,7 @@ import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
-import { Fileish, ValidationCheck, ValidationKind } from './fileish'
+import { buildValidationCheck, Fileish, ValidationCheck, ValidationKind } from './fileish'
 import { ResourceNode } from './resource'
 
 export class Bundle extends Fileish implements Bundleish {
@@ -52,16 +52,18 @@ export class Bundle extends Fileish implements Bundleish {
   protected getValidationChecks(): ValidationCheck[] {
     const books = this.__books()
     return [
-      {
-        message: BundleValidationKind.MISSING_BOOK,
+      buildValidationCheck({
         nodesToLoad: this.books,
-        fn: () => books.filter(b => !b.v.exists).map(b => b.range)
-      },
-      {
-        message: BundleValidationKind.NO_BOOKS,
+        itemsToCheck: books,
+        toRange: b => b.range,
+        validator: b => b.v.exists ? undefined : BundleValidationKind.MISSING_BOOK
+      }),
+      buildValidationCheck({
         nodesToLoad: I.Set(),
-        fn: () => books.isEmpty() ? I.Set([NOWHERE]) : I.Set()
-      }
+        itemsToCheck: I.Set([this]), // Kinda HACKy
+        toRange: i => NOWHERE,
+        validator: _ => books.isEmpty() ? BundleValidationKind.NO_BOOKS : undefined
+      })
     ]
   }
 }

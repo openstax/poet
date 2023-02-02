@@ -119,8 +119,11 @@ documents.onDidClose(({ document }) => {
 })
 
 documents.onDidChangeContent(({ document }) => {
-  const manager = getBundleForUri(document.uri)
-  manager.updateFileContents(document.uri, document.getText())
+  const inner = async (): Promise<void> => {
+    const manager = getBundleForUri(document.uri)
+    await manager.updateFileContents(document.uri, document.getText())
+  }
+  inner().catch(err => { throw err })
 })
 connection.onDidChangeWatchedFiles(({ changes }) => {
   const inner = async (): Promise<void> => {

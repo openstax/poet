@@ -48,6 +48,16 @@ export interface HasRange {
   range: Range
 }
 
+export function filterNull<T>(set: I.Set<Opt<T>>): I.Set<T> {
+  return I.Set<T>().withMutations(s => {
+    set.forEach(s1 => {
+      if (s1 !== undefined) {
+        s.add(s1)
+      }
+    })
+  })
+}
+
 export function textWithRange(el: Element, attr?: string): WithRange<string> {
   const range = calculateElementPositions(el)
   const v = attr !== undefined ? el.getAttribute(attr) : el.textContent

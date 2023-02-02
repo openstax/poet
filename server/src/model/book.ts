@@ -2,7 +2,7 @@ import I from 'immutable'
 import * as Quarx from 'quarx'
 import { PageNode } from './page'
 import { Opt, WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, TocNodeKind } from './utils'
-import { Fileish, ValidationCheck, ValidationKind } from './fileish'
+import { buildValidationCheck, Fileish, ValidationCheck, ValidationKind } from './fileish'
 
 const equalsTocNodeWithRange = (n1: TocNodeWithRange, n2: TocNodeWithRange): boolean => {
   /* istanbul ignore else */
@@ -133,22 +133,27 @@ export class BookNode extends Fileish {
     const duplicateTitles = I.Set(findDuplicates(nonPages.map(subcol => subcol.title)))
     const pageLeaves = I.List<TocPageWithRange>().withMutations(acc => this.collectPages(this.__toc, acc))
     const duplicatePages = I.Set(findDuplicates(pages))
+    const toRange = <T extends HasRange>(l: T) => l.range
+
     return [
-      {
-        message: BookValidationKind.MISSING_PAGE,
+      buildValidationCheck({
         nodesToLoad: I.Set(pages),
-        fn: () => I.Set(this.tocLeaves()).filter(p => !p.page.exists).map(l => l.range)
-      },
-      {
-        message: BookValidationKind.DUPLICATE_CHAPTER_TITLE,
+        itemsToCheck: I.Set(this.tocLeaves()),
+        toRange,
+        validator: p => p.page.exists ? undefined : BookValidationKind.MISSING_PAGE
+      }),
+      buildValidationCheck({
         nodesToLoad: I.Set(),
-        fn: () => I.Set(nonPages.filter(subcol => duplicateTitles.has(subcol.title)).map(l => l.range))
-      },
-      {
-        message: BookValidationKind.DUPLICATE_PAGE,
+        itemsToCheck: I.Set(nonPages),
+        toRange,
+        validator: subcol => duplicateTitles.has(subcol.title) ? BookValidationKind.DUPLICATE_CHAPTER_TITLE : undefined
+      }),
+      buildValidationCheck({
         nodesToLoad: I.Set(),
-        fn: () => I.Set(pageLeaves.filter(p => duplicatePages.has(p.page)).map(l => l.range))
-      }
+        itemsToCheck: I.Set(pageLeaves),
+        toRange,
+        validator: p => duplicatePages.has(p.page) ? BookValidationKind.DUPLICATE_PAGE : undefined
+      })
     ]
   }
 }

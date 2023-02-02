@@ -2,7 +2,7 @@ import path from 'path'
 import I from 'immutable'
 import { DOMParser } from 'xmldom'
 import * as Quarx from 'quarx'
-import { Bundleish, Opt, PathHelper, expectValue, Range, HasRange, NOWHERE } from './utils'
+import { Bundleish, Opt, PathHelper, expectValue, Range, HasRange, NOWHERE, filterNull } from './utils'
 
 export enum ValidationSeverity {
   ERROR = 1,
@@ -27,11 +27,35 @@ export class WrappedParseError<T extends Error> extends ParseError {
   }
 }
 
-export interface ValidationCheck {
-  message: ValidationKind
-  nodesToLoad: I.Set<Fileish>
-  fn: (loadedNodes?: I.Set<Fileish>) => I.Set<Range>
+interface RangeErrorPair {
+  kind: ValidationKind
+  range: Range
 }
+export interface ValidationCheck {
+  nodesToLoad: I.Set<Fileish>
+  getErrors: () => I.Set<RangeErrorPair>
+}
+
+export interface BuildValidationOptions<T> {
+  nodesToLoad: I.Set<Fileish>
+  itemsToCheck: I.Set<T>
+  toRange: (item: T) => Range
+  validator: (item: T) => Opt<ValidationKind>
+}
+export function buildValidationCheck<T>({ nodesToLoad, itemsToCheck, toRange, validator }: BuildValidationOptions<T>): ValidationCheck {
+  return {
+    nodesToLoad,
+    getErrors: () => filterNull(itemsToCheck.map(i => {
+      const kind = validator(i)
+      if (kind !== undefined) {
+        return { range: toRange(i), kind }
+      } else {
+        return undefined
+      }
+    }))
+  }
+}
+
 export class ValidationResponse {
   constructor(public readonly errors: I.Set<ModelError>, public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
 
@@ -45,10 +69,6 @@ export class ValidationResponse {
   }
 }
 
-function toValidationErrors(node: Fileish, message: ValidationKind, sources: I.Set<Range>) {
-  return sources.map(s => new ModelError(node, message, s))
-}
-
 export abstract class Fileish {
   private readonly _isLoaded = Quarx.observable.box(false)
   private readonly _exists = Quarx.observable.box(false)
@@ -60,7 +80,7 @@ export abstract class Fileish {
     this.absPath = this.pathHelper.canonicalize(absPath)
   }
 
-  static debug = (...args: any[]) => {} // console.debug
+  static debug = (...args: any[]) => { } // console.debug
   protected abstract getValidationChecks(): ValidationCheck[]
   public get isLoaded() { return this._isLoaded.get() }
   public get workspacePath() { return path.relative(this.bundle.workspaceRootUri, this.absPath) }
@@ -146,7 +166,10 @@ export abstract class Fileish {
     } else if (!this._exists.get()) {
       return new ValidationResponse(I.Set(), I.Set())
     } else {
-      const responses = this.getValidationChecks().map(c => ValidationResponse.continueOnlyIfLoaded(c.nodesToLoad, () => toValidationErrors(this, c.message, c.fn(c.nodesToLoad))))
+      const responses = this.getValidationChecks().map(c => ValidationResponse.continueOnlyIfLoaded(c.nodesToLoad, () => {
+        const errors = c.getErrors()
+        return errors.map(err => new ModelError(this, err.kind, err.range))
+      }))
       const nodesToLoad = I.Set(responses.map(r => r.nodesToLoad)).flatMap(x => x)
       const errors = I.Set(responses.map(r => r.errors)).flatMap(x => x)
       return new ValidationResponse(errors, nodesToLoad)

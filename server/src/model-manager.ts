@@ -10,7 +10,7 @@ import { URI, Utils } from 'vscode-uri'
 import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode, TocPage } from '../../common/src/toc'
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
-import { PageLinkKind, PageNode } from './model/page'
+import { ExercisesJSON, PageLinkKind, PageNode } from './model/page'
 import { Fileish } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
@@ -18,6 +18,7 @@ import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '
 import { BookNode, TocSubbookWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
+import { FetchCache } from './fetch-cache'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -49,6 +50,15 @@ function findOrCreateNode(bundle: Bundle, absPath: string) {
     return bundle.allPages.getOrAdd(absPath)
   } else if (BOOK_RE.test(absPath)) {
     return bundle.allBooks.getOrAdd(absPath)
+  } else {
+    // Check each of the factories to see if the node exists
+    const book = bundle.allBooks.get(absPath)
+    /* istanbul ignore if */
+    if (book !== undefined) return book
+    const page = bundle.allPages.get(absPath)
+    if (page !== undefined) return page
+    const resource = bundle.allResources.get(absPath)
+    return resource
   }
 }
 
@@ -116,6 +126,7 @@ export class ModelManager {
   public static debug: (...args: any[]) => void = console.debug
 
   public readonly jobRunner = new JobRunner()
+  private readonly fetchCache = new FetchCache<ExercisesJSON>()
   private readonly openDocuments = new Map<string, string>()
   private didLoadOrphans = false
   private bookTocs: BookToc[] = []
@@ -255,7 +266,7 @@ export class ModelManager {
     }
   }
 
-  public updateFileContents(absPath: string, contents: string) {
+  private updateFileContentsOnly(absPath: string, contents: string) {
     const node = findOrCreateNode(this.bundle, absPath)
     if (node === undefined) {
       ModelManager.debug('[DOC_UPDATER] Could not find model for this file so ignoring update events', absPath)
@@ -263,8 +274,18 @@ export class ModelManager {
     }
     ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
     node.load(contents)
-    this.sendFileDiagnostics(node)
     this.openDocuments.set(absPath, contents)
+    return node
+  }
+
+  public async updateFileContents(absPath: string, contents: string) {
+    const node = this.updateFileContentsOnly(absPath, contents)
+    if (node instanceof PageNode) {
+      await this.fetchAndSetExercises(node)
+    }
+    if (node !== undefined) {
+      this.sendFileDiagnostics(node)
+    }
   }
 
   public closeDocument(absPath: string) {
@@ -290,15 +311,22 @@ export class ModelManager {
     }
   }
 
+  private async load(node: Fileish, fileContent: Opt<string>) {
+    node.load(fileContent)
+    if (node instanceof PageNode) {
+      await this.fetchAndSetExercises(node)
+    }
+  }
+
   private async readAndLoad(node: Fileish) {
     if (node.isLoaded) { return }
     const fileContent = await this.readOrNull(node)
-    node.load(fileContent)
+    await this.load(node, fileContent)
   }
 
   private async readAndUpdate(node: Fileish) {
     const fileContent = await this.readOrNull(node)
-    node.load(fileContent)
+    await this.load(node, fileContent)
   }
 
   private sendFileDiagnostics(node: Fileish) {
@@ -343,11 +371,11 @@ export class ModelManager {
       {
         type: 'FILEOPENED_SEND_DIAGNOSTICS',
         context,
-        fn: () => {
+        fn: async () => {
           const node = findNode(this.bundle, uri)
           if (node !== undefined) {
             if (content !== undefined) {
-              this.updateFileContents(uri, content)
+              await this.updateFileContents(uri, content)
             } else {
               this.sendFileDiagnostics(node)
             }
@@ -394,7 +422,7 @@ export class ModelManager {
     await this.readAndLoad(page)
     const ret: DocumentLink[] = []
     for (const pageLink of page.pageLinks) {
-      if (pageLink.type === PageLinkKind.URL) {
+      if (pageLink.type === PageLinkKind.URL || pageLink.type === PageLinkKind.EXERCISE) {
         ret.push(DocumentLink.create(pageLink.range, pageLink.url))
       } else {
         const targetPage = pageLink.page
@@ -433,6 +461,7 @@ export class ModelManager {
           const newXml = renameTitle(evt.newTitle, oldXml)
           await fs.promises.writeFile(fsPath, newXml)
           page.load(newXml) // Just speed up the process
+          await this.fetchAndSetExercises(page)
         } else {
           node.value.title = evt.newTitle
           await writeBookToc(book, bookToc)
@@ -572,12 +601,21 @@ export class ModelManager {
     const out = fn(fileContents, node.absPath)
 
     ModelManager.debug('[DOC_UPDATER] Updating contents of', node.workspacePath)
-    node.load(out)
+    await this.load(node, out)
     this.sendFileDiagnostics(node)
 
     const fsPath = URI.parse(node.absPath).fsPath
     await fs.promises.writeFile(fsPath, out)
     return true
+  }
+
+  async fetchAndSetExercises(node: PageNode) {
+    const urls = node.exerciseURLs
+    const map = new Map<string, ExercisesJSON>()
+    for (const url of urls) {
+      map.set(url, await this.fetchCache.get(url))
+    }
+    node.setExerciseCache(I.Map(map))
   }
 }
 

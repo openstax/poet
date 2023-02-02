@@ -1,7 +1,9 @@
 import expect from 'expect'
+import Immutable from 'immutable'
 import * as path from 'path'
-import { ELEMENT_TO_PREFIX, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
-import { expectErrors, first, FS_PATH_HELPER, makeBundle, pageMaker } from './spec-helpers.spec'
+import { ValidationKind } from './fileish'
+import { ELEMENT_TO_PREFIX, exerciseTagToUrl, EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID, EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID, LINKED_EXERCISE_PREFIX_NICK_URL, LINKED_EXERCISE_PREFIX_TAG_URL, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
+import { expectErrors, first, FS_PATH_HELPER, makeBundle, PageInfo, pageMaker } from './spec-helpers.spec'
 
 describe('Page', () => {
   let page = null as unknown as PageNode
@@ -36,6 +38,15 @@ describe('Page', () => {
   })
 })
 
+function expectPageErrors(expectedErrors: ValidationKind[], info: PageInfo, page?: PageNode) {
+  if (page === undefined) {
+    const bundle = makeBundle()
+    page = bundle.allPages.getOrAdd('somepage/filename')
+  }
+  page.load(pageMaker(info))
+  expectErrors(page, expectedErrors)
+}
+
 describe('Page validations', () => {
   it(PageValidationKind.MISSING_RESOURCE.title, () => {
     const bundle = makeBundle()
@@ -54,21 +65,20 @@ describe('Page validations', () => {
     expect(page.validationErrors.errors.size).toBe(0)
   })
   it(`${PageValidationKind.MISSING_RESOURCE.title} (iframe)`, () => {
-    const bundle = makeBundle()
-    const page = bundle.allPages.getOrAdd('somedir/filename.cnxml')
-    const missingIframe = bundle.allResources.getOrAdd('somedir/invalid-path-to-interactive')
-    missingIframe.load(undefined)
-    const info = {
+    expectPageErrors([], {
       extraCnxml: `
         <iframe src="https://openstax.org"/>
         <iframe src="http://openstax.org"/>
-        <iframe src="./invalid-path-to-interactive"/>
     `
-    }
-    page.load(pageMaker(info))
-    // Expect exactly one validation error
-    expect(page.validationErrors.errors.size).toBe(1)
-    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MISSING_RESOURCE)
+    })
+
+    const bundle = makeBundle()
+    const missingIframe = bundle.allResources.getOrAdd('somepage/invalid-path-to-interactive')
+    missingIframe.load(undefined)
+
+    expectPageErrors([PageValidationKind.MISSING_RESOURCE], {
+      extraCnxml: '<iframe src="./invalid-path-to-interactive"/>'
+    }, bundle.allPages.getOrAdd('somepage/filename'))
   })
   it(PageValidationKind.MISSING_TARGET.title, () => {
     const bundle = makeBundle()
@@ -76,16 +86,15 @@ describe('Page validations', () => {
     const target = bundle.allPages.getOrAdd('modules/m234/index.cnxml')
 
     // Url (always ok)
-    page.load(pageMaker({ pageLinks: [{ url: 'https://openstax.org' }] }))
-    expect(page.validationErrors.errors.size).toBe(0)
+    expectPageErrors([], { pageLinks: [{ url: 'https://openstax.org' }] })
 
     // Local id that does not exist
-    page.load(pageMaker({ pageLinks: [{ targetId: 'nonexistentid' }] }))
-    expect(page.validationErrors.errors.size).toBe(1)
+    expectPageErrors([PageValidationKind.MISSING_TARGET], {
+      pageLinks: [{ targetId: 'nonexistentid' }]
+    })
 
     // Local id that does exist
-    page.load(pageMaker({ elementIds: ['elementId1'], pageLinks: [{ targetId: 'elementId1' }] }))
-    expect(page.validationErrors.errors.size).toBe(0)
+    expectPageErrors([], { elementIds: ['elementId1'], pageLinks: [{ targetId: 'elementId1' }] })
 
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234' }] }))
     // Verify the target needs to be loaded
@@ -105,13 +114,13 @@ describe('Page validations', () => {
     expect(page.validationErrors.errors.size).toBe(1)
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'elementId1' }] }))
     expect(page.validationErrors.errors.size).toBe(0)
+
+    expectPageErrors([PageValidationKind.MISSING_TARGET], {
+      pageLinks: [{ url: '#anywhere' }]
+    })
   })
   it(PageValidationKind.MALFORMED_UUID.title, () => {
-    const bundle = makeBundle()
-    const page = bundle.allPages.getOrAdd('somepage/filename')
-    const info = { uuid: 'invalid-uuid-value' }
-    page.load(pageMaker(info))
-    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MALFORMED_UUID)
+    expectPageErrors([PageValidationKind.MALFORMED_UUID], { uuid: 'invalid-uuid-value' })
   })
   it(PageValidationKind.DUPLICATE_UUID.title, () => {
     const bundle = makeBundle()
@@ -124,29 +133,116 @@ describe('Page validations', () => {
     expectErrors(page2, [PageValidationKind.DUPLICATE_UUID])
   })
   it('Reports multiple validation errors', () => {
-    const bundle = makeBundle()
-    const page = bundle.allPages.getOrAdd('somepage')
-    page.load(pageMaker({ uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }] }))
-    expectErrors(page, [PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET])
+    expectPageErrors([PageValidationKind.MALFORMED_UUID, PageValidationKind.MISSING_TARGET], {
+      uuid: 'malformed-uuid', pageLinks: [{ targetId: 'nonexistent' }]
+    })
   })
   it(PageValidationKind.MISSING_ID.title, () => {
-    const bundle = makeBundle()
-    const page = bundle.allPages.getOrAdd('somepage/filename')
     const elementsThatRequireId = Array.from(ELEMENT_TO_PREFIX.keys()).map(tagName => `<${tagName}/>`)
     const expectedErrors = Array.from(ELEMENT_TO_PREFIX.keys()).map(_ => PageValidationKind.MISSING_ID)
-    const info = {
+    expectPageErrors(expectedErrors, {
       extraCnxml: elementsThatRequireId.join('')
-    }
-    page.load(pageMaker(info))
-    expectErrors(page, expectedErrors)
+    })
   })
   it(`${PageValidationKind.MISSING_ID.title} Terms inside a definition are ignored`, () => {
-    const bundle = makeBundle()
-    const page = bundle.allPages.getOrAdd('somepage/filename')
-    const info = {
+    expectPageErrors([], {
       extraCnxml: '<definition id="test"><term>No id here is okay</term></definition>'
-    }
-    page.load(pageMaker(info))
-    expectErrors(page, [])
+    })
+  })
+  it(PageValidationKind.EXERCISE_MISSING.title, () => {
+    expectPageErrors([PageValidationKind.EXERCISE_MISSING], {
+      pageLinks: [{ url: `${LINKED_EXERCISE_PREFIX_TAG_URL}ex1234` }]
+    })
+  })
+  it(`${PageValidationKind.EXERCISE_MISSING.title} for a nickname`, () => {
+    expectPageErrors([PageValidationKind.EXERCISE_MISSING], {
+      pageLinks: [{ url: `${LINKED_EXERCISE_PREFIX_NICK_URL}ex1234` }]
+    })
+  })
+
+  function buildPageWithExerciseLink(exTag: string, uuid?: string, bundle = makeBundle()) {
+    const page = bundle.allPages.getOrAdd('somepage/filename')
+    page.load(pageMaker({
+      uuid,
+      pageLinks: [{ url: `${LINKED_EXERCISE_PREFIX_TAG_URL}${exTag}` }]
+    }))
+    expect(page.exerciseURLs.size).toBe(1)
+    expect(page.exerciseURLs.first()).toEqual(exerciseTagToUrl(exTag))
+    return page
+  }
+  it(PageValidationKind.EXERCISE_COUNT_ZERO.title, () => {
+    const exTag = 'ex1234'
+    const page = buildPageWithExerciseLink(exTag)
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), { items: [] }]]))
+    expectErrors(page, [PageValidationKind.EXERCISE_COUNT_ZERO])
+  })
+  it(PageValidationKind.EXERCISE_COUNT_TOO_MANY.title, () => {
+    const exTag = 'ex1234'
+    const page = buildPageWithExerciseLink(exTag)
+    const exerciseJSON = { tags: [] }
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
+      items: [
+        exerciseJSON,
+        exerciseJSON
+      ]
+    }]]))
+    expectErrors(page, [PageValidationKind.EXERCISE_COUNT_TOO_MANY])
+  })
+  it(PageValidationKind.EXERCISE_NO_PAGES.title, () => {
+    const exTag = 'ex1234'
+    const page = buildPageWithExerciseLink(exTag)
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
+      items: [{ tags: [`${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:uuid-that-is-not-in-our-bundle`] }]
+    }]]))
+    expectErrors(page, [PageValidationKind.EXERCISE_NO_PAGES])
+  })
+  it(PageValidationKind.EXERCISE_PAGE_MISSING_FEATURE.title, () => {
+    const exTag = 'ex1234'
+    const uuid = '88888888-8888-4888-8888-888888888888'
+    const bundle = makeBundle()
+    const page = buildPageWithExerciseLink(exTag, uuid, bundle)
+    expect(bundle.allPages.all.filter(p => !p.isLoaded).toArray()).toEqual([])
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
+      items: [{
+        // Exercise JSON
+        tags: [
+          `${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:${uuid}`,
+          `${EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID}:element-id-that-is-not-in-the-target-page-which-is-our-page`
+        ]
+      }]
+    }]]))
+    expectErrors(page, [PageValidationKind.EXERCISE_PAGE_MISSING_FEATURE])
+  })
+  it(PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE.title, () => {
+    const exTag = 'ex1234'
+    const uuid = '88888888-8888-4888-8888-888888888888'
+    const otherUUID = '77777777-7777-4777-7777-777777777777'
+    const bundle = makeBundle()
+    const page = buildPageWithExerciseLink(exTag, uuid, bundle)
+    const otherPage = bundle.allPages.getOrAdd('someother/path')
+    otherPage.load(pageMaker({ uuid: otherUUID }))
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
+      items: [{
+        // Exercise JSON
+        tags: [
+          `${EXERCISE_TAG_PREFIX_CONTEXT_PAGE_UUID}:${otherUUID}`,
+          `${EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID}:element-id-that-is-not-in-the-target-page-which-is-our-page`
+        ]
+      }]
+    }]]))
+    expectErrors(page, [PageValidationKind.EXERCISE_MISSING_TARGET_FEATURE])
+  })
+  it(`${PageValidationKind.EXERCISE_PAGE_MISSING_FEATURE.title}. Because the feature id is missing on the current page`, () => {
+    const exTag = 'ex1234'
+    const page = buildPageWithExerciseLink(exTag)
+    page.setExerciseCache(Immutable.Map([[page.exerciseURLs.first(), {
+      items: [{
+        // Exercise JSON
+        tags: [
+          `${EXERCISE_TAG_PREFIX_CONTEXT_ELEMENT_ID}:element-id-that-is-not-in-our-page`
+        ]
+      }]
+    }]]))
+    expectErrors(page, [PageValidationKind.EXERCISE_PAGE_MISSING_FEATURE])
   })
 })

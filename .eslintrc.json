@@ -19,6 +19,7 @@
     "**/webpack.config.js",
     "jest.config.js",
     "client/specs/__mocks__/vscode.js",
+    "server/src/__mocks__/node-fetch.js",
     "snapshots.js"
   ],
   "plugins": [

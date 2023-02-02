@@ -46,18 +46,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
 
   // If this is not a book repo then don't bother writing the XSD files
   const workspaceRoot = getRootPathUri()
-  /* The following istanbul comments are a hack because the coverage seems to misrepresent them as uncovered */
   /* istanbul ignore next */
   if (workspaceRoot !== null && fs.existsSync(path.join(workspaceRoot.fsPath, 'META-INF/books.xml'))) {
     await populateXsdSchemaFiles(resourceRootDir)
   }
 
-  /* istanbul ignore next */
   await client.onReady()
-  /* istanbul ignore next */
-  const extExports = doRest(client)
-  /* istanbul ignore next */
-  return extExports
+  return doRest(client)
 }
 
 export async function deactivate(): Promise<void> {
@@ -72,14 +67,6 @@ function createHostContext(client: LanguageClient): ExtensionHostContext {
       onDidChangeWatchedFiles
     },
     bookTocs: EMPTY_BOOKS_AND_ORPHANS
-  }
-}
-
-function createExports(tocPanelManager: PanelManager<TocEditorPanel>, cnxmlPreviewPanelManager: PanelManager<CnxmlPreviewPanel>, imageManagerPanelManager: PanelManager<ImageManagerPanel>): ExtensionExports {
-  return {
-    [OpenstaxCommand.SHOW_TOC_EDITOR]: tocPanelManager,
-    [OpenstaxCommand.SHOW_CNXML_PREVIEW]: cnxmlPreviewPanelManager,
-    [OpenstaxCommand.SHOW_IMAGE_MANAGER]: imageManagerPanelManager
   }
 }
 
@@ -109,7 +96,12 @@ function doRest(client: LanguageClient): ExtensionExports {
 
   // It is a logic error for anything else to listen to this event from the client.
   // It is only allowed a single handler, from what we can tell
+  /* istanbul ignore next */
   client.onRequest('onDidChangeWatchedFiles', () => { onDidChangeWatchedFilesEmitter.fire() })
 
-  return createExports(tocPanelManager, cnxmlPreviewPanelManager, imageManagerPanelManager)
+  return {
+    [OpenstaxCommand.SHOW_TOC_EDITOR]: tocPanelManager,
+    [OpenstaxCommand.SHOW_CNXML_PREVIEW]: cnxmlPreviewPanelManager,
+    [OpenstaxCommand.SHOW_IMAGE_MANAGER]: imageManagerPanelManager
+  }
 }
