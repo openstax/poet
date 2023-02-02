@@ -97,6 +97,7 @@ connection.onInitialized(() => {
     for (const workspace of currentWorkspaces) {
       const manager = bundleFactory.getOrAdd(workspace.uri)
       manager.performInitialValidation()
+      await manager.loadEnoughForOrphans()
     }
   }
   inner().catch(e => { throw e })
