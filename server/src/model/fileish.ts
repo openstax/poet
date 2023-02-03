@@ -44,8 +44,8 @@ export class ValidationResponse {
   }
 }
 
-function toValidationErrors(node: Fileish, message: ValidationKind, sources: I.Set<Range | ModelError>) {
-  return sources.map(s => s instanceof ModelError ? s : new ModelError(node, message.title, message.severity, s))
+function toValidationErrors(node: Fileish, message: ValidationKind, sources: I.Set<Range>) {
+  return sources.map(s => new ModelError(node, message.title, message.severity, s))
 }
 
 export abstract class Fileish {
