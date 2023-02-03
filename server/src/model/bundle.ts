@@ -1,14 +1,11 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange, calculateElementPositions, expectValue, NOWHERE, join, formatString } from './utils'
+import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange, calculateElementPositions, expectValue, NOWHERE, join } from './utils'
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
-import { Fileish, ModelError, ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
+import { Fileish, ValidationCheck, ValidationKind } from './fileish'
 import { ResourceNode } from './resource'
-import fs from 'fs'
-import path from 'path'
-import { URI } from 'vscode-uri'
 
 export class Bundle extends Fileish implements Bundleish {
   public readonly allResources: Factory<ResourceNode> = new Factory((absPath: string) => new ResourceNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
@@ -55,10 +52,6 @@ export class Bundle extends Fileish implements Bundleish {
     return this.isDuplicate(uuid, this.allPages.all, (p: PageNode): string => { return p.uuid() })
   }
 
-  public isDuplicateFilename(filename: string) {
-    return this.isDuplicate(filename, this.allResources.all, (r: ResourceNode): string => { return r.absPath.toLowerCase() })
-  }
-
   protected getValidationChecks(): ValidationCheck[] {
     const books = this.__books()
     return [
@@ -71,7 +64,7 @@ export class Bundle extends Fileish implements Bundleish {
         message: BundleValidationKind.NO_BOOKS,
         nodesToLoad: I.Set(),
         fn: () => books.isEmpty() ? I.Set([NOWHERE]) : I.Set()
-      },
+      }
     ]
   }
 }

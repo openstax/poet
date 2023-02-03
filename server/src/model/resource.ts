@@ -18,13 +18,13 @@ export class ResourceNode extends Fileish {
     return I.Set()
   }
 
-  protected getValidationChecks() {return [
-    {
+  protected getValidationChecks() {
+    return [{
       message: ResourceValidationKind.DUPLICATE_RESOURCES,
       nodesToLoad: I.Set<Fileish>(),
       fn: () => this.checkDuplicateResources()
-    }
-  ] }
+    }]
+  }
 }
 
 export class ResourceValidationKind extends ValidationKind {
