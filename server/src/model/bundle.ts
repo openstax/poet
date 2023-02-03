@@ -43,7 +43,7 @@ export class Bundle extends Fileish implements Bundleish {
     return this.ensureLoaded(this._books)
   }
 
-  public isDuplicate(property: string, nodes: I.Set<Fileish>, condition: any) {
+  private isDuplicate(property: string, nodes: I.Set<Fileish>, condition: any) {
     const duplicates = I.Set(findDuplicates(I.List(nodes).filter(n => n.exists).map(n => condition(n))))
     return duplicates.has(property)
   }

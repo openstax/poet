@@ -29,7 +29,7 @@ export class WrappedParseError<T extends Error> extends ParseError {
 export interface ValidationCheck {
   message: ValidationKind
   nodesToLoad: I.Set<Fileish>
-  fn: (loadedNodes?: I.Set<Fileish>) => I.Set<Range | ModelError>
+  fn: (loadedNodes?: I.Set<Fileish>) => I.Set<Range>
 }
 export class ValidationResponse {
   constructor(public readonly errors: I.Set<ModelError>, public readonly nodesToLoad: I.Set<Fileish> = I.Set()) {}
