@@ -202,6 +202,7 @@ export class ModelManager {
   }
 
   private sendAllDiagnostics() {
+    ModelManager.debug("Sending All Diagnostics")
     for (const node of this.bundle.allNodes) {
       if (node.isLoaded) {
         this.sendFileDiagnostics(node)

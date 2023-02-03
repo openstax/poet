@@ -28,5 +28,5 @@ export class ResourceNode extends Fileish {
 }
 
 export class ResourceValidationKind extends ValidationKind {
-  static DUPLICATE_RESOURCES = new ResourceValidationKind('Has similar name')
+  static DUPLICATE_RESOURCES = new ResourceValidationKind('Another file has the same name with a different case.')
 }
