@@ -15,15 +15,14 @@ export class ValidationKind {
   constructor(readonly title: string, readonly severity = ValidationSeverity.ERROR) { }
 }
 export class ModelError extends Error implements HasRange {
-  constructor(public readonly node: Fileish, public readonly kind: ValidationKind, public readonly range: Range) {
-    super(kind.title)
-    this.name = this.constructor.name
+  constructor(public readonly node: Fileish, public readonly title: string, public readonly severity: ValidationSeverity, public readonly range: Range) {
+    super(title)
   }
 }
 export class ParseError extends ModelError { }
 export class WrappedParseError<T extends Error> extends ParseError {
   constructor(node: Fileish, originalError: T) {
-    super(node, new ValidationKind(originalError.message), NOWHERE)
+    super(node, originalError.message, ValidationSeverity.ERROR, NOWHERE)
   }
 }
 
@@ -46,7 +45,7 @@ export class ValidationResponse {
 }
 
 function toValidationErrors(node: Fileish, message: ValidationKind, sources: I.Set<Range>) {
-  return sources.map(s => new ModelError(node, message, s))
+  return sources.map(s => new ModelError(node, message.title, message.severity, s))
 }
 
 export abstract class Fileish {
@@ -123,7 +122,7 @@ export abstract class Fileish {
         line: locator.lineNumber - 1,
         character: locator.columnNumber - 1
       }
-      this._parseError.set(new ParseError(this, new ValidationKind(msg), { start: pos, end: pos }))
+      this._parseError.set(new ParseError(this, msg, ValidationSeverity.ERROR, { start: pos, end: pos }))
     }
     const p = new DOMParser({
       locator,

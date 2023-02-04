@@ -48,7 +48,7 @@ describe('Page validations', () => {
     expect(first(page.validationErrors.nodesToLoad)).toBe(image)
     // At first the image does not exist:
     image.load(undefined)
-    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MISSING_RESOURCE)
+    expect(first(page.validationErrors.errors).title).toBe(PageValidationKind.MISSING_RESOURCE.title)
     // And then it does:
     image.load('somebits')
     expect(page.validationErrors.errors.size).toBe(0)
@@ -68,7 +68,7 @@ describe('Page validations', () => {
     page.load(pageMaker(info))
     // Expect exactly one validation error
     expect(page.validationErrors.errors.size).toBe(1)
-    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MISSING_RESOURCE)
+    expect(first(page.validationErrors.errors).title).toBe(PageValidationKind.MISSING_RESOURCE.title)
   })
   it(PageValidationKind.MISSING_TARGET.title, () => {
     const bundle = makeBundle()
@@ -94,7 +94,7 @@ describe('Page validations', () => {
 
     // At first the target does not exist:
     target.load(undefined)
-    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MISSING_TARGET)
+    expect(first(page.validationErrors.errors).title).toBe(PageValidationKind.MISSING_TARGET.title)
     // And then it does:
     target.load(pageMaker({ uuid: '11111111-1111-4111-1111-111111111111' }))
     expect(page.validationErrors.errors.size).toBe(0)
@@ -111,7 +111,7 @@ describe('Page validations', () => {
     const page = bundle.allPages.getOrAdd('somepage/filename')
     const info = { uuid: 'invalid-uuid-value' }
     page.load(pageMaker(info))
-    expect(first(page.validationErrors.errors).kind).toBe(PageValidationKind.MALFORMED_UUID)
+    expect(first(page.validationErrors.errors).title).toBe(PageValidationKind.MALFORMED_UUID.title)
   })
   it(PageValidationKind.DUPLICATE_UUID.title, () => {
     const bundle = makeBundle()

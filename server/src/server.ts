@@ -23,6 +23,7 @@ import { Factory } from './model/factory'
 import { ModelManager } from './model-manager'
 import { JobRunner } from './job-runner'
 import { TocModificationParams, TocNodeKind } from '../../common/src/toc'
+import { Fileish } from './model/fileish'
 sourcemaps.install()
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -56,6 +57,7 @@ const consoleDebug = (...args: any[]) => {
   // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
   connection.console.log(args.map(a => `${a}`).join(', '))
 }
+Fileish.debug = consoleDebug
 ModelManager.debug = consoleDebug
 JobRunner.debug = () => {}
 
@@ -95,6 +97,7 @@ connection.onInitialized(() => {
     for (const workspace of currentWorkspaces) {
       const manager = bundleFactory.getOrAdd(workspace.uri)
       manager.performInitialValidation()
+      await manager.loadEnoughForOrphans()
     }
   }
   inner().catch(e => { throw e })

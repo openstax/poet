@@ -15,8 +15,9 @@ export enum DocumentsToOpen {
 }
 
 export const PushValidationModal = {
-  cnxmlErrorMsg: 'There are outstanding validation errors that must be resolved before pushing is allowed.',
-  xmlErrorMsg: 'There are outstanding schema errors that must be resolved before pushing is allowed.'
+  poetErrorMsg: 'There are outstanding validation errors that must be resolved before pushing is allowed.',
+  xmlErrorMsg: 'There are outstanding schema errors that must be resolved before pushing is allowed.',
+  duplicateFileNamesErrorMsg: ' have the same name. They should be renamed or deleted before pushing is allowed.'
 }
 
 export const getDocumentsToOpen = async (checkType: DocumentsToOpen): Promise<Set<string>> => {
@@ -154,8 +155,8 @@ export const validateContent = async () => {
 }
 
 export const canPush = (errorsBySource: Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>): boolean => {
-  if (errorsBySource.has(DiagnosticSource.cnxml)) {
-    void vscode.window.showErrorMessage(PushValidationModal.cnxmlErrorMsg, { modal: true })
+  if (errorsBySource.has(DiagnosticSource.poet)) {
+    void vscode.window.showErrorMessage(PushValidationModal.poetErrorMsg, { modal: true })
     return false
   }
   if (errorsBySource.has(DiagnosticSource.xml)) {

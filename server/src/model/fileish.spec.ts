@@ -48,6 +48,6 @@ describe('The abstract ancestor class', () => {
     f.load('>invalid-xml')
     expect(f.validationErrors.errors.size).toBe(1)
     const err = first(f.validationErrors.errors)
-    expect(err.message).toBe('I-always-throw-an-error')
+    expect(err.title).toBe('I-always-throw-an-error')
   })
 })
