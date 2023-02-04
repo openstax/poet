@@ -75,6 +75,16 @@ The unit tests can be debugged using the VSCode debugger. There are 2 ways to ru
 1. If you run the Unit tests from the `[Run and Debug]` VSCode panel then breakpoints will work.
 1. If you want to run the tests from a terminal, follow the instructions to set the [Auto-Attach setting in VSCode](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_auto-attach) and then run `npm run test:unit` or `npm run test:unit:watch`.
 
+### Debugging in Gitpod (Client and Language Server)
+
+You can debug POET in Gitpod thusly:
+
+1. Open `[Run and Debug]` in the VSCode panel
+1. Select and run the `Run Extension` debug configuration from the dropdown
+1. Wait for the extension to start in a new tab/window
+1. Select and run `Attach to Language Server` debug configuration from the dropdown
+1. If all is well, you should be able to set breakpoints in the server and client scripts and debug all the things
+
 # Commandline
 
 A commandline version of POET is available at [./poet](./poet).
