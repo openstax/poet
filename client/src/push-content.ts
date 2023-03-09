@@ -173,6 +173,14 @@ export const getRepo = (): Repository => {
   return result
 }
 
+export const setDefaultGitConfig = async (): Promise<void> => {
+  const repo = getRepo()
+  const config = await repo.getConfigs()
+  if (!config.some(p => p.key === 'pull.ff' || p.key === 'pull.rebase')) {
+    await repo.setConfig('pull.ff', 'true')
+  }
+}
+
 export const taggingDialog = async (): Promise<Tag | undefined> => {
   const tagMode = await vscode.window.showInformationMessage(
     'Tag for release candidate or release?',

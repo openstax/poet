@@ -669,4 +669,32 @@ describe('tests with sinon', () => {
       expect(progressReportCount).toBe(1) // Just the 1 to get the progress bar spinning
     })
   })
+  describe('setDefaultGitConfig', () => {
+    ['pull.rebase', 'pull.ff'].forEach(key => {
+      it(`is not called when ${key} is set`, async () => {
+        const setConfigStub = sinon.stub().resolves()
+        const stubRepo = {
+          setConfig: setConfigStub,
+          getConfigs: sinon.stub().resolves([{ key, value: 'true' }])
+        } as any as Repository
+        const stubGetRepo = sinon.stub(pushContent, 'getRepo').returns(stubRepo)
+        await pushContent.setDefaultGitConfig()
+        expect(stubGetRepo.callCount).toBe(1)
+        expect(setConfigStub.callCount).toBe(0)
+        expect(setConfigStub.calledWith('pull.ff', 'true')).toBe(false)
+      })
+    })
+    it('is called when pull.ff and pull.rebase are unset', async () => {
+      const setConfigStub = sinon.stub().resolves()
+      const stubRepo = {
+        setConfig: setConfigStub,
+        getConfigs: sinon.stub().resolves([])
+      } as any as Repository
+      const stubGetRepo = sinon.stub(pushContent, 'getRepo').returns(stubRepo)
+      await pushContent.setDefaultGitConfig()
+      expect(stubGetRepo.callCount).toBe(1)
+      expect(setConfigStub.callCount).toBe(1)
+      expect(setConfigStub.calledWith('pull.ff', 'true')).toBe(true)
+    })
+  })
 })

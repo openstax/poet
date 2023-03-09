@@ -13,9 +13,11 @@ import { TocEditorPanel } from '../src/panel-toc-editor'
 import { BooksAndOrphans, ExtensionServerNotification } from '../../common/src/requests'
 import { PanelManager } from '../src/panel'
 import { CnxmlPreviewPanel } from '../src/panel-cnxml-preview'
+import * as pushContent from '../src/push-content'
 
 describe('Extension', () => {
   const sinon = Sinon.createSandbox()
+  beforeEach(async () => sinon.stub(pushContent, 'setDefaultGitConfig').resolves())
   afterEach(async () => sinon.restore())
   it('forwardOnDidChangeWorkspaceFolders sends a request to the language server', async function () {
     const stub = sinon.stub()
