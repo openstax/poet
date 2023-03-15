@@ -31,7 +31,7 @@
   <xs:element name="metadata">
     <xs:complexType>
       <xs:all>
-        <xs:element ref="mdml:content-id"/>
+        <xs:element minOccurs="0" ref="mdml:content-id"/>
         <xs:element ref="mdml:title"/>
         <xs:element ref="mdml:license"/>
         <xs:element ref="mdml:uuid"/>

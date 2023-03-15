@@ -84,7 +84,7 @@ index 43d3127..744f1b7 100644
 -        <xs:group ref="mathml:language"/>
 -      </xs:choice>
 +      <xs:all>
-+        <xs:element ref="mdml:content-id"/>
++        <xs:element minOccurs="0" ref="mdml:content-id"/>
 +        <xs:element ref="mdml:title"/>
 +        <xs:element ref="mdml:license"/>
 +        <xs:element ref="mdml:uuid"/>
