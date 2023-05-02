@@ -1,4 +1,4 @@
-const {URI} = require('vscode-uri')
+const { URI, Utils } = require('vscode-uri')
 
 const REQUIRED_VSCODE_VERSION = '1.52.0'
 const appName = 'VSCODE_MOCK?'
@@ -58,6 +58,7 @@ const workspace = {
     onDidDelete: jest.fn(),
   })),
   fs: {
+    readFile: jest.fn(),
     writeFile: jest.fn(),
     stat: jest.fn(() => {
       // By default, throw an error which means the file was not found
@@ -197,7 +198,10 @@ const vscode = {
   env: { appName },
   StatusBarAlignment,
   ViewColumn,
-  Uri: URI,
+  Uri: {
+    ...URI,
+    ...Utils
+  },
   Disposable,
   Range,
   Diagnostic,
