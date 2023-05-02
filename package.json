@@ -45,7 +45,7 @@
     "onCommand:openstax.showTocEditor",
     "onCommand:openstax.showImageManager",
     "onCommand:openstax.pushContent",
-    "onCommand:openstax.tagContent",
+    "onCommand:openstax.generateReadme",
     "onView:tocTrees",
     "onCommand:openstax.validateContent"
   ],
@@ -68,8 +68,8 @@
         "category": "Openstax"
       },
       {
-        "command": "openstax.tagContent",
-        "title": "Build in CORGI",
+        "command": "openstax.generateReadme",
+        "title": "Generate README",
         "category": "Openstax"
       },
       {
@@ -108,7 +108,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Build in CORGI](command:openstax.tagContent)\n[Validate Content](command:openstax.validateContent)"
+        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Generate README](command:openstax.generateReadme)\n[Validate Content](command:openstax.validateContent)"
       }
     ],
     "menus": {
