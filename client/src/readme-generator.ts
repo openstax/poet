@@ -203,11 +203,7 @@ function populateTemplate(template: string, replacements: Record<string, string>
   // '{{ x }}' -> replacements['x']
   return template.replace(/\{{2}.+?\}{2}/g, m => {
     const prop = m.slice(2, -2)
-    const value = replacements[prop.trim()]
-    /* istanbul ignore if */
-    if (value === undefined) {
-      throw new Error(`${prop} is undefined`)
-    }
+    const value = expect(replacements[prop.trim()], `${prop} is undefined`)
     return value
   })
 }
