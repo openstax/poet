@@ -80,20 +80,21 @@ describe('getLicense', () => {
 describe('write readme', () => {
   const sinon = Sinon.createSandbox()
   const encoder = new TextEncoder()
+  const decoder = new TextDecoder()
   let getRootPathUri: Sinon.SinonStub<[], vscode.Uri | null>
   beforeEach(() => {
     getRootPathUri = sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('.'))
   })
   afterEach(() => sinon.restore())
 
-  const mkMockRead = (fakeFiles: Record<string, Uint8Array>) => {
+  const mkMockRead = (fakeFiles: Record<string, string>) => {
     return async (uri: vscode.Uri) => {
       const fsPath = uri.fsPath
       const content = fakeFiles[fsPath]
       if (content == null) {
         throw new Error(`Got unexpected path in readFile stub ${fsPath}`)
       }
-      return content
+      return encoder.encode(content)
     }
   }
   const title1 = 'Stuff and things'
@@ -103,8 +104,8 @@ describe('write readme', () => {
   const slug2 = 'stuff-other-things'
   const slug3 = 'other-stuff-other-things'
 
-  const mkCollection = (slug: string, title: string) => {
-    return encoder.encode(`\
+  const mkCollection = (slug: string, title: string): string => {
+    return `\
       <col:collection xmlns:col="http://cnx.rice.edu/collxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns="http://cnx.rice.edu/collxml">
         <col:metadata>
           <md:title>${title}</md:title>
@@ -113,17 +114,17 @@ describe('write readme', () => {
           <md:license url="http://creativecommons.org/licenses/by/4.0/"/>
         </col:metadata>
       </col:collection>
-    `)
+    `
   }
 
-  const mkMetaInf = (slugs: string[]): Uint8Array => {
-    return encoder.encode(`\
+  const mkMetaInf = (slugs: string[]): string => {
+    return `\
       <container xmlns="https://openstax.org/namespaces/book-container" version="1">
         ${slugs.map(slug =>
           `<book slug="${slug}" style="dummy" href="../collections/${slug}.collection.xml"/>`
         ).join('\n')}
       </container>
-    `)
+    `
   }
 
   const metaInfOneBook = mkMetaInf([slug1])
@@ -143,7 +144,7 @@ describe('write readme', () => {
     }))
     const write = sinon.stub(vscode.workspace.fs, 'writeFile').callsFake(async (uri: vscode.Uri, content: Uint8Array) => {
       outputPath = uri.fsPath
-      output = (new TextDecoder().decode(content))
+      output = decoder.decode(content)
     })
 
     await writeReadmeForWorkspace()
@@ -169,7 +170,7 @@ describe('write readme', () => {
     }))
     const write = sinon.stub(vscode.workspace.fs, 'writeFile').callsFake(async (uri: vscode.Uri, content: Uint8Array) => {
       outputPath = uri.fsPath
-      output = (new TextDecoder().decode(content))
+      output = decoder.decode(content)
     })
 
     await writeReadmeForWorkspace()
@@ -202,7 +203,7 @@ describe('write readme', () => {
     }))
     const write = sinon.stub(vscode.workspace.fs, 'writeFile').callsFake(async (uri: vscode.Uri, content: Uint8Array) => {
       outputPath = uri.fsPath
-      output = (new TextDecoder().decode(content))
+      output = decoder.decode(content)
     })
 
     await writeReadmeForWorkspace()
@@ -226,12 +227,9 @@ describe('write readme', () => {
   })
 
   it('fails for bundles that contain various licenses', async () => {
-    const moddedColS1 = new TextEncoder().encode(
-      new TextDecoder().decode(collectionS1)
-        .replace(
-          'http://creativecommons.org/licenses/by/4.0',
-          'http://creativecommons.org/licenses/by-nd/4.0'
-        )
+    const moddedColS1 = collectionS1.replace(
+      'http://creativecommons.org/licenses/by/4.0',
+      'http://creativecommons.org/licenses/by-nd/4.0'
     )
 
     sinon.stub(vscode.workspace.fs, 'readFile').callsFake(mkMockRead({
