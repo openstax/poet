@@ -2,7 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'
-import { pushContent, tagContent, validateContent, setDefaultGitConfig } from './push-content'
+import { pushContent, validateContent, setDefaultGitConfig } from './push-content'
 import { TocEditorPanel } from './panel-toc-editor'
 import { CnxmlPreviewPanel } from './panel-cnxml-preview'
 import { expect, ensureCatch, ensureCatchPromise, launchLanguageServer, populateXsdSchemaFiles, getRootPathUri, configureWorkspaceSettings } from './utils'
@@ -12,6 +12,7 @@ import { ImageManagerPanel } from './panel-image-manager'
 import { toggleTocTreesFilteringHandler } from './toc-trees-provider'
 import { BookOrTocNode, TocsTreeProvider } from './book-tocs'
 import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
+import { writeReadmeForWorkspace } from './readme-generator'
 
 let tocTreesView: vscode.TreeView<BookOrTocNode>
 let tocTreesProvider: TocsTreeProvider
@@ -102,7 +103,7 @@ function doRest(client: LanguageClient): ExtensionExports {
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, imageManagerPanelManager.revealOrNew.bind(imageManagerPanelManager))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent(hostContext)))
-  vscode.commands.registerCommand('openstax.tagContent', ensureCatch(tagContent))
+  vscode.commands.registerCommand('openstax.generateReadme', ensureCatch(writeReadmeForWorkspace))
   tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
   vscode.commands.registerCommand('openstax.validateContent', ensureCatch(validateContent))
