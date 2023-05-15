@@ -3,6 +3,7 @@ import * as Quarx from 'quarx'
 import { PageNode } from './page'
 import { Opt, WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, TocNodeKind } from './utils'
 import { Fileish, ValidationCheck, ValidationKind } from './fileish'
+import { getCCLicense } from './cc-license'
 
 const equalsTocNodeWithRange = (n1: TocNodeWithRange, n2: TocNodeWithRange): boolean => {
   /* istanbul ignore else */
@@ -32,6 +33,7 @@ export class BookNode extends Fileish {
   private readonly _slug = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _language = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _licenseUrl = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _licenseText = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
   private readonly _toc = Quarx.observable.box<Opt<TocNodeWithRange[]>>(undefined, { equals: equalsOptArrayToc })
 
   protected parseXML = (doc: Document) => {
@@ -40,6 +42,7 @@ export class BookNode extends Fileish {
     this._slug.set(textWithRange(selectOne('/col:collection/col:metadata/md:slug', doc)))
     this._language.set(textWithRange(selectOne('/col:collection/col:metadata/md:language', doc)))
     this._licenseUrl.set(textWithRange(selectOne('/col:collection/col:metadata/md:license', doc), 'url'))
+    this._licenseText.set(textWithRange(selectOne('/col:collection/col:metadata/md:license', doc)))
     const root: Element = selectOne('/col:collection/col:content', doc)
     this._toc.set(this.buildChildren(root))
   }
@@ -102,6 +105,12 @@ export class BookNode extends Fileish {
 
   public get licenseUrl() {
     return this.ensureLoaded(this._licenseUrl).v
+  }
+
+  public get license() {
+    const licenseUrl = this.ensureLoaded(this._licenseUrl).v
+    const licenseText = this.ensureLoaded(this._licenseText).v
+    return getCCLicense(licenseUrl, licenseText)
   }
 
   public get pages() {

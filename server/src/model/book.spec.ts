@@ -1,3 +1,4 @@
+import expect from 'expect'
 import { BookValidationKind } from './book'
 import { bookMaker, BookMakerTocNode, expectErrors, first, loadSuccess, makeBundle, pageMaker } from './spec-helpers.spec'
 
@@ -31,5 +32,19 @@ describe('Book validations', () => {
     const page = first(book.pages)
     page.load(pageMaker({}))
     expectErrors(book, [BookValidationKind.DUPLICATE_PAGE, BookValidationKind.DUPLICATE_PAGE])
+  })
+})
+
+describe('Book computed properties', () => {
+  it('Returns license', () => {
+    const bundle = makeBundle()
+    const book = first(loadSuccess(bundle).books)
+    book.load(bookMaker({ licenseUrl: 'http://creativecommons.org/licenses/by-nd/4.0' }))
+    expect(book.license).toEqual({
+      text: 'Creative Commons Attribution-NoDerivatives License',
+      type: 'Creative Commons Attribution-NoDerivatives',
+      url: 'http://creativecommons.org/licenses/by-nd/4.0',
+      version: '4.0'
+    })
   })
 })
