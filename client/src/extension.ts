@@ -12,7 +12,7 @@ import { ImageManagerPanel } from './panel-image-manager'
 import { toggleTocTreesFilteringHandler } from './toc-trees-provider'
 import { BookOrTocNode, TocsTreeProvider } from './book-tocs'
 import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
-import { writeReadmeForWorkspace } from './readme-generator'
+import { readmeGenerator } from './generate-readme'
 
 let tocTreesView: vscode.TreeView<BookOrTocNode>
 let tocTreesProvider: TocsTreeProvider
@@ -103,7 +103,7 @@ function doRest(client: LanguageClient): ExtensionExports {
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, imageManagerPanelManager.revealOrNew.bind(imageManagerPanelManager))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent(hostContext)))
-  vscode.commands.registerCommand('openstax.generateReadme', ensureCatch(writeReadmeForWorkspace))
+  vscode.commands.registerCommand('openstax.generateReadme', ensureCatch(readmeGenerator(hostContext)))
   tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
   vscode.commands.registerCommand('openstax.validateContent', ensureCatch(validateContent))
