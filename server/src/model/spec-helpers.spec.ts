@@ -100,6 +100,7 @@ export interface BookMakerInfo {
   uuid?: string
   language?: string
   licenseUrl?: string
+  licenseText?: string
   toc?: BookMakerTocNode[]
 }
 export function bookMaker(info: BookMakerInfo) {
@@ -108,6 +109,7 @@ export function bookMaker(info: BookMakerInfo) {
     slug: info.slug ?? 'slug1',
     langauge: info.language ?? 'xxyyzz',
     licenseUrl: info.licenseUrl ?? 'http://creativecommons.org/licenses/by/4.0/',
+    licenseText: info.licenseText ?? '',
     uuid: info.uuid ?? '00000000-0000-4000-0000-000000000000',
     toc: info.toc ?? []
   }
@@ -117,7 +119,10 @@ export function bookMaker(info: BookMakerInfo) {
       <md:slug>${i.slug}</md:slug>
       <md:uuid>${i.uuid}</md:uuid>
       <md:language>${i.langauge}</md:language>
-      <md:license url="${i.licenseUrl}"/>
+      ${i.licenseText === ''
+        ? `<md:license url="${i.licenseUrl}"/>`
+        : `<md:license url="${i.licenseUrl}">${i.licenseText}</md:license>`
+      }
     </col:metadata>
     <col:content>
         ${i.toc.map(tocToString).join('\n')}
