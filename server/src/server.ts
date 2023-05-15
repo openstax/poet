@@ -15,7 +15,7 @@ import { URI, Utils } from 'vscode-uri'
 import { expectValue } from './model/utils'
 
 import { ExtensionServerRequest } from '../../common/src/requests'
-import { bundleEnsureIdsHandler, resourceAutocompleteHandler } from './server-handler'
+import { bundleEnsureIdsHandler, bundleGenerateReadme, resourceAutocompleteHandler } from './server-handler'
 
 import * as sourcemaps from 'source-map-support'
 import { Bundle } from './model/bundle'
@@ -153,6 +153,7 @@ connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocM
 })
 
 connection.onRequest(ExtensionServerRequest.BundleEnsureIds, bundleEnsureIdsHandler())
+connection.onRequest(ExtensionServerRequest.GenerateReadme, bundleGenerateReadme())
 
 connection.onCompletionResolve((a: CompletionItem, token: CancellationToken): CompletionItem => a)
 
