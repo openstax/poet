@@ -15,7 +15,8 @@ export type Opt<T> = T | undefined
 
 export enum ExtensionServerRequest {
   BundleEnsureIds = 'BUNDLE_ENSURE_IDS',
-  TocModification = 'TOC_MODIFICATION'
+  TocModification = 'TOC_MODIFICATION',
+  GenerateReadme = 'GENREATE_README'
 }
 
 export enum ExtensionServerNotification {
@@ -52,6 +53,14 @@ export interface BundleEnsureIdsParams {
   workspaceUri: string
 }
 
+export interface BundleGenerateReadme {
+  workspaceUri: string
+}
+
 export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsParams): Promise<void> => {
   return await client.sendRequest(ExtensionServerRequest.BundleEnsureIds, args)
+}
+
+export const requestGenerateReadme = async (client: LanguageClient, args: BundleGenerateReadme): Promise<void> => {
+  return await client.sendRequest(ExtensionServerRequest.GenerateReadme, args)
 }
