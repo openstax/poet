@@ -8,3 +8,12 @@ Array [
   },
 ]
 `;
+
+exports[`generateReadme runs and yields a response 1`] = `
+Array [
+  "GENREATE_README",
+  Object {
+    "workspaceUri": "/fake/workspace",
+  },
+]
+`;
