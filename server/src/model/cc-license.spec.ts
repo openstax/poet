@@ -19,19 +19,19 @@ describe('getCCLicense', () => {
 
   it('returns a License object with expected properties for non-localized versions', () => {
     const license = getCCLicense(
-      'https://creativecommons.org/licenses/by-nc-sa/4.0/',
+      'https://creativecommons.org/licenses/by-nc-sa/4.0',
       ''
     )
 
     expect(license).toEqual({
-      url: 'https://creativecommons.org/licenses/by-nc-sa/4.0',
+      url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
       type: 'Creative Commons Attribution-NonCommercial-ShareAlike',
       version: '4.0',
       text: 'Creative Commons Attribution-NonCommercial-ShareAlike License'
     })
   })
 
-  it('throws an error if the license text is missing', () => {
+  it('throws an error if the license text is missing when required', () => {
     expect(() => getCCLicense(
       'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en',
       ''
@@ -42,7 +42,7 @@ describe('getCCLicense', () => {
     expect(() => getCCLicense(
       '',
       'Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License'
-    )).toThrow('Empty license url')
+    )).toThrow('Unrecognized licenseUrl: ""')
   })
 
   it('throws an error if the license type contains an unrecognized attribute', () => {
