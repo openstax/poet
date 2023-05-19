@@ -43,7 +43,7 @@ describe('Book computed properties', () => {
     expect(book.license).toEqual({
       text: 'Creative Commons Attribution-NoDerivatives License',
       type: 'Creative Commons Attribution-NoDerivatives',
-      url: 'http://creativecommons.org/licenses/by-nd/4.0',
+      url: 'http://creativecommons.org/licenses/by-nd/4.0/',
       version: '4.0'
     })
   })
