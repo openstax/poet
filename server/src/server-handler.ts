@@ -25,7 +25,7 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsParams) => Pr
 export function bundleGenerateReadme(): (request: BundleGenerateReadme) => Promise<void> {
   return async (request: BundleEnsureIdsParams) => {
     const manager = bundleFactory.getOrAdd(request.workspaceUri)
-    const books = manager.bundle.allBooks.all
+    const books = manager.bundle.books
     const readmePath = `${URI.parse(request.workspaceUri).fsPath}/README.md`
     if (!books.every(b => b.exists && b.isLoaded)) {
       throw new Error('Wait longer for books to load')
