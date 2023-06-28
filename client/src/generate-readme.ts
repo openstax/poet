@@ -10,6 +10,6 @@ export function readmeGenerator(hostContext: ExtensionHostContext) {
         workspaceUri: expect(getRootPathUri(), 'Could not get root workspace uri').toString()
       }
     )
-    void vscode.window.showInformationMessage('Done!', { title: 'Generate README' })
+    void vscode.window.showInformationMessage('Generate README: Done!')
   }
 }
