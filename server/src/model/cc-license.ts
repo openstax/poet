@@ -14,7 +14,7 @@ const LICENSE_ATTRIBUTES: Record<string, string> = {
   sa: 'ShareAlike'
 }
 
-const LICENSE_PATTERN = /https?:\/\/creativecommons\.org\/licenses\/([a-z-]+)\/(\d\.\d)\/?(deed\..+)?/
+const LICENSE_PATTERN = /^https?:\/\/creativecommons\.org\/licenses\/([a-z-]+)\/(\d\.\d)\/?(deed\..+)?$/
 
 export function getCCLicense(licenseUrl: string, licenseText: string): CCLicense {
   const match = expectValue(licenseUrl.match(LICENSE_PATTERN), `Unrecognized licenseUrl: "${licenseUrl}"`)
