@@ -1,7 +1,7 @@
 import Sinon from 'sinon'
 import * as pushContent from '../src/push-content'
 import * as utils from '../src/utils'
-import { Repository, Change, Status, CommitOptions, GitExtension, GitErrorCodes, Branch, RepositoryState, RefType } from '../src/git-api/git.d'
+import { Repository, Change, Status, CommitOptions, GitExtension, GitErrorCodes, Branch, RepositoryState } from '../src/git-api/git.d'
 import vscode from 'vscode'
 import expect from 'expect'
 import { Substitute } from '@fluffy-spoon/substitute'
@@ -274,72 +274,6 @@ describe('Push Button Test Suite', () => {
   })
   test('validateMessage returns null for message that is long enough', async () => {
     expect(pushContent.validateMessage('abc')).toBe(null)
-  })
-  test('taggingDialog', async () => {
-    const mockDialog = sinon.stub(vscode.window, 'showInformationMessage')
-    mockDialog.resolves(undefined)
-    expect(await pushContent.taggingDialog()).toBe(undefined)
-    mockDialog.resolves(pushContent.Tag.release as any as vscode.MessageItem)
-    expect(await pushContent.taggingDialog()).toBe(pushContent.Tag.release)
-    mockDialog.resolves(pushContent.Tag.candidate as any as vscode.MessageItem)
-    expect(await pushContent.taggingDialog()).toBe(pushContent.Tag.candidate)
-  })
-  test('getNewTag', async () => {
-    const repoState = {
-      refs: [{
-        name: 'main',
-        type: RefType.Head,
-        commit: 'a'
-      }]
-    } as any as RepositoryState
-    const mockRepo = {
-      state: repoState
-    } as any as Repository
-    const mockHead = {
-      commit: 'a'
-    } as any as Branch
-
-    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
-
-    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead)).toBe('1rc')
-    mockRepo.state.refs.push({
-      name: '1rc',
-      type: RefType.Tag,
-      commit: 'b'
-    })
-
-    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead)).toBe('2rc')
-    mockRepo.state.refs.push({
-      name: '2rc',
-      type: RefType.Tag,
-      commit: 'a'
-    })
-    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.candidate, mockHead)).toBe(undefined)
-    expect(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', { modal: false })).toBe(true)
-    showErrorMsgStub.reset()
-
-    mockRepo.state.refs.length = 0
-    mockRepo.state.refs.push({
-      name: 'main',
-      type: RefType.Head,
-      commit: 'a'
-    })
-
-    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead)).toBe('1')
-    mockRepo.state.refs.push({
-      name: '1',
-      type: RefType.Tag,
-      commit: 'b'
-    })
-
-    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead)).toBe('2')
-    mockRepo.state.refs.push({
-      name: '2',
-      type: RefType.Tag,
-      commit: 'a'
-    })
-    expect(await pushContent.getNewTag(mockRepo, pushContent.Tag.release, mockHead)).toBe(undefined)
-    expect(showErrorMsgStub.calledOnceWith('Tag of this type already exists for this content version.', { modal: false })).toBe(true)
   })
   test('canPush returns correct values', async () => {
     const fileUri = { path: '/test.cnxml', scheme: 'file' } as any as vscode.Uri
