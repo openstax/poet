@@ -27,6 +27,7 @@ describe('Push Button Test Suite', () => {
     // openAndValidate is tested fully later in this file
     sinon.stub(pushContent, 'openAndValidate')
       .resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+    sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('test'))
   })
   afterEach(() => sinon.restore())
   const commitOptions: CommitOptions = { all: true }
@@ -57,10 +58,10 @@ describe('Push Button Test Suite', () => {
     })
   }
   // This was once an integration test, now it is kind of pointless.
-  test('getRepo returns a repository', async () => {
+  test('getBookRepo returns a repository', async () => {
     const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
     sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
-    const repo = pushContent.getRepo()
+    const repo = pushContent.getBookRepo()
     expect(repo.rootUri).toBeDefined()
   })
   test('pushContent pushes with no conflict', async () => {
@@ -216,7 +217,6 @@ describe('Push Button Test Suite', () => {
     sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(pushContent, 'getMessage').resolves('poet commit')
     sinon.stub(pushContent, 'canPush').returns(true)
-    sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('fjsdlf'))
     sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
     const stubPushContentHelperInner = sinon.stub()
     sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
@@ -317,6 +317,9 @@ describe('Push Button Test Suite', () => {
 describe('tests with sinon', () => {
   const sinon = Sinon.createSandbox()
   afterEach(async () => sinon.restore())
+  beforeEach(() => {
+    sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('test'))
+  })
   describe('validateContent', () => {
     it('only runs when it should', async () => {
       const showInformationMessageStub = sinon.stub(vscode.window, 'showInformationMessage')
@@ -516,9 +519,8 @@ describe('tests with sinon', () => {
           setConfig: setConfigStub,
           getConfigs: sinon.stub().resolves([{ key, value: 'true' }])
         } as any as Repository
-        const stubGetRepo = sinon.stub(pushContent, 'getRepo').returns(stubRepo)
+        sinon.stub(pushContent, 'getRepos').returns([stubRepo])
         await pushContent.setDefaultGitConfig()
-        expect(stubGetRepo.callCount).toBe(1)
         expect(setConfigStub.callCount).toBe(0)
         expect(setConfigStub.calledWith('pull.ff', 'true')).toBe(false)
       })
@@ -529,9 +531,8 @@ describe('tests with sinon', () => {
         setConfig: setConfigStub,
         getConfigs: sinon.stub().resolves([])
       } as any as Repository
-      const stubGetRepo = sinon.stub(pushContent, 'getRepo').returns(stubRepo)
+      sinon.stub(pushContent, 'getRepos').returns([stubRepo])
       await pushContent.setDefaultGitConfig()
-      expect(stubGetRepo.callCount).toBe(1)
       expect(setConfigStub.callCount).toBe(1)
       expect(setConfigStub.calledWith('pull.ff', 'true')).toBe(true)
     })

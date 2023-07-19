@@ -17,7 +17,7 @@ export const PushValidationModal = {
 
 export const getDocumentsToOpen = async (checkType: DocumentsToOpen): Promise<Set<string>> => {
   if (checkType === DocumentsToOpen.modified) {
-    const repo = getRepo()
+    const repo = getBookRepo()
     return new Set(
       repo.state.workingTreeChanges
         .filter(change =>
@@ -161,18 +161,36 @@ export const canPush = (errorsBySource: Map<string, Array<[vscode.Uri, vscode.Di
   return true
 }
 
-export const getRepo = (): Repository => {
+export const getRepos = () => {
   const gitExtension = expect(vscode.extensions.getExtension<GitExtension>('vscode.git'), 'Expected vscode.git extension to be installed').exports
   const api = gitExtension.getAPI(1)
-  const result: Repository = api.repositories[0]
-  return result
+  return api.repositories
+}
+
+export const getRepo = (pathHint: string): Repository | undefined => {
+  // Note: It may seem like api.getRepository would be a valid replacement for this; however,
+  // api.getRepository always returns at least one repository (assuming there is at least one),
+  // regardless of the uri supplied
+  const results = getRepos().filter(r => r.rootUri.fsPath.endsWith(pathHint))
+  /* istanbul ignore next */
+  if (results.length > 1) {
+    throw new Error(`"${pathHint}" matched more than one repository`)
+  }
+  return results[0]
+}
+
+export const getBookRepo = (): Repository => {
+  // NOTE: This assumes that the book is the root repository
+  const uri = expect(getRootPathUri(), 'Could not get workspace root')
+  return expect(getRepo(uri.fsPath), 'Could not get book repository')
 }
 
 export const setDefaultGitConfig = async (): Promise<void> => {
-  const repo = getRepo()
-  const config = await repo.getConfigs()
-  if (!config.some(p => p.key === 'pull.ff' || p.key === 'pull.rebase')) {
-    await repo.setConfig('pull.ff', 'true')
+  for (const repo of getRepos()) {
+    const config = await repo.getConfigs()
+    if (!config.some(p => p.key === 'pull.ff' || p.key === 'pull.rebase')) {
+      await repo.setConfig('pull.ff', 'true')
+    }
   }
 }
 
@@ -211,7 +229,7 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       // push content
       progress.report({ message: 'Pushing...' })
       await _pushContent(
-        getRepo,
+        getBookRepo,
         getMessage,
         vscode.window.showInformationMessage,
         vscode.window.showErrorMessage
