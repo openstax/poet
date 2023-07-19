@@ -1,13 +1,8 @@
 import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
-import { GitExtension, GitErrorCodes, CommitOptions, Repository, RefType, Ref, Status } from './git-api/git'
+import { GitExtension, GitErrorCodes, CommitOptions, Repository, Status } from './git-api/git'
 import { ExtensionHostContext } from './panel'
 import { DiagnosticSource, requestEnsureIds } from '../../common/src/requests'
-
-export enum Tag {
-  release = 'Release',
-  candidate = 'Release Candidate'
-}
 
 export enum DocumentsToOpen {
   all = 'All Content',
@@ -179,40 +174,6 @@ export const setDefaultGitConfig = async (): Promise<void> => {
   if (!config.some(p => p.key === 'pull.ff' || p.key === 'pull.rebase')) {
     await repo.setConfig('pull.ff', 'true')
   }
-}
-
-export const taggingDialog = async (): Promise<Tag | undefined> => {
-  const tagMode = await vscode.window.showInformationMessage(
-    'Tag for release candidate or release?',
-    { modal: true },
-    ...[Tag.release, Tag.candidate]
-  )
-
-  if (tagMode === undefined) { return undefined }
-  return tagMode
-}
-
-export const getNewTag = async (repo: Repository, tagMode: Tag, head: Ref): Promise<string | undefined> => {
-  const tags: number[] = []
-  const release = tagMode === Tag.release
-  const regex = release ? /^\d+$/ : /^\d+rc$/
-
-  const validTags = repo.state.refs.filter((ref, i) => {
-    return (ref.type === RefType.Tag && regex.test(ref.name as string))
-  })
-
-  for (const ref of validTags) {
-    if (ref.commit === head.commit) {
-      void vscode.window.showErrorMessage('Tag of this type already exists for this content version.', { modal: false })
-      return undefined
-    }
-
-    const versionNumberString = expect(ref.name, '').replace('rc', '')
-    tags.push(Number(versionNumberString))
-  }
-
-  const previousVersion = tags.length > 0 ? Math.max(...tags) : 0
-  return `${previousVersion + 1}${release ? '' : 'rc'}`
 }
 
 export const validateMessage = (message: string): string | null => {
