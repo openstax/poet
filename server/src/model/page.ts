@@ -59,6 +59,8 @@ const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+const URL_RE = /^https?:\/\/[^\s]+.[^\s]+$/i
+
 export const ELEMENT_TO_PREFIX = new Map<string, string>()
 ELEMENT_TO_PREFIX.set('para', 'para')
 ELEMENT_TO_PREFIX.set('equation', 'eq')
@@ -272,6 +274,13 @@ export class PageNode extends Fileish {
         fn: () => this.pageLinks.filter(l => {
           return l.type === PageLinkKind.UNKNOWN
         }).map(l => l.range)
+      },
+      {
+        message: PageValidationKind.INVALID_URL,
+        nodesToLoad: I.Set(),
+        fn: () => this.pageLinks.filter(l => {
+          return l.type === PageLinkKind.URL && !URL_RE.test(l.url)
+        }).map(l => l.range)
       }
     ]
   }
@@ -283,4 +292,5 @@ export class PageValidationKind extends ValidationKind {
   static DUPLICATE_UUID = new PageValidationKind('Duplicate Page/Module UUID')
   static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.INFORMATION)
   static EMPTY_LINK = new PageValidationKind('Link target is empty', ValidationSeverity.WARNING)
+  static INVALID_URL = new PageValidationKind('Invalid URL', ValidationSeverity.ERROR)
 }
