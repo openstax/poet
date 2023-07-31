@@ -21,7 +21,8 @@ export interface IFrameLink extends HasRange {
 export enum PageLinkKind {
   URL,
   PAGE,
-  PAGE_ELEMENT
+  PAGE_ELEMENT,
+  UNKNOWN
 }
 export type PageLink = HasRange & ({
   type: PageLinkKind.URL
@@ -33,6 +34,8 @@ export type PageLink = HasRange & ({
   type: PageLinkKind.PAGE_ELEMENT
   page: PageNode
   targetElementId: string
+} | {
+  type: PageLinkKind.UNKNOWN
 })
 
 function convertToPos(str: string, cursor: number): Position {
@@ -184,6 +187,9 @@ export class PageNode extends Fileish {
       if (toUrl !== undefined) {
         return { range, type: PageLinkKind.URL, url: toUrl }
       }
+      if (toDocument === undefined && toTargetId === undefined && toUrl === undefined) {
+        return { range, type: PageLinkKind.UNKNOWN }
+      }
       const toPage = toDocument !== undefined ? super.bundle.allPages.getOrAdd(join(this.pathHelper, PathKind.MODULE_TO_MODULEID, this.absPath, toDocument)) : this
       if (toTargetId !== undefined) {
         return {
@@ -220,12 +226,13 @@ export class PageNode extends Fileish {
       {
         message: PageValidationKind.MISSING_TARGET,
         nodesToLoad: filterNull(pageLinks.map(l => {
-          if (l.type !== PageLinkKind.URL && l.page !== this) {
+          if (l.type !== PageLinkKind.URL && l.type !== PageLinkKind.UNKNOWN && l.page !== this) {
             return l.page
           }
           return undefined
         })),
         fn: () => pageLinks.filter(l => {
+          if (l.type === PageLinkKind.UNKNOWN) return false // unknown links are bad (but we can't check them)
           if (l.type === PageLinkKind.URL) return false // URL links are ok
           if (!l.page.exists) return true // link to non-existent page are bad
           if (l.type === PageLinkKind.PAGE) return false // linking to the whole page and it exists is ok
@@ -258,6 +265,13 @@ export class PageNode extends Fileish {
         fn: () => {
           return this.ensureLoaded(this._elementsMissingIds)
         }
+      },
+      {
+        message: PageValidationKind.EMPTY_LINK,
+        nodesToLoad: I.Set(),
+        fn: () => this.pageLinks.filter(l => {
+          return l.type === PageLinkKind.UNKNOWN
+        }).map(l => l.range)
       }
     ]
   }
@@ -268,4 +282,5 @@ export class PageValidationKind extends ValidationKind {
   static MALFORMED_UUID = new PageValidationKind('Malformed UUID')
   static DUPLICATE_UUID = new PageValidationKind('Duplicate Page/Module UUID')
   static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.INFORMATION)
+  static EMPTY_LINK = new PageValidationKind('Link target is empty', ValidationSeverity.WARNING)
 }

@@ -106,6 +106,12 @@ describe('Page validations', () => {
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'elementId1' }] }))
     expect(page.validationErrors.errors.size).toBe(0)
   })
+  it(PageValidationKind.EMPTY_LINK.title, () => {
+    const bundle = makeBundle()
+    const page = bundle.allPages.getOrAdd('modules/m123/index.cnxml')
+    page.load(pageMaker({ pageLinks: [{ url: '' }, { targetId: undefined }, { targetPage: undefined }] }))
+    expect(page.validationErrors.errors.size).toBe(3)
+  })
   it(PageValidationKind.MALFORMED_UUID.title, () => {
     const bundle = makeBundle()
     const page = bundle.allPages.getOrAdd('somepage/filename')

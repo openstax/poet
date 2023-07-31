@@ -83,7 +83,14 @@ export function pageMaker(info: PageInfo) {
   </metadata>
   <content>
 ${i.imageHrefs.map(href => `    <image src="${href}"/>`).join('\n')}
-${i.pageLinks.map(({ targetPage, targetId, url }) => `    <link document="${targetPage ?? ''}" target-id="${targetId ?? ''}" url="${url ?? ''}"/>`).join('\n')}
+${i.pageLinks.map(({ targetPage, targetId, url }) => {
+  let link = '   <link'
+  if (targetPage !== undefined) link += ` document="${targetPage}"`
+  if (targetId !== undefined) link += ` target-id="${targetId}"`
+  if (url !== undefined) link += ` url="${url}"`
+  link += '/>'
+  return link
+}).join('\n')}
 ${i.elementIds.map(id => `<para id="${id}"/>`).join('\n')}
 ${i.extraCnxml}
   </content>
