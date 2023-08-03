@@ -6,6 +6,7 @@ from tests.ui.pages.home import HomePoet
 @pytest.mark.nondestructive
 def test_home_ui(chrome_page, github_user, github_password, gitpod_repo_url):
     # GIVEN: Playwright, chromium and a gitpod repo url
+    # (https://gitpod.io/#https://github.com/openstax/osbooks-otto-book)
 
     # WHEN: gitpod launches
     chrome_page.goto(gitpod_repo_url)
