@@ -45,6 +45,13 @@ describe('getCCLicense', () => {
     )).toThrow('Unrecognized licenseUrl: ""')
   })
 
+  it('throws an error if the license URL is malformed', () => {
+    expect(() => getCCLicense(
+      'https://creativecommons.org/licenses/by/4.0/aaa/',
+      'Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License'
+    )).toThrow('Unrecognized licenseUrl: "https://creativecommons.org/licenses/by/4.0/aaa/"')
+  })
+
   it('throws an error if the license type contains an unrecognized attribute', () => {
     expect(() => getCCLicense(
       'https://creativecommons.org/licenses/by-nderp/4.0/deed.en',
