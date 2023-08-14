@@ -408,6 +408,10 @@ export class ModelManager {
     await this.readAndLoad(page)
     const ret: DocumentLink[] = []
     for (const pageLink of page.pageLinks) {
+      /* istanbul ignore if */
+      if (pageLink.type === PageLinkKind.UNKNOWN) {
+        continue
+      }
       if (pageLink.type === PageLinkKind.URL) {
         ret.push(DocumentLink.create(pageLink.range, pageLink.url))
       } else {
