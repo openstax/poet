@@ -59,7 +59,7 @@ const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-const URL_RE = /^https?:\/\/[^\s$.?#].[^\s]*$/i
+const URL_RE = /^(#(exercise|ost\/api\/ex)\/[A-Za-z0-9\-]+|(https?:\/\/|www.)[^\s$.?#].[^\s]*)$/i
 
 export const ELEMENT_TO_PREFIX = new Map<string, string>()
 ELEMENT_TO_PREFIX.set('para', 'para')
