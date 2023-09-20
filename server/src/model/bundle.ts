@@ -12,10 +12,19 @@ export class Bundle extends Fileish implements Bundleish {
   public readonly allPages: Factory<PageNode> = new Factory((absPath: string) => new PageNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
+  private readonly _resourceCountByPath = Quarx.observable.box<Record<string, number>>({})
 
   constructor(pathHelper: PathHelper<string>, public readonly workspaceRootUri: string) {
     super(undefined, pathHelper, pathHelper.join(workspaceRootUri, 'META-INF/books.xml'))
     super.setBundle(this)
+    Quarx.autorun(() => {
+      const resCountByPath: Record<string, number> = {}
+      for (const resource of this.allResources.all) {
+        const lowerPath = resource.absPath.toLowerCase()
+        resCountByPath[lowerPath] = (resCountByPath[lowerPath] ?? 0) + 1
+      }
+      this._resourceCountByPath.set(resCountByPath)
+    })
   }
 
   protected parseXML = (doc: Document) => {
@@ -37,6 +46,10 @@ export class Bundle extends Fileish implements Bundleish {
 
   public get books() {
     return this.__books().map(b => b.v)
+  }
+
+  public isDuplicateResourcePath(path: string): boolean {
+    return this._resourceCountByPath.get()[path.toLowerCase()] > 1
   }
 
   private __books() {

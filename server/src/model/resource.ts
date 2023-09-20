@@ -4,25 +4,13 @@ import { NOWHERE, Range } from './utils'
 
 // This can be an Image or an IFrame
 export class ResourceNode extends Fileish {
-  private checkDuplicateResources(): I.Set<Range> {
-    const myLower = this.absPath.toLowerCase()
-    for (const resource of this.bundle.allResources.all) {
-      if (resource === this) {
-        continue
-      }
-      const lower = resource.absPath.toLowerCase()
-      if (lower === myLower) {
-        return I.Set<Range>([NOWHERE])
-      }
-    }
-    return I.Set()
-  }
-
   protected getValidationChecks() {
     return [{
       message: ResourceValidationKind.DUPLICATE_RESOURCES,
       nodesToLoad: I.Set<Fileish>(),
-      fn: () => this.checkDuplicateResources()
+      fn: () => this.bundle.isDuplicateResourcePath(this.absPath)
+        ? I.Set([NOWHERE])
+        : I.Set<Range>()
     }]
   }
 }
