@@ -299,7 +299,9 @@ export class ModelManager {
     if (await checkFileExists(fsPath)) {
       const stat = await fs.promises.stat(fsPath)
       if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
-        return await fs.promises.readFile(fsPath, 'utf-8')
+        return ['.jpg', '.png'].some((ext) => uri.endsWith(ext))
+          ? 'image'
+          : await fs.promises.readFile(fsPath, 'utf-8')
       }
     }
   }
@@ -319,7 +321,7 @@ export class ModelManager {
     const { errors, nodesToLoad } = node.validationErrors
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
-      const diagnostics = errors.toSet().map(err => {
+      const diagnostics = errors.map(err => {
         return Diagnostic.create(err.range, err.title, err.severity, undefined, DiagnosticSource.poet)
       }).toArray()
       this.conn.sendDiagnostics({
