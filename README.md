@@ -130,9 +130,27 @@ $ poet shrink /path/to/osbooks-college-algebra-bundle precalculus-2e:0,3 algebra
 
 # Publishing
 
-We rely on [this Concourse pipeline](https://github.com/openstax/concourse-pipelines/tree/master/release-poet) to publish a new version to the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=openstax.editor) and [OpenVSX.org marketplace](https://open-vsx.org/extension/openstax/editor) whenever a new tag is created on this repo.
+We rely on [this Concourse pipeline](https://github.com/openstax/concourse-pipelines/tree/master/release-poet) to publish a new version to the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=openstax.editor) and [OpenVSX.org marketplace](https://open-vsx.org/extension/openstax/editor). That pipeline uses the `build-for-release.sh`, `publish-openvsx.sh`, and `publish-vsce.sh` scripts in the `scripts` directory for publishing. It's not recommended that you run these scripts yourself, but you can if you have the correct credentials.
 
-The Major version will _eventually_ track the repo schema verion that is supported so try to bump minor/patch versions.
+Example running publish from repo root:
+```sh
+VERSION=... \
+OPENVSX_TOKEN=... \
+./scripts/publish-openvsx.sh
+```
+
+or for vsce
+
+```sh
+VERSION=... \
+PUBLISHER=... \
+VSCE_TOKEN=... \
+./scripts/publish-vsce.sh
+```
+
+The process for vsce is the same except that you must supply a publisher as well.
+
+The Major version will _eventually_ track the repo schema version that is supported so try to bump minor/patch versions.
 
 
 ## Local .vsix
