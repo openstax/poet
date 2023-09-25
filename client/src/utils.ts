@@ -168,8 +168,6 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
       fileEvents: [
         vscode.workspace.createFileSystemWatcher('**/META-INF/books.xml'),
         vscode.workspace.createFileSystemWatcher('**/media/**'),
-        vscode.workspace.createFileSystemWatcher('**/modules/**'),
-        vscode.workspace.createFileSystemWatcher('**/collections/**'),
         vscode.workspace.createFileSystemWatcher('**/*.cnxml'),
         vscode.workspace.createFileSystemWatcher('**/*.collection.xml')
       ]
