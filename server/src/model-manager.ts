@@ -308,7 +308,7 @@ export class ModelManager {
       const stat = await fs.promises.stat(fsPath)
       if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
         return ['.jpg', '.png'].some((ext) => uri.endsWith(ext))
-          ? 'image'
+          ? '<fakeimagedata>'
           : await fs.promises.readFile(fsPath, 'utf-8')
       }
     }
