@@ -205,7 +205,13 @@ export class ModelManager {
     ModelManager.debug('Sending All Diagnostics')
     for (const node of this.bundle.allNodes) {
       if (node.isLoaded) {
-        this.sendFileDiagnostics(node)
+        const validationErrors = node.validationErrors
+        const errorHashes = validationErrors.errors.map(I.hash)
+        const oldHashes = this.errorHashesByPath.get(node.absPath)
+        if (oldHashes?.equals(errorHashes) !== true) {
+          this.errorHashesByPath.set(node.absPath, errorHashes)
+          this.sendFileDiagnostics(node, validationErrors)
+        }
       }
     }
   }
@@ -261,6 +267,7 @@ export class ModelManager {
       })
       // Unload all removed nodes so users do not think the files still exist
       removedNodes.forEach(n => {
+        this.errorHashesByPath.delete(n.absPath)
         n.load(undefined)
         this.sendFileDiagnostics(n)
       })
@@ -317,8 +324,8 @@ export class ModelManager {
     node.load(fileContent)
   }
 
-  private sendFileDiagnostics(node: Fileish) {
-    const { errors, nodesToLoad } = node.validationErrors
+  private sendFileDiagnostics(node: Fileish, validationErrors?: ValidationResponse) {
+    const { errors, nodesToLoad } = validationErrors ?? node.validationErrors
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
       const diagnostics = errors.map(err => {
@@ -342,7 +349,7 @@ export class ModelManager {
     const jobs = [
       { slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: () => this.bundle.allBooks.all.forEach(enqueueLoadJob) },
-      { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(this.sendFileDiagnostics.bind(this)) } },
+      { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(b => this.sendFileDiagnostics(b)) } },
       { slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: () => this.bundle.allPages.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_ALL_RESOURCES', context: this.bundle, fn: () => this.bundle.allResources.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes.map(f => this.sendFileDiagnostics(f))) }
