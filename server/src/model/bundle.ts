@@ -12,18 +12,30 @@ export class Bundle extends Fileish implements Bundleish {
   public readonly allPages: Factory<PageNode> = new Factory((absPath: string) => new PageNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
-  private readonly _resourceCountByPath = Quarx.observable.box<Record<string, number>>({})
+  private readonly _duplicateResourcePaths = Quarx.observable.box<I.Set<string>>(I.Set<string>())
+  private readonly _duplicateUUIDs = Quarx.observable.box<I.Set<string>>(I.Set<string>())
 
   constructor(pathHelper: PathHelper<string>, public readonly workspaceRootUri: string) {
     super(undefined, pathHelper, pathHelper.join(workspaceRootUri, 'META-INF/books.xml'))
     super.setBundle(this)
     Quarx.autorun(() => {
-      const resCountByPath: Record<string, number> = {}
-      for (const resource of this.allResources.all) {
-        const lowerPath = resource.absPath.toLowerCase()
-        resCountByPath[lowerPath] = (resCountByPath[lowerPath] ?? 0) + 1
-      }
-      this._resourceCountByPath.set(resCountByPath)
+      this._duplicateResourcePaths.set(
+        I.Set(
+          findDuplicates(I.List(this.allResources.all)
+            .map(n => n.absPath.toLowerCase())
+          )
+        )
+      )
+    })
+    Quarx.autorun(() => {
+      this._duplicateUUIDs.set(
+        I.Set(
+          findDuplicates(I.List(this.allPages.all)
+            .filter(n => n.exists)
+            .map(n => n.uuid())
+          )
+        )
+      )
     })
   }
 
@@ -49,20 +61,15 @@ export class Bundle extends Fileish implements Bundleish {
   }
 
   public isDuplicateResourcePath(path: string): boolean {
-    return this._resourceCountByPath.get()[path.toLowerCase()] > 1
+    return this._duplicateResourcePaths.get().has(path.toLowerCase())
   }
 
   private __books() {
     return this.ensureLoaded(this._books)
   }
 
-  private isDuplicate(property: string, nodes: I.Set<Fileish>, condition: any) {
-    const duplicates = I.Set(findDuplicates(I.List(nodes).filter(n => n.exists).map(n => condition(n))))
-    return duplicates.has(property)
-  }
-
   public isDuplicateUuid(uuid: string) {
-    return this.isDuplicate(uuid, this.allPages.all, (p: PageNode): string => { return p.uuid() })
+    return this._duplicateUUIDs.get().has(uuid)
   }
 
   protected getValidationChecks(): ValidationCheck[] {
