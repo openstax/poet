@@ -11,7 +11,7 @@ import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubboo
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
-import { Fileish } from './model/fileish'
+import { Fileish, ValidationResponse } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
 import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
@@ -117,6 +117,7 @@ export class ModelManager {
 
   public readonly jobRunner = new JobRunner()
   private readonly openDocuments = new Map<string, string>()
+  private readonly errorHashesByPath = new Map<string, I.Set<number>>()
   private didLoadOrphans = false
   private bookTocs: BookToc[] = []
   private tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>(x => {
