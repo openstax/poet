@@ -11,7 +11,7 @@ import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubboo
 import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
 import { Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
-import { Fileish } from './model/fileish'
+import { Fileish, ValidationResponse } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
 import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
@@ -117,6 +117,7 @@ export class ModelManager {
 
   public readonly jobRunner = new JobRunner()
   private readonly openDocuments = new Map<string, string>()
+  private readonly errorHashesByPath = new Map<string, I.Set<number>>()
   private didLoadOrphans = false
   private bookTocs: BookToc[] = []
   private tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>(x => {
@@ -205,7 +206,13 @@ export class ModelManager {
     ModelManager.debug('Sending All Diagnostics')
     for (const node of this.bundle.allNodes) {
       if (node.isLoaded) {
-        this.sendFileDiagnostics(node)
+        const validationErrors = node.validationErrors
+        const errorHashes = validationErrors.errors.map(I.hash)
+        const oldHashes = this.errorHashesByPath.get(node.absPath)
+        if (oldHashes?.equals(errorHashes) !== true) {
+          this.errorHashesByPath.set(node.absPath, errorHashes)
+          this.sendFileDiagnostics(node, validationErrors)
+        }
       }
     }
   }
@@ -261,6 +268,7 @@ export class ModelManager {
       })
       // Unload all removed nodes so users do not think the files still exist
       removedNodes.forEach(n => {
+        this.errorHashesByPath.delete(n.absPath)
         n.load(undefined)
         this.sendFileDiagnostics(n)
       })
@@ -299,7 +307,9 @@ export class ModelManager {
     if (await checkFileExists(fsPath)) {
       const stat = await fs.promises.stat(fsPath)
       if (stat.isFile()) { // Example: <image src=""/> resolves to 'modules/m123' which is a directory.
-        return await fs.promises.readFile(fsPath, 'utf-8')
+        return ['.jpg', '.png'].some((ext) => uri.endsWith(ext))
+          ? '<fakeimagedata>'
+          : await fs.promises.readFile(fsPath, 'utf-8')
       }
     }
   }
@@ -315,11 +325,11 @@ export class ModelManager {
     node.load(fileContent)
   }
 
-  private sendFileDiagnostics(node: Fileish) {
-    const { errors, nodesToLoad } = node.validationErrors
+  private sendFileDiagnostics(node: Fileish, validationErrors?: ValidationResponse) {
+    const { errors, nodesToLoad } = validationErrors ?? node.validationErrors
     if (nodesToLoad.isEmpty()) {
       const uri = node.absPath
-      const diagnostics = errors.toSet().map(err => {
+      const diagnostics = errors.map(err => {
         return Diagnostic.create(err.range, err.title, err.severity, undefined, DiagnosticSource.poet)
       }).toArray()
       this.conn.sendDiagnostics({
@@ -340,7 +350,7 @@ export class ModelManager {
     const jobs = [
       { slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: () => this.bundle.allBooks.all.forEach(enqueueLoadJob) },
-      { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(this.sendFileDiagnostics.bind(this)) } },
+      { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(b => this.sendFileDiagnostics(b)) } },
       { slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: () => this.bundle.allPages.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_ALL_RESOURCES', context: this.bundle, fn: () => this.bundle.allResources.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes.map(f => this.sendFileDiagnostics(f))) }

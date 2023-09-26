@@ -71,6 +71,7 @@ export interface Bundleish {
   allResources: Factory<ResourceNode>
   workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
+  isDuplicateResourcePath: (path: string) => boolean
 }
 
 export enum PathKind {
