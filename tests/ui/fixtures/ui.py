@@ -4,10 +4,10 @@ import pytest
 
 @pytest.fixture
 def chrome_page():
-    """Return playwright chromium browser page"""
+    """Return playwright chromium browser page - slow flow"""
     playwright_sync = sync_playwright().start()
     chrome_browser = playwright_sync.chromium.launch(
-        headless=True, slow_mo=900, timeout=120000
+        headless=True, slow_mo=1500, timeout=120000
     )
     context = chrome_browser.new_context()
 
@@ -31,7 +31,9 @@ def github_user(request):
 def github_password(request):
     """Return a github password"""
     config = request.config
-    github_password = config.getoption("github_password") or config.getini("github_password")
+    github_password = config.getoption("github_password") or config.getini(
+        "github_password"
+    )
     if github_password is not None:
         return github_password
 
@@ -40,6 +42,8 @@ def github_password(request):
 def gitpod_repo_url(request):
     """Return a git repo url in gitpod"""
     config = request.config
-    gitpod_repo_url = config.getoption("gitpod_repo_url") or config.getini("gitpod_repo_url")
+    gitpod_repo_url = config.getoption("gitpod_repo_url") or config.getini(
+        "gitpod_repo_url"
+    )
     if gitpod_repo_url is not None:
         return gitpod_repo_url
