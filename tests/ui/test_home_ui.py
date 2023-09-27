@@ -15,11 +15,10 @@ def test_home_ui(chrome_page, github_user, github_password, gitpod_repo_url):
     home.click_github_login_button()
 
     with chrome_page.context.pages[1] as github_login_window:
+        github_login_window.fill("#login_field", github_user)
+        github_login_window.fill("#password", github_password)
 
-        github_login_window.fill('#login_field', github_user)
-        github_login_window.fill('#password', github_password)
-
-        github_login_window.click('input.btn.btn-primary.btn-block.js-sign-in-button')
+        github_login_window.click("input.btn.btn-primary.btn-block.js-sign-in-button")
 
     # THEN: openstax extension launches and icon appears
     assert home.openstax_icon
@@ -29,6 +28,7 @@ def test_home_ui(chrome_page, github_user, github_password, gitpod_repo_url):
     # THEN: POET UI launches and is visible
     assert home.open_toc_editor_button_is_visible
     assert home.push_content_button_is_visible
+    assert home.generate_readme_button_is_visible
     assert home.validate_content_button_is_visible
 
     assert home.toc_tree_dropdown_list_is_visible

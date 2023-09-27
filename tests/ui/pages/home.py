@@ -10,24 +10,9 @@ class HomePoet:
         self.github_login_button_locator.click()
 
     @property
-    def login_button_locator(self):
-        return self.page.locator(
-            "div > input.btn.btn-primary.btn-block.js-sign-in-button"
-        )
-
-    def click_login_button(self):
-        self.login_button_locator.click()
-
-    @property
     def openstax_icon(self):
         return self.page.wait_for_selector(
-            "div > div.composite-bar > div > ul > li:nth-child(7)", timeout=99000
-        )
-
-    @property
-    def openstax_icon_is_visible(self):
-        return self.page.is_visible(
-            "div > div.composite-bar > div > ul > li:nth-child(7)"
+            "div.composite-bar > div > ul > li:nth-child(7)", timeout=99000
         )
 
     def click_openstax_icon(self):
@@ -43,22 +28,26 @@ class HomePoet:
 
     @property
     def open_toc_editor_button_is_visible(self):
-        return self.page.is_visible("div > div.welcome-view-content > div:nth-child(1)")
+        return self.page.is_visible("div.welcome-view-content > div:nth-child(1)")
 
     @property
     def open_toc_editor_button_locator(self):
-        return self.page.locator("div > div.welcome-view-content > div:nth-child(1)")
+        return self.page.locator("div.welcome-view-content > div:nth-child(1)")
 
     def click_open_toc_editor_button(self):
         return self.open_toc_editor_button_locator.click()
 
     @property
     def push_content_button_is_visible(self):
-        return self.page.is_visible("div > div.welcome-view-content > div:nth-child(2)")
+        return self.page.is_visible("div.welcome-view-content > div:nth-child(2)")
+
+    @property
+    def generate_readme_button_is_visible(self):
+        return self.page.is_visible("div.welcome-view-content > div:nth-child(3)")
 
     @property
     def validate_content_button_is_visible(self):
-        return self.page.is_visible("div > div.welcome-view-content > div:nth-child(4)")
+        return self.page.is_visible("div.welcome-view-content > div:nth-child(4)")
 
     @property
     def toc_tree_dropdown_list_is_visible(self):
@@ -75,9 +64,7 @@ class HomePoet:
 
     @property
     def book_list_dropdown_locator(self):
-        return self.child_frame.locator(
-            "div > div.panel-editable > div.controls > select"
-        )
+        return self.child_frame.locator("div.panel-editable > div.controls > select")
 
     def click_book_list_dropdown(self):
         self.book_list_dropdown_locator.click()
@@ -105,13 +92,17 @@ class HomePoet:
     @property
     def chapter_box_title_locator(self):
         return self.child_frame.locator(
-            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > div.rst__rowLabel > span.rst__rowTitle.rst__rowTitleWithSubtitle"
+            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > "
+            "div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > "
+            "div.rst__rowLabel > span.rst__rowTitle.rst__rowTitleWithSubtitle"
         )
 
     @property
     def chapter_box_title_input(self):
         return self.child_frame.locator(
-            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > div.rst__rowLabel > span.rst__rowTitle.rst__rowTitleWithSubtitle > input"
+            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > "
+            "div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > "
+            "div.rst__rowLabel > span.rst__rowTitle.rst__rowTitleWithSubtitle > input"
         )
 
     def click_chapter_box_title(self):
@@ -151,21 +142,26 @@ class HomePoet:
     def subcollection_locator_new_box(self):
         # Last newly added item in the chapter list (left panel)
         return self.child_frame.locator(
-            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > div > div > div:nth-child(1)"
+            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > "
+            "div > div > div:nth-child(1)"
         )
 
     @property
     def subcollection_locator_new_box_title(self):
         # Title of the last newly added item in the chapter list (left panel)
         return self.child_frame.locator(
-            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > div.rst__rowLabel"
+            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > "
+            "div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > "
+            "div.rst__rowLabel"
         )
 
     @property
     def subcollection_locator_new_box_title_input(self):
         # Title of the last newly added item in the chapter list (left panel)
         return self.child_frame.locator(
-            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > div.rst__rowLabel > span > input"
+            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > "
+            "div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > "
+            "div.rst__rowLabel > span > input"
         )
 
     def click_new_subcollection_box_title(self):
@@ -177,7 +173,7 @@ class HomePoet:
     @property
     def search_field_locator(self):
         return self.child_frame.locator(
-            "div > div.panel-editable > div.controls > div:nth-child(3) > input"
+            "div.panel-editable > div.controls > div:nth-child(3) > input"
         )
 
     def fill_search_field(self, value):
@@ -214,7 +210,8 @@ class HomePoet:
     @property
     def stop_workspace_button_locator(self):
         return self.page.locator(
-            "div.menubar-menu-items-holder.monaco-menu-container > div > div.monaco-menu > div > ul > li:nth-child(15) > a > span.action-label"
+            "div.menubar-menu-items-holder.monaco-menu-container > div > div.monaco-menu > "
+            "div > ul > li:nth-child(15) > a > span.action-label"
         )
 
     def click_stop_workspace_button(self):
