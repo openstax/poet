@@ -6,7 +6,7 @@ version="$VERSION"
 openvsx_token="$OPENVSX_TOKEN"
 HERE="$(cd "$(dirname "$0")"; pwd)"
 
-"$HERE"/build-for-release.bash "$version"
+"$HERE"/build-for-release.sh "$version"
 
 cd "$HERE"/..
 npm install ovsx
