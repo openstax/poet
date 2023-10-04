@@ -7,7 +7,7 @@ def chrome_page():
     """Return playwright chromium browser page - slow flow"""
     playwright_sync = sync_playwright().start()
     chrome_browser = playwright_sync.chromium.launch(
-        headless=True, slow_mo=1500, timeout=120000
+        headless=True, slow_mo=1600, timeout=120000
     )
     context = chrome_browser.new_context()
 
@@ -47,3 +47,12 @@ def gitpod_repo_url(request):
     )
     if gitpod_repo_url is not None:
         return gitpod_repo_url
+
+
+@pytest.fixture
+def github_token(request):
+    """Return a github token"""
+    config = request.config
+    github_token = config.getoption("github_token") or config.getini("github_token")
+    if github_token is not None:
+        return github_token
