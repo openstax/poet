@@ -42,12 +42,12 @@ def test_problems_tab_all_repos(
                 ccont = chrome_page.content()
 
                 sopa = BeautifulSoup(ccont, "html.parser")
-                problems = sopa.select(aria_label_0)
+                zero_problems = sopa.select(aria_label_0)
 
                 repo_name = gitpod_repo_url.split("openstax/")
 
                 try:
-                    assert problems
+                    assert zero_problems
 
                 except AssertionError:
                     print(f"!!! Problems detected under Problems tab: {repo_name[1]}")
@@ -85,12 +85,12 @@ def test_problems_tab_all_repos(
                 ccont = chrome_page.content()
 
                 sopa = BeautifulSoup(ccont, "html.parser")
-                problems = sopa.select(aria_label_0)
+                zero_problems = sopa.select(aria_label_0)
 
                 repo_name = gitpod_repo_url.split("openstax/")
 
                 try:
-                    assert problems
+                    assert zero_problems
 
                 except AssertionError:
                     print(f"!!! Problems detected under Problems tab: {repo_name[1]}")
