@@ -6,8 +6,21 @@ class HomePoet:
     def github_login_button_locator(self):
         return self.page.locator(".btn-login")
 
+    @property
+    def github_login_button_is_visible(self):
+        return self.page.is_visible(".btn-login")
+
     def click_github_login_button(self):
         self.github_login_button_locator.click()
+
+    @property
+    def workspace_continue_button(self):
+        return self.page.locator(
+            "div.w-full.flex.justify-end.mt-3.space-x-2.px-6 > button"
+        )
+
+    def click_workspace_continue_button(self):
+        self.workspace_continue_button.click()
 
     @property
     def openstax_icon(self):
@@ -216,3 +229,7 @@ class HomePoet:
 
     def click_stop_workspace_button(self):
         self.stop_workspace_button_locator.click()
+
+    @property
+    def private_repo_warning_is_visible(self):
+        return self.page.is_visible("span.flex-1.text-left > div:nth-child(1) > span")

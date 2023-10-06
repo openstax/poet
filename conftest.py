@@ -3,7 +3,11 @@ import os
 import pytest
 
 # Import fixtures
-pytest_plugins = "tests.ui.fixtures.ui"
+pytest_plugins = (
+    "tests.ui.fixtures.ui",
+    "tests.ui.fixtures.git_content_repos",
+    "tests.ui.fixtures.headers_data",
+)
 
 
 def get_custom_markers():
@@ -18,7 +22,7 @@ def get_custom_markers():
         "ui: mark tests used for ui tests",
         "unit: mark tests as a unit test",
         "nondestructive: tests using this decorator will run in sensitive environments",
-        "sensitive: the url for environments where destructive tests should not be executed"
+        "sensitive: the url for environments where destructive tests should not be executed",
     )
 
 
@@ -32,7 +36,7 @@ def pytest_addoption(parser):
         action="store_true",
         dest="run_destructive",
         default=False,
-        help="include destructive tests (tests not explicitly marked as \'nondestructive\'). (disabled by default).",
+        help="include destructive tests (tests not explicitly marked as 'nondestructive'). (disabled by default).",
     )
     parser.addini("github_user", help="github user")
     parser.addoption(
@@ -55,6 +59,13 @@ def pytest_addoption(parser):
         default=os.getenv("GITPOD_REPO_URL", None),
         help="gitpod_repo_url",
     )
+    parser.addini("github_token", help="github token")
+    parser.addoption(
+        "--github_token",
+        metavar="tag",
+        default=os.getenv("GITHUB_TOKEN", None),
+        help="github_token",
+    )
 
 
 def pytest_configure(config):
@@ -67,10 +78,12 @@ def pytest_configure(config):
 
 
 def pytest_runtest_setup(item):
-    destructive = 'nondestructive' not in item.keywords
+    destructive = "nondestructive" not in item.keywords
 
     if destructive:
         # Skip the test with an appropriate message
-        pytest.skip("This test is destructive and the target URL is"
-                    "considered a sensitive environment. If this test"
-                    "is not destructive add the 'nondestructive' marker.")
+        pytest.skip(
+            "This test is destructive and the target URL is"
+            "considered a sensitive environment. If this test"
+            "is not destructive add the 'nondestructive' marker."
+        )
