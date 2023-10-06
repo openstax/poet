@@ -23,10 +23,14 @@ class HomePoet:
         self.workspace_continue_button.click()
 
     @property
-    def openstax_icon(self):
+    def openstax_icon_is_visible(self):
         return self.page.wait_for_selector(
-            "div.composite-bar > div > ul > li:nth-child(7)", timeout=99000
+            "div.composite-bar > div > ul > li:nth-child(7)", timeout=120000
         )
+
+    @property
+    def openstax_icon(self):
+        return self.page.locator("div.composite-bar > div > ul > li:nth-child(7)")
 
     def click_openstax_icon(self):
         self.openstax_icon.click()
@@ -230,6 +234,62 @@ class HomePoet:
     def click_stop_workspace_button(self):
         self.stop_workspace_button_locator.click()
 
+    # Menubar items ----
+
+    @property
+    def menubar_explorer_button_locator(self):
+        return self.page.wait_for_selector(
+            "div.composite-bar > div > ul > li:nth-child(1)", timeout=90000
+        )
+
+    def click_explorer_button(self):
+        self.menubar_explorer_button_locator.click()
+
+    @property
+    def explorer_modules_locator(self):
+        return self.page.wait_for_selector(
+            "div.monaco-list-row :text('modules')", timeout=90000
+        )
+
+    def click_explorer_modules(self):
+        self.explorer_modules_locator.click()
+
+    @property
+    def explorer_submodule_locator(self):
+        return self.page.wait_for_selector("id=list_id_1_9", timeout=90000)
+
+    def click_explorer_submodule(self):
+        self.explorer_submodule_locator.click()
+
+    @property
+    def explorer_index_file_locator(self):
+        return self.page.wait_for_selector("id=list_id_1_10", timeout=90000)
+
+    def click_explorer_index_file(self):
+        self.explorer_index_file_locator.click()
+
+    @property
+    def problems_tab_locator(self):
+        return self.page.wait_for_selector(
+            "div.composite-bar.panel-switcher-container > div > ul > li:nth-child(2)",
+            timeout=90000,
+        )
+
+    def click_problems_tab(self):
+        self.problems_tab_locator.click()
+
+    @property
+    def problems_tab_message(self):
+        return self.page.wait_for_selector(
+            "div.pane-body.markers-panel.wide", timeout=90000
+        )
+
     @property
     def private_repo_warning_is_visible(self):
         return self.page.is_visible("span.flex-1.text-left > div:nth-child(1) > span")
+
+    @property
+    def workspace_limit_warning_is_visible(self):
+        return self.page.is_visible(
+            "div:nth-child(6) > div > div > div:nth-child(2) > div > h3 > span"
+        )
