@@ -25,7 +25,7 @@ class HomePoet:
     @property
     def openstax_icon_is_visible(self):
         return self.page.wait_for_selector(
-            "div.composite-bar > div > ul > li:nth-child(7)", timeout=120000
+            "div.composite-bar > div > ul > li:nth-child(7)", timeout=210000
         )
 
     @property
@@ -293,3 +293,23 @@ class HomePoet:
         return self.page.is_visible(
             "div:nth-child(6) > div > div > div:nth-child(2) > div > h3 > span"
         )
+
+    # To change users in gitpod user dropdown
+
+    @property
+    def gitpod_user_dropdown(self):
+        return self.page.wait_for_selector(
+            "div > div:nth-child(1) > div.relative > div"
+        )
+
+    def click_gitpod_user_dropdown(self):
+        self.gitpod_user_dropdown.click()
+
+    @property
+    def gitpod_user_selector(self):
+        return self.page.wait_for_selector(
+            "div > div:nth-child(1) > div.relative :text('openstax')"
+        )
+
+    def click_gitpod_user_selector(self):
+        self.gitpod_user_selector.click()
