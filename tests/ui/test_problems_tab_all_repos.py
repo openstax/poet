@@ -9,7 +9,8 @@ def test_problems_tab_all_repos(
 ):
     # GIVEN: Playwright, chromium and gitpod
     # repo url as: https://gitpod.io/#https://github.com/openstax/osbooks-otto-book
-    # run the test: pytest -k test_problems_tab.py tests/ui --github_user xxx --github_password yyy --github_token zzz
+    # run the test: pytest -k test_problems_tab.py tests/ui --github_user xxx --github_password yyy
+    # --github_token zzz > problems.log
 
     sign_in_button_selector = "input.btn.btn-primary.btn-block.js-sign-in-button"
 
@@ -28,6 +29,13 @@ def test_problems_tab_all_repos(
                 continue
 
             else:
+                if home.gitpod_user_dropdown.inner_text() == "0 openstax":
+                    pass
+
+                else:
+                    home.click_gitpod_user_dropdown()
+                    home.click_gitpod_user_selector()
+
                 home.click_workspace_continue_button()
 
                 if home.workspace_limit_warning_is_visible:
@@ -65,7 +73,6 @@ def test_problems_tab_all_repos(
                                     f"!!! Problems detected under Problems tab: {repo}"
                                 )
                                 print(f"{home.problems_tab_message.inner_text()}")
-                                continue
 
                             else:
                                 print(f"NO PROBLEMS IN {repo}")
@@ -87,6 +94,13 @@ def test_problems_tab_all_repos(
                     github_login_window.fill("#password", github_password)
 
                     github_login_window.click(sign_in_button_selector)
+
+                if home.gitpod_user_dropdown.inner_text() == "0 openstax":
+                    pass
+
+                else:
+                    home.click_gitpod_user_dropdown()
+                    home.click_gitpod_user_selector()
 
                 home.click_workspace_continue_button()
 
@@ -124,7 +138,6 @@ def test_problems_tab_all_repos(
                                     f"!!! Problems detected under Problems tab: {repo}"
                                 )
                                 print(f"{home.problems_tab_message.inner_text()}")
-                                continue
 
                             else:
                                 print(f"NO PROBLEMS IN {repo}")
