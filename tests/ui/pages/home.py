@@ -207,12 +207,12 @@ class HomePoet:
 
     @property
     def toc_editor_all_modules_dropdown_is_visible(self):
-        return self.page.locator("div.panel-uneditable > div.controls")
+        return self.page.locator("div[class='controls']")
 
     @property
     def toc_editor_deleted_modules_list_is_visible(self):
         return self.page.locator(
-            "div.panel-uneditable > div:nth-child(2) > div > div > div > div:nth-child(1)"
+            "div:nth-child(2) > div > div > div > div:nth-child(1)"
         )
 
     # To stop workspace ----
@@ -227,8 +227,7 @@ class HomePoet:
     @property
     def stop_workspace_button_locator(self):
         return self.page.locator(
-            "div.menubar-menu-items-holder.monaco-menu-container > div > div.monaco-menu > "
-            "div > ul > li:nth-child(15) > a > span.action-label"
+            "div.monaco-menu > div > ul > li:nth-child(15) > a > span.action-label"
         )
 
     def click_stop_workspace_button(self):
@@ -248,7 +247,7 @@ class HomePoet:
     @property
     def explorer_modules_locator(self):
         return self.page.wait_for_selector(
-            "div.monaco-list-row :text('modules')", timeout=90000
+            "div[class='monaco-list-row'] :text('modules')", timeout=90000
         )
 
     def click_explorer_modules(self):
@@ -286,21 +285,17 @@ class HomePoet:
 
     @property
     def private_repo_warning_is_visible(self):
-        return self.page.is_visible("span.flex-1.text-left > div:nth-child(1) > span")
+        return self.page.is_visible("span.flex-1.text-left > div:nth-child(1)")
 
     @property
     def workspace_limit_warning_is_visible(self):
-        return self.page.is_visible(
-            "div:nth-child(6) > div > div > div:nth-child(2) > div > h3 > span"
-        )
+        return self.page.is_visible("div:nth-child(6) > div > div > div:nth-child(2)")
 
     # To change users in gitpod user dropdown
 
     @property
     def gitpod_user_dropdown(self):
-        return self.page.wait_for_selector(
-            "div > div:nth-child(1) > div.relative > div"
-        )
+        return self.page.wait_for_selector("div:nth-child(1) > div.relative")
 
     def click_gitpod_user_dropdown(self):
         self.gitpod_user_dropdown.click()
@@ -308,7 +303,7 @@ class HomePoet:
     @property
     def gitpod_user_selector(self):
         return self.page.wait_for_selector(
-            "div > div:nth-child(1) > div.relative :text('openstax')"
+            "div:nth-child(1) > div.relative :text('openstax')"
         )
 
     def click_gitpod_user_selector(self):
