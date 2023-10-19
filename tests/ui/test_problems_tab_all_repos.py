@@ -9,7 +9,7 @@ def test_problems_tab_all_repos(
 ):
     # GIVEN: Playwright, chromium and gitpod
     # repo url as: https://gitpod.io/#https://github.com/openstax/osbooks-otto-book
-    # run the test: pytest -k test_problems_tab.py tests/ui --github_user xxx --github_password yyy
+    # run the test: pytest -k test_problems_tab_all_repos.py tests/ui --github_user xxx --github_password yyy
     # --github_token zzz > problems.log
 
     sign_in_button_selector = "input.btn.btn-primary.btn-block.js-sign-in-button"
@@ -38,47 +38,40 @@ def test_problems_tab_all_repos(
 
                 home.click_workspace_continue_button()
 
-                if home.workspace_limit_warning_is_visible:
-                    pytest.exit("Gitpod warning! Workspace limit reached!")
-
+                # THEN: openstax extension launches and icon appears
+                if not home.openstax_icon_is_visible:
+                    print("No openstax icon")
                 else:
-                    # THEN: openstax extension launches and icon appears
+                    home.click_openstax_icon()
 
-                    if not home.openstax_icon_is_visible:
-                        print("No openstax icon")
+                    # THEN: TOC Editor and book list dropdown is visible
+                    if not home.open_toc_editor_button_is_visible:
+                        print(">>>TOC Editor button not loaded, skipping")
+                        continue
+
                     else:
-                        home.click_openstax_icon()
+                        home.click_explorer_button()
+                        home.click_explorer_modules()
+                        home.click_explorer_submodule()
+                        home.click_explorer_index_file()
 
-                        # THEN: TOC Editor and book list dropdown is visible
-                        if not home.open_toc_editor_button_is_visible:
-                            print(">>>TOC Editor button not loaded, skipping")
-                            continue
+                        home.click_problems_tab()
+
+                        try:
+                            assert (
+                                "No problems have been detected in the workspace."
+                                in home.problems_tab_message.inner_text()
+                            )
+
+                        except AssertionError:
+                            print(f"!!! Problems detected under Problems tab: {repo}")
+                            print(f"{home.problems_tab_message.inner_text()}")
 
                         else:
-                            home.click_explorer_button()
-                            home.click_explorer_modules()
-                            home.click_explorer_submodule()
-                            home.click_explorer_index_file()
+                            print(f"NO PROBLEMS IN {repo}")
 
-                            home.click_problems_tab()
-
-                            try:
-                                assert (
-                                    "No problems have been detected in the workspace."
-                                    in home.problems_tab_message.inner_text()
-                                )
-
-                            except AssertionError:
-                                print(
-                                    f"!!! Problems detected under Problems tab: {repo}"
-                                )
-                                print(f"{home.problems_tab_message.inner_text()}")
-
-                            else:
-                                print(f"NO PROBLEMS IN {repo}")
-
-                            home.click_gitpod_menubar()
-                            home.click_stop_workspace_button()
+                        home.click_gitpod_menubar()
+                        home.click_stop_workspace_button()
 
         else:
             if home.private_repo_warning_is_visible:
@@ -104,43 +97,38 @@ def test_problems_tab_all_repos(
 
                 home.click_workspace_continue_button()
 
-                if home.workspace_limit_warning_is_visible:
-                    pytest.exit("Gitpod warning! Workspace limit reached!")
-
+                # THEN: openstax extension launches and icon appears
+                if not home.openstax_icon_is_visible:
+                    print("No openstax icon")
                 else:
-                    if not home.openstax_icon_is_visible:
-                        print("No openstax icon")
-                    else:
-                        # THEN: openstax extension launches and icon appears
-                        home.click_openstax_icon()
+                    # THEN: openstax extension launches and icon appears
+                    home.click_openstax_icon()
 
-                        # THEN: TOC Editor and book list dropdown is visible
-                        if not home.open_toc_editor_button_is_visible:
-                            print(">>> TOC Editor button not loaded, skipping")
-                            continue
+                    # THEN: TOC Editor and book list dropdown is visible
+                    if not home.open_toc_editor_button_is_visible:
+                        print(">>> TOC Editor button not loaded, skipping")
+                        continue
+
+                    else:
+                        home.click_explorer_button()
+                        home.click_explorer_modules()
+                        home.click_explorer_submodule()
+                        home.click_explorer_index_file()
+
+                        home.click_problems_tab()
+
+                        try:
+                            assert (
+                                "No problems have been detected in the workspace."
+                                in home.problems_tab_message.inner_text()
+                            )
+
+                        except AssertionError:
+                            print(f"!!! Problems detected under Problems tab: {repo}")
+                            print(f"{home.problems_tab_message.inner_text()}")
 
                         else:
-                            home.click_explorer_button()
-                            home.click_explorer_modules()
-                            home.click_explorer_submodule()
-                            home.click_explorer_index_file()
+                            print(f"NO PROBLEMS IN {repo}")
 
-                            home.click_problems_tab()
-
-                            try:
-                                assert (
-                                    "No problems have been detected in the workspace."
-                                    in home.problems_tab_message.inner_text()
-                                )
-
-                            except AssertionError:
-                                print(
-                                    f"!!! Problems detected under Problems tab: {repo}"
-                                )
-                                print(f"{home.problems_tab_message.inner_text()}")
-
-                            else:
-                                print(f"NO PROBLEMS IN {repo}")
-
-                            home.click_gitpod_menubar()
-                            home.click_stop_workspace_button()
+                        home.click_gitpod_menubar()
+                        home.click_stop_workspace_button()
