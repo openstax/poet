@@ -1,3 +1,6 @@
+import time
+
+
 class HomePoet:
     def __init__(self, page):
         self.page = page
@@ -71,6 +74,35 @@ class HomePoet:
         return self.page.locator(
             "div.split-view-container > div:nth-child(2) > div > div.pane-header.expanded > h3"
         )
+
+    @property
+    def validate_content_button(self):
+        return self.page.locator("div.welcome-view-content > div:nth-child(4)")
+
+    def click_validate_content_button(self):
+        return self.validate_content_button.click()
+
+    @property
+    def validate_content_all_content_option(self):
+        return self.page.locator("div.dialog-buttons-row > div > a:nth-child(1)")
+
+    def click_validate_content_all_content_option(self):
+        return self.validate_content_all_content_option.click()
+
+    @property
+    def validation_notification_dialog_box_is_visible(self):
+        # Content validation dialog showing the validation progress
+        return any(
+            "Opening documents with errors..." in inner_text
+            for inner_text in self.page.locator(
+                "div.notification-list-item-main-row > div.notification-list-item-message > span"
+            ).all_inner_texts()
+        )
+
+    @property
+    def cannot_activate_poet_dialog_box_is_visible(self):
+        # Dialog for missing gitpod.yml file in book repos
+        return self.page.is_visible("div > div.notifications-toasts.visible")
 
     # TOC Editor left panel ------
 
@@ -287,10 +319,6 @@ class HomePoet:
     def private_repo_warning_is_visible(self):
         return self.page.is_visible("span.flex-1.text-left > div:nth-child(1)")
 
-    @property
-    def workspace_limit_warning_is_visible(self):
-        return self.page.is_visible("div:nth-child(6) > div > div > div:nth-child(2)")
-
     # To change users in gitpod user dropdown
 
     @property
@@ -308,3 +336,17 @@ class HomePoet:
 
     def click_gitpod_user_selector(self):
         self.gitpod_user_selector.click()
+
+    def wait_for_validation_end(
+        self, condition, timeout_seconds=900, interval_seconds=10
+    ):
+        # Waits for the content validation process to complete (at various times depending on the book repo)
+        end = time.time() + timeout_seconds
+        while time.time() < end:
+            if condition():
+                time.sleep(interval_seconds)
+
+            else:
+                return True
+
+        raise Exception("Timeout")
