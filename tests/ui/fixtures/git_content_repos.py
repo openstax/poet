@@ -8,7 +8,7 @@ def git_content_repos(headers_data):
 
     repos = []
 
-    # list of excluded test git repos
+    # list of excluded test and non-valid book repos
     dels = [
         "osbooks-testing",
         "osbooks-otto-book",
@@ -20,6 +20,11 @@ def git_content_repos(headers_data):
         "osbooks-failing-test-book",
         "osbooks-test-content",
         "osbooks-makroekonomia-test",
+        "osbooks-mikroekonomia",
+        "osbooks-life-liberty-and-pursuit-happiness",
+        "osbooks-fizyka-bundle",
+        "osbooks-psychologia",
+        "osbooks-pl-marketing",
     ]
 
     next_url = "https://api.github.com/orgs/openstax/repos?per_page=50"
