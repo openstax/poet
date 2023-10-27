@@ -20,8 +20,17 @@ def test_home_ui(chrome_page, github_user, github_password, gitpod_repo_url):
 
         github_login_window.click("input.btn.btn-primary.btn-block.js-sign-in-button")
 
+    if home.gitpod_user_dropdown.inner_text() == "0 openstax":
+        pass
+
+    else:
+        home.click_gitpod_user_dropdown()
+        home.click_gitpod_user_selector()
+
+    home.click_workspace_continue_button()
+
     # THEN: openstax extension launches and icon appears
-    assert home.openstax_icon
+    assert home.openstax_icon_is_visible
 
     home.click_openstax_icon()
 
@@ -41,3 +50,6 @@ def test_home_ui(chrome_page, github_user, github_password, gitpod_repo_url):
 
     assert home.toc_editor_all_modules_dropdown_is_visible
     assert home.toc_editor_deleted_modules_list_is_visible
+
+    home.click_gitpod_menubar()
+    home.click_stop_workspace_button()

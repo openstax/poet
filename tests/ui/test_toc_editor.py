@@ -16,13 +16,23 @@ def test_toc_editor(chrome_page, github_user, github_password, gitpod_repo_url):
     home.click_github_login_button()
 
     with chrome_page.context.pages[1] as github_login_window:
+        github_login_window.fill("#login_field", github_user)
+        github_login_window.fill("#password", github_password)
 
-        github_login_window.fill('#login_field', github_user)
-        github_login_window.fill('#password', github_password)
+        github_login_window.click("input.btn.btn-primary.btn-block.js-sign-in-button")
 
-        github_login_window.click('input.btn.btn-primary.btn-block.js-sign-in-button')
+    if home.gitpod_user_dropdown.inner_text() == "0 openstax":
+        pass
+
+    else:
+        home.click_gitpod_user_dropdown()
+        home.click_gitpod_user_selector()
+
+    home.click_workspace_continue_button()
 
     # THEN: openstax extension launches and icon appears
+    assert home.openstax_icon_is_visible
+
     home.click_openstax_icon()
 
     # THEN: TOC Editor and book list dropdown is visible
@@ -41,7 +51,10 @@ def test_toc_editor(chrome_page, github_user, github_password, gitpod_repo_url):
     # THEN: Add module input box is visible and editable
     assert home.add_module_input_box_is_visible
 
-    assert "Title of new Page (Press 'Enter' to confirm or 'Escape' to cancel)" in home.add_module_input_box_is_visible.inner_text()
+    assert (
+        "Title of new Page (Press 'Enter' to confirm or 'Escape' to cancel)"
+        in home.add_module_input_box_is_visible.inner_text()
+    )
 
     home.fill_add_module_input_box("qachapter")
 
@@ -63,9 +76,12 @@ def test_toc_editor(chrome_page, github_user, github_password, gitpod_repo_url):
 
     assert home.add_subcollection_input_box_is_visible
 
-    assert "Title of new Book Section (Press 'Enter' to confirm or 'Escape' to cancel)" in home.add_subcollection_input_box_is_visible.inner_text()
+    assert (
+        "Title of new Book Section (Press 'Enter' to confirm or 'Escape' to cancel)"
+        in home.add_subcollection_input_box_is_visible.inner_text()
+    )
 
-    home.fill_add_subcollection_input_box('QADIR')
+    home.fill_add_subcollection_input_box("QADIR")
 
     chrome_page.keyboard.press("Enter")
 
@@ -80,6 +96,9 @@ def test_toc_editor(chrome_page, github_user, github_password, gitpod_repo_url):
     assert "NEW-QA-DIR" in home.chapter_subcollection_list_is_visible.inner_text()
 
     # THEN: search field is visible and editable
-    home.fill_search_field('Eger')
+    home.fill_search_field("Eger")
 
     assert home.search_item_amount_indicator_is_visible
+
+    home.click_gitpod_menubar()
+    home.click_stop_workspace_button()
