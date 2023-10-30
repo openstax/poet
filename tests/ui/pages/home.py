@@ -62,12 +62,59 @@ class HomePoet:
         return self.page.is_visible("div.welcome-view-content > div:nth-child(2)")
 
     @property
+    def push_content_button(self):
+        return self.page.locator("div.welcome-view-content > div:nth-child(2)")
+
+    def click_push_content_button(self):
+        return self.push_content_button.click()
+
+    @property
+    def push_message_input_field_is_visible(self):
+        return self.page.locator("div.monaco-inputbox.idle.synthetic-focus")
+
+    @property
+    def push_message_input_field_not_visible(self):
+        return self.page.locator("div.monaco-inputbox.idle")
+
+    @property
+    def push_content_dialog_box(self):
+        return self.page.locator("div > div.notifications-toasts.visible")
+
+    @property
+    def push_content_dialog_box_cancel_button(self):
+        return self.page.locator("div.notification-list-item-buttons-container > a")
+
+    def click_push_content_dialog_box_cancel_button(self):
+        return self.push_content_dialog_box_cancel_button.click()
+
+    @property
     def generate_readme_button_is_visible(self):
         return self.page.is_visible("div.welcome-view-content > div:nth-child(3)")
 
     @property
+    def generate_readme_button(self):
+        return self.page.locator("div.welcome-view-content > div:nth-child(3)")
+
+    def click_generate_readme_button(self):
+        return self.generate_readme_button.click()
+
+    @property
+    def generate_readme_dialog_box_is_visible(self):
+        return self.page.wait_for_selector("div.notifications-toasts.visible > div")
+
+    @property
+    def generate_readme_dialog_box_text(self):
+        return self.page.locator(
+            "div.notification-list-item-main-row > div.notification-list-item-message"
+        )
+
+    @property
     def validate_content_button_is_visible(self):
         return self.page.is_visible("div.welcome-view-content > div:nth-child(4)")
+
+    @property
+    def validate_content_popup_dialog_is_visible(self):
+        return self.page.is_visible("div > div.monaco-dialog-modal-block.dimmed > div")
 
     @property
     def toc_tree_dropdown_list_is_visible(self):
@@ -88,6 +135,13 @@ class HomePoet:
 
     def click_validate_content_all_content_option(self):
         return self.validate_content_all_content_option.click()
+
+    @property
+    def validate_content_cancel_button(self):
+        return self.page.locator("div.dialog-buttons-row > div > a:nth-child(2)")
+
+    def click_validate_content_cancel_button(self):
+        return self.validate_content_cancel_button.click()
 
     @property
     def validation_notification_dialog_box_is_visible(self):
