@@ -356,7 +356,7 @@ class HomePoet:
     @property
     def problems_tab_locator(self):
         return self.page.wait_for_selector(
-            "div.composite-bar.panel-switcher-container > div > ul > li:nth-child(2)",
+            "div.composite-bar-container > div > div > ul > li:nth-child(2)",
             timeout=90000,
         )
 
