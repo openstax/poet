@@ -17,7 +17,7 @@ import { PanelStateMessage, PanelStateMessageType } from '../../common/src/webvi
       })
     }
     function createCnxmlFromContent(content: string): string {
-      return `<document xmlns="http://cnx.rice.edu/cnxml"><content>${content}</content></document>`
+      return `<document xmlns="http://cnx.rice.edu/cnxml"><content>${content}</content></document><!-- extra bit for testing -->`
     }
     function sendScrollToLine(line: number): void {
       sendMessage({ type: 'scroll-in-preview', line })
