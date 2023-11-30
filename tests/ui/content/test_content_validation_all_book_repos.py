@@ -4,13 +4,15 @@ from tests.ui.pages.home import HomePoet
 
 
 @pytest.mark.nondestructive
-def test_content_validation_all_repos(
+def test_content_validation_all_book_repos(
     chrome_page, github_user, github_password, git_content_repos, headers_data
 ):
     # GIVEN: Playwright, chromium and gitpod
     # repo url as: https://gitpod.io/#https://github.com/openstax/osbooks-content-repo
     # run the test: pytest -k test_content_validation_all_repos.py tests/ui --github_user xxx --github_password yyy
     # --github_token zzz > validation.log
+
+    # As per github changes, modified on November 30, 2023
 
     sign_in_button_selector = "input.btn.btn-primary.btn-block.js-sign-in-button"
 
@@ -23,19 +25,19 @@ def test_content_validation_all_repos(
         chrome_page.goto(gitpod_repo_url)
         home = HomePoet(chrome_page)
 
-        if not home.github_login_button_is_visible:
+        if not home.continue_with_github_is_visible:
+            if home.gitpod_user_dropdown.inner_text() == "0 openstax":
+                pass
+
+            else:
+                home.click_gitpod_user_dropdown()
+                home.click_gitpod_user_selector()
+
             if home.private_repo_warning_is_visible:
                 print(f"SKIPPING! Book repo is private: {repo}")
                 continue
 
             else:
-                if home.gitpod_user_dropdown.inner_text() == "0 openstax":
-                    pass
-
-                else:
-                    home.click_gitpod_user_dropdown()
-                    home.click_gitpod_user_selector()
-
                 home.click_workspace_continue_button()
 
                 # THEN: openstax extension launches and icon appears
@@ -83,27 +85,27 @@ def test_content_validation_all_repos(
                         home.click_stop_workspace_button()
 
         else:
+            home.click_continue_with_github_button()
+
+            # WHEN: login into repo
+            with chrome_page.context.pages[1] as github_login_window:
+                github_login_window.fill("#login_field", github_user)
+                github_login_window.fill("#password", github_password)
+
+                github_login_window.click(sign_in_button_selector)
+
+            if home.gitpod_user_dropdown.inner_text() == "0 openstax":
+                pass
+
+            else:
+                home.click_gitpod_user_dropdown()
+                home.click_gitpod_user_selector()
+
             if home.private_repo_warning_is_visible:
                 print(f"SKIPPING! Book repo is private: {repo}")
                 continue
 
             else:
-                # WHEN: login into repo
-                home.click_github_login_button()
-
-                with chrome_page.context.pages[1] as github_login_window:
-                    github_login_window.fill("#login_field", github_user)
-                    github_login_window.fill("#password", github_password)
-
-                    github_login_window.click(sign_in_button_selector)
-
-                if home.gitpod_user_dropdown.inner_text() == "0 openstax":
-                    pass
-
-                else:
-                    home.click_gitpod_user_dropdown()
-                    home.click_gitpod_user_selector()
-
                 home.click_workspace_continue_button()
 
                 if not home.openstax_icon_is_visible:
