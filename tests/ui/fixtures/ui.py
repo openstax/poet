@@ -7,7 +7,7 @@ def chrome_page():
     """Return playwright chromium browser page - slow flow"""
     playwright_sync = sync_playwright().start()
     chrome_browser = playwright_sync.chromium.launch(
-        headless=True, slow_mo=1600, timeout=120000
+        headless=True, slow_mo=1800, timeout=120000
     )
     context = chrome_browser.new_context()
 

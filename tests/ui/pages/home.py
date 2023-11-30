@@ -7,11 +7,11 @@ class HomePoet:
 
     @property
     def github_login_button_locator(self):
-        return self.page.locator(".btn-login")
+        return self.page.locator("input.btn.btn-primary.btn-block.js-sign-in-button")
 
     @property
     def github_login_button_is_visible(self):
-        return self.page.is_visible(".btn-login")
+        return self.page.is_visible("input.btn.btn-primary.btn-block.js-sign-in-button")
 
     def click_github_login_button(self):
         self.github_login_button_locator.click()
@@ -33,7 +33,9 @@ class HomePoet:
 
     @property
     def openstax_icon(self):
-        return self.page.locator("div.composite-bar > div > ul > li:nth-child(7)")
+        return self.page.wait_for_selector(
+            "div.composite-bar > div > ul > li:nth-child(7)", timeout=90000
+        )
 
     def click_openstax_icon(self):
         self.openstax_icon.click()
@@ -48,7 +50,9 @@ class HomePoet:
 
     @property
     def open_toc_editor_button_is_visible(self):
-        return self.page.is_visible("div.welcome-view-content > div:nth-child(1)")
+        return self.page.wait_for_selector(
+            "div.welcome-view-content > div:nth-child(1)", timeout=90000
+        )
 
     @property
     def open_toc_editor_button_locator(self):
@@ -390,6 +394,21 @@ class HomePoet:
 
     def click_gitpod_user_selector(self):
         self.gitpod_user_selector.click()
+
+    @property
+    def continue_with_github_is_visible(self):
+        return self.page.is_visible(
+            "div > div.w-56.mx-auto.flex.flex-col.space-y-3.items-center > button"
+        )
+
+    @property
+    def continue_with_github_button(self):
+        return self.page.locator(
+            "div > div.w-56.mx-auto.flex.flex-col.space-y-3.items-center > button"
+        )
+
+    def click_continue_with_github_button(self):
+        self.continue_with_github_button.click()
 
     def wait_for_validation_end(
         self, condition, timeout_seconds=900, interval_seconds=10
