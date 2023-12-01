@@ -242,7 +242,7 @@ const handleRefresh = (xml, xsl) => {
       }
       case Node.DOCUMENT_FRAGMENT_NODE: {
         // Wrap the children of the document fragment in a <div>
-        const children = [...xmlNode.childNodes].map(c => recBuildVDom(c))
+        const children = [...xmlNode.childNodes].map(c => recBuildVDom(c)).filter(c => !!c)
         return vdom_h('DIV', {}, ...children)
       }
       default: {
