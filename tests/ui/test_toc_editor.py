@@ -8,18 +8,23 @@ def test_toc_editor(chrome_page, github_user, github_password, gitpod_repo_url):
     # GIVEN: Playwright, chromium and a gitpod repo url
     # (https://gitpod.io/#https://github.com/openstax/osbooks-otto-book)
 
+    sign_in_button_selector = "input.btn.btn-primary.btn-block.js-sign-in-button"
+
     # WHEN: gitpod launches
     chrome_page.goto(gitpod_repo_url)
     home = HomePoet(chrome_page)
 
     # WHEN: login into openstax/osbooks-otto-book repo
-    home.click_github_login_button()
+    if not home.continue_with_github_is_visible:
+        pass
+
+    home.click_continue_with_github_button()
 
     with chrome_page.context.pages[1] as github_login_window:
         github_login_window.fill("#login_field", github_user)
         github_login_window.fill("#password", github_password)
 
-        github_login_window.click("input.btn.btn-primary.btn-block.js-sign-in-button")
+        github_login_window.click(sign_in_button_selector)
 
     if home.gitpod_user_dropdown.inner_text() == "0 openstax":
         pass

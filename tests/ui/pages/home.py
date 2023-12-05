@@ -6,21 +6,8 @@ class HomePoet:
         self.page = page
 
     @property
-    def github_login_button_locator(self):
-        return self.page.locator("input.btn.btn-primary.btn-block.js-sign-in-button")
-
-    @property
-    def github_login_button_is_visible(self):
-        return self.page.is_visible("input.btn.btn-primary.btn-block.js-sign-in-button")
-
-    def click_github_login_button(self):
-        self.github_login_button_locator.click()
-
-    @property
     def workspace_continue_button(self):
-        return self.page.locator(
-            "div.w-full.flex.justify-end.mt-3.space-x-2.px-6 > button"
-        )
+        return self.page.locator("button").get_by_text("Continue")
 
     def click_workspace_continue_button(self):
         self.workspace_continue_button.click()
@@ -28,17 +15,11 @@ class HomePoet:
     @property
     def openstax_icon_is_visible(self):
         return self.page.wait_for_selector(
-            "div.composite-bar > div > ul > li:nth-child(7)", timeout=210000
-        )
-
-    @property
-    def openstax_icon(self):
-        return self.page.wait_for_selector(
-            "div.composite-bar > div > ul > li:nth-child(7)", timeout=90000
+            "div.composite-bar > div > ul > li:nth-child(7)", timeout=120000
         )
 
     def click_openstax_icon(self):
-        self.openstax_icon.click()
+        self.openstax_icon_is_visible.click()
 
     @property
     def parent_frame(self):
@@ -56,7 +37,7 @@ class HomePoet:
 
     @property
     def open_toc_editor_button_locator(self):
-        return self.page.locator("div.welcome-view-content > div:nth-child(1)")
+        return self.page.get_by_text("Open ToC Editor", exact=True)
 
     def click_open_toc_editor_button(self):
         return self.open_toc_editor_button_locator.click()
@@ -67,7 +48,7 @@ class HomePoet:
 
     @property
     def push_content_button(self):
-        return self.page.locator("div.welcome-view-content > div:nth-child(2)")
+        return self.page.get_by_text("Push Content", exact=True)
 
     def click_push_content_button(self):
         return self.push_content_button.click()
@@ -97,7 +78,7 @@ class HomePoet:
 
     @property
     def generate_readme_button(self):
-        return self.page.locator("div.welcome-view-content > div:nth-child(3)")
+        return self.page.get_by_text("Generate README")
 
     def click_generate_readme_button(self):
         return self.generate_readme_button.click()
@@ -126,12 +107,8 @@ class HomePoet:
             "div.split-view-container > div:nth-child(2) > div > div.pane-header.expanded > h3"
         )
 
-    @property
-    def validate_content_button(self):
-        return self.page.locator("div.welcome-view-content > div:nth-child(4)")
-
     def click_validate_content_button(self):
-        return self.validate_content_button.click()
+        return self.page.get_by_text("Validate Content").click()
 
     @property
     def validate_content_all_content_option(self):
@@ -233,7 +210,10 @@ class HomePoet:
 
     @property
     def add_subcollection_input_box_is_visible(self):
-        return self.page.locator("div.quick-input-widget.show-file-icons")
+        return self.page.get_by_text(
+            "Title of new Book Section (Press 'Enter' to confirm or 'Escape' to cancel)",
+            exact=True,
+        )
 
     def fill_add_subcollection_input_box(self, value):
         self.add_subcollection_input_box_locator.fill(value)
@@ -316,9 +296,7 @@ class HomePoet:
 
     @property
     def stop_workspace_button_locator(self):
-        return self.page.locator(
-            "div.monaco-menu > div > ul > li:nth-child(15) > a > span.action-label"
-        )
+        return self.page.get_by_text("Gitpod: Stop Workspace", exact=True)
 
     def click_stop_workspace_button(self):
         self.stop_workspace_button_locator.click()
@@ -357,15 +335,8 @@ class HomePoet:
     def click_explorer_index_file(self):
         self.explorer_index_file_locator.click()
 
-    @property
-    def problems_tab_locator(self):
-        return self.page.wait_for_selector(
-            "div.composite-bar-container > div > div > ul > li:nth-child(2)",
-            timeout=90000,
-        )
-
     def click_problems_tab(self):
-        self.problems_tab_locator.click()
+        return self.page.get_by_text("Problems", exact=True).click()
 
     @property
     def problems_tab_message(self):
@@ -403,9 +374,7 @@ class HomePoet:
 
     @property
     def continue_with_github_button(self):
-        return self.page.locator(
-            "div > div.w-56.mx-auto.flex.flex-col.space-y-3.items-center > button"
-        )
+        return self.page.locator("button").get_by_text("Continue with GitHub")
 
     def click_continue_with_github_button(self):
         self.continue_with_github_button.click()
