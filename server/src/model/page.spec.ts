@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import * as path from 'path'
 import { ELEMENT_TO_PREFIX, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
 import { expectErrors, first, FS_PATH_HELPER, makeBundle, pageMaker } from './spec-helpers.spec'

@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import assert from 'assert'
 import * as xpath from 'xpath-ts'
 import { DOMParser, XMLSerializer } from 'xmldom'

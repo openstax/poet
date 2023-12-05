@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import I from 'immutable'
 import { BookNode } from './model/book'
 import { bookMaker, bundleMaker, makeBundle } from './model/spec-helpers.spec'

@@ -1,5 +1,5 @@
 import { join } from 'path'
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import mockfs from 'mock-fs'
 
 import { activate, deactivate, forwardOnDidChangeWorkspaceFolders, setLanguageServerLauncher, setResourceRootDir } from '../src/extension'

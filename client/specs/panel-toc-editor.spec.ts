@@ -1,5 +1,5 @@
 import { join } from 'path'
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import SinonRoot, { SinonStub } from 'sinon'
 
 import vscode, { Disposable, Event, EventEmitter, Uri, ViewColumn, WebviewPanel } from 'vscode'

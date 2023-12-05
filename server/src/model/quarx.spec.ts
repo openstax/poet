@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import * as Quarx from 'quarx'
 import { TocNode, TocNodeKind } from './utils'
 import { bookMaker, first, loadSuccess, makeBundle, read } from './spec-helpers.spec'

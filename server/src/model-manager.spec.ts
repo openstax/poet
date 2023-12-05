@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import fs from 'fs'
 import path from 'path'
 import mockfs from 'mock-fs'

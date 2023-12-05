@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import SinonRoot from 'sinon'
 import { readFileSync } from 'fs'
 import * as path from 'path'

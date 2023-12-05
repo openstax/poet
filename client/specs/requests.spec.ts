@@ -1,6 +1,6 @@
 import Sinon from 'sinon'
 import { requestEnsureIds, requestGenerateReadme } from '../../common/src/requests'
-import expect from 'expect'
+import { expect } from '@jest/globals'
 
 describe('ensureIds', () => {
   const sinon = Sinon.createSandbox()

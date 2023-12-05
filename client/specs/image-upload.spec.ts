@@ -1,5 +1,5 @@
 import { join } from 'path'
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import SinonRoot from 'sinon'
 import mockfs from 'mock-fs'
 

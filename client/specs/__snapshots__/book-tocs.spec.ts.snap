@@ -1,11 +1,11 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Toc Provider filters fileids when filtering is set 1`] = `
-Object {
+{
   "collapsibleState": "None",
-  "command": Object {
-    "arguments": Array [
-      Object {
+  "command": {
+    "arguments": [
+      {
         "$mid": 1,
         "path": "/path/to/file",
         "scheme": "file",
@@ -17,7 +17,7 @@ Object {
   "description": "fileId",
   "iconPath": "File",
   "label": "title",
-  "resourceUri": Object {
+  "resourceUri": {
     "$mid": 1,
     "path": "/path/to/file",
     "scheme": "file",
@@ -26,11 +26,11 @@ Object {
 `;
 
 exports[`Toc Provider filters fileids when filtering is set 2`] = `
-Object {
+{
   "collapsibleState": "None",
-  "command": Object {
-    "arguments": Array [
-      Object {
+  "command": {
+    "arguments": [
+      {
         "$mid": 1,
         "path": "/path/to/file",
         "scheme": "file",
@@ -41,7 +41,7 @@ Object {
   },
   "iconPath": "File",
   "label": "title (fileId)",
-  "resourceUri": Object {
+  "resourceUri": {
     "$mid": 1,
     "path": "/path/to/file",
     "scheme": "file",
@@ -50,11 +50,11 @@ Object {
 `;
 
 exports[`Toc Provider filters fileids when filtering is set 3`] = `
-Object {
+{
   "collapsibleState": "None",
-  "command": Object {
-    "arguments": Array [
-      Object {
+  "command": {
+    "arguments": [
+      {
         "$mid": 1,
         "path": "/path/to/file",
         "scheme": "file",
@@ -66,7 +66,7 @@ Object {
   "description": "fileId",
   "iconPath": "File",
   "label": "title",
-  "resourceUri": Object {
+  "resourceUri": {
     "$mid": 1,
     "path": "/path/to/file",
     "scheme": "file",
@@ -75,11 +75,11 @@ Object {
 `;
 
 exports[`Toc Provider returns tree items for children 1`] = `
-Object {
+{
   "collapsibleState": "Collapsed",
-  "command": Object {
-    "arguments": Array [
-      Object {
+  "command": {
+    "arguments": [
+      {
         "$mid": 1,
         "path": "/some/path",
         "scheme": "file",
@@ -91,7 +91,7 @@ Object {
   "description": "slug",
   "iconPath": ThemeIcon {},
   "label": "title",
-  "resourceUri": Object {
+  "resourceUri": {
     "$mid": 1,
     "path": "/some/path",
     "scheme": "file",
@@ -100,7 +100,7 @@ Object {
 `;
 
 exports[`Toc Provider returns tree items for children 2`] = `
-Object {
+{
   "collapsibleState": "Collapsed",
   "iconPath": "Folder",
   "label": "title",
@@ -108,11 +108,11 @@ Object {
 `;
 
 exports[`Toc Provider returns tree items for children 3`] = `
-Object {
+{
   "collapsibleState": "None",
-  "command": Object {
-    "arguments": Array [
-      Object {
+  "command": {
+    "arguments": [
+      {
         "$mid": 1,
         "path": "/path/to/file",
         "scheme": "file",
@@ -124,7 +124,7 @@ Object {
   "description": "fileId",
   "iconPath": "File",
   "label": "title",
-  "resourceUri": Object {
+  "resourceUri": {
     "$mid": 1,
     "path": "/path/to/file",
     "scheme": "file",

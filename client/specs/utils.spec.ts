@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import Sinon from 'sinon'
 import mockfs from 'mock-fs'
 import vscode, { ExtensionContext, Uri, Webview } from 'vscode'

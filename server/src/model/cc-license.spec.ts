@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 
 import { getCCLicense, licenseEqual } from './cc-license'
 

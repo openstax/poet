@@ -1,5 +1,5 @@
 import Sinon from 'sinon'
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import { Disposer, ExtensionHostContext, Panel, PanelManager } from '../src/panel'
 import { Disposable, WebviewPanel } from 'vscode'
 

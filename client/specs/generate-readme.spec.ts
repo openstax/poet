@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import Sinon from 'sinon'
 import * as vscode from 'vscode'
 import { LanguageClient } from 'vscode-languageclient/node'

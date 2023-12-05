@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 
 import { BookRootNode, BookToc, ClientTocNode, TocNodeKind } from '../../common/src/toc'
 import { TocsTreeProvider } from '../src/book-tocs'
