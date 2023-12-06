@@ -28,7 +28,8 @@
     "lint": "eslint . --ext ts,js,jsx,tsx,json",
     "lint:fix": "npm run lint -- --fix",
     "pretest:cypress": "npm run build && ./scripts/pre-cypress.bash",
-    "test:cypress": "cypress run --quiet --config-file ./cypress.json",
+    "test:cypress": "npm run test:cypress:only",
+    "test:cypress:only": "cypress run --quiet --config-file ./cypress.config.ts",
     "pretest:unit": "jest --clearCache",
     "test:unit": "jest --coverage --coverageDirectory ./.nyc_output/",
     "test:unit:watch": "npm run test:unit -- --watch --updateSnapshot",
@@ -41,13 +42,7 @@
   },
   "activationEvents": [
     "onLanguage:xml",
-    "onCommand:openstax.showPreviewToSide",
-    "onCommand:openstax.showTocEditor",
-    "onCommand:openstax.showImageManager",
-    "onCommand:openstax.pushContent",
-    "onCommand:openstax.generateReadme",
-    "onView:tocTrees",
-    "onCommand:openstax.validateContent"
+    "onCommand:openstax.showImageManager"
   ],
   "contributes": {
     "commands": [
