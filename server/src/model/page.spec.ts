@@ -31,7 +31,7 @@ describe('Page', () => {
     expect(page.optTitle).toBe(UNTITLED_FILE)
   })
   it('errors if there are two uuid elements (or any element that should occur exactly once in the doc)', () => {
-    expect(() => page.load(pageMaker({ uuid: 'little bobby drop tables</md:uuid><md:uuid>injection is fun' })))
+    expect(() => { page.load(pageMaker({ uuid: 'little bobby drop tables</md:uuid><md:uuid>injection is fun' })) })
       .toThrow("Expected one but found 2 results that match '//md:uuid'")
   })
 })

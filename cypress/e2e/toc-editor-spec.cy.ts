@@ -1,5 +1,5 @@
 // Shares a namespace with the other specfiles if not scoped
-import { PanelIncomingMessage, Bookish, TreeItemWithToken, PanelState } from '../../client/src/panel-toc-editor'
+import { type PanelIncomingMessage, type Bookish, type TreeItemWithToken, type PanelState } from '../../client/src/panel-toc-editor'
 import { TocNodeKind } from '../../common/src/toc'
 import { PanelStateMessageType } from '../../common/src/webview-constants'
 {

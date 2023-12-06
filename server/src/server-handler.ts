@@ -1,10 +1,10 @@
 import fs from 'node:fs'
 
-import { BundleGenerateReadme, BundleEnsureIdsParams } from '../../common/src/requests'
+import { type BundleGenerateReadme, type BundleEnsureIdsParams } from '../../common/src/requests'
 import { idFixer } from './fix-document-ids'
 import { bundleFactory } from './server'
-import { ModelManager } from './model-manager'
-import { CompletionItem, CompletionParams } from 'vscode-languageserver/node'
+import { type ModelManager } from './model-manager'
+import { type CompletionItem, type CompletionParams } from 'vscode-languageserver/node'
 import { PageValidationKind } from './model/page'
 import { generateReadmeForWorkspace } from './readme-generator'
 import { URI } from 'vscode-uri'

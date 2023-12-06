@@ -1,4 +1,4 @@
-import { BookToc, ClientPageish } from './toc'
+import { type BookToc, type ClientPageish } from './toc'
 
 export enum DiagnosticSource {
   xml = 'xml',
@@ -58,9 +58,9 @@ export interface BundleGenerateReadme {
 }
 
 export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsParams): Promise<void> => {
-  return await client.sendRequest(ExtensionServerRequest.BundleEnsureIds, args)
+  await client.sendRequest(ExtensionServerRequest.BundleEnsureIds, args)
 }
 
 export const requestGenerateReadme = async (client: LanguageClient, args: BundleGenerateReadme): Promise<void> => {
-  return await client.sendRequest(ExtensionServerRequest.GenerateReadme, args)
+  await client.sendRequest(ExtensionServerRequest.GenerateReadme, args)
 }

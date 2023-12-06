@@ -1,8 +1,8 @@
 import { expect } from '@jest/globals'
 import * as Quarx from 'quarx'
-import { TocNode, TocNodeKind } from './utils'
+import { type TocNode, TocNodeKind } from './utils'
 import { bookMaker, first, loadSuccess, makeBundle, read } from './spec-helpers.spec'
-import { PageNode } from './page'
+import { type PageNode } from './page'
 
 describe('Quarx.autorun code', () => {
   it('Triggers a ToC autorun when the Page title changes', () => {

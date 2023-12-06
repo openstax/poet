@@ -4,7 +4,7 @@ import { expect } from '@jest/globals'
 
 describe('ensureIds', () => {
   const sinon = Sinon.createSandbox()
-  afterEach(() => sinon.restore())
+  afterEach(() => { sinon.restore() })
 
   it('runs and yields a response', async () => {
     const client = {
@@ -17,7 +17,7 @@ describe('ensureIds', () => {
 
 describe('generateReadme', () => {
   const sinon = Sinon.createSandbox()
-  afterEach(() => sinon.restore())
+  afterEach(() => { sinon.restore() })
 
   it('runs and yields a response', async () => {
     const client = {

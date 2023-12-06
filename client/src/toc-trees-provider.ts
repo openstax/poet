@@ -1,7 +1,7 @@
 import vscode, { ThemeIcon } from 'vscode'
-import { BookRootNode, ClientTocNode, TocNodeKind } from '../../common/src/toc'
-import { TocsTreeProvider, BookOrTocNode } from './book-tocs'
-import { ExtensionHostContext } from './panel'
+import { BookRootNode, type ClientTocNode, TocNodeKind } from '../../common/src/toc'
+import { type TocsTreeProvider, type BookOrTocNode } from './book-tocs'
+import { type ExtensionHostContext } from './panel'
 
 export const TocItemIcon = {
   Page: ThemeIcon.File,

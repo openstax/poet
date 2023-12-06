@@ -1,5 +1,5 @@
 import { expect } from '@jest/globals'
-import { Bundle, BundleValidationKind } from './bundle'
+import { type Bundle, BundleValidationKind } from './bundle'
 import { bundleMaker, expectErrors, first, loadSuccess, makeBundle, read } from './spec-helpers.spec'
 
 describe('Bundle validations', () => {

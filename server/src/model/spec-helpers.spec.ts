@@ -2,9 +2,9 @@ import { expect } from '@jest/globals'
 import SinonRoot from 'sinon'
 import { readFileSync } from 'fs'
 import * as path from 'path'
-import I from 'immutable'
+import type I from 'immutable'
 import { Bundle } from './bundle'
-import { Fileish, ValidationKind } from './fileish'
+import { type Fileish, type ValidationKind } from './fileish'
 
 describe('spec-helpers Dummy', () => {
   it('trivially passes because Jest requires every spec file to have at least one test', () => {
@@ -24,8 +24,8 @@ interface PathHelper<T> {
 }
 
 export const FS_PATH_HELPER: PathHelper<string> = {
-  join: path.join,
-  dirname: path.dirname,
+  join: (root, ...components) => path.join(root, ...components),
+  dirname: (p) => path.dirname(p),
   canonicalize: (x) => x
 }
 
@@ -63,17 +63,17 @@ export interface PageInfo {
   title?: string | null // null means omit the whole element
   elementIds?: string[]
   imageHrefs?: string[]
-  pageLinks?: Array<{targetPage?: string, targetId?: string, url?: string}>
+  pageLinks?: Array<{ targetPage?: string, targetId?: string, url?: string }>
   extraCnxml?: string
 }
 export function pageMaker(info: PageInfo) {
   const i = {
     title: info.title !== undefined ? info.title : 'TestTitle',
-    uuid: info.uuid !== undefined ? info.uuid : '00000000-0000-4000-0000-000000000000',
-    elementIds: info.elementIds !== undefined ? info.elementIds : [],
-    imageHrefs: info.imageHrefs !== undefined ? info.imageHrefs : [],
+    uuid: info.uuid ?? '00000000-0000-4000-0000-000000000000',
+    elementIds: info.elementIds ?? [],
+    imageHrefs: info.imageHrefs ?? [],
     pageLinks: info.pageLinks !== undefined ? info.pageLinks.map(({ targetPage, targetId, url }) => ({ targetPage, targetId, url })) : [],
-    extraCnxml: info.extraCnxml !== undefined ? info.extraCnxml : ''
+    extraCnxml: info.extraCnxml ?? ''
   }
   const titleElement = i.title === null ? '' : `<title>${i.title}</title>`
   return `<document xmlns="http://cnx.rice.edu/cnxml">
@@ -151,7 +151,7 @@ function tocToString(node: BookMakerTocNode): string {
 
 interface BundleMakerInfo {
   version?: number
-  books?: Array<string | {slug: string, href: string}>
+  books?: Array<string | { slug: string, href: string }>
 }
 export function bundleMaker(info: BundleMakerInfo) {
   const i = {

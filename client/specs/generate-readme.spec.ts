@@ -1,7 +1,7 @@
 import { expect } from '@jest/globals'
 import Sinon from 'sinon'
 import * as vscode from 'vscode'
-import { LanguageClient } from 'vscode-languageclient/node'
+import { type LanguageClient } from 'vscode-languageclient/node'
 import { ExtensionServerRequest } from '../../common/src/requests'
 import { setLanguageServerLauncher } from '../src/extension'
 import { readmeGenerator } from '../src/generate-readme'
@@ -10,7 +10,7 @@ import * as utils from '../src/utils'
 describe('Request readme generated', () => {
   const sinon = Sinon.createSandbox()
 
-  afterEach(() => sinon.restore())
+  afterEach(() => { sinon.restore() })
 
   it('uses correct request type and uri', async () => {
     const fakeWorkspacePath = vscode.Uri.file('/a/b/c/d')

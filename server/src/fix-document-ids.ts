@@ -21,7 +21,7 @@ export function fixDocument(doc: Document): void {
   const elsWithIds = select('//cnxml:*[@id]', doc) as Element[]
   const ids = new Set(elsWithIds.map(el => el.getAttribute('id')))
   const els = select(ELEMENTS_MISSING_IDS_SEL, doc) as Element[]
-  const cacheHighId: { [tag: string]: number } = {}
+  const cacheHighId: Record<string, number> = {}
   for (const el of els) {
     const tag = el.tagName.toLowerCase()
     let counter = cacheHighId[tag] > 0 ? cacheHighId[tag] + 1 : 1

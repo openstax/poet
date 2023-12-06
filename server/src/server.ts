@@ -2,12 +2,12 @@ import {
   createConnection,
   TextDocuments,
   ProposedFeatures,
-  InitializeParams,
+  type InitializeParams,
   TextDocumentSyncKind,
-  InitializeResult,
-  CompletionItem,
-  CancellationToken,
-  CompletionParams
+  type InitializeResult,
+  type CompletionItem,
+  type CancellationToken,
+  type CompletionParams
 } from 'vscode-languageserver/node'
 
 import { TextDocument } from 'vscode-languageserver-textdocument'
@@ -22,7 +22,7 @@ import { Bundle } from './model/bundle'
 import { Factory } from './model/factory'
 import { ModelManager } from './model-manager'
 import { JobRunner } from './job-runner'
-import { TocModificationParams, TocNodeKind } from '../../common/src/toc'
+import { type TocModificationParams, TocNodeKind } from '../../common/src/toc'
 import { Fileish } from './model/fileish'
 sourcemaps.install()
 
@@ -31,7 +31,7 @@ sourcemaps.install()
 const connection = createConnection(ProposedFeatures.all)
 
 // Create a simple text document manager.
-const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument)
+const documents = new TextDocuments<TextDocument>(TextDocument)
 
 function getBundleForUri(uri: string): ModelManager {
   const bundles = bundleFactory.all.filter(b => uri.startsWith(b.bundle.workspaceRootUri))

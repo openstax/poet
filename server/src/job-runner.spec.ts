@@ -1,5 +1,5 @@
 import { expect } from '@jest/globals'
-import { JobRunner, URIPair } from './job-runner'
+import { JobRunner, type URIPair } from './job-runner'
 
 JobRunner.debug = () => {} // Turn off logging
 

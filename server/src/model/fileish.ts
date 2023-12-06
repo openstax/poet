@@ -2,7 +2,7 @@ import path from 'path'
 import I from 'immutable'
 import { DOMParser } from 'xmldom'
 import * as Quarx from 'quarx'
-import { Bundleish, Opt, PathHelper, expectValue, Range, HasRange, NOWHERE } from './utils'
+import { type Bundleish, type Opt, type PathHelper, expectValue, type Range, type HasRange, NOWHERE } from './utils'
 
 export enum ValidationSeverity {
   ERROR = 1,

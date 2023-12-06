@@ -1,5 +1,5 @@
 import { expect } from '@jest/globals'
-import { Opt } from './utils'
+import { type Opt } from './utils'
 import { Fileish } from './fileish'
 import { first, FS_PATH_HELPER, makeBundle } from './spec-helpers.spec'
 

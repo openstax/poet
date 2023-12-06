@@ -4,18 +4,18 @@ import path from 'path'
 import mockfs from 'mock-fs'
 import SinonRoot from 'sinon'
 import I from 'immutable'
-import { createConnection, WatchDog } from 'vscode-languageserver'
-import { DiagnosticSeverity, FileChangeType, Logger, ProtocolConnection, PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
+import { createConnection, type WatchDog } from 'vscode-languageserver'
+import { DiagnosticSeverity, FileChangeType, type Logger, type ProtocolConnection, type PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
 import xmlFormat from 'xml-formatter'
-import { expectValue, Opt, join, PathKind } from './model/utils'
+import { expectValue, type Opt, join, PathKind } from './model/utils'
 import { Bundle, BundleValidationKind } from './model/bundle'
 import { ModelManager } from './model-manager'
-import { bookMaker, bundleMaker, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle, PageInfo, pageMaker } from './model/spec-helpers.spec'
-import { Job, JobRunner } from './job-runner'
+import { bookMaker, bundleMaker, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle, type PageInfo, pageMaker } from './model/spec-helpers.spec'
+import { type Job, JobRunner } from './job-runner'
 
 import { PageNode, PageValidationKind } from './model/page'
-import { TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc'
-import { BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
+import { type TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc'
+import { type BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { URI, Utils } from 'vscode-uri'
 
 ModelManager.debug = () => {} // Turn off logging
@@ -90,7 +90,7 @@ describe('Bundle Manager', () => {
     await manager.jobRunner.done()
 
     expect(manager.bundle.allNodes.size).toBe(1 + 1 + 1) // bundle + book + page
-    manager.bundle.allNodes.forEach(n => expect(n.isLoaded).toBe(true))
+    manager.bundle.allNodes.forEach(n => { expect(n.isLoaded).toBe(true) })
   })
   it('loadEnoughToSendDiagnostics() sends diagnostics for a file we recognize', async () => {
     manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, manager.bundle.absPath)
@@ -102,7 +102,7 @@ describe('Bundle Manager', () => {
     // Bundle needs to load all the books
     const books = manager.bundle.books
     expect(books.size).toBe(1)
-    books.forEach(b => expect(b.isLoaded).toBe(true))
+    books.forEach(b => { expect(b.isLoaded).toBe(true) })
   })
   it('loadEnoughToSendDiagnostics() does not send diagnostics for a file we do not recognize', async () => {
     manager.loadEnoughToSendDiagnostics(manager.bundle.workspaceRootUri, '/path/t/non-existent/file')
@@ -115,7 +115,7 @@ describe('Bundle Manager', () => {
     expect(manager.bundle.books.toArray()).toEqual([])
   })
   it('calls sendDiagnostics with objects that can be serialized (no cycles)', () => {
-    ignoreConsoleWarnings(() => manager.updateFileContents(manager.bundle.absPath, '<notvalidXML'))
+    ignoreConsoleWarnings(() => { manager.updateFileContents(manager.bundle.absPath, '<notvalidXML') })
     expect(sendDiagnosticsStub.callCount).toBe(1)
     const diagnosticsObj = sendDiagnosticsStub.getCall(0).args[0]
     expect(diagnosticsObj.uri).toBeTruthy()
@@ -159,7 +159,7 @@ describe('Unexpected files/directories', () => {
   })
 
   it('path is to a directory instead of a file', async () => {
-    await expect(async () => await manager.loadEnoughForToc()).rejects.toThrow(/^Object has not been loaded yet \[/)
+    await expect(async () => { await manager.loadEnoughForToc() }).rejects.toThrow(/^Object has not been loaded yet \[/)
     expect(manager.bundle.exists).toBe(false)
   })
 })
@@ -241,7 +241,7 @@ describe('updating files', () => {
   })
 
   it('does not modify a file that has invalid XML', async () => {
-    ignoreConsoleWarnings(() => manager.bundle.load('<invalid xml'))
+    ignoreConsoleWarnings(() => { manager.bundle.load('<invalid xml') })
     const didChange = await manager.modifyFileish(manager.bundle, (_) => '<root>does not matter</root>')
     expect(didChange).toBe(false)
 
@@ -500,7 +500,7 @@ describe('modifyToc()', () => {
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
     manager = new ModelManager(bundle, conn, (p) => { params = p })
   })
-  afterEach(() => mockfs.restore())
+  afterEach(() => { mockfs.restore() })
 
   function getInner(bookIndex: number) {
     const t1 = params.books[bookIndex].tocTree[0]

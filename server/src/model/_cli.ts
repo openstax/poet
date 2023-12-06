@@ -9,14 +9,14 @@ import https from 'https'
 import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
-import { expectValue, PathHelper, select, TocNodeKind } from './utils'
+import { expectValue, type PathHelper, select, TocNodeKind } from './utils'
 import { Bundle } from './bundle'
-import { Fileish } from './fileish'
-import { PageLinkKind, PageNode } from './page'
-import { BookNode, TocNodeWithRange, TocPageWithRange, TocSubbookWithRange } from './book'
-import { ResourceNode } from './resource'
+import { type Fileish } from './fileish'
+import { PageLinkKind, type PageNode } from './page'
+import { BookNode, type TocNodeWithRange, type TocPageWithRange, type TocSubbookWithRange } from './book'
+import { type ResourceNode } from './resource'
 import { removeNode, writeBookToc } from '../model-manager'
-import { BookRootNode, BookToc, ClientTocNode } from '../../../common/src/toc'
+import { BookRootNode, type BookToc, type ClientTocNode } from '../../../common/src/toc'
 import { fromBook, IdMap } from '../book-toc-utils'
 
 const ALLOWED_FILES = [
@@ -43,8 +43,8 @@ function loadNode(n: Fileish) {
 }
 
 const pathHelper: PathHelper<string> = {
-  join: path.join,
-  dirname: path.dirname,
+  join: (root, ...components) => path.join(root, ...components),
+  dirname: (p) => path.dirname(p),
   canonicalize: (x) => x
 }
 
@@ -186,7 +186,7 @@ async function orphans(bookDirs: string[]) {
     const orphans = allFiles.subtract(referencedFiles)
 
     log('Found orphans', orphans.size)
-    orphans.forEach(o => console.log(toRelPath(o)))
+    orphans.forEach(o => { console.log(toRelPath(o)) })
 
     hasErrors = hasErrors || orphans.size > 0
   }
@@ -203,7 +203,7 @@ function recFindLeafPages(acc: TocPageWithRange[], node: TocSubbookWithRange) {
   })
 }
 
-function traverse(node: BookNode|TocNodeWithRange, indexes: number[]): TocPageWithRange[] {
+function traverse(node: BookNode | TocNodeWithRange, indexes: number[]): TocPageWithRange[] {
   if (node instanceof BookNode) {
     return traverse(node.toc[indexes[0]], indexes.slice(1))
   } else if (node.type === TocNodeKind.Page) {
@@ -222,7 +222,7 @@ function traverse(node: BookNode|TocNodeWithRange, indexes: number[]): TocPageWi
 }
 
 /* Returns true if this node has nothing worth keeping (trimMe) */
-function trimNodes(node: ClientTocNode|BookToc, keepPages: Set<PageNode>): boolean {
+function trimNodes(node: ClientTocNode | BookToc, keepPages: Set<PageNode>): boolean {
   if (node.type === TocNodeKind.Page) {
     const hasKeeper = [...keepPages].find(n => n.absPath === node.value.absPath) !== undefined
     return !hasKeeper
@@ -280,7 +280,7 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
     const book = expectValue(bundle.books.find(b => b.slug === entry.slug), `Could not find book with slug '${entry.slug}'`)
     const pages = entry.sections.map(s => traverse(book, s)).flat()
     keepBooks.add(book)
-    pages.forEach(p => pageAccumulator(keepPages, p.page))
+    pages.forEach(p => { pageAccumulator(keepPages, p.page) })
   })
   keepPages.forEach(p => {
     p.resources.forEach(r => keepResources.add(r))
@@ -302,7 +302,7 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
   })
   // Finally! We are ready to delete everything that is not in our keep set.
   // First, let's update the model with a simplified ToC for each book
-  const tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>((v) => {
+  const tocIdMap = new IdMap<string, TocSubbookWithRange | PageNode>((v) => {
     return 'itdoesnotmatter'
   })
   for (const b of keepBooks) {
@@ -334,7 +334,7 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
     .union(bundle.allPages.all.subtract(I.Set(keepPages)))
     .union(bundle.allResources.all.subtract(I.Set(keepResources)))
   log('Deleting files:', filesToDelete.size)
-  filesToDelete.forEach(f => fs.unlinkSync(f.absPath))
+  filesToDelete.forEach(f => { fs.unlinkSync(f.absPath) })
 }
 
 ;(async function () {

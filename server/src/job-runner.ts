@@ -1,6 +1,6 @@
 import path from 'path'
 import { Fileish } from './model/fileish'
-import { expectValue, Opt, profileAsync } from './model/utils'
+import { expectValue, type Opt, profileAsync } from './model/utils'
 
 export interface URIPair { workspace: string, doc: string }
 export interface Job {
@@ -21,7 +21,7 @@ export class JobRunner {
     this.process()
   }
 
-  public async done(): Promise<any> { return this._currentPromise === undefined ? await Promise.resolve() : await this._currentPromise }
+  public async done(): Promise<any> { this._currentPromise === undefined ? await Promise.resolve() : await this._currentPromise }
 
   private length() {
     return this.fastStack.length + this.slowStack.length
@@ -34,12 +34,14 @@ export class JobRunner {
   private process() {
     if (this._currentPromise !== undefined) return // job is running
     this._currentPromise = new Promise((resolve, reject) => {
-      setImmediate(() => this.tickWithCb(resolve, err => {
-        JobRunner.debug(err)
-        this._currentPromise = undefined
-        reject(err)
-        this.process()
-      }))
+      setImmediate(() => {
+        this.tickWithCb(resolve, err => {
+          JobRunner.debug(err)
+          this._currentPromise = undefined
+          reject(err)
+          this.process()
+        })
+      })
     })
   }
 
@@ -47,7 +49,7 @@ export class JobRunner {
   private tickWithCb(resolve: () => void, reject: (err: any) => void) {
     const current = this.pop()
     if (current !== undefined) {
-      this.tick(current).then(() => this.tickWithCb(resolve, reject), reject)
+      this.tick(current).then(() => { this.tickWithCb(resolve, reject) }, reject)
     } else {
       resolve()
       this._currentPromise = undefined

@@ -1,11 +1,10 @@
-
 import vscode from 'vscode'
 import path from 'path'
 import fs from 'fs'
 import {
   LanguageClient,
-  LanguageClientOptions,
-  ServerOptions,
+  type LanguageClientOptions,
+  type ServerOptions,
   TransportKind
 } from 'vscode-languageclient/node'
 

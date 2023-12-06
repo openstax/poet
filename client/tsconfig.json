@@ -6,8 +6,6 @@
   "include": [
     "specs/**/*.spec.ts",
     "src/**/*.ts",
-    "src/**/*.js",
-    "src/**/*.jsx",
     "../common/src/**/*.ts"
   ],
   "exclude": [

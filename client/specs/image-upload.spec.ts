@@ -5,9 +5,9 @@ import mockfs from 'mock-fs'
 
 import vscode from 'vscode'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
-import { LanguageClient } from 'vscode-languageclient/node'
+import { type LanguageClient } from 'vscode-languageclient/node'
 import { EMPTY_BOOKS_AND_ORPHANS } from '../../common/src/requests'
-import { ExtensionEvents } from '../src/panel'
+import { type ExtensionEvents } from '../src/panel'
 import { ImageManagerPanel } from '../src/panel-image-manager'
 
 const actualResourceRootDir = join(__dirname, '../static')
