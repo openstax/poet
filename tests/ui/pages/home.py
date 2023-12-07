@@ -14,9 +14,7 @@ class HomePoet:
 
     @property
     def openstax_icon_is_visible(self):
-        return self.page.wait_for_selector(
-            "div.composite-bar > div > ul > li:nth-child(7)", timeout=120000
-        )
+        return self.page.wait_for_selector("ul > li:nth-child(7)", timeout=90000)
 
     def click_openstax_icon(self):
         self.openstax_icon_is_visible.click()
@@ -31,27 +29,17 @@ class HomePoet:
 
     @property
     def open_toc_editor_button_is_visible(self):
-        return self.page.wait_for_selector(
-            "div.welcome-view-content > div:nth-child(1)", timeout=90000
-        )
-
-    @property
-    def open_toc_editor_button_locator(self):
         return self.page.get_by_text("Open ToC Editor", exact=True)
 
     def click_open_toc_editor_button(self):
-        return self.open_toc_editor_button_locator.click()
+        return self.open_toc_editor_button_is_visible.click()
 
     @property
     def push_content_button_is_visible(self):
-        return self.page.is_visible("div.welcome-view-content > div:nth-child(2)")
-
-    @property
-    def push_content_button(self):
         return self.page.get_by_text("Push Content", exact=True)
 
     def click_push_content_button(self):
-        return self.push_content_button.click()
+        return self.push_content_button_is_visible.click()
 
     @property
     def push_message_input_field_is_visible(self):
@@ -67,25 +55,21 @@ class HomePoet:
 
     @property
     def push_content_dialog_box_cancel_button(self):
-        return self.page.locator("div.notification-list-item-buttons-container > a")
+        return self.page.locator("div.notification-list-item-buttons-container")
 
     def click_push_content_dialog_box_cancel_button(self):
         return self.push_content_dialog_box_cancel_button.click()
 
     @property
     def generate_readme_button_is_visible(self):
-        return self.page.is_visible("div.welcome-view-content > div:nth-child(3)")
-
-    @property
-    def generate_readme_button(self):
-        return self.page.get_by_text("Generate README")
+        return self.page.get_by_text("Generate README", exact=True)
 
     def click_generate_readme_button(self):
-        return self.generate_readme_button.click()
+        return self.generate_readme_button_is_visible.click()
 
     @property
     def generate_readme_dialog_box_is_visible(self):
-        return self.page.wait_for_selector("div.notifications-toasts.visible > div")
+        return self.page.wait_for_selector("div.notifications-toasts.visible")
 
     @property
     def generate_readme_dialog_box_text(self):
@@ -95,20 +79,20 @@ class HomePoet:
 
     @property
     def validate_content_button_is_visible(self):
-        return self.page.is_visible("div.welcome-view-content > div:nth-child(4)")
+        return self.page.get_by_text("Validate Content", exact=True)
 
     @property
     def validate_content_popup_dialog_is_visible(self):
-        return self.page.is_visible("div > div.monaco-dialog-modal-block.dimmed > div")
+        return self.page.is_visible("div > div.monaco-dialog-modal-block.dimmed")
 
     @property
     def toc_tree_dropdown_list_is_visible(self):
         return self.page.locator(
-            "div.split-view-container > div:nth-child(2) > div > div.pane-header.expanded > h3"
+            "div.split-view-container > div:nth-child(2) > div > div.pane-header.expanded"
         )
 
     def click_validate_content_button(self):
-        return self.page.get_by_text("Validate Content").click()
+        return self.validate_content_button_is_visible.click()
 
     @property
     def validate_content_all_content_option(self):
@@ -130,7 +114,7 @@ class HomePoet:
         return any(
             "Opening documents with errors..." in inner_text
             for inner_text in self.page.locator(
-                "div.notification-list-item-main-row > div.notification-list-item-message > span"
+                "div.notification-list-item-main-row > div.notification-list-item-message"
             ).all_inner_texts()
         )
 
@@ -175,19 +159,11 @@ class HomePoet:
 
     @property
     def chapter_box_title_locator(self):
-        return self.child_frame.locator(
-            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > "
-            "div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > "
-            "div.rst__rowLabel > span.rst__rowTitle.rst__rowTitleWithSubtitle"
-        )
+        return self.child_frame.locator("span.node-title").first
 
     @property
     def chapter_box_title_input(self):
-        return self.child_frame.locator(
-            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > "
-            "div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > "
-            "div.rst__rowLabel > span.rst__rowTitle.rst__rowTitleWithSubtitle > input"
-        )
+        return self.child_frame.locator("input.node-title-rename").first
 
     def click_chapter_box_title(self):
         self.chapter_box_title_locator.click()
@@ -236,20 +212,12 @@ class HomePoet:
     @property
     def subcollection_locator_new_box_title(self):
         # Title of the last newly added item in the chapter list (left panel)
-        return self.child_frame.locator(
-            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > "
-            "div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > "
-            "div.rst__rowLabel"
-        )
+        return self.child_frame.locator("span.node-title").first
 
     @property
     def subcollection_locator_new_box_title_input(self):
         # Title of the last newly added item in the chapter list (left panel)
-        return self.child_frame.locator(
-            "div.panel-editable > div:nth-child(2) > div > div > div > div:nth-child(1) > "
-            "div > div > div:nth-child(1) > div.rst__nodeContent > div > div > div > div.rst__rowContents > "
-            "div.rst__rowLabel > span > input"
-        )
+        return self.child_frame.locator("input.node-title-rename").first
 
     def click_new_subcollection_box_title(self):
         self.subcollection_locator_new_box_title.click()
@@ -270,14 +238,14 @@ class HomePoet:
     def search_item_amount_indicator_is_visible(self):
         # Search info (how many items search shows)
         return self.child_frame.locator(
-            "div.panel-editable > div.controls > div:nth-child(3) > p"
+            "div.panel-editable > div.controls > div:nth-child(3)"
         )
 
     # TOC Editor right panel ------
 
     @property
     def toc_editor_all_modules_dropdown_is_visible(self):
-        return self.page.locator("div[class='controls']")
+        return self.page.locator("div.controls")
 
     @property
     def toc_editor_deleted_modules_list_is_visible(self):
@@ -289,7 +257,7 @@ class HomePoet:
 
     @property
     def gitpod_menubar_locator(self):
-        return self.page.locator('div[class="menubar-menu-button"]')
+        return self.page.locator("div.menubar-menu-button")
 
     def click_gitpod_menubar(self):
         self.gitpod_menubar_locator.click()
@@ -315,7 +283,7 @@ class HomePoet:
     @property
     def explorer_modules_locator(self):
         return self.page.wait_for_selector(
-            "div[class='monaco-list-row'] :text('modules')", timeout=90000
+            "div.monaco-list-row :text('modules')", timeout=90000
         )
 
     def click_explorer_modules(self):
@@ -374,7 +342,9 @@ class HomePoet:
 
     @property
     def continue_with_github_button(self):
-        return self.page.locator("button").get_by_text("Continue with GitHub")
+        return self.page.locator("button").get_by_text(
+            "Continue with GitHub", exact=True
+        )
 
     def click_continue_with_github_button(self):
         self.continue_with_github_button.click()
