@@ -26,10 +26,7 @@ def test_content_validation_all_book_repos(
         home = HomePoet(chrome_page)
 
         if not home.continue_with_github_is_visible:
-            if home.gitpod_user_dropdown.inner_text() == "0 openstax":
-                pass
-
-            else:
+            if home.gitpod_user_dropdown.inner_text() != "0 openstax":
                 home.click_gitpod_user_dropdown()
                 home.click_gitpod_user_selector()
 
@@ -94,10 +91,7 @@ def test_content_validation_all_book_repos(
 
                 github_login_window.click(sign_in_button_selector)
 
-            if home.gitpod_user_dropdown.inner_text() == "0 openstax":
-                pass
-
-            else:
+            if home.gitpod_user_dropdown.inner_text() != "0 openstax":
                 home.click_gitpod_user_dropdown()
                 home.click_gitpod_user_selector()
 
