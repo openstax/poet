@@ -15,10 +15,8 @@ def test_toc_editor(chrome_page, github_user, github_password, gitpod_repo_url):
     home = HomePoet(chrome_page)
 
     # WHEN: login into openstax/osbooks-otto-book repo
-    if not home.continue_with_github_is_visible:
-        pass
-
-    home.click_continue_with_github_button()
+    if home.continue_with_github_is_visible:
+        home.click_continue_with_github_button()
 
     with chrome_page.context.pages[1] as github_login_window:
         github_login_window.fill("#login_field", github_user)
@@ -26,10 +24,7 @@ def test_toc_editor(chrome_page, github_user, github_password, gitpod_repo_url):
 
         github_login_window.click(sign_in_button_selector)
 
-    if home.gitpod_user_dropdown.inner_text() == "0 openstax":
-        pass
-
-    else:
+    if home.gitpod_user_dropdown.inner_text() != "0 openstax":
         home.click_gitpod_user_dropdown()
         home.click_gitpod_user_selector()
 
