@@ -1,6 +1,6 @@
 import I from 'immutable'
 import { Fileish, ValidationKind } from './fileish'
-import { NOWHERE, Range } from './utils'
+import { NOWHERE, type Range } from './utils'
 
 // This can be an Image or an IFrame
 export class ResourceNode extends Fileish {

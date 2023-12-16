@@ -420,7 +420,7 @@ const App = (props) => (
 function walkTree(n /*: TreeItemWithToken */, fn /*: (TreeItemWithToken) => void */) {
   fn(n)
   if (n.children) {
-    n.children.forEach(c => walkTree(c, fn))
+    n.children.forEach(c => { walkTree(c, fn) })
   }
 }
 
@@ -445,8 +445,8 @@ window.addEventListener('message', event => {
       /* istanbul ignore if */
       if (oldBook === undefined || newBook === undefined) { break }
       const expandedTitles = new Map()
-      oldBook.tocTree.forEach(t => walkTree(t, n => { n.expanded && expandedTitles.set(n.title, n.expanded) }))
-      newBook.tocTree.forEach(t => walkTree(t, n => { n.expanded = expandedTitles.get(n.title) }))
+      oldBook.tocTree.forEach(t => { walkTree(t, n => { n.expanded && expandedTitles.set(n.title, n.expanded) }) })
+      newBook.tocTree.forEach(t => { walkTree(t, n => { n.expanded = expandedTitles.get(n.title) }) })
     }
   }
   const selectionIndices = previousState ? previousState.selectionIndices : { editable: 0, uneditable: 0 }

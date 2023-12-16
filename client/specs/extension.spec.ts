@@ -1,24 +1,24 @@
 import { join } from 'path'
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import mockfs from 'mock-fs'
 
 import { activate, deactivate, forwardOnDidChangeWorkspaceFolders, setLanguageServerLauncher, setResourceRootDir } from '../src/extension'
-import { Extension, ExtensionContext, WebviewPanel } from 'vscode'
+import { type Extension, type ExtensionContext, type WebviewPanel } from 'vscode'
 import * as vscode from 'vscode'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import Sinon from 'sinon'
-import { LanguageClient } from 'vscode-languageclient/node'
+import { type LanguageClient } from 'vscode-languageclient/node'
 import { OpenstaxCommand } from '../src/extension-types'
-import { TocEditorPanel } from '../src/panel-toc-editor'
-import { BooksAndOrphans, ExtensionServerNotification } from '../../common/src/requests'
-import { PanelManager } from '../src/panel'
-import { CnxmlPreviewPanel } from '../src/panel-cnxml-preview'
+import { type TocEditorPanel } from '../src/panel-toc-editor'
+import { type BooksAndOrphans, ExtensionServerNotification } from '../../common/src/requests'
+import { type PanelManager } from '../src/panel'
+import { type CnxmlPreviewPanel } from '../src/panel-cnxml-preview'
 import * as pushContent from '../src/push-content'
 
 describe('Extension', () => {
   const sinon = Sinon.createSandbox()
   beforeEach(async () => sinon.stub(pushContent, 'setDefaultGitConfig').resolves())
-  afterEach(async () => sinon.restore())
+  afterEach(async () => { sinon.restore() })
   it('forwardOnDidChangeWorkspaceFolders sends a request to the language server', async function () {
     const stub = sinon.stub()
     const client = { sendRequest: stub } as unknown as LanguageClient
@@ -46,7 +46,7 @@ describe('Extension', () => {
       const extensionContext = {
         asAbsolutePath: (p: string) => join(__dirname, '..', '..', p)
       } as unknown as ExtensionContext
-      afterEach(async () => await deactivate())
+      afterEach(async () => { await deactivate() })
       it('Starts up', async function () {
         await expect(activate(extensionContext)).resolves.toBeTruthy()
       })
@@ -83,7 +83,7 @@ describe('Extension', () => {
         }
         mockfs(fs)
       })
-      afterEach(() => mockfs.restore())
+      afterEach(() => { mockfs.restore() })
 
       // Copy-pasta
       const extensionContext = {
@@ -101,7 +101,7 @@ describe('Extension', () => {
         sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file(fakeWorkspacePath))
         setResourceRootDir(fakeResourceRootDir)
       })
-      afterEach(async () => await deactivate())
+      afterEach(async () => { await deactivate() })
 
       it('show cnxml preview with no file open', async () => {
         expect(vscode.window.activeTextEditor).toBeUndefined()

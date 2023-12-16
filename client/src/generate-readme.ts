@@ -1,6 +1,6 @@
 import vscode from 'vscode'
 import { requestGenerateReadme } from '../../common/src/requests'
-import { ExtensionHostContext } from './panel'
+import { type ExtensionHostContext } from './panel'
 import { expect, getRootPathUri } from './utils'
 
 export function readmeGenerator(hostContext: ExtensionHostContext) {

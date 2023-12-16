@@ -1,4 +1,4 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import * as xpath from 'xpath-ts'
 import { DOMParser } from 'xmldom'
 import { calculateElementPositions } from './utils'

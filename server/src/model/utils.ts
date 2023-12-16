@@ -1,9 +1,9 @@
 import path from 'path'
-import I from 'immutable'
+import type I from 'immutable'
 import * as xpath from 'xpath-ts'
-import { PageNode } from './page'
-import { Factory } from './factory'
-import { ResourceNode } from './resource'
+import { type PageNode } from './page'
+import { type Factory } from './factory'
+import { type ResourceNode } from './resource'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'

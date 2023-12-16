@@ -1,9 +1,9 @@
 import xmlFormat from 'xml-formatter'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { BookRootNode, BookToc, ClientPageish, ClientTocNode, TocPage } from '../../common/src/toc'
+import { BookRootNode, type BookToc, type ClientPageish, type ClientTocNode, type TocPage } from '../../common/src/toc'
 import { pageToModuleId } from './model-manager'
-import { BookNode, TocSubbookWithRange, TocNodeWithRange } from './model/book'
-import { PageNode } from './model/page'
+import { type BookNode, type TocSubbookWithRange, type TocNodeWithRange } from './model/book'
+import { type PageNode } from './model/page'
 import { selectOne, NS_COLLECTION, NS_METADATA, TocNodeKind, equalsArray } from './model/utils'
 
 export const equalsTocNode = (n1: ClientTocNode, n2: ClientTocNode): boolean => {
@@ -53,7 +53,7 @@ const BOOK_XML_TEMPLATE = `<col:collection xmlns:col="http://cnx.rice.edu/collxm
 <col:content/>
 </col:collection>`
 
-export function fromBook(tocIdMap: IdMap<string, TocSubbookWithRange|PageNode>, book: BookNode): BookToc {
+export function fromBook(tocIdMap: IdMap<string, TocSubbookWithRange | PageNode>, book: BookNode): BookToc {
   return {
     type: BookRootNode.Singleton,
     absPath: book.absPath,
@@ -87,10 +87,10 @@ export function toString(t: BookToc) {
   return serailizedXml
 }
 
-export function fromPage(tocIdMap: IdMap<string, TocSubbookWithRange|PageNode>, n: PageNode): TocPage<ClientPageish> {
+export function fromPage(tocIdMap: IdMap<string, TocSubbookWithRange | PageNode>, n: PageNode): TocPage<ClientPageish> {
   return { type: TocNodeKind.Page, value: { token: tocIdMap.add(n), title: n.optTitle, absPath: n.absPath, fileId: pageToModuleId(n) } }
 }
-function recTree(tocIdMap: IdMap<string, TocSubbookWithRange|PageNode>, parent: TocSubbookWithRange|null, n: TocNodeWithRange): ClientTocNode {
+function recTree(tocIdMap: IdMap<string, TocSubbookWithRange | PageNode>, parent: TocSubbookWithRange | null, n: TocNodeWithRange): ClientTocNode {
   if (n.type === TocNodeKind.Page) {
     return fromPage(tocIdMap, n.page)
   } else {

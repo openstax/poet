@@ -1,7 +1,7 @@
 import vscode from 'vscode'
-import { LanguageClient } from 'vscode-languageclient/node'
-import { BooksAndOrphans } from '../../common/src/requests'
-import { PanelStateMessageType, PanelStateMessage } from '../../common/src/webview-constants'
+import { type LanguageClient } from 'vscode-languageclient/node'
+import { type BooksAndOrphans } from '../../common/src/requests'
+import { PanelStateMessageType, type PanelStateMessage } from '../../common/src/webview-constants'
 import { ensureCatchPromise, genNonce, injectCspNonce } from './utils'
 
 // Modified from https://github.com/microsoft/vscode/blob/main/extensions/markdown-language-features/src/util/dispose.ts
@@ -77,7 +77,7 @@ export abstract class Panel<InMessage, OutMessage, State> implements DisposableS
     this.panel = innerPanel
     this.nonce = genNonce()
     this.registerDisposable(this.panel)
-    this.panel.onDidDispose(() => this.dispose())
+    this.panel.onDidDispose(() => { this.dispose() })
 
     this.registerDisposable(this.panel.webview.onDidReceiveMessage((message) => {
       /* istanbul ignore if */
@@ -152,15 +152,15 @@ export abstract class Panel<InMessage, OutMessage, State> implements DisposableS
   }
 
   readonly reveal: Panel<InMessage, OutMessage, State>['panel']['reveal'] = (...args) => {
-    return this.panel.reveal(...args)
+    this.panel.reveal(...args)
   }
 
   readonly onDidDispose: Panel<InMessage, OutMessage, State>['disposer']['onDidDispose'] = (...args) => {
-    return this.disposer.onDidDispose(...args)
+    this.disposer.onDidDispose(...args)
   }
 
   readonly dispose: Panel<InMessage, OutMessage, State>['disposer']['dispose'] = (...args) => {
-    return this.disposer.dispose(...args)
+    this.disposer.dispose(...args)
   }
 
   readonly registerDisposable: Panel<InMessage, OutMessage, State>['disposer']['registerDisposable'] = (...args) => {

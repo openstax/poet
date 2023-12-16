@@ -1,6 +1,6 @@
-import expect from 'expect'
-import I from 'immutable'
-import { BookNode } from './model/book'
+import { expect } from '@jest/globals'
+import type I from 'immutable'
+import { type BookNode } from './model/book'
 import { bookMaker, bundleMaker, makeBundle } from './model/spec-helpers.spec'
 import { generateReadmeForWorkspace } from './readme-generator'
 

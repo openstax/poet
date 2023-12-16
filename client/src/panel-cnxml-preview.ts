@@ -4,7 +4,7 @@ import path from 'path'
 import { fixResourceReferences, fixCspSourceReferences, addBaseHref, expect, getRootPathUri, ensureCatchPromise, ensureCatch } from './utils'
 import { PanelType } from './extension-types'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import { ExtensionHostContext, Panel } from './panel'
+import { type ExtensionHostContext, Panel } from './panel'
 
 // Line is one-indexed
 export interface ScrollInEditorIncoming {

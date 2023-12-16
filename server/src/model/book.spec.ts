@@ -1,6 +1,6 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import { BookValidationKind } from './book'
-import { bookMaker, BookMakerTocNode, expectErrors, first, loadSuccess, makeBundle, pageMaker } from './spec-helpers.spec'
+import { bookMaker, type BookMakerTocNode, expectErrors, first, loadSuccess, makeBundle, pageMaker } from './spec-helpers.spec'
 
 describe('Book validations', () => {
   it(BookValidationKind.DUPLICATE_CHAPTER_TITLE.title, () => {

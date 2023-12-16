@@ -4,18 +4,18 @@ import fs from 'fs'
 import * as path from 'path'
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { Connection } from 'vscode-languageserver'
-import { CompletionItem, CompletionItemKind, Diagnostic, DocumentLink, FileChangeType, FileEvent, TextEdit } from 'vscode-languageserver-protocol'
+import { type Connection } from 'vscode-languageserver'
+import { CompletionItem, CompletionItemKind, Diagnostic, DocumentLink, FileChangeType, type FileEvent, TextEdit } from 'vscode-languageserver-protocol'
 import { URI, Utils } from 'vscode-uri'
-import { BookToc, ClientTocNode, TocModification, TocModificationKind, TocSubbook, ClientSubbookish, ClientPageish, TocNodeKind, Token, BookRootNode, TocPage } from '../../common/src/toc'
-import { Opt, expectValue, Position, inRange, Range, equalsArray, selectOne } from './model/utils'
-import { Bundle } from './model/bundle'
+import { type BookToc, type ClientTocNode, type TocModification, TocModificationKind, type TocSubbook, type ClientSubbookish, type ClientPageish, TocNodeKind, type Token, BookRootNode, type TocPage } from '../../common/src/toc'
+import { type Opt, expectValue, type Position, inRange, type Range, equalsArray, selectOne } from './model/utils'
+import { type Bundle } from './model/bundle'
 import { PageLinkKind, PageNode } from './model/page'
-import { Fileish, ValidationResponse } from './model/fileish'
+import { type Fileish, type ValidationResponse } from './model/fileish'
 import { JobRunner } from './job-runner'
 import { equalsBookToc, equalsClientPageishArray, fromBook, fromPage, IdMap, renameTitle, toString } from './book-toc-utils'
-import { BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
-import { BookNode, TocSubbookWithRange } from './model/book'
+import { type BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } from '../../common/src/requests'
+import { type BookNode, type TocSubbookWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
 
@@ -26,7 +26,7 @@ const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 
 const PATH_SEP = path.sep
 
-interface NodeAndParent {node: ClientTocNode, parent: BookToc|ClientTocNode}
+interface NodeAndParent { node: ClientTocNode, parent: BookToc | ClientTocNode }
 function childrenOf(n: ClientTocNode) {
   /* istanbul ignore else */
   if (n.type === TocNodeKind.Subbook) {
@@ -89,7 +89,7 @@ function toStringFileChangeType(t: FileChangeType) {
 //
 // This splits the sideEffect from the re-compute function so that sideEffectFn only runs when the input to the sideEffectFn changes
 function memoizeTempValue<T>(equalsFn: (a: T, b: T) => boolean, computeFn: () => T, sideEffectFn: (arg: T) => void) {
-  const temp = Quarx.observable.box<Opt<{matryoshka: T}>>(undefined, { equals: matryoshkaEquals(equalsFn) })
+  const temp = Quarx.observable.box<Opt<{ matryoshka: T }>>(undefined, { equals: matryoshkaEquals(equalsFn) })
   Quarx.autorun(() => {
     temp.set({ matryoshka: computeFn() })
   })
@@ -101,7 +101,7 @@ function memoizeTempValue<T>(equalsFn: (a: T, b: T) => boolean, computeFn: () =>
     }
   })
 }
-const matryoshkaEquals = <T>(eq: (n1: T, n2: T) => boolean) => (n1: Opt<{matryoshka: T}>, n2: Opt<{matryoshka: T}>) => {
+const matryoshkaEquals = <T>(eq: (n1: T, n2: T) => boolean) => (n1: Opt<{ matryoshka: T }>, n2: Opt<{ matryoshka: T }>) => {
   /* istanbul ignore next */
   if (n1 === undefined && n2 === undefined) return true
   if (n1 !== undefined && n2 !== undefined) {
@@ -120,18 +120,18 @@ export class ModelManager {
   private readonly errorHashesByPath = new Map<string, I.Set<number>>()
   private didLoadOrphans = false
   private bookTocs: BookToc[] = []
-  private tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>(x => {
+  private tocIdMap = new IdMap<string, TocSubbookWithRange | PageNode>(x => {
     /* istanbul ignore next */
     throw new Error('BUG: has not been set yet')
   })
 
   constructor(public bundle: Bundle, private readonly conn: Connection, bookTocHandler?: (params: BooksAndOrphans) => void) {
-    const defaultHandler = (params: BooksAndOrphans) => conn.sendNotification(ExtensionServerNotification.BookTocs, params)
+    const defaultHandler = (params: BooksAndOrphans) => { conn.sendNotification(ExtensionServerNotification.BookTocs, params) }
     const handler = bookTocHandler ?? defaultHandler
     // BookTocs
     const computeFn = () => {
       let idCounter = 0
-      const tocIdMap = new IdMap<string, TocSubbookWithRange|PageNode>((v) => {
+      const tocIdMap = new IdMap<string, TocSubbookWithRange | PageNode>((v) => {
         if (v instanceof PageNode) {
           return `servertoken:page:${v.absPath}`
         } else {
@@ -148,7 +148,7 @@ export class ModelManager {
       ModelManager.debug('[MODEL_MANAGER] bundle file is not loaded yet or does not exist')
       return { tocIdMap, books: [], orphans: [] }
     }
-    const sideEffectFn = (v: BooksAndOrphans & {tocIdMap: IdMap<string, TocSubbookWithRange|PageNode>}) => {
+    const sideEffectFn = (v: BooksAndOrphans & { tocIdMap: IdMap<string, TocSubbookWithRange | PageNode> }) => {
       this.tocIdMap = v.tocIdMap
       this.bookTocs = v.books
       const params: BooksAndOrphans = {
@@ -340,30 +340,30 @@ export class ModelManager {
       // push this task back onto the job stack and then add loading jobs for each node that needs to load
       const unloadedNodes = nodesToLoad.filter(n => !n.isLoaded)
       ModelManager.debug('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
-      this.jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => this.sendFileDiagnostics(node) })
-      unloadedNodes.forEach(n => this.jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => await this.readAndLoad(n) }))
+      this.jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => { this.sendFileDiagnostics(node) } })
+      unloadedNodes.forEach(n => { this.jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => { await this.readAndLoad(n) } }) })
     }
   }
 
   performInitialValidation() {
-    const enqueueLoadJob = (node: Fileish) => this.jobRunner.enqueue({ slow: true, type: 'INITIAL_LOAD_DEP', context: node, fn: async () => await this.readAndLoad(node) })
+    const enqueueLoadJob = (node: Fileish) => { this.jobRunner.enqueue({ slow: true, type: 'INITIAL_LOAD_DEP', context: node, fn: async () => { await this.readAndLoad(node) } }) }
     const jobs = [
-      { slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => await this.readAndLoad(this.bundle) },
+      { slow: true, type: 'INITIAL_LOAD_BUNDLE', context: this.bundle, fn: async () => { await this.readAndLoad(this.bundle) } },
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOKS', context: this.bundle, fn: () => this.bundle.allBooks.all.forEach(enqueueLoadJob) },
-      { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(b => this.sendFileDiagnostics(b)) } },
+      { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(b => { this.sendFileDiagnostics(b) }) } },
       { slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: () => this.bundle.allPages.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_ALL_RESOURCES', context: this.bundle, fn: () => this.bundle.allResources.all.forEach(enqueueLoadJob) },
-      { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => await Promise.all(this.bundle.allNodes.map(f => this.sendFileDiagnostics(f))) }
+      { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this.bundle.allNodes.forEach(f => { this.sendFileDiagnostics(f) }) }
     ]
-    jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
+    jobs.reverse().forEach(j => { this.jobRunner.enqueue(j) })
   }
 
   loadEnoughToSendDiagnostics(workspaceUri: string, uri: string, content?: string) {
     const context = { workspace: workspaceUri, doc: uri }
     // load the books to see if this URI is a page in a book
     const jobs = [
-      { type: 'FILEOPENED_LOAD_BUNDLE_DEP', context, fn: async () => await this.readAndLoad(this.bundle) },
-      { type: 'FILEOPENED_LOAD_BOOKS_DEP', context, fn: async () => await Promise.all(this.bundle.books.map(async f => await this.readAndLoad(f))) },
+      { type: 'FILEOPENED_LOAD_BUNDLE_DEP', context, fn: async () => { await this.readAndLoad(this.bundle) } },
+      { type: 'FILEOPENED_LOAD_BOOKS_DEP', context, fn: async () => await Promise.all(this.bundle.books.map(async f => { await this.readAndLoad(f) })) },
       {
         type: 'FILEOPENED_SEND_DIAGNOSTICS',
         context,
@@ -379,7 +379,7 @@ export class ModelManager {
         }
       }
     ]
-    jobs.reverse().forEach(j => this.jobRunner.enqueue(j))
+    jobs.reverse().forEach(j => { this.jobRunner.enqueue(j) })
   }
 
   public autocompleteResources(page: PageNode, cursor: Position) {
@@ -505,7 +505,7 @@ export class ModelManager {
   private recFind(token: Token, parent: ClientTocNode | BookToc, nodes: ClientTocNode[]): Opt<NodeAndParent> {
     for (const node of nodes) {
       if (node.value.token === token) {
-        return { node: node, parent }
+        return { node, parent }
       }
       /* istanbul ignore else */
       if (node.type === TocNodeKind.Subbook) {

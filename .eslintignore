@@ -1,0 +1,3 @@
+/cypress.config.ts
+/client/src/webview-js/cnxml-preview/cnxml-preview.js
+/client/src/webview-js/toc-editor/toc-editor.jsx

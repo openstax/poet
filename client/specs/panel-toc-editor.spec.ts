@@ -1,17 +1,17 @@
 import { join } from 'path'
-import expect from 'expect'
-import SinonRoot, { SinonStub } from 'sinon'
+import { expect } from '@jest/globals'
+import SinonRoot, { type SinonStub } from 'sinon'
 
-import vscode, { Disposable, Event, EventEmitter, Uri, ViewColumn, WebviewPanel } from 'vscode'
-import { BookRootNode, BookToc, TocNodeKind, TocModificationKind } from '../../common/src/toc'
+import vscode, { Disposable, type Event, EventEmitter, Uri, ViewColumn, type WebviewPanel } from 'vscode'
+import { BookRootNode, type BookToc, TocNodeKind, TocModificationKind } from '../../common/src/toc'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { TocItemIcon, TocTreeItem, TocTreesProvider, toggleTocTreesFilteringHandler } from '../src/toc-trees-provider'
-import { PanelIncomingMessage, TocEditorPanel } from '../src/panel-toc-editor'
-import { LanguageClient } from 'vscode-languageclient/node'
+import { type PanelIncomingMessage, TocEditorPanel } from '../src/panel-toc-editor'
+import { type LanguageClient } from 'vscode-languageclient/node'
 import { EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest } from '../../common/src/requests'
-import { ExtensionEvents, ExtensionHostContext } from '../src/panel'
-import { BookOrTocNode, TocsTreeProvider } from '../src/book-tocs'
-import { PanelStateMessage, PanelStateMessageType } from '../../common/src/webview-constants'
+import { type ExtensionEvents, type ExtensionHostContext } from '../src/panel'
+import { type BookOrTocNode, type TocsTreeProvider } from '../src/book-tocs'
+import { type PanelStateMessage, PanelStateMessageType } from '../../common/src/webview-constants'
 
 const TEST_OUT_DIR = join(__dirname, '../src')
 const resourceRootDir = TEST_OUT_DIR
@@ -33,7 +33,7 @@ const createMockClient = () => {
 type ExtractEventGeneric<GenericEvent> = GenericEvent extends Event<infer X> ? X : never
 type ExtensionEventEmitters = { [key in keyof ExtensionEvents]: EventEmitter<ExtractEventGeneric<ExtensionEvents[key]>> }
 const createMockEvents = (): { emitters: ExtensionEventEmitters, events: ExtensionEvents } => {
-  const onDidChangeWatchedFilesEmitter: EventEmitter<undefined> = new EventEmitter()
+  const onDidChangeWatchedFilesEmitter = new EventEmitter<undefined>()
   const emitters = {
     onDidChangeWatchedFiles: onDidChangeWatchedFilesEmitter
   }
@@ -45,7 +45,7 @@ const createMockEvents = (): { emitters: ExtensionEventEmitters, events: Extensi
 
 describe('Toc Editor', () => {
   const sinon = SinonRoot.createSandbox()
-  afterEach(() => sinon.restore())
+  afterEach(() => { sinon.restore() })
   it('TocTreesProvider returns expected TocTreeItems', async () => {
     const fakeTreeBooks: BookToc[] = []
     fakeTreeBooks.push(
@@ -174,10 +174,10 @@ describe('Toc Editor', () => {
     sendRequestMock.onCall(0).resolves(null)
     sendRequestMock.onCall(1).resolves(fakeTreeBooks)
 
-    expect(await tocTreesProvider.getChildren(undefined)).toMatchSnapshot()
-    expect(await tocTreesProvider.getChildren(undefined)).toMatchSnapshot()
+    expect(tocTreesProvider.getChildren(undefined)).toMatchSnapshot()
+    expect(tocTreesProvider.getChildren(undefined)).toMatchSnapshot()
     expect(book1Item).toMatchSnapshot()
-    expect(await tocTreesProvider.getChildren(book2Item)).toMatchSnapshot()
+    expect(tocTreesProvider.getChildren(book2Item)).toMatchSnapshot()
     expect(tocTreesProvider.getTreeItem(book2Item)).toMatchSnapshot()
     expect(await tocTreesProvider.getParent(book2Item)).toMatchSnapshot()
     expect(await tocTreesProvider.getParent(module3Item)).toMatchSnapshot()
@@ -258,7 +258,7 @@ describe('Toc Editor', () => {
       expect(getMessage().title).toBe('new_title')
     })
     it('disposes', () => {
-      expect(() => p.dispose()).not.toThrow()
+      expect(() => { p.dispose() }).not.toThrow()
     })
     it('sends a message to Webview when a fileChanged event is emitted', () => {
       expect(postMessageStub.callCount).toBe(0)
@@ -298,8 +298,8 @@ describe('Toc Editor', () => {
       expect(postMessageStub.callCount).toBe(1)
       expect(postMessageStub.firstCall.args).toMatchSnapshot()
     })
-    it('does not send a message to Webview when panel is disposed', async () => {
-      await expect(p.refreshPanel({} as unknown as WebviewPanel, client)).rejects
+    it('does not send a message to Webview when panel is disposed', () => {
+      expect(p.refreshPanel({} as unknown as WebviewPanel, client)).rejects // eslint-disable-line @typescript-eslint/no-unused-expressions
     })
     it('refreshes when server watched file changes', async () => {
       const refreshStub = sinon.stub(p, 'refreshPanel')

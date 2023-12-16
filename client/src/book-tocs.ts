@@ -1,6 +1,6 @@
-import { EventEmitter, TreeItemCollapsibleState, Uri, TreeDataProvider } from 'vscode'
+import { EventEmitter, TreeItemCollapsibleState, Uri, type TreeDataProvider } from 'vscode'
 
-import { BookToc, ClientTocNode, BookRootNode, TocNodeKind } from '../../common/src/toc'
+import { type BookToc, type ClientTocNode, BookRootNode, TocNodeKind } from '../../common/src/toc'
 import { TocItemIcon } from './toc-trees-provider'
 
 export type BookOrTocNode = BookToc | ClientTocNode
@@ -25,7 +25,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
   public update(n: BookToc[]) {
     this.bookTocs = n
     this.parentsMap.clear()
-    this.bookTocs.forEach(n => this.recAddParent(n))
+    this.bookTocs.forEach(n => { this.recAddParent(n) })
     this._onDidChangeTreeData.fire()
   }
 

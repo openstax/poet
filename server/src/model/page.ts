@@ -1,8 +1,8 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { Opt, Position, PathKind, WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, Range } from './utils'
-import { Fileish, ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
-import { ResourceNode } from './resource'
+import { type Opt, type Position, PathKind, type WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, type HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, type Range } from './utils'
+import { Fileish, type ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
+import { type ResourceNode } from './resource'
 
 enum ResourceLinkKind {
   Image,

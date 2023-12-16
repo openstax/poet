@@ -27,7 +27,7 @@ const getElementBoundsOfInfluence = ({ element }) => {
     const height = Math.max(1, (childBounds.top - myBounds.top))
     return {
       top: myBounds.top,
-      height: height
+      height
     }
   }
   return {

@@ -1,15 +1,15 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { Bundleish, findDuplicates, Opt, PathHelper, PathKind, select, WithRange, calculateElementPositions, expectValue, NOWHERE, join } from './utils'
+import { type Bundleish, findDuplicates, type Opt, type PathHelper, PathKind, select, type WithRange, calculateElementPositions, expectValue, NOWHERE, join } from './utils'
 import { Factory } from './factory'
 import { PageNode } from './page'
 import { BookNode } from './book'
-import { Fileish, ValidationCheck, ValidationKind } from './fileish'
+import { Fileish, type ValidationCheck, ValidationKind } from './fileish'
 import { ResourceNode } from './resource'
 
 export class Bundle extends Fileish implements Bundleish {
-  public readonly allResources: Factory<ResourceNode> = new Factory((absPath: string) => new ResourceNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
-  public readonly allPages: Factory<PageNode> = new Factory((absPath: string) => new PageNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
+  public readonly allResources: Factory<ResourceNode> = new Factory<ResourceNode>((absPath: string) => new ResourceNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
+  public readonly allPages: Factory<PageNode> = new Factory<PageNode>((absPath: string) => new PageNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
   private readonly _duplicateResourcePaths = Quarx.observable.box<I.Set<string>>(I.Set<string>())

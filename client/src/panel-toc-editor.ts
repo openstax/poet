@@ -2,13 +2,13 @@ import fs from 'fs'
 import path from 'path'
 import vscode from 'vscode'
 
-import { TreeItem as TreeItemUI } from 'react-sortable-tree'
+import { type TreeItem as TreeItemUI } from 'react-sortable-tree'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect, ensureCatch } from './utils'
-import { ClientPageish, ClientTocNode, TocNodeKind, PageRenameEvent, SubbookRenameEvent, TocMoveEvent, TocRemoveEvent, CreatePageEvent, CreateSubbookEvent, TocModification, TocModificationKind, TocModificationParams } from '../../common/src/toc'
+import { type ClientPageish, type ClientTocNode, TocNodeKind, type PageRenameEvent, type SubbookRenameEvent, type TocMoveEvent, type TocRemoveEvent, type CreatePageEvent, type CreateSubbookEvent, type TocModification, TocModificationKind, type TocModificationParams } from '../../common/src/toc'
 import { PanelType } from './extension-types'
-import { LanguageClient } from 'vscode-languageclient/node'
-import { BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest, Opt } from '../../common/src/requests'
-import { ExtensionHostContext, Panel } from './panel'
+import { type LanguageClient } from 'vscode-languageclient/node'
+import { type BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerRequest, type Opt } from '../../common/src/requests'
+import { type ExtensionHostContext, Panel } from './panel'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 export const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -124,7 +124,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, never, PanelStat
   // readonly handleMessage = handleMessageFromWebviewPanel(this.panel, this.context.client)
   readonly handleMessage = async (m: PanelIncomingMessage) => {
     const workspaceUri = expect(getRootPathUri(), 'No root path in which to generate a module').toString()
-    let event: Opt<TocModification|CreatePageEvent|CreateSubbookEvent>
+    let event: Opt<TocModification | CreatePageEvent | CreateSubbookEvent>
     if (m.type === TocModificationKind.Move || m.type === TocModificationKind.Remove || m.type === TocModificationKind.PageRename || m.type === TocModificationKind.SubbookRename) {
       event = m
     } else if (m.type === TocNodeKind.Page) {
@@ -168,7 +168,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, never, PanelStat
         n.children.forEach(recAddModules)
       }
     }
-    this.state.books.forEach(b => b.tocTree.forEach(recAddModules))
+    this.state.books.forEach(b => { b.tocTree.forEach(recAddModules) })
     const orphanModules = this.state.orphans
 
     const allModulesSorted = Array.from(allModules).sort(fileIdSorter)

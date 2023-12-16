@@ -1,12 +1,12 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import Sinon from 'sinon'
 import mockfs from 'mock-fs'
-import vscode, { ExtensionContext, Uri, Webview } from 'vscode'
+import vscode, { type ExtensionContext, Uri, type Webview } from 'vscode'
 import { addBaseHref, fixResourceReferences, fixCspSourceReferences, ensureCatch, ensureCatchPromise, expect as expectOrig, getErrorDiagnosticsBySource, populateXsdSchemaFiles, configureWorkspaceSettings, launchLanguageServer } from '../src/utils'
 import { Panel } from '../src/panel'
 import { join } from 'path'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
-import { LanguageClient } from 'vscode-languageclient/node'
+import { type LanguageClient } from 'vscode-languageclient/node'
 
 const TEST_OUT_DIR = join(__dirname, '../static') // contains 'xsd/' dir
 
@@ -27,7 +27,7 @@ describe('expectValue', () => {
 
 describe('tests with sinon', () => {
   const sinon = Sinon.createSandbox()
-  afterEach(() => sinon.restore())
+  afterEach(() => { sinon.restore() })
 
   describe('ensureCatch', () => {
     it('ensureCatch throws when its argument throws', async () => {
@@ -36,7 +36,7 @@ describe('tests with sinon', () => {
       const s = sinon.spy(vscode.window, 'showErrorMessage')
       const wrapped = ensureCatch(fn)
 
-      await expect(async () => await wrapped()).rejects.toThrow(errMessage)
+      await expect(async () => { await wrapped() }).rejects.toThrow(errMessage)
       // Verify that a message was sent to the user
       expect(s.callCount).toBe(1)
     })
@@ -46,7 +46,7 @@ describe('tests with sinon', () => {
       const s = sinon.spy(vscode.window, 'showErrorMessage')
       const promise = fn()
 
-      await expect(async () => await ensureCatchPromise(promise)).rejects.toThrow(errMessage)
+      await expect(async () => { await ensureCatchPromise(promise) }).rejects.toThrow(errMessage)
       // Verify that a message was sent to the user
       expect(s.callCount).toBe(1)
     })
@@ -136,7 +136,7 @@ describe('tests with sinon', () => {
       } as any as vscode.Extension<any>
       sinon.stub(vscode.extensions, 'getExtension').withArgs('redhat.vscode-xml').returns(fakeXmlExtension)
     })
-    afterEach(() => mockfs.restore())
+    afterEach(() => { mockfs.restore() })
 
     it('schema files are populated when not existing', async () => {
       const schemaPath = join(WORKSPACE_ROOT, '.xsd')

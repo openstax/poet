@@ -1,11 +1,11 @@
 import Sinon from 'sinon'
 import * as pushContent from '../src/push-content'
 import * as utils from '../src/utils'
-import { Repository, Change, Status, CommitOptions, GitExtension, GitErrorCodes, Branch, RepositoryState } from '../src/git-api/git.d'
+import { type Repository, type Change, Status, type CommitOptions, type GitExtension, GitErrorCodes, type Branch, type RepositoryState } from '../src/git-api/git.d'
 import vscode from 'vscode'
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import { Substitute } from '@fluffy-spoon/substitute'
-import { ExtensionHostContext } from '../src/panel'
+import { type ExtensionHostContext } from '../src/panel'
 import { DiagnosticSource, ExtensionServerRequest } from '../../common/src/requests'
 
 const makeCaptureMessage = (messages: string[]): (message: string) => Promise<string | undefined> => {
@@ -29,7 +29,7 @@ describe('Push Button Test Suite', () => {
       .resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('test'))
   })
-  afterEach(() => sinon.restore())
+  afterEach(() => { sinon.restore() })
   const commitOptions: CommitOptions = { all: true }
   const sendRequestMock = sinon.stub()
   const mockHostContext: ExtensionHostContext = {
@@ -316,7 +316,7 @@ describe('Push Button Test Suite', () => {
 
 describe('tests with sinon', () => {
   const sinon = Sinon.createSandbox()
-  afterEach(async () => sinon.restore())
+  afterEach(async () => { sinon.restore() })
   beforeEach(() => {
     sinon.stub(utils, 'getRootPathUri').returns(vscode.Uri.file('test'))
   })
@@ -360,7 +360,7 @@ describe('tests with sinon', () => {
         vscode.Uri.file('/c.xhtml')
       ].map((uri, i) => ({
         originalUri: uri,
-        uri: uri,
+        uri,
         renameUri: undefined,
         status: i === 0 ? Status.DELETED : Status.MODIFIED
       }))
@@ -374,10 +374,10 @@ describe('tests with sinon', () => {
       const toOpen = await pushContent.getDocumentsToOpen(pushContent.DocumentsToOpen.modified)
       changesToReturn
         .filter(c => c.status !== Status.DELETED)
-        .forEach(c => expect(toOpen.has(c.uri.toString())).toBe(true))
+        .forEach(c => { expect(toOpen.has(c.uri.toString())).toBe(true) })
       changesToReturn
         .filter(c => c.status === Status.DELETED)
-        .forEach(c => expect(toOpen.has(c.uri.toString())).toBe(false))
+        .forEach(c => { expect(toOpen.has(c.uri.toString())).toBe(false) })
       expect(toOpen.size === 2)
     })
   })
@@ -428,9 +428,11 @@ describe('tests with sinon', () => {
       const getDocumentsToOpenStub = sinon.stub(pushContent, 'getDocumentsToOpen')
       const showTextDocumentStub = sinon.stub(vscode.window, 'showTextDocument')
         .callsFake((uri: vscode.Uri, options?: vscode.TextDocumentShowOptions): Thenable<vscode.TextEditor> => {
-          return new Promise((resolve, reject) => resolve(
-            { document: { uri: uri } as any as vscode.TextDocument } as any as vscode.TextEditor
-          ))
+          return new Promise((resolve, reject) => {
+            resolve(
+              { document: { uri } as any as vscode.TextDocument } as any as vscode.TextEditor
+            )
+          })
         })
       const executeCommandStub = sinon.stub(vscode.commands, 'executeCommand').resolves()
       const getDiagnosticsStub = sinon.stub(vscode.languages, 'getDiagnostics')

@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
-import { GitExtension, GitErrorCodes, CommitOptions, Repository, Status } from './git-api/git'
-import { ExtensionHostContext } from './panel'
+import { type GitExtension, GitErrorCodes, type CommitOptions, type Repository, Status } from './git-api/git'
+import { type ExtensionHostContext } from './panel'
 import { DiagnosticSource, requestEnsureIds } from '../../common/src/requests'
 
 export enum DocumentsToOpen {
@@ -41,7 +41,7 @@ export const closeValidDocuments = async (
   openedEditors: vscode.TextEditor[],
   errorsBySource: Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>
 ) => {
-  const urisWithErrors: Set<string> = new Set()
+  const urisWithErrors = new Set<string>()
   for (const errors of errorsBySource.values()) {
     errors.forEach(e => urisWithErrors.add(e[0].toString()))
   }
@@ -83,7 +83,7 @@ export const progressWithTimeEst = async<T>(
             increment: value.increment
           })
         } else {
-          progress.report({ message: message })
+          progress.report({ message })
         }
       }
     }
@@ -269,7 +269,8 @@ export const _pushContent = (
     if (e.stdout.includes('nothing to commit')) {
       void errorReporter('No changes to push.')
     } else {
-      const message: string = e.gitErrorCode === undefined ? e.message : /* istanbul ignore next */ e.gitErrorCode
+      /* istanbul ignore next */
+      const message: string = e.gitErrorCode ?? e.message
       void errorReporter(`Push failed: ${message}`)
     }
   }

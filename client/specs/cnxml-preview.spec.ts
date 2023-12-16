@@ -1,16 +1,16 @@
-import expect from 'expect'
+import { expect } from '@jest/globals'
 import SinonRoot from 'sinon'
 import mockfs from 'mock-fs'
 
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { CnxmlPreviewPanel, rawTextHtml, tagElementsWithLineNumbers } from '../src/panel-cnxml-preview'
 
-import vscode, { TextDocument, Uri } from 'vscode'
+import vscode, { type TextDocument, type Uri } from 'vscode'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import { EMPTY_BOOKS_AND_ORPHANS } from '../../common/src/requests'
 import { join } from 'path'
-import { ExtensionEvents } from '../src/panel'
-import { LanguageClient } from 'vscode-languageclient/node'
+import { type ExtensionEvents } from '../src/panel'
+import { type LanguageClient } from 'vscode-languageclient/node'
 import { PanelStateMessageType } from '../../common/src/webview-constants'
 import { readFileSync } from 'fs'
 
@@ -37,7 +37,7 @@ function expectValue<T>(v: T | null | undefined) {
 
 function makeDocument(uri: Uri, content: string) {
   const document: vscode.TextDocument = {
-    uri: uri,
+    uri,
     languageId: 'xml',
     lineAt: () => ({ text: 'fakedata2' }),
     positionAt: () => -123,
@@ -104,8 +104,8 @@ describe('cnxml-preview', () => {
       const fakeEditor: vscode.TextEditor = {
         document: {
           lineAt: () => ({ text: 'fakedata' }),
-          languageId: languageId,
-          uri: uri
+          languageId,
+          uri
         },
         // used by panel-cnxml-preview scrollToRangeStartOfEditor
         visibleRanges: [
@@ -149,7 +149,7 @@ describe('cnxml-preview', () => {
     })
 
     it('rebinds to resource in the active editor', async () => {
-      const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: events })
+      const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events })
       const postMessage = sinon.spy(panel, 'postMessage')
       expect((panel as any).resourceBinding).toBe(null)
 
@@ -178,12 +178,12 @@ describe('cnxml-preview', () => {
         join(resourceRootDir, 'cnxml-to-html5.xsl'),
         'utf-8'
       )
-      expect(postMessage.calledWith({ type: PanelStateMessageType.Response, state: { xml: xmlExpectedSecond, xsl: xsl } })).toBe(true)
+      expect(postMessage.calledWith({ type: PanelStateMessageType.Response, state: { xml: xmlExpectedSecond, xsl } })).toBe(true)
       expect((panel as any).resourceBinding.fsPath).toBe(resourceSecond.fsPath)
     })
 
     it('only rebinds to cnxml', async () => {
-      const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events: events })
+      const panel = new CnxmlPreviewPanel({ bookTocs: EMPTY_BOOKS_AND_ORPHANS, resourceRootDir, client: createMockClient(), events })
       const postMessage = sinon.spy(panel, 'postMessage')
 
       const documentFirst = await vscode.workspace.openTextDocument(resourceFirst)
@@ -232,7 +232,7 @@ describe('cnxml-preview', () => {
       function revealRange(textEditor: vscode.TextEditor, range: vscode.Range, strategy: vscode.TextEditorRevealType) {
         (textEditor as any).visibleRanges = [range]
         const evt: vscode.TextEditorVisibleRangesChangeEvent = {
-          textEditor: textEditor,
+          textEditor,
           visibleRanges: [range]
         }
         odctevr.getCalls().forEach(c => c.firstArg(evt))

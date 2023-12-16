@@ -1,7 +1,7 @@
 import Sinon from 'sinon'
-import expect from 'expect'
-import { Disposer, ExtensionHostContext, Panel, PanelManager } from '../src/panel'
-import { Disposable, WebviewPanel } from 'vscode'
+import { expect } from '@jest/globals'
+import { Disposer, type ExtensionHostContext, Panel, PanelManager } from '../src/panel'
+import { Disposable, type WebviewPanel } from 'vscode'
 
 describe('panel', () => {
   const sinon = Sinon.createSandbox()
@@ -27,7 +27,7 @@ describe('panel', () => {
     async handleMessage(message: boolean) {}
   }
 
-  afterEach(() => sinon.restore())
+  afterEach(() => { sinon.restore() })
 
   it('handles onDidDispose', () => {
     const panel = new TestPanel()

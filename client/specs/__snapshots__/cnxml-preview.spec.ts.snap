@@ -2,7 +2,7 @@
 
 exports[`cnxml-preview simple tagElementsWithLineNumbers 1`] = `
 "
-      <document data-line=\\"2\\">
-          <div data-line=\\"3\\"><span data-line=\\"3\\">Test</span><div data-line=\\"3\\"/></div>
+      <document data-line="2">
+          <div data-line="3"><span data-line="3">Test</span><div data-line="3"/></div>
       </document>"
 `;

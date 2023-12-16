@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See LICENSE in this directory for license information.
  *-------------------------------------------------------------------------------------------- */
 
-import { Uri, Event, Disposable, ProviderResult } from 'vscode'
-export { ProviderResult } from 'vscode'
+import { type Uri, type Event, type Disposable, type ProviderResult } from 'vscode'
+export type { ProviderResult } from 'vscode'
 
 export interface Git {
   readonly path: string

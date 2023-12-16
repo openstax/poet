@@ -1,6 +1,6 @@
 import * as Quarx from 'quarx'
 import I from 'immutable'
-import { Opt } from './utils'
+import { type Opt } from './utils'
 export class Factory<T> {
   private readonly _map = Quarx.observable.box(I.Map<string, T>())
   constructor(private readonly builder: (filePath: string) => T, private readonly canonicalizer: (filePath: string) => string) { }

@@ -1,8 +1,8 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { PageNode } from './page'
-import { Opt, WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, TocNodeKind } from './utils'
-import { Fileish, ValidationCheck, ValidationKind } from './fileish'
+import { type PageNode } from './page'
+import { type Opt, type WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, type HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, TocNodeKind } from './utils'
+import { Fileish, type ValidationCheck, ValidationKind } from './fileish'
 import { getCCLicense } from './cc-license'
 
 const equalsTocNodeWithRange = (n1: TocNodeWithRange, n2: TocNodeWithRange): boolean => {
@@ -118,7 +118,7 @@ export class BookNode extends Fileish {
   }
 
   private tocLeaves() {
-    return I.List<TocPageWithRange>().withMutations(acc => this.collectPages(this.__toc, acc))
+    return I.List<TocPageWithRange>().withMutations(acc => { this.collectPages(this.__toc, acc) })
   }
 
   private collectPages(nodes: TocNodeWithRange[], acc: I.List<TocPageWithRange>) {
@@ -138,9 +138,9 @@ export class BookNode extends Fileish {
 
   protected getValidationChecks(): ValidationCheck[] {
     const pages = this.pages
-    const nonPages = I.List<TocSubbookWithRange>().withMutations(acc => this.collectNonPages(this.__toc, acc))
+    const nonPages = I.List<TocSubbookWithRange>().withMutations(acc => { this.collectNonPages(this.__toc, acc) })
     const duplicateTitles = I.Set(findDuplicates(nonPages.map(subcol => subcol.title)))
-    const pageLeaves = I.List<TocPageWithRange>().withMutations(acc => this.collectPages(this.__toc, acc))
+    const pageLeaves = I.List<TocPageWithRange>().withMutations(acc => { this.collectPages(this.__toc, acc) })
     const duplicatePages = I.Set(findDuplicates(pages))
     return [
       {

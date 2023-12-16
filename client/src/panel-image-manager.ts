@@ -3,10 +3,10 @@ import fs from 'fs'
 import path from 'path'
 import { fixResourceReferences, fixCspSourceReferences, getRootPathUri, expect } from './utils'
 import { PanelType } from './extension-types'
-import { ExtensionHostContext, Panel } from './panel'
+import { type ExtensionHostContext, Panel } from './panel'
 
 export interface PanelIncomingMessage {
-  mediaUploads: Array<{mediaName: string, data: string}>
+  mediaUploads: Array<{ mediaName: string, data: string }>
 }
 
 const initPanel = (context: ExtensionHostContext): vscode.WebviewPanel => {

@@ -1,7 +1,7 @@
 import { licenseEqual } from './model/cc-license'
 import { expectValue } from './model/utils'
 
-import { BookNode } from './model/book'
+import { type BookNode } from './model/book'
 
 // Maybe these templates should be in files so they can be edited more easily?
 const bookTemplate = `\

@@ -4,9 +4,9 @@ import vscode from 'vscode'
 import SinonRoot from 'sinon'
 import 'source-map-support/register'
 import { rawTextHtml } from '../src/panel-cnxml-preview'
-import { LanguageClient } from 'vscode-languageclient/node'
+import { type LanguageClient } from 'vscode-languageclient/node'
 import { EMPTY_BOOKS_AND_ORPHANS } from '../../common/src/requests'
-import { Disposer, ExtensionEvents, ExtensionHostContext, Panel } from '../src/panel'
+import { Disposer, type ExtensionEvents, type ExtensionHostContext, Panel } from '../src/panel'
 
 // Test runs in out/client/src/test/suite, not src/client/src/test/suite
 const TEST_OUT_DIR = path.join(__dirname, '../../')
