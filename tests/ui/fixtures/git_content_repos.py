@@ -25,6 +25,7 @@ def git_content_repos(headers_data):
         "osbooks-fizyka-bundle",
         "osbooks-psychologia",
         "osbooks-pl-marketing",
+        "osbooks-makroekonomia",
     ]
 
     next_url = "https://api.github.com/orgs/openstax/repos?per_page=50"
