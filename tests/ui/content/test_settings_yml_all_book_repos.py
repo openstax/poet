@@ -43,23 +43,22 @@ def test_settings_yml_all_book_repos(git_content_repos, headers_data):
 
                 else:
                     settings_yml_content = yaml.safe_load(settings_yml_resp.text)
-                    settings_yml_list = list(settings_yml_content.values())[0]
 
                     try:
-                        settings_yml_list["private"]
+                        settings_yml_list = list(settings_yml_content.values())[0]
 
-                    except KeyError:
-                        print("!!! issue with private key in .github/settings.yml")
-                        continue
+                    except AttributeError:
+                        print("key:value missing in .github/settings.yml")
 
                     else:
-                        yml_private_list = list(settings_yml_list.items())[0]
-
                         try:
-                            assert "False" == str(yml_private_list[1])
+                            is_private = settings_yml_content["repository"]["private"]
 
-                        except AssertionError:
-                            print(
-                                f"repository:private entry in .github/settings.yml is set to {str(yml_private_list[1])}"
-                            )
-                            continue
+                            if is_private:
+                                print(
+                                    f"<<< repository:private entry in .github/settings.yml is set to {is_private}"
+                                )
+                                continue
+
+                        except (KeyError, TypeError):
+                            print("!!! issue with private key in .github/settings.yml")
