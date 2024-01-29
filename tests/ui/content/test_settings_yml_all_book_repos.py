@@ -60,5 +60,5 @@ def test_settings_yml_all_book_repos(git_content_repos, headers_data):
                                 )
                                 continue
 
-                        except (KeyError, TypeError):
+                        except KeyError:
                             print("!!! issue with private key in .github/settings.yml")
