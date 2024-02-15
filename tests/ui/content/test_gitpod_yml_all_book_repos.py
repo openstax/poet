@@ -9,7 +9,7 @@ import yaml
 def test_gitpod_yml_all_book_repos(git_content_repos, headers_data):
     # verifies .gitpod.yml of each repo
     # run the test: pytest -k test_gitpod_yml_all_book_repos.py tests/ui/content --github_token zzz
-    # Modified on February 14, 2024
+    # Modified on February 15, 2024
 
     for repo in git_content_repos:
         gitpod_yml_dir = f"https://api.github.com/repos/openstax/{repo}/contents/"
@@ -30,14 +30,16 @@ def test_gitpod_yml_all_book_repos(git_content_repos, headers_data):
             gitpod_yml_content = yaml.safe_load(gitpod_yml_resp.text)
 
             try:
-                assert gitpod_yml_content["ports"][0]["port"] == 27149
-                assert gitpod_yml_content["ports"][0]["visibility"] == "public"
+                visibility_by_port = {
+                    port["port"]: port["visibility"]
+                    for port in gitpod_yml_content["ports"]
+                }
 
-                assert (
-                    "openstax.editor"
-                    and "redhat.vscode-xml"
-                    in gitpod_yml_content["vscode"]["extensions"]
-                )
+                assert visibility_by_port[27149] == "public"
 
-            except (AssertionError, KeyError) as attr:
+                assert ["openstax.editor", "redhat.vscode-xml"] == gitpod_yml_content[
+                    "vscode"
+                ]["extensions"]
+
+            except (AssertionError, KeyError, TypeError) as attr:
                 print(f"Issue found: {attr}")
