@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 
-import { type BundleGenerateReadme, type BundleEnsureIdsParams } from '../../common/src/requests'
+import type { BundleGenerateReadmeParams, BundleEnsureIdsParams, BundleGetSubmoduleConfigParams } from '../../common/src/requests'
 import { idFixer } from './fix-document-ids'
 import { bundleFactory } from './server'
 import { type ModelManager } from './model-manager'
@@ -8,6 +8,7 @@ import { type CompletionItem, type CompletionParams } from 'vscode-languageserve
 import { PageValidationKind } from './model/page'
 import { generateReadmeForWorkspace } from './readme-generator'
 import { URI } from 'vscode-uri'
+import { parseGitConfig } from './git-config-parser'
 
 export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsParams) => Promise<void> {
   return async (request: BundleEnsureIdsParams) => {
@@ -22,8 +23,8 @@ export function bundleEnsureIdsHandler(): (request: BundleEnsureIdsParams) => Pr
   }
 }
 
-export function bundleGenerateReadme(): (request: BundleGenerateReadme) => Promise<void> {
-  return async (request: BundleEnsureIdsParams) => {
+export function bundleGenerateReadme(): (request: BundleGenerateReadmeParams) => Promise<void> {
+  return async (request: BundleGenerateReadmeParams) => {
     const manager = bundleFactory.getOrAdd(request.workspaceUri)
     const books = manager.bundle.books
     const readmePath = `${URI.parse(request.workspaceUri).fsPath}/README.md`
@@ -32,6 +33,15 @@ export function bundleGenerateReadme(): (request: BundleGenerateReadme) => Promi
     }
     // toArray because I.Set uses non-standard iterators
     fs.writeFileSync(readmePath, generateReadmeForWorkspace(books.toArray()))
+  }
+}
+
+export function bundleGetSubmoduleConfig(): (request: BundleGetSubmoduleConfigParams) => Promise<Record<string, string> | null> {
+  return async (request: BundleGetSubmoduleConfigParams) => {
+    const gitmodules = `${URI.parse(request.workspaceUri).fsPath}/.gitmodules`
+    return fs.existsSync(gitmodules)
+      ? parseGitConfig(fs.readFileSync(gitmodules, 'utf-8'))
+      : null
   }
 }
 

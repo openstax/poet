@@ -2,7 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import vscode from 'vscode'
 import { type LanguageClient } from 'vscode-languageclient/node'
-import { pushContent, validateContent, setDefaultGitConfig } from './push-content'
+import { pushContent, validateContent, setDefaultGitConfig, initPrivateSubmodule } from './push-content'
 import { TocEditorPanel } from './panel-toc-editor'
 import { CnxmlPreviewPanel } from './panel-cnxml-preview'
 import { expect, ensureCatch, ensureCatchPromise, launchLanguageServer, populateXsdSchemaFiles, getRootPathUri, configureWorkspaceSettings } from './utils'
@@ -108,6 +108,7 @@ function doRest(client: LanguageClient): ExtensionExports {
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
   vscode.commands.registerCommand('openstax.validateContent', ensureCatch(validateContent))
   void ensureCatchPromise(setDefaultGitConfig())
+  void ensureCatchPromise(initPrivateSubmodule(hostContext))
 
   // It is a logic error for anything else to listen to this event from the client.
   // It is only allowed a single handler, from what we can tell

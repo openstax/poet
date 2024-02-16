@@ -2,7 +2,10 @@ import vscode from 'vscode'
 import { expect, getErrorDiagnosticsBySource, getRootPathUri } from './utils'
 import { type GitExtension, GitErrorCodes, type CommitOptions, type Repository, Status } from './git-api/git'
 import { type ExtensionHostContext } from './panel'
-import { DiagnosticSource, requestEnsureIds } from '../../common/src/requests'
+import { DiagnosticSource, requestEnsureIds, requestGetSubmoduleConfig } from '../../common/src/requests'
+import { type LanguageClient } from 'vscode-languageclient/node'
+
+const PRIVATE_SUBMODULE_NAME = 'private'
 
 export enum DocumentsToOpen {
   all = 'All Content',
@@ -207,6 +210,44 @@ export const getMessage = async (): Promise<string | undefined> => {
   return message
 }
 
+// NOTE: When the private submodule is not initialized, this will return undefined
+export const _getPrivateSubmodule = () => getRepo(PRIVATE_SUBMODULE_NAME)
+
+/* istanbul ignore next (already tested in pushContent) */
+export const initPrivateSubmodule = async (hostContext: ExtensionHostContext) => {
+  const privateSubmodule = _getPrivateSubmodule()
+  if (privateSubmodule !== undefined) {
+    await preparePrivateSubmodule(hostContext.client, privateSubmodule)
+  } else {
+    console.warn(`Private submodule not found: ${PRIVATE_SUBMODULE_NAME}`)
+  }
+}
+
+export const preparePrivateSubmodule = async (
+  client: LanguageClient,
+  privateSubmodule: Repository
+): Promise<void> => {
+  // TODO: What if submodule needs to be initialized? (not a problem in gitpod)
+  const uri = expect(getRootPathUri(), 'Could not get root path')
+  const maybeGitModules = await requestGetSubmoduleConfig(
+    client,
+    { workspaceUri: uri.toString() }
+  )
+  const submoduleBranch = expect(
+    maybeGitModules?.[`submodule.${PRIVATE_SUBMODULE_NAME}.branch`],
+    'Could not determine which private submodule branch to use'
+  )
+  try {
+    await privateSubmodule.fetch()
+    await privateSubmodule.checkout(submoduleBranch)
+  } catch (e) {
+    console.error(e)
+    throw new Error(
+      `Could not checkout private submodule branch: ${submoduleBranch}`
+    )
+  }
+}
+
 export const pushContent = (hostContext: ExtensionHostContext) => async () => {
   // Do a precursory check for known errors (fast!)
   if (canPush(getErrorDiagnosticsBySource())) {
@@ -223,17 +264,42 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       progress.report({ message: 'Creating Auto Element IDs, please wait...' })
       // const serverErrorMessage = 'Server cannot properly find workspace'
       const uri = expect(getRootPathUri(), 'No root path in which to generate a module')
+      const pushTargets = [getBookRepo()]
       // fix ids
       // TODO: better ui in future. Add `increment` value in `progress.report` and use a callback to update real progress
       await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
+      const privateSubmodule = _getPrivateSubmodule()
+      if (privateSubmodule !== undefined) {
+        try {
+          await preparePrivateSubmodule(hostContext.client, privateSubmodule)
+          pushTargets.push(privateSubmodule)
+        } catch (e) {
+          const err = e as Error
+          await vscode.window.showErrorMessage(err.message)
+          return
+        }
+      } else {
+        console.warn('Could not find private submodule')
+      }
       // push content
       progress.report({ message: 'Pushing...' })
-      await _pushContent(
-        getBookRepo,
-        getMessage,
-        vscode.window.showInformationMessage,
-        vscode.window.showErrorMessage
-      )()
+      const commitMessage = await getMessage()
+      /* istanbul ignore if */
+      if (commitMessage == null || !canPush(await openAndValidate(DocumentsToOpen.modified))) {
+        return
+      }
+
+      for (const repo of pushTargets) {
+        const infoWithRepo = async (msg: string) => {
+          /* istanbul ignore next (just wrapping function) */
+          return await vscode.window.showInformationMessage(`${repo.rootUri.fsPath}: ${msg}`)
+        }
+        const errorWithRepo = async (msg: string) => {
+          /* istanbul ignore next (just wrapping function) */
+          return await vscode.window.showErrorMessage(`${repo.rootUri.fsPath}: ${msg}`)
+        }
+        await _pushContent(repo, commitMessage, infoWithRepo, errorWithRepo)()
+      }
     })
   }
 }
@@ -244,21 +310,16 @@ interface GitError extends Error {
 }
 
 export const _pushContent = (
-  _getRepo: () => Repository,
-  _getMessage: () => Thenable<string | undefined>,
+  repo: Repository,
+  commitMessage: string,
   infoReporter: (msg: string) => Thenable<string | undefined>,
-  errorReporter: (msg: string) => Thenable<string | undefined>
+  errorReporter: (msg: string) => Thenable<string | undefined>,
+  options?: { branchName?: string }
 ) => async () => {
-  const repo = _getRepo()
   const commitOptions: CommitOptions = { all: true }
 
   let commitSucceeded = false
 
-  const commitMessage = await _getMessage()
-  /* istanbul ignore if */
-  if (commitMessage == null || !canPush(await openAndValidate(DocumentsToOpen.modified))) {
-    return
-  }
   try {
     await repo.commit(commitMessage, commitOptions)
     commitSucceeded = true
