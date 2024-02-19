@@ -4,15 +4,13 @@
 
 import glob from 'glob'
 import { DOMParser, XMLSerializer } from 'xmldom'
-import http from 'http' // easier to use node-fetch but didn't want to add a dependency
-import https from 'https'
 import fs from 'fs'
 import path from 'path'
 import I from 'immutable'
 import { expectValue, type PathHelper, select, TocNodeKind } from './utils'
 import { Bundle } from './bundle'
 import { type Fileish } from './fileish'
-import { PageLinkKind, type PageNode } from './page'
+import { type PageLink, PageLinkKind, type PageNode } from './page'
 import { BookNode, type TocNodeWithRange, type TocPageWithRange, type TocSubbookWithRange } from './book'
 import { type ResourceNode } from './resource'
 import { removeNode, writeBookToc } from '../model-manager'
@@ -25,10 +23,19 @@ const ALLOWED_FILES = [
   '.gitpod.yml'
 ]
 
-// Print log messages to stderr per convention
-const log = console.error.bind(console.error)
+const info = console.error.bind(console.error)
 
-log('WARN: Manually setting NODE_ENV=production so we get nicer error messages')
+// Print log messages to stderr per convention
+const logText = console.log.bind(console.log)
+
+function logCsv(bundle: Bundle, page: PageNode, link: PageLink, errorCode: string | number, fromUrl: string, toUrl = '', secondToUrl = '') {
+  const bundleRoot = path.join(bundle.absPath, '../../')
+  const bundleName = path.basename(bundleRoot)
+  const pagePath = path.relative(bundleRoot, page.absPath)
+  logText(`"${bundleName}","${pagePath}",${link.range.start.line},${link.range.start.character},${errorCode.toString()},"${fromUrl}","${toUrl}","${secondToUrl}"`)
+}
+
+info('WARN: Manually setting NODE_ENV=production so we get nicer error messages')
 process.env.NODE_ENV = 'production'
 
 const sleep = async (ms: number) => await new Promise((resolve) => setTimeout(resolve, ms))
@@ -53,7 +60,7 @@ function loadRepo(repoPath: string) {
   let nodesToLoad = I.Set<Fileish>()
   do {
     nodesToLoad = bundle.allNodes.flatMap(n => n.validationErrors.nodesToLoad).filter(n => !n.isLoaded && n.validationErrors.errors.size === 0)
-    log('Loading', nodesToLoad.size, 'file(s)...')
+    info('Loading', nodesToLoad.size, 'file(s)...')
     nodesToLoad.forEach(loadNode)
   } while (nodesToLoad.size > 0)
   return bundle
@@ -63,14 +70,14 @@ async function load(bookDirs: string[]): Promise<[boolean, Bundle[]]> {
   let errorCount = 0
   const bundles = []
   for (const rootPath of bookDirs) {
-    log('Validating', toRelPath(rootPath))
+    info('Validating', toRelPath(rootPath))
     const bundle = loadRepo(path.resolve(rootPath))
 
-    log('')
-    log('This directory contains:')
-    log('  Books:', bundle.allBooks.size)
-    log('  Pages:', bundle.allPages.size)
-    log('  Images:', bundle.allResources.size)
+    info('')
+    info('This directory contains:')
+    info('  Books:', bundle.allBooks.size)
+    info('  Pages:', bundle.allPages.size)
+    info('  Images:', bundle.allResources.size)
 
     const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
     bundles.push(bundle)
@@ -83,11 +90,11 @@ function printErrors(bundles: Bundle[]) {
   bundles.forEach(bundle => {
     const validationErrors = bundle.allNodes.flatMap(n => n.validationErrors.errors)
     if (validationErrors.size > 0) {
-      log('Validation Errors:', validationErrors.size)
+      logText('Validation Errors:', validationErrors.size)
     }
     validationErrors.forEach(e => {
       const { range } = e
-      console.log(toRelPath(e.node.absPath), `${range.start.line}:${range.start.character}`, e.title)
+      info(toRelPath(e.node.absPath), `${range.start.line}:${range.start.character}`, e.title)
     })
   })
 }
@@ -105,14 +112,11 @@ async function lintLinks(bookDirs: string[]) {
       for (const link of page.pageLinks) {
         if (link.type === PageLinkKind.URL) {
           const url = link.url
-          log('Checking Link to URL', url)
-          // const resp = await fetch(url)
-          // if (resp.status < 200 || resp.status >= 300) {
-          //   console.log(page.absPath, link.url)
-          // }
-          let proto: typeof http | typeof https = http
-          if (url.startsWith('https:')) {
-            proto = https
+          info('Checking Link to URL', url)
+
+          // Skip injected exercises
+          if (url.startsWith('#ost/api/ex') || url.startsWith('#exercise/')) {
+            continue
           }
 
           // Parse the URL first because it might not be valid
@@ -121,51 +125,52 @@ async function lintLinks(bookDirs: string[]) {
             new URL(url)
           } catch {
             hasErrors = true
-            log(`Error: Could not parse URL '${url}' and urlEncoded to show any odd unicode characters`, encodeURI(url))
+            logCsv(bundle, page, link, 'parse', encodeURI(url))
             continue
           }
 
-          proto.get(url, res => {
-            if (res.statusCode !== undefined) {
-              if (res.statusCode >= 200 && res.statusCode < 300) {
-                console.log('Ok:', res.statusCode, link.url)
-              } else if (res.statusCode >= 300 && res.statusCode < 400) {
-                log('Following Redirect:', res.statusCode, link.url)
-                const destUrl = res.headers.location
-                if (destUrl !== undefined) {
+          let destUrl = ''
+          try {
+            const res = await fetch(url, { method: 'HEAD', redirect: 'manual' })
+            if (res.status !== undefined) {
+              if (res.status >= 200 && res.status < 300) {
+                info('Ok:', res.status, link.url)
+              } else if (res.status >= 300 && res.status < 400) {
+                info('Following Redirect:', res.status, link.url)
+                destUrl = res.headers.get('location') ?? ''
+                if (destUrl !== undefined && destUrl !== null) {
                   // -------------------
                   // Avert your eyes!
                   // This is lazy copy/pasta
                   // -------------------
-                  let proto2: typeof http | typeof https = http
-                  if (destUrl.startsWith('https:')) {
-                    proto2 = https
-                  }
-                  proto2.get(destUrl, res => {
-                    if (res.statusCode !== undefined) {
-                      if (res.statusCode >= 200 && res.statusCode < 300) {
-                        console.log('Ok:', res.statusCode, link.url, 'to', destUrl)
-                      } else if (res.statusCode >= 300 && res.statusCode < 400) {
-                        hasErrors = true
-                        log('Double Redirect:', res.statusCode, link.url, 'to', destUrl, 'to', res.headers.location)
-                      } else {
-                        hasErrors = true
-                        log('Error:', res.statusCode, link.url, 'to', destUrl)
-                      }
+
+                  const res2 = await fetch(destUrl, { method: 'HEAD', redirect: 'manual' })
+                  if (res2.status !== undefined) {
+                    if (res2.status >= 200 && res2.status < 300) {
+                      info('Ok:', res2.status, link.url, 'to', destUrl)
+                    } else if (res2.status >= 300 && res2.status < 400) {
+                      hasErrors = true
+                      logCsv(bundle, page, link, 'double_redirect', link.url, destUrl, res2.headers.get('location') ?? '')
+                    } else {
+                      hasErrors = true
+                      logCsv(bundle, page, link, res.status, link.url, destUrl)
                     }
-                  })
+                  }
                 }
               } else {
                 hasErrors = true
-                log('Error:', res.statusCode, link.url)
+                logCsv(bundle, page, link, res.status, link.url)
               }
             }
-          })
+          } catch (err) {
+            logCsv(bundle, page, link, 'fetch_failed_maybe', url, destUrl, (err as Error).message)
+          }
         }
       }
+      await sleep(100)
     }
   }
-  log('----------------------------')
+  info('----------------------------')
   await sleep(10 * 1000)
   process.exit(hasErrors ? 111 : 0)
 }
@@ -185,7 +190,7 @@ async function orphans(bookDirs: string[]) {
 
     const orphans = allFiles.subtract(referencedFiles)
 
-    log('Found orphans', orphans.size)
+    info('Found orphans', orphans.size)
     orphans.forEach(o => { console.log(toRelPath(o)) })
 
     hasErrors = hasErrors || orphans.size > 0
@@ -333,11 +338,9 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
     .union(bundle.allBooks.all.subtract(I.Set(keepBooks)))
     .union(bundle.allPages.all.subtract(I.Set(keepPages)))
     .union(bundle.allResources.all.subtract(I.Set(keepResources)))
-  log('Deleting files:', filesToDelete.size)
+  info('Deleting files:', filesToDelete.size)
   filesToDelete.forEach(f => { fs.unlinkSync(f.absPath) })
-}
-
-;(async function () {
+}; (async function () {
   switch (process.argv[2]) {
     case 'validate': {
       const bookDirs = process.argv.length >= 4 ? process.argv.slice(3) : [process.cwd()]
@@ -367,11 +370,11 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
       break
     }
     default: {
-      log(`Unsupported command '${process.argv[2]}'. Expected one of the following:`)
-      log('    validate <directory>')
-      log('    links <directory>')
-      log('    orphans <directory>')
-      log('    shrink <directory> bookslug:0,9.0,9.7 bookslug2:13.0')
+      info(`Unsupported command '${process.argv[2]}'. Expected one of the following:`)
+      info('    validate <directory>')
+      info('    links <directory>')
+      info('    orphans <directory>')
+      info('    shrink <directory> bookslug:0,9.0,9.7 bookslug2:13.0')
     }
   }
 })().then(null, (err) => { throw err })
