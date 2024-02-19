@@ -27,4 +27,4 @@ readonly root_dir="$(cd "$(dirname "$actual_file")" && pwd)"
     popd
 }
 
-$(cd "$root_dir" && npm bin)/ts-node "$root_dir/server/src/model/_cli.ts" $@
+cd "$root_dir" && npx ts-node "$root_dir/server/src/model/_cli.ts" $@
