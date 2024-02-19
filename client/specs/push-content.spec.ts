@@ -15,10 +15,6 @@ const makeCaptureMessage = (messages: string[]): (message: string) => Promise<st
   }
 }
 
-const makeMockDialog = (message: string): () => Promise<string | undefined> => {
-  return async (): Promise<string | undefined> => { return message }
-}
-
 const ignore = async (message: string): Promise<string | undefined> => { return undefined }
 
 describe('Push Button Test Suite', () => {
@@ -67,7 +63,6 @@ describe('Push Button Test Suite', () => {
   test('pushContent pushes with no conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockDialog('poet commit')
 
     const getRepo = (): Repository => {
       const stubRepo = Substitute.for<Repository>()
@@ -80,8 +75,8 @@ describe('Push Button Test Suite', () => {
     }
 
     await pushContent._pushContent(
-      getRepo,
-      mockMessageInput,
+      getRepo(),
+      'poet commit',
       captureMessage,
       ignore
     )()
@@ -92,7 +87,6 @@ describe('Push Button Test Suite', () => {
   test('push with merge conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockDialog('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = GitErrorCodes.Conflict
@@ -108,8 +102,8 @@ describe('Push Button Test Suite', () => {
     }
 
     await pushContent._pushContent(
-      getRepo,
-      mockMessageInput,
+      getRepo(),
+      'poet commit',
       ignore,
       captureMessage
     )()
@@ -120,7 +114,6 @@ describe('Push Button Test Suite', () => {
   test('unknown commit error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockDialog('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.gitErrorCode = ''
@@ -136,8 +129,8 @@ describe('Push Button Test Suite', () => {
     }
 
     await pushContent._pushContent(
-      getRepo,
-      mockMessageInput,
+      getRepo(),
+      'poet commit',
       ignore,
       captureMessage
     )()
@@ -148,7 +141,6 @@ describe('Push Button Test Suite', () => {
   test('push with no changes', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockDialog('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = 'nothing to commit.'
@@ -164,8 +156,8 @@ describe('Push Button Test Suite', () => {
     }
 
     await pushContent._pushContent(
-      getRepo,
-      mockMessageInput,
+      getRepo(),
+      'poet commit',
       ignore,
       captureMessage
     )()
@@ -176,7 +168,6 @@ describe('Push Button Test Suite', () => {
   test('unknown push error', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockDialog('poet commit')
     const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
 
     error.stdout = ''
@@ -192,8 +183,8 @@ describe('Push Button Test Suite', () => {
     }
 
     await pushContent._pushContent(
-      getRepo,
-      mockMessageInput,
+      getRepo(),
+      'poet commit',
       ignore,
       captureMessage
     )()
@@ -213,23 +204,106 @@ describe('Push Button Test Suite', () => {
     expect(stubPushContentHelperInner.notCalled).toBe(true)
     expect(sendRequestMock.notCalled).toBe(true)
   })
-  test('pushContent invokes _pushContent when canPush is true', async () => {
+  test('pushContent does not invoke _pushContent when private submodule exists and cannot be prepared for pushing', async () => {
+    const error: any = { _fake: 'FakeSoStackTraceIsNotInConsole', message: '' }
+    const stubRepo = {
+      fetch: async () => { throw error }
+    } as unknown as Repository
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
+    sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+    sinon.stub(pushContent, 'getMessage').resolves('poet commit')
+    sinon.stub(pushContent, 'canPush').returns(true)
+    sinon.stub(pushContent, '_getPrivateSubmodule').returns(stubRepo)
+    sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
+    const stubPushContentHelperInner = sinon.stub()
+    sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    sendRequestMock.resolves(new Proxy({}, {
+      get() {
+        return 'fake-branch-name'
+      }
+    }))
+    await pushContent.pushContent(mockHostContext)()
+    expect(sendRequestMock.calledOnceWith(
+      ExtensionServerRequest.GetSubmoduleConfig
+    ))
+    expect(stubPushContentHelperInner.callCount).toBe(0)
+    expect(showErrorMsgStub.args[0][0]).toMatch(
+      /Could not checkout private submodule branch/
+    )
+    sendRequestMock.reset()
+  })
+  const configTests: Array<[string, object | null]> = [
+    ['submodule configuration missing', null],
+    ['submodule branch missing', {}]
+  ]
+  configTests.forEach(([testCase, value]) => {
+    const message = `pushContent does not invoke _pushContent when ${testCase}`
+    test(message, async () => {
+      const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+      const showErrorMsgStub = sinon.stub(vscode.window, 'showErrorMessage')
+      sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
+      sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+      sinon.stub(pushContent, 'getMessage').resolves('poet commit')
+      sinon.stub(pushContent, 'canPush').returns(true)
+      sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
+      const stubPushContentHelperInner = sinon.stub()
+      sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+      sendRequestMock.resolves(value)
+      await pushContent.pushContent(mockHostContext)()
+      expect(showErrorMsgStub.args[0][0]).toMatch(
+        /Could not determine which private submodule branch to use/
+      )
+      expect(sendRequestMock.calledOnceWith(
+        ExtensionServerRequest.GetSubmoduleConfig
+      ))
+      // One for book repo, one for private submodule
+      expect(stubPushContentHelperInner.callCount).toBe(0)
+      sendRequestMock.reset()
+    })
+  })
+  test('pushContent invokes _pushContent when canPush is true and private submodule is missing', async () => {
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
+    sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
+    sinon.stub(pushContent, 'getMessage').resolves('poet commit')
+    sinon.stub(pushContent, 'canPush').returns(true)
+    sinon.stub(pushContent, '_getPrivateSubmodule').returns(undefined)
+    sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
+    const stubPushContentHelperInner = sinon.stub()
+    sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    await pushContent.pushContent(mockHostContext)()
+    expect(stubPushContentHelperInner.callCount).toBe(1)
+    expect(sendRequestMock.calledOnceWith(
+      ExtensionServerRequest.BundleEnsureIds
+    )).toBe(true)
+  })
+  test('pushContent invokes _pushContent with private submodule and book repository', async () => {
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
     sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(pushContent, 'getMessage').resolves('poet commit')
     sinon.stub(pushContent, 'canPush').returns(true)
     sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
     const stubPushContentHelperInner = sinon.stub()
     sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    sendRequestMock.resolves(new Proxy({}, {
+      get() {
+        return 'fake-branch-name'
+      }
+    }))
     await pushContent.pushContent(mockHostContext)()
-    expect(stubPushContentHelperInner.calledOnce).toBe(true)
     expect(sendRequestMock.calledOnceWith(
-      ExtensionServerRequest.BundleEnsureIds
-    )).toBe(true)
+      ExtensionServerRequest.GetSubmoduleConfig
+    ))
+    // One for book repo, one for private submodule
+    expect(stubPushContentHelperInner.callCount).toBe(2)
+    sendRequestMock.reset()
   })
   test('pushes to new branch', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
-    const mockMessageInput = makeMockDialog('poet commit')
     const pushStub = sinon.stub()
     const newBranchName = 'newbranch'
 
@@ -255,8 +329,8 @@ describe('Push Button Test Suite', () => {
       return stubRepo
     }
     await pushContent._pushContent(
-      getRepo,
-      mockMessageInput,
+      getRepo(),
+      'poet commit',
       captureMessage,
       ignore
     )()
