@@ -281,13 +281,18 @@ describe('Push Button Test Suite', () => {
   })
   test('pushContent invokes _pushContent with private submodule and book repository', async () => {
     const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    const stubRepo = Substitute.for<Repository>()
     sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
     sinon.stub(utils, 'getErrorDiagnosticsBySource').resolves(new Map<string, Array<[vscode.Uri, vscode.Diagnostic]>>())
     sinon.stub(pushContent, 'getMessage').resolves('poet commit')
     sinon.stub(pushContent, 'canPush').returns(true)
+    sinon.stub(pushContent, '_getPrivateSubmodule').returns(stubRepo)
     sinon.stub(vscode.window, 'withProgress').callsFake(withProgressNoCancel)
     const stubPushContentHelperInner = sinon.stub()
-    sinon.stub(pushContent, '_pushContent').returns(stubPushContentHelperInner)
+    const stubPushContentHelperOuter = sinon.stub(
+      pushContent,
+      '_pushContent'
+    ).returns(stubPushContentHelperInner)
     sendRequestMock.resolves(new Proxy({}, {
       get() {
         return 'fake-branch-name'
@@ -299,6 +304,9 @@ describe('Push Button Test Suite', () => {
     ))
     // One for book repo, one for private submodule
     expect(stubPushContentHelperInner.callCount).toBe(2)
+    // Private submodule should go first because that means the latest
+    // submodule version will be committed
+    expect(stubPushContentHelperOuter.args[0][0]).toBe(stubRepo)
     sendRequestMock.reset()
   })
   test('pushes to new branch', async () => {

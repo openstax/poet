@@ -272,7 +272,9 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       if (privateSubmodule !== undefined) {
         try {
           await preparePrivateSubmodule(hostContext.client, privateSubmodule)
-          pushTargets.push(privateSubmodule)
+          // Private submodule should go first because that means the latest
+          // submodule version will be committed
+          pushTargets.unshift(privateSubmodule)
         } catch (e) {
           const err = e as Error
           await vscode.window.showErrorMessage(err.message)
