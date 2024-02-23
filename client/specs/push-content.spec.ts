@@ -1,7 +1,7 @@
 import Sinon from 'sinon'
 import * as pushContent from '../src/push-content'
 import * as utils from '../src/utils'
-import { type Repository, type Change, Status, type CommitOptions, type GitExtension, GitErrorCodes, type Branch, type RepositoryState } from '../src/git-api/git.d'
+import { type Repository, type Change, Status, type CommitOptions, type GitExtension, GitErrorCodes, type Branch, type RepositoryState, type Submodule } from '../src/git-api/git.d'
 import vscode from 'vscode'
 import { expect } from '@jest/globals'
 import { Substitute } from '@fluffy-spoon/substitute'
@@ -191,6 +191,35 @@ describe('Push Button Test Suite', () => {
 
     expect(messages.length).toBe(1)
     expect(messages[0]).toBe('Push failed: ')
+  })
+  test('_hasSubmodule returns correct values', () => {
+    const moduleName = 'test'
+    const submoduleStub = new Proxy(Substitute.for<Submodule>(), {
+      get: (target, p) => p === 'name' ? moduleName : Reflect.get(target, p)
+    })
+    const repoWithSubmodules = new Proxy(Substitute.for<Repository>(), {
+      get: (target, p) => p === 'state'
+        ? { submodules: [submoduleStub] }
+        : Reflect.get(target, p)
+    })
+    const repoWithoutSubmodules = new Proxy(Substitute.for<Repository>(), {
+      get: (target, p) => p === 'state'
+        ? { submodules: [] }
+        : Reflect.get(target, p)
+    })
+    expect(pushContent._hasSubmodule(repoWithSubmodules, moduleName)).toBe(true)
+    expect(pushContent._hasSubmodule(repoWithoutSubmodules, moduleName)).toBe(false)
+  })
+  test('_getPrivateSubmodule throws an error when an uninitialized submodule is found', async () => {
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    const bookRepoStub = Substitute.for<Repository>()
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
+    sinon.stub(pushContent, 'getRepo').returns(undefined)
+    sinon.stub(pushContent, 'getBookRepo').returns(bookRepoStub)
+    sinon.stub(pushContent, '_hasSubmodule').returns(true)
+    expect(pushContent._getPrivateSubmodule).toThrow(
+      /Uninitialized private submodule/i
+    )
   })
   test('does not invoke _pushContent when canPush is false', async () => {
     const file1Diag1 = { severity: vscode.DiagnosticSeverity.Error, source: 'source1' } as any as vscode.Diagnostic

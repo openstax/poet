@@ -210,16 +210,33 @@ export const getMessage = async (): Promise<string | undefined> => {
   return message
 }
 
+export const _hasSubmodule = (repo: Repository, name: string) => {
+  return repo.state.submodules.some((mod) => mod.name === name)
+}
+
 // NOTE: When the private submodule is not initialized, this will return undefined
-export const _getPrivateSubmodule = () => getRepo(PRIVATE_SUBMODULE_NAME)
+export const _getPrivateSubmodule = () => {
+  const privateSubmodule = getRepo(PRIVATE_SUBMODULE_NAME)
+  if (privateSubmodule === undefined) {
+    /* istanbul ignore else (should only print a warning) */
+    if (_hasSubmodule(getBookRepo(), PRIVATE_SUBMODULE_NAME)) {
+      // TODO: Wish we could initialize submodules when this happens
+      throw new Error(
+        'ERROR: Uninitialized private submodule detected! ' +
+        'Your changes will not be committed/pushed!'
+      )
+    } else {
+      console.warn(`Private submodule not found: ${PRIVATE_SUBMODULE_NAME}`)
+    }
+  }
+  return privateSubmodule
+}
 
 /* istanbul ignore next (already tested in pushContent) */
 export const initPrivateSubmodule = async (hostContext: ExtensionHostContext) => {
   const privateSubmodule = _getPrivateSubmodule()
   if (privateSubmodule !== undefined) {
     await preparePrivateSubmodule(hostContext.client, privateSubmodule)
-  } else {
-    console.warn(`Private submodule not found: ${PRIVATE_SUBMODULE_NAME}`)
   }
 }
 
@@ -227,7 +244,6 @@ export const preparePrivateSubmodule = async (
   client: LanguageClient,
   privateSubmodule: Repository
 ): Promise<void> => {
-  // TODO: What if submodule needs to be initialized? (not a problem in gitpod)
   const uri = expect(getRootPathUri(), 'Could not get root path')
   const maybeGitModules = await requestGetSubmoduleConfig(
     client,
@@ -280,8 +296,6 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
           await vscode.window.showErrorMessage(err.message)
           return
         }
-      } else {
-        console.warn('Could not find private submodule')
       }
       // push content
       progress.report({ message: 'Pushing...' })
