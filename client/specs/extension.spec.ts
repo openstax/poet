@@ -17,7 +17,10 @@ import * as pushContent from '../src/push-content'
 
 describe('Extension', () => {
   const sinon = Sinon.createSandbox()
-  beforeEach(async () => sinon.stub(pushContent, 'setDefaultGitConfig').resolves())
+  beforeEach(async () => {
+    sinon.stub(pushContent, 'setDefaultGitConfig').resolves()
+    sinon.stub(pushContent, 'initPrivateSubmodule').resolves()
+  })
   afterEach(async () => { sinon.restore() })
   it('forwardOnDidChangeWorkspaceFolders sends a request to the language server', async function () {
     const stub = sinon.stub()

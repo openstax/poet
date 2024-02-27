@@ -16,7 +16,8 @@ export type Opt<T> = T | undefined
 export enum ExtensionServerRequest {
   BundleEnsureIds = 'BUNDLE_ENSURE_IDS',
   TocModification = 'TOC_MODIFICATION',
-  GenerateReadme = 'GENREATE_README'
+  GenerateReadme = 'GENREATE_README',
+  GetSubmoduleConfig = 'GET_SUBMODULE_CONFIG'
 }
 
 export enum ExtensionServerNotification {
@@ -49,18 +50,22 @@ interface LanguageClient {
   sendRequest: <R>(method: string, param: any) => Promise<R>
 }
 
-export interface BundleEnsureIdsParams {
+export interface BundleRequestParams {
   workspaceUri: string
 }
 
-export interface BundleGenerateReadme {
-  workspaceUri: string
-}
+export interface BundleEnsureIdsParams extends BundleRequestParams { }
+export interface BundleGenerateReadmeParams extends BundleRequestParams { }
+export interface BundleGetSubmoduleConfigParams extends BundleRequestParams { }
 
 export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsParams): Promise<void> => {
   await client.sendRequest(ExtensionServerRequest.BundleEnsureIds, args)
 }
 
-export const requestGenerateReadme = async (client: LanguageClient, args: BundleGenerateReadme): Promise<void> => {
+export const requestGenerateReadme = async (client: LanguageClient, args: BundleGenerateReadmeParams): Promise<void> => {
   await client.sendRequest(ExtensionServerRequest.GenerateReadme, args)
+}
+
+export const requestGetSubmoduleConfig = async (client: LanguageClient, args: BundleGetSubmoduleConfigParams): Promise<Record<string, string> | null> => {
+  return await client.sendRequest(ExtensionServerRequest.GetSubmoduleConfig, args)
 }
