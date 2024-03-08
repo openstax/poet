@@ -221,10 +221,7 @@ export const _getPrivateSubmodule = () => {
     /* istanbul ignore else (should only print a warning) */
     if (_hasSubmodule(getBookRepo(), PRIVATE_SUBMODULE_NAME)) {
       // TODO: Wish we could initialize submodules when this happens
-      throw new Error(
-        'ERROR: Uninitialized private submodule detected! ' +
-        'Your changes will not be committed/pushed!'
-      )
+      throw new Error('Uninitialized private submodule detected!')
     } else {
       console.warn(`Private submodule not found: ${PRIVATE_SUBMODULE_NAME}`)
     }
@@ -284,16 +281,24 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
       // fix ids
       // TODO: better ui in future. Add `increment` value in `progress.report` and use a callback to update real progress
       await requestEnsureIds(hostContext.client, { workspaceUri: uri.toString() })
-      const privateSubmodule = _getPrivateSubmodule()
-      if (privateSubmodule !== undefined) {
-        try {
+      try {
+        const privateSubmodule = _getPrivateSubmodule()
+        if (privateSubmodule !== undefined) {
           await preparePrivateSubmodule(hostContext.client, privateSubmodule)
           // Private submodule should go first because that means the latest
-          // submodule version will be committed
+          // submodule version will be committed to the book repository
           pushTargets.unshift(privateSubmodule)
-        } catch (e) {
-          const err = e as Error
-          await vscode.window.showErrorMessage(err.message)
+        }
+      } catch (e) {
+        const err = e as Error
+        // Add '.' if the message does not end in '.', '?', or '!'.
+        const errMsg = err.message.trimEnd().replace(/[^.?!]$/, (s) => `${s}.`)
+        const response = await vscode.window.showErrorMessage(
+          `${errMsg} Your changes will not be committed/pushed to the private submodule!`,
+          { modal: true, detail: 'Continue pushing to book repository?' },
+          'OK'
+        )
+        if (response !== 'OK') {
           return
         }
       }
