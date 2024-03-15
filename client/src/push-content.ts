@@ -291,10 +291,12 @@ export const pushContent = (hostContext: ExtensionHostContext) => async () => {
         }
       } catch (e) {
         const err = e as Error
-        // Add '.' if the message does not end in '.', '?', or '!'.
-        const errMsg = err.message.trimEnd().replace(/[^.?!]$/, (s) => `${s}.`)
+        const errMsg = [
+          'Your changes will not be committed/pushed to the private submodule!',
+          `Underlying reason: ${err.message}`
+        ].join('\n\n')
         const response = await vscode.window.showErrorMessage(
-          `${errMsg} Your changes will not be committed/pushed to the private submodule!`,
+          errMsg,
           { modal: true, detail: 'Continue pushing to book repository?' },
           'OK'
         )
