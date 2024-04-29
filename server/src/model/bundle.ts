@@ -6,10 +6,12 @@ import { PageNode } from './page'
 import { BookNode } from './book'
 import { Fileish, type ValidationCheck, ValidationKind } from './fileish'
 import { ResourceNode } from './resource'
+import { H5PExercise } from './h5p-exercise'
 
 export class Bundle extends Fileish implements Bundleish {
   public readonly allResources: Factory<ResourceNode> = new Factory<ResourceNode>((absPath: string) => new ResourceNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   public readonly allPages: Factory<PageNode> = new Factory<PageNode>((absPath: string) => new PageNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
+  public readonly allH5P: Factory<H5PExercise> = new Factory<H5PExercise>((absPath: string) => new H5PExercise(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
   private readonly _duplicateResourcePaths = Quarx.observable.box<I.Set<string>>(I.Set<string>())

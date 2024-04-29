@@ -4,6 +4,7 @@ import * as xpath from 'xpath-ts'
 import { type PageNode } from './page'
 import { type Factory } from './factory'
 import { type ResourceNode } from './resource'
+import { type H5PExercise } from './h5p-exercise'
 
 export const NS_COLLECTION = 'http://cnx.rice.edu/collxml'
 const NS_CNXML = 'http://cnx.rice.edu/cnxml'
@@ -77,6 +78,7 @@ export interface Paths {
 export interface Bundleish {
   allPages: Factory<PageNode>
   allResources: Factory<ResourceNode>
+  allH5P: Factory<H5PExercise>
   workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
   isDuplicateResourcePath: (path: string) => boolean

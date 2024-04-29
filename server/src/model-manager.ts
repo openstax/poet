@@ -18,6 +18,7 @@ import { type BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } f
 import { type BookNode, type TocSubbookWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
+import { H5PExercise } from './model/h5p-exercise'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -49,7 +50,10 @@ function findOrCreateNode(bundle: Bundle, absPath: string) {
     return bundle.allPages.getOrAdd(absPath)
   } else if (BOOK_RE.test(absPath)) {
     return bundle.allBooks.getOrAdd(absPath)
+  } else if (absPath.endsWith('h5p.json')) {
+    return bundle.allH5P.getOrAdd(absPath)
   }
+  return undefined
 }
 
 function findNode(bundle: Bundle, absPath: string) {
@@ -58,7 +62,8 @@ function findNode(bundle: Bundle, absPath: string) {
     : (
         bundle.allBooks.get(absPath) ??
         bundle.allPages.get(absPath) ??
-        bundle.allResources.get(absPath))
+        bundle.allResources.get(absPath)) ??
+        bundle.allH5P.get(absPath)
 }
 
 export function pageToModuleId(page: PageNode) {
@@ -191,8 +196,9 @@ export class ModelManager {
   public async loadEnoughForOrphans() {
     if (this.didLoadOrphans) return
     await this.loadEnoughForToc()
+    const { pagesRoot, mediaRoot, booksRoot, publicRoot } = this.bundle.paths
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
+    const files = glob.sync(`{${pagesRoot}/*/*.cnxml,${mediaRoot}/*.*,${booksRoot}/*.collection.xml,${publicRoot}/*/h5p.json}`, { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
     Quarx.batch(() => {
       files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, this.bundle.pathHelper.canonicalize(absPath)), `BUG? We found files that the bundle did not recognize: ${absPath}`))
     })
@@ -258,13 +264,15 @@ export class ModelManager {
         // Remove if it was a file
         const removedNode = bundle.allBooks.remove(uri) ??
                   bundle.allPages.remove(uri) ??
-                  bundle.allResources.remove(uri)
+                  bundle.allResources.remove(uri) ??
+                  bundle.allH5P.remove(uri)
         if (removedNode !== undefined) s.add(removedNode)
         // Remove if it was a directory
         const filePathDir = `${uri}${PATH_SEP}`
         s.union(bundle.allBooks.removeByKeyPrefix(filePathDir))
         s.union(bundle.allPages.removeByKeyPrefix(filePathDir))
         s.union(bundle.allResources.removeByKeyPrefix(filePathDir))
+        s.union(bundle.allH5P.removeByKeyPrefix(filePathDir))
       })
       // Unload all removed nodes so users do not think the files still exist
       removedNodes.forEach(n => {
@@ -353,6 +361,7 @@ export class ModelManager {
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(b => { this.sendFileDiagnostics(b) }) } },
       { slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: () => this.bundle.allPages.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_ALL_RESOURCES', context: this.bundle, fn: () => this.bundle.allResources.all.forEach(enqueueLoadJob) },
+      { slow: true, type: 'INITIAL_LOAD_ALL_H5P', context: this.bundle, fn: () => this.bundle.allH5P.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this.bundle.allNodes.forEach(f => { this.sendFileDiagnostics(f) }) }
     ]
     jobs.reverse().forEach(j => { this.jobRunner.enqueue(j) })
@@ -424,6 +433,8 @@ export class ModelManager {
       }
       if (pageLink.type === PageLinkKind.URL) {
         ret.push(DocumentLink.create(pageLink.range, pageLink.url))
+      } else if (pageLink.type === PageLinkKind.H5P) {
+        ret.push(DocumentLink.create(pageLink.range, pageLink.h5p.absPath))
       } else {
         const targetPage = pageLink.page
         if (targetPage.isLoaded && !targetPage.exists) {
