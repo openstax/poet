@@ -14,6 +14,14 @@ export class Bundle extends Fileish implements Bundleish {
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
   private readonly _duplicateResourcePaths = Quarx.observable.box<I.Set<string>>(I.Set<string>())
   private readonly _duplicateUUIDs = Quarx.observable.box<I.Set<string>>(I.Set<string>())
+  // TODO: parse these from META-INF/books.xml
+  public readonly paths = {
+    publicRoot: 'interactives',
+    privateRoot: 'private',
+    booksRoot: 'collections',
+    pagesRoot: 'modules',
+    mediaRoot: 'media'
+  }
 
   constructor(pathHelper: PathHelper<string>, public readonly workspaceRootUri: string) {
     super(undefined, pathHelper, pathHelper.join(workspaceRootUri, 'META-INF/books.xml'))

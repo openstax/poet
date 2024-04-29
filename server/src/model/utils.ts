@@ -66,12 +66,21 @@ export type TocNode<T> = TocSubbook<T> | TocPage<T>
 export interface TocSubbook<T> { type: TocNodeKind.Subbook, readonly title: string, readonly children: Array<TocNode<T>> }
 export interface TocPage<T> { type: TocNodeKind.Page, readonly page: T }
 
+export interface Paths {
+  booksRoot: string
+  pagesRoot: string
+  mediaRoot: string
+  privateRoot: string
+  publicRoot: string
+}
+
 export interface Bundleish {
   allPages: Factory<PageNode>
   allResources: Factory<ResourceNode>
   workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
   isDuplicateResourcePath: (path: string) => boolean
+  paths: Paths
 }
 
 export enum PathKind {
