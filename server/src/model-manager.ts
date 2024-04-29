@@ -28,6 +28,11 @@ const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 const PATH_SEP = path.sep
 
 interface NodeAndParent { node: ClientTocNode, parent: BookToc | ClientTocNode }
+interface Autocompleter {
+  hasLinkNearCursor: (page: PageNode, cursor: Position) => boolean
+  getRange: (cursor: Position, content: string) => Range | undefined
+  getCompletionItems: (page: PageNode, range: Range) => CompletionItem[]
+}
 function childrenOf(n: ClientTocNode) {
   /* istanbul ignore else */
   if (n.type === TocNodeKind.Subbook) {
@@ -391,26 +396,53 @@ export class ModelManager {
     jobs.reverse().forEach(j => { this.jobRunner.enqueue(j) })
   }
 
+  private autocomplete(
+    page: PageNode,
+    cursor: Position,
+    autocompleter: Autocompleter
+  ) {
+    if (!autocompleter.hasLinkNearCursor(page, cursor)) { return [] }
+
+    const content = expectValue(
+      this.getOpenDocContents(page.absPath),
+      'BUG: This file should be open and have been sent from the vscode client'
+    )
+
+    const range = autocompleter.getRange(cursor, content)
+    if (range === undefined) { return [] }
+
+    return autocompleter.getCompletionItems(page, range)
+  }
+
+  private rangeFinderFactory(start: string, end: string) {
+    return (cursor: Position, content: string) => {
+      const lines = content.split('\n')
+      // We're in an autocomplete context
+      // Now check and see if we are right at the start of the thing we
+      // want to autocomplete (src, url, etc.)
+      const beforeCursor = lines[cursor.line].substring(0, cursor.character)
+      const afterCursor = lines[cursor.line].substring(cursor.character)
+      const startOffset = beforeCursor.lastIndexOf(start)
+      const endOffset = afterCursor.indexOf(end)
+      return startOffset < 0 || endOffset < 0
+        ? undefined
+        : {
+            start: { line: cursor.line, character: startOffset + start.length },
+            end: { line: cursor.line, character: endOffset + cursor.character }
+          }
+    }
+  }
+
   public autocompleteResources(page: PageNode, cursor: Position) {
-    const foundLinks = page.resourceLinks.toArray().filter((l) => {
-      return inRange(l.range, cursor)
-    })
-
-    if (foundLinks.length === 0) { return [] }
-
-    // We're inside an <image> or <iframe> element.
-    // Now check and see if we are right at the src=" point
-    const content = expectValue(this.getOpenDocContents(page.absPath), 'BUG: This file should be open and have been sent from the vscode client').split('\n')
-    const beforeCursor = content[cursor.line].substring(0, cursor.character)
-    const afterCursor = content[cursor.line].substring(cursor.character)
-    const startQuoteOffset = beforeCursor.lastIndexOf('src="')
-    const endQuoteOffset = afterCursor.indexOf('"')
-    if (startQuoteOffset >= 0 && endQuoteOffset >= 0) {
-      const range: Range = {
-        start: { line: cursor.line, character: startQuoteOffset + 'src="'.length },
-        end: { line: cursor.line, character: endQuoteOffset + cursor.character }
-      }
-      const ret = this.orphanedResources.toArray().map(i => {
+    const resourceAutocompleter: Autocompleter = {
+      hasLinkNearCursor: (page, cursor) => {
+        return page.resourceLinks
+          .toArray()
+          .filter((l) => inRange(l.range, cursor))
+          .length > 0
+      },
+      getRange: this.rangeFinderFactory('src="', '"'),
+      getCompletionItems: (page, range) => this.orphanedResources.toArray().map(i => {
         const insertText = path.relative(path.dirname(page.absPath), i.absPath)
         const item = CompletionItem.create(insertText)
         item.textEdit = TextEdit.replace(range, insertText)
@@ -418,9 +450,34 @@ export class ModelManager {
         item.detail = 'Orphaned Resource'
         return item
       })
-      return ret
     }
-    return []
+    return this.autocomplete(page, cursor, resourceAutocompleter)
+  }
+
+  public autocompleteUrls(page: PageNode, cursor: Position) {
+    const urlAutocompleter: Autocompleter = {
+      hasLinkNearCursor: (page, cursor) => {
+        return page.pageLinks
+          .toArray()
+          .filter((l) => inRange(l.range, cursor))
+          .length > 0
+      },
+      getRange: this.rangeFinderFactory('url="', '"'),
+      getCompletionItems: (_page, range) => {
+        return this.bundle.allH5P.all.toArray().filter((h) => h.exists)
+          .map((h) => path.dirname(h.absPath))
+          .map((p) => path.basename(p))
+          .map((name) => {
+            const text = `${H5PExercise.PLACEHOLDER}/${name}`
+            const item = CompletionItem.create(text)
+            item.textEdit = TextEdit.replace(range, text)
+            item.kind = CompletionItemKind.File
+            item.detail = 'H5P interactive'
+            return item
+          })
+      }
+    }
+    return this.autocomplete(page, cursor, urlAutocompleter)
   }
 
   async getDocumentLinks(page: PageNode) {

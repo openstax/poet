@@ -15,7 +15,7 @@ import { URI, Utils } from 'vscode-uri'
 import { expectValue } from './model/utils'
 
 import { ExtensionServerRequest } from '../../common/src/requests'
-import { bundleEnsureIdsHandler, bundleGenerateReadme, bundleGetSubmoduleConfig, resourceAutocompleteHandler } from './server-handler'
+import { bundleEnsureIdsHandler, bundleGenerateReadme, bundleGetSubmoduleConfig, autocompleteHandler } from './server-handler'
 
 import * as sourcemaps from 'source-map-support'
 import { Bundle } from './model/bundle'
@@ -160,7 +160,7 @@ connection.onCompletionResolve((a: CompletionItem, token: CancellationToken): Co
 
 connection.onCompletion(async (params: CompletionParams): Promise<CompletionItem[]> => {
   const manager = getBundleForUri(params.textDocument.uri)
-  return await resourceAutocompleteHandler(params, manager)
+  return await autocompleteHandler(params, manager)
 })
 connection.onDocumentLinks(async ({ textDocument }) => {
   const { uri } = textDocument
