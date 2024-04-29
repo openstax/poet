@@ -10,13 +10,14 @@ import xmlFormat from 'xml-formatter'
 import { expectValue, type Opt, join, PathKind } from './model/utils'
 import { Bundle, BundleValidationKind } from './model/bundle'
 import { ModelManager } from './model-manager'
-import { bookMaker, bundleMaker, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle, type PageInfo, pageMaker } from './model/spec-helpers.spec'
+import { bookMaker, bundleMaker, first, FS_PATH_HELPER, ignoreConsoleWarnings, loadSuccess, makeBundle, type PageInfo, pageMaker, newH5PPath } from './model/spec-helpers.spec'
 import { type Job, JobRunner } from './job-runner'
 
 import { PageNode, PageValidationKind } from './model/page'
 import { type TocModification, TocModificationKind, TocNodeKind } from '../../common/src/toc'
 import { type BooksAndOrphans, DiagnosticSource } from '../../common/src/requests'
 import { URI, Utils } from 'vscode-uri'
+import { H5PExercise } from './model/h5p-exercise'
 
 ModelManager.debug = () => {} // Turn off logging
 JobRunner.debug = () => {} // Turn off logging
@@ -293,6 +294,7 @@ describe('processFilesystemChange()', () => {
     expect((await fireChange(FileChangeType.Created, 'modules/m1234/index.cnxml')).size).toBe(1)
     expect((await fireChange(FileChangeType.Created, 'media/newpic.png')).size).toBe(1)
     expect((await fireChange(FileChangeType.Created, 'media/does-not-exist.png')).size).toBe(1)
+    expect((await fireChange(FileChangeType.Created, `${manager.bundle.paths.publicRoot}/does-not-exist/h5p.json`)).size).toBe(1)
   })
   it('does not create things it does not understand', async () => {
     expect((await fireChange(FileChangeType.Created, 'README.md')).toArray()).toEqual([])
@@ -309,6 +311,7 @@ describe('processFilesystemChange()', () => {
     expect(sendDiagnosticsStub.callCount).toBe(1)
 
     expect((await fireChange(FileChangeType.Changed, 'media/newpic.png')).toArray()).toEqual([]) // Since the model was not aware of the file yet
+    expect((await fireChange(FileChangeType.Changed, `${manager.bundle.paths.publicRoot}/does-not-exist/h5p.json`)).toArray()).toEqual([]) // Since the model was not aware of the file yet
   })
   it('deletes Files and directories', async () => {
     // Load the Bundle, Book, and Page
@@ -434,6 +437,67 @@ describe('Image Autocomplete', () => {
   })
 })
 
+describe('URL Autocomplete', () => {
+  const sinon = SinonRoot.createSandbox()
+  const h5pName = 'abc'
+  let manager = null as unknown as ModelManager
+  let page: PageNode
+  let h5p: H5PExercise
+
+  beforeEach(() => {
+    const bundle = makeBundle()
+    manager = new ModelManager(bundle, conn)
+    page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
+    h5p = manager.bundle.allH5P.getOrAdd(newH5PPath(manager.bundle, h5pName))
+    h5p.load('any-string')
+    manager.updateFileContents(page.absPath, pageMaker({ pageLinks: [{ url: `${H5PExercise.PLACEHOLDER}/abc` }] }))
+  })
+
+  afterEach(() => {
+    sinon.restore()
+  })
+
+  it('Returns all H5P interactives', () => {
+    expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
+    expect(page.validationErrors.errors.toArray()).toEqual([])
+
+    expect(page.pageLinks.size).toBe(1)
+    const firstLink = first(page.pageLinks)
+    const results = manager.autocompleteUrls(
+      page,
+      {
+        line: firstLink.range.start.line,
+        character: firstLink.range.start.character + '<link url="X'.length
+      }
+    )
+    expect(results).not.toEqual([])
+    expect(results[0].label).toBe(`${H5PExercise.PLACEHOLDER}/${h5pName}`)
+  })
+
+  it('Returns no results outside url tag', () => {
+    expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
+    expect(page.validationErrors.errors.toArray()).toEqual([])
+
+    const cursor = { line: 0, character: 0 }
+    const results = manager.autocompleteResources(page, cursor)
+    expect(results).toEqual([])
+  })
+
+  it('Returns no results outside replacement range', () => {
+    expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
+    expect(page.validationErrors.errors.toArray()).toEqual([])
+
+    const firstLink = first(page.pageLinks)
+    const results = manager.autocompleteResources(
+      page, {
+        line: firstLink.range.start.line,
+        character: firstLink.range.start.character + '<url'.length
+      }
+    )
+    expect(results).toEqual([])
+  })
+})
+
 describe('documentLinks()', () => {
   let manager = null as unknown as ModelManager
 
@@ -452,6 +516,7 @@ describe('documentLinks()', () => {
     const nonexistentButLoadedPath = FS_PATH_HELPER.join(FS_PATH_HELPER.dirname(FS_PATH_HELPER.dirname(page.absPath)), nonexistentButLoadedId, 'index.cnxml')
     const otherPage = manager.bundle.allPages.getOrAdd(otherPagePath)
     const nonexistentButLoadedPage = manager.bundle.allPages.getOrAdd(nonexistentButLoadedPath)
+    const h5p = manager.bundle.allH5P.getOrAdd(newH5PPath(manager.bundle, 'abcd'))
 
     otherPage.load(pageMaker({
       elementIds: ['other-el-id']
@@ -482,6 +547,14 @@ describe('documentLinks()', () => {
     await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'nonexistent-id' }] }, `modules/${otherId}/index.cnxml`)
     await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'other-el-id' }] }, `modules/${otherId}/index.cnxml#9:0`)
     await testPageLink({ pageLinks: [{ targetPage: nonexistentButLoadedId }] }, undefined)
+    await testPageLink(
+      {
+        pageLinks: [
+          { url: `${H5PExercise.PLACEHOLDER}/abcd` }
+        ]
+      },
+      path.relative(URI.parse(manager.bundle.workspaceRootUri).fsPath, h5p.absPath)
+    )
   })
 })
 
