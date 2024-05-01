@@ -1,7 +1,7 @@
 import { ResourceValidationKind } from './resource'
 import { bundleMaker, expectErrors, makeBundle, newH5PPath } from './spec-helpers.spec'
 
-describe('Resource validations', () => {
+describe('H5P validations', () => {
   it(ResourceValidationKind.DUPLICATE_RESOURCES.title, () => {
     const bundle = makeBundle()
     bundle.load(bundleMaker({}))
