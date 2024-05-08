@@ -63,7 +63,7 @@ export class Bundle extends Fileish implements Bundleish {
   }
 
   public get allNodes() {
-    return I.Set([this]).union(this.allBooks.all).union(this.allPages.all).union(this.allResources.all)
+    return I.Set([this]).union(this.allBooks.all).union(this.allPages.all).union(this.allResources.all).union(this.allH5P.all)
   }
 
   public get books() {
