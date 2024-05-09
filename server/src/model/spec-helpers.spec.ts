@@ -169,3 +169,9 @@ export function bundleMaker(info: BundleMakerInfo) {
 ${i.books.map(({ slug, href }) => `<book slug="${slug}" href="${href}" />`).join('\n')}
 </container>`
 }
+
+export function newH5PPath(bundle: Bundle, nickname: string) {
+  return bundle.pathHelper.join(
+    bundle.workspaceRootUri, bundle.paths.publicRoot, nickname, 'h5p.json'
+  )
+}

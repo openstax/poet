@@ -165,10 +165,20 @@ export function launchLanguageServer(context: vscode.ExtensionContext): Language
     documentSelector: [{ scheme: 'file', language: 'xml' }],
     synchronize: {
       fileEvents: [
+        // FIXME: media, modules, collections, etc. should not be hardcoded here
+        // NOTE: these patterns do not support matching directories without matching files
+        // '**/*/' and '**/**/' both match all directories AND files
+        // Additionally, events are sent for each pattern that matches. This can cause
+        // massively degraded performance if there are many overlapping patterns
+        // It is a known issue and a completely new watcher system is being created to address
+        // the shortcomings of this one
+        // See: https://github.com/microsoft/vscode/wiki/File-Watcher-Internals
         vscode.workspace.createFileSystemWatcher('**/META-INF/books.xml'),
         vscode.workspace.createFileSystemWatcher('**/media/**'),
-        vscode.workspace.createFileSystemWatcher('**/*.cnxml'),
-        vscode.workspace.createFileSystemWatcher('**/*.collection.xml')
+        vscode.workspace.createFileSystemWatcher('**/modules/**'),
+        vscode.workspace.createFileSystemWatcher('**/*.collection.xml'),
+        vscode.workspace.createFileSystemWatcher('**/interactives/*/'),
+        vscode.workspace.createFileSystemWatcher('**/interactives/*/h5p.json')
       ]
     }
   }

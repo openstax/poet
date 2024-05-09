@@ -3,6 +3,7 @@ import * as Quarx from 'quarx'
 import { type Opt, type Position, PathKind, type WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, type HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, type Range } from './utils'
 import { Fileish, type ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
 import { type ResourceNode } from './resource'
+import { H5PExercise } from './h5p-exercise'
 
 enum ResourceLinkKind {
   Image,
@@ -20,6 +21,7 @@ export interface IFrameLink extends HasRange {
 
 export enum PageLinkKind {
   URL,
+  H5P,
   PAGE,
   PAGE_ELEMENT,
   UNKNOWN
@@ -36,6 +38,10 @@ export type PageLink = HasRange & ({
   targetElementId: string
 } | {
   type: PageLinkKind.UNKNOWN
+} | {
+  type: PageLinkKind.H5P
+  url: string
+  h5p: H5PExercise
 })
 
 function convertToPos(str: string, cursor: number): Position {
@@ -59,7 +65,17 @@ const equalsOptWithRange = equalsOpt(equalsWithRange(tripleEq))
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-const URL_RE = /^(#(exercise|ost\/api\/ex)\/[A-Za-z0-9\-_]+|(https?:\/\/|www.)[^\s$.?#].[^\s]*)$/i
+const URL_RE = /^(https?:\/\/|www\.)[^\s$.?#].[^\s]*$/i
+
+// NOTE: These should be case sensitive because matching is case sensitive during exercise injection
+// Match exercise nickname or exercise tag, respectively
+const EXERCISES_RE = /^#(exercise|ost\/api\/ex)\/[A-Za-z0-9\-_]+[^\s$.?#].[^\s]*$/
+// Match placeholder followed by any valid path name
+const H5P_RE = new RegExp(`^${H5PExercise.PLACEHOLDER}/[^\\?/:*"<>#|\0]+$`)
+
+const isWebPath = URL_RE.test.bind(URL_RE)
+const isExercisePath = EXERCISES_RE.test.bind(EXERCISES_RE)
+const isH5PPath = H5P_RE.test.bind(H5P_RE)
 
 export const ELEMENT_TO_PREFIX = new Map<string, string>()
 ELEMENT_TO_PREFIX.set('para', 'para')
@@ -139,6 +155,12 @@ export class PageNode extends Fileish {
     return this.resourceLinks.map(l => l.target)
   }
 
+  public get h5p() {
+    return this.pageLinks
+      .filter((l): l is PageLink & { type: PageLinkKind.H5P } => l.type === PageLinkKind.H5P)
+      .map((l) => l.h5p)
+  }
+
   public get resourceLinks() {
     return this.ensureLoaded(this._resourceLinks)
   }
@@ -187,6 +209,15 @@ export class PageNode extends Fileish {
       const toTargetId = changeEmptyToNull(linkNode.getAttribute('target-id'))
       const toUrl = changeEmptyToNull(linkNode.getAttribute('url'))
       if (toUrl !== undefined) {
+        if (isH5PPath(toUrl)) {
+          const absPath = this.pathHelper.join(
+            super.bundle.workspaceRootUri,
+            toUrl.replace(H5PExercise.PLACEHOLDER, super.bundle.paths.publicRoot),
+            'h5p.json'
+          )
+          const target = super.bundle.allH5P.getOrAdd(absPath)
+          return { range, type: PageLinkKind.H5P, url: toUrl, h5p: target }
+        }
         return { range, type: PageLinkKind.URL, url: toUrl }
       }
       if (toDocument === undefined && toTargetId === undefined && toUrl === undefined) {
@@ -228,6 +259,9 @@ export class PageNode extends Fileish {
       {
         message: PageValidationKind.MISSING_TARGET,
         nodesToLoad: filterNull(pageLinks.map(l => {
+          if (l.type === PageLinkKind.H5P) {
+            return l.h5p
+          }
           if (l.type !== PageLinkKind.URL && l.type !== PageLinkKind.UNKNOWN && l.page !== this) {
             return l.page
           }
@@ -236,6 +270,7 @@ export class PageNode extends Fileish {
         fn: () => pageLinks.filter(l => {
           if (l.type === PageLinkKind.UNKNOWN) return false // unknown links are bad (but we can't check them)
           if (l.type === PageLinkKind.URL) return false // URL links are ok
+          if (l.type === PageLinkKind.H5P) return !l.h5p.exists
           if (!l.page.exists) return true // link to non-existent page are bad
           if (l.type === PageLinkKind.PAGE) return false // linking to the whole page and it exists is ok
           return !l.page.hasElementId(l.targetElementId)
@@ -279,7 +314,9 @@ export class PageNode extends Fileish {
         message: PageValidationKind.INVALID_URL,
         nodesToLoad: I.Set(),
         fn: () => this.pageLinks.filter(l => {
-          return l.type === PageLinkKind.URL && !URL_RE.test(l.url)
+          return l.type === PageLinkKind.URL && !(
+            isWebPath(l.url) || isExercisePath(l.url) || isH5PPath(l.url)
+          )
         }).map(l => l.range)
       }
     ]

@@ -45,13 +45,16 @@ export function bundleGetSubmoduleConfig(): (request: BundleGetSubmoduleConfigPa
   }
 }
 
-export async function resourceAutocompleteHandler(documentPosition: CompletionParams, manager: ModelManager): Promise<CompletionItem[]> {
+export async function autocompleteHandler(documentPosition: CompletionParams, manager: ModelManager): Promise<CompletionItem[]> {
   await manager.loadEnoughForOrphans()
   const cursor = documentPosition.position
   const page = manager.bundle.allPages.get(documentPosition.textDocument.uri)
 
   if (page !== undefined) {
-    return manager.autocompleteResources(page, cursor)
+    return [
+      ...manager.autocompleteResources(page, cursor),
+      ...manager.autocompleteUrls(page, cursor)
+    ]
   }
   return []
 }

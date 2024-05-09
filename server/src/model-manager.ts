@@ -18,6 +18,7 @@ import { type BooksAndOrphans, DiagnosticSource, ExtensionServerNotification } f
 import { type BookNode, type TocSubbookWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
+import { H5PExercise } from './model/h5p-exercise'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -27,6 +28,11 @@ const BOOK_RE = /\/collections\/[^/]+\.collection\.xml$/
 const PATH_SEP = path.sep
 
 interface NodeAndParent { node: ClientTocNode, parent: BookToc | ClientTocNode }
+interface Autocompleter {
+  hasLinkNearCursor: (page: PageNode, cursor: Position) => boolean
+  getRange: (cursor: Position, content: string) => Range | undefined
+  getCompletionItems: (page: PageNode, range: Range) => CompletionItem[]
+}
 function childrenOf(n: ClientTocNode) {
   /* istanbul ignore else */
   if (n.type === TocNodeKind.Subbook) {
@@ -49,7 +55,10 @@ function findOrCreateNode(bundle: Bundle, absPath: string) {
     return bundle.allPages.getOrAdd(absPath)
   } else if (BOOK_RE.test(absPath)) {
     return bundle.allBooks.getOrAdd(absPath)
+  } else if (absPath.endsWith('h5p.json')) {
+    return bundle.allH5P.getOrAdd(absPath)
   }
+  return undefined
 }
 
 function findNode(bundle: Bundle, absPath: string) {
@@ -58,7 +67,8 @@ function findNode(bundle: Bundle, absPath: string) {
     : (
         bundle.allBooks.get(absPath) ??
         bundle.allPages.get(absPath) ??
-        bundle.allResources.get(absPath))
+        bundle.allResources.get(absPath)) ??
+        bundle.allH5P.get(absPath)
 }
 
 export function pageToModuleId(page: PageNode) {
@@ -176,6 +186,12 @@ export class ModelManager {
     return this.bundle.allResources.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.resources))
   }
 
+  public get orphanedH5P() {
+    const books = this.bundle.books.filter(loadedAndExists)
+    const pages = books.flatMap(b => b.pages)
+    return this.bundle.allH5P.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.h5p))
+  }
+
   public async loadEnoughForToc() {
     // The only reason this is not implemented as a Job is because we need to send a timely response to the client
     // and there is no code for being notified when a Job completes
@@ -191,8 +207,9 @@ export class ModelManager {
   public async loadEnoughForOrphans() {
     if (this.didLoadOrphans) return
     await this.loadEnoughForToc()
+    const { pagesRoot, mediaRoot, booksRoot, publicRoot } = this.bundle.paths
     // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-    const files = glob.sync('{modules/*/index.cnxml,media/*.*,collections/*.collection.xml}', { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
+    const files = glob.sync(`{${pagesRoot}/*/*.cnxml,${mediaRoot}/*.*,${booksRoot}/*.collection.xml,${publicRoot}/*/h5p.json}`, { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
     Quarx.batch(() => {
       files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, this.bundle.pathHelper.canonicalize(absPath)), `BUG? We found files that the bundle did not recognize: ${absPath}`))
     })
@@ -258,13 +275,15 @@ export class ModelManager {
         // Remove if it was a file
         const removedNode = bundle.allBooks.remove(uri) ??
                   bundle.allPages.remove(uri) ??
-                  bundle.allResources.remove(uri)
+                  bundle.allResources.remove(uri) ??
+                  bundle.allH5P.remove(uri)
         if (removedNode !== undefined) s.add(removedNode)
         // Remove if it was a directory
         const filePathDir = `${uri}${PATH_SEP}`
         s.union(bundle.allBooks.removeByKeyPrefix(filePathDir))
         s.union(bundle.allPages.removeByKeyPrefix(filePathDir))
         s.union(bundle.allResources.removeByKeyPrefix(filePathDir))
+        s.union(bundle.allH5P.removeByKeyPrefix(filePathDir))
       })
       // Unload all removed nodes so users do not think the files still exist
       removedNodes.forEach(n => {
@@ -353,6 +372,7 @@ export class ModelManager {
       { slow: true, type: 'INITIAL_LOAD_ALL_BOOK_ERRORS', context: this.bundle, fn: () => { this.bundle.allBooks.all.forEach(b => { this.sendFileDiagnostics(b) }) } },
       { slow: true, type: 'INITIAL_LOAD_ALL_PAGES', context: this.bundle, fn: () => this.bundle.allPages.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_ALL_RESOURCES', context: this.bundle, fn: () => this.bundle.allResources.all.forEach(enqueueLoadJob) },
+      { slow: true, type: 'INITIAL_LOAD_ALL_H5P', context: this.bundle, fn: () => this.bundle.allH5P.all.forEach(enqueueLoadJob) },
       { slow: true, type: 'INITIAL_LOAD_REPORT_VALIDATION', context: this.bundle, fn: async () => this.bundle.allNodes.forEach(f => { this.sendFileDiagnostics(f) }) }
     ]
     jobs.reverse().forEach(j => { this.jobRunner.enqueue(j) })
@@ -382,26 +402,53 @@ export class ModelManager {
     jobs.reverse().forEach(j => { this.jobRunner.enqueue(j) })
   }
 
+  private autocomplete(
+    page: PageNode,
+    cursor: Position,
+    autocompleter: Autocompleter
+  ) {
+    if (!autocompleter.hasLinkNearCursor(page, cursor)) { return [] }
+
+    const content = expectValue(
+      this.getOpenDocContents(page.absPath),
+      'BUG: This file should be open and have been sent from the vscode client'
+    )
+
+    const range = autocompleter.getRange(cursor, content)
+    if (range === undefined) { return [] }
+
+    return autocompleter.getCompletionItems(page, range)
+  }
+
+  private rangeFinderFactory(start: string, end: string) {
+    return (cursor: Position, content: string) => {
+      const lines = content.split('\n')
+      // We're in an autocomplete context
+      // Now check and see if we are right at the start of the thing we
+      // want to autocomplete (src, url, etc.)
+      const beforeCursor = lines[cursor.line].substring(0, cursor.character)
+      const afterCursor = lines[cursor.line].substring(cursor.character)
+      const startOffset = beforeCursor.lastIndexOf(start)
+      const endOffset = afterCursor.indexOf(end)
+      return startOffset < 0 || endOffset < 0
+        ? undefined
+        : {
+            start: { line: cursor.line, character: startOffset + start.length },
+            end: { line: cursor.line, character: endOffset + cursor.character }
+          }
+    }
+  }
+
   public autocompleteResources(page: PageNode, cursor: Position) {
-    const foundLinks = page.resourceLinks.toArray().filter((l) => {
-      return inRange(l.range, cursor)
-    })
-
-    if (foundLinks.length === 0) { return [] }
-
-    // We're inside an <image> or <iframe> element.
-    // Now check and see if we are right at the src=" point
-    const content = expectValue(this.getOpenDocContents(page.absPath), 'BUG: This file should be open and have been sent from the vscode client').split('\n')
-    const beforeCursor = content[cursor.line].substring(0, cursor.character)
-    const afterCursor = content[cursor.line].substring(cursor.character)
-    const startQuoteOffset = beforeCursor.lastIndexOf('src="')
-    const endQuoteOffset = afterCursor.indexOf('"')
-    if (startQuoteOffset >= 0 && endQuoteOffset >= 0) {
-      const range: Range = {
-        start: { line: cursor.line, character: startQuoteOffset + 'src="'.length },
-        end: { line: cursor.line, character: endQuoteOffset + cursor.character }
-      }
-      const ret = this.orphanedResources.toArray().map(i => {
+    const resourceAutocompleter: Autocompleter = {
+      hasLinkNearCursor: (page, cursor) => {
+        return page.resourceLinks
+          .toArray()
+          .filter((l) => inRange(l.range, cursor))
+          .length > 0
+      },
+      getRange: this.rangeFinderFactory('src="', '"'),
+      getCompletionItems: (page, range) => this.orphanedResources.toArray().map(i => {
         const insertText = path.relative(path.dirname(page.absPath), i.absPath)
         const item = CompletionItem.create(insertText)
         item.textEdit = TextEdit.replace(range, insertText)
@@ -409,9 +456,34 @@ export class ModelManager {
         item.detail = 'Orphaned Resource'
         return item
       })
-      return ret
     }
-    return []
+    return this.autocomplete(page, cursor, resourceAutocompleter)
+  }
+
+  public autocompleteUrls(page: PageNode, cursor: Position) {
+    const urlAutocompleter: Autocompleter = {
+      hasLinkNearCursor: (page, cursor) => {
+        return page.pageLinks
+          .toArray()
+          .filter((l) => inRange(l.range, cursor))
+          .length > 0
+      },
+      getRange: this.rangeFinderFactory('url="', '"'),
+      getCompletionItems: (_page, range) => {
+        return this.orphanedH5P.toArray().filter((h) => h.exists)
+          .map((h) => path.dirname(h.absPath))
+          .map((p) => path.basename(p))
+          .map((name) => {
+            const text = `${H5PExercise.PLACEHOLDER}/${name}`
+            const item = CompletionItem.create(text)
+            item.textEdit = TextEdit.replace(range, text)
+            item.kind = CompletionItemKind.File
+            item.detail = 'H5P interactive'
+            return item
+          })
+      }
+    }
+    return this.autocomplete(page, cursor, urlAutocompleter)
   }
 
   async getDocumentLinks(page: PageNode) {
@@ -424,6 +496,8 @@ export class ModelManager {
       }
       if (pageLink.type === PageLinkKind.URL) {
         ret.push(DocumentLink.create(pageLink.range, pageLink.url))
+      } else if (pageLink.type === PageLinkKind.H5P) {
+        ret.push(DocumentLink.create(pageLink.range, pageLink.h5p.absPath))
       } else {
         const targetPage = pageLink.page
         if (targetPage.isLoaded && !targetPage.exists) {

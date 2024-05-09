@@ -1,7 +1,8 @@
 import { expect } from '@jest/globals'
 import * as path from 'path'
 import { ELEMENT_TO_PREFIX, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
-import { expectErrors, first, FS_PATH_HELPER, makeBundle, pageMaker } from './spec-helpers.spec'
+import { expectErrors, first, FS_PATH_HELPER, makeBundle, newH5PPath, pageMaker } from './spec-helpers.spec'
+import { H5PExercise } from './h5p-exercise'
 
 describe('Page', () => {
   let page = null as unknown as PageNode
@@ -74,6 +75,7 @@ describe('Page validations', () => {
     const bundle = makeBundle()
     const page = bundle.allPages.getOrAdd('modules/m123/index.cnxml')
     const target = bundle.allPages.getOrAdd('modules/m234/index.cnxml')
+    const h5p = bundle.allH5P.getOrAdd(newH5PPath(bundle, 'abc'))
 
     // Url (always ok)
     page.load(pageMaker({ pageLinks: [{ url: 'https://openstax.org' }] }))
@@ -104,6 +106,18 @@ describe('Page validations', () => {
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'nonexistentId' }] }))
     expect(page.validationErrors.errors.size).toBe(1)
     page.load(pageMaker({ pageLinks: [{ targetPage: 'm234', targetId: 'elementId1' }] }))
+    expect(page.validationErrors.errors.size).toBe(0)
+
+    // Test h5p missing target error
+    page.load(pageMaker({ pageLinks: [{ url: `${H5PExercise.PLACEHOLDER}/abc` }] }))
+    // At first it should not be loaded and should be queued to be loaded
+    expect(h5p.isLoaded).toBe(false)
+    expect(first(page.validationErrors.nodesToLoad)).toBe(h5p)
+    // Then we simulate h5p not existing
+    h5p.load(undefined)
+    expect(first(page.validationErrors.errors).title).toBe(PageValidationKind.MISSING_TARGET.title)
+    // Finally, we simulate h5p existing
+    h5p.load('any-string')
     expect(page.validationErrors.errors.size).toBe(0)
   })
   it(PageValidationKind.EMPTY_LINK.title, () => {
