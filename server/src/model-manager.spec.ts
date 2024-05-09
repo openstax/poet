@@ -440,9 +440,11 @@ describe('Image Autocomplete', () => {
 describe('URL Autocomplete', () => {
   const sinon = SinonRoot.createSandbox()
   const h5pName = 'abc'
+  const orphanedH5PName = '123'
   let manager = null as unknown as ModelManager
   let page: PageNode
   let h5p: H5PExercise
+  let orphanedH5P: H5PExercise
 
   beforeEach(() => {
     const bundle = makeBundle()
@@ -450,6 +452,8 @@ describe('URL Autocomplete', () => {
     page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
     h5p = manager.bundle.allH5P.getOrAdd(newH5PPath(manager.bundle, h5pName))
     h5p.load('any-string')
+    orphanedH5P = manager.bundle.allH5P.getOrAdd(newH5PPath(manager.bundle, orphanedH5PName))
+    orphanedH5P.load('any-string')
     manager.updateFileContents(page.absPath, pageMaker({ pageLinks: [{ url: `${H5PExercise.PLACEHOLDER}/abc` }] }))
   })
 
@@ -457,7 +461,7 @@ describe('URL Autocomplete', () => {
     sinon.restore()
   })
 
-  it('Returns all H5P interactives', () => {
+  it('Returns orphaned H5P interactives', () => {
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
@@ -471,7 +475,7 @@ describe('URL Autocomplete', () => {
       }
     )
     expect(results).not.toEqual([])
-    expect(results[0].label).toBe(`${H5PExercise.PLACEHOLDER}/${h5pName}`)
+    expect(results[0].label).toBe(`${H5PExercise.PLACEHOLDER}/${orphanedH5PName}`)
   })
 
   it('Returns no results outside url tag', () => {

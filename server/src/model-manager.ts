@@ -186,6 +186,12 @@ export class ModelManager {
     return this.bundle.allResources.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.resources))
   }
 
+  public get orphanedH5P() {
+    const books = this.bundle.books.filter(loadedAndExists)
+    const pages = books.flatMap(b => b.pages)
+    return this.bundle.allH5P.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.h5p))
+  }
+
   public async loadEnoughForToc() {
     // The only reason this is not implemented as a Job is because we need to send a timely response to the client
     // and there is no code for being notified when a Job completes
@@ -464,7 +470,7 @@ export class ModelManager {
       },
       getRange: this.rangeFinderFactory('url="', '"'),
       getCompletionItems: (_page, range) => {
-        return this.bundle.allH5P.all.toArray().filter((h) => h.exists)
+        return this.orphanedH5P.toArray().filter((h) => h.exists)
           .map((h) => path.dirname(h.absPath))
           .map((p) => path.basename(p))
           .map((name) => {

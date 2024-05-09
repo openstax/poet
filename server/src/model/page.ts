@@ -155,6 +155,12 @@ export class PageNode extends Fileish {
     return this.resourceLinks.map(l => l.target)
   }
 
+  public get h5p() {
+    return this.pageLinks
+      .filter((l): l is PageLink & { type: PageLinkKind.H5P } => l.type === PageLinkKind.H5P)
+      .map((l) => l.h5p)
+  }
+
   public get resourceLinks() {
     return this.ensureLoaded(this._resourceLinks)
   }
