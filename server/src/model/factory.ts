@@ -22,20 +22,11 @@ export class Factory<T> {
     }
   }
 
-  public remove(absPath: string) {
-    absPath = this.canonicalizer(absPath)
-    const m = this._map.get()
-    const item = m.get(absPath)
-    this._map.set(m.delete(absPath))
-    return item
-  }
-
-  public removeByKeyPrefix(pathPrefix: string) {
+  public findByKeyPrefix(pathPrefix: string) {
     pathPrefix = this.canonicalizer(pathPrefix)
     const m = this._map.get()
-    const removedItems = m.filter((_, key) => key.startsWith(pathPrefix))
-    this._map.set(m.filter((_, key) => !key.startsWith(pathPrefix)))
-    return I.Set(removedItems.values())
+    const matchingItems = m.filter((_, key) => key.startsWith(pathPrefix))
+    return I.Set(matchingItems.values())
   }
 
   public get size() { return this._map.get().size }

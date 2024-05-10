@@ -8,7 +8,7 @@ export class ResourceNode extends Fileish {
     return [{
       message: ResourceValidationKind.DUPLICATE_RESOURCES,
       nodesToLoad: I.Set<Fileish>(),
-      fn: () => this.bundle.isDuplicateResourcePath(this.absPath)
+      fn: () => this.bundle.isDuplicateFilePath(this.absPath)
         ? I.Set([NOWHERE])
         : I.Set<Range>()
     }]

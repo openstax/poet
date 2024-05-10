@@ -317,6 +317,8 @@ describe('processFilesystemChange()', () => {
     // Load the Bundle, Book, and Page
     loadSuccess(first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages))
 
+    const sizeBefore = manager.bundle.allNodes.size
+
     // Delete non-existent file
     expect((await fireChange(FileChangeType.Deleted, 'media/newpic.png')).toArray()).toEqual([])
     // Delete a file
@@ -328,8 +330,10 @@ describe('processFilesystemChange()', () => {
     // expect(sendDiagnosticsStub.callCount).toBe(0)
 
     // Delete everything (including the bundle)
-    expect((await fireChange(FileChangeType.Deleted, '')).size).toBe(1)
+    // All nodes should still be in bundle, but they should no longer exist
+    expect((await fireChange(FileChangeType.Deleted, '')).size).toBe(sizeBefore)
     expect(manager.bundle.exists).toBe(false)
+    expect(manager.bundle.allNodes.every((n) => !n.exists))
   })
   it('deletes Image/Page/Book', async () => {
     // Load the Bundle, Book, and Page

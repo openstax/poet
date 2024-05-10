@@ -222,7 +222,7 @@ export class ModelManager {
   private sendAllDiagnostics() {
     ModelManager.debug('Sending All Diagnostics')
     for (const node of this.bundle.allNodes) {
-      if (node.isLoaded) {
+      if (loadedAndExists(node)) {
         const validationErrors = node.validationErrors
         const errorHashes = validationErrors.errors.map(I.hash)
         const oldHashes = this.errorHashesByPath.get(node.absPath)
@@ -270,26 +270,20 @@ export class ModelManager {
       ModelManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
 
       const removedNodes = I.Set<Fileish>().withMutations(s => {
-        // Unload if the user deleted the bundle directory
         if (bundle.absPath.startsWith(uri)) s.add(bundle)
-        // Remove if it was a file
-        const removedNode = bundle.allBooks.remove(uri) ??
-                  bundle.allPages.remove(uri) ??
-                  bundle.allResources.remove(uri) ??
-                  bundle.allH5P.remove(uri)
-        if (removedNode !== undefined) s.add(removedNode)
-        // Remove if it was a directory
         const filePathDir = `${uri}${PATH_SEP}`
-        s.union(bundle.allBooks.removeByKeyPrefix(filePathDir))
-        s.union(bundle.allPages.removeByKeyPrefix(filePathDir))
-        s.union(bundle.allResources.removeByKeyPrefix(filePathDir))
-        s.union(bundle.allH5P.removeByKeyPrefix(filePathDir))
+        bundle.allFactories.forEach((f) => {
+          const maybeNode = f.get(uri)
+          if (maybeNode !== undefined) s.add(maybeNode)
+          s.union<Fileish>(f.findByKeyPrefix(filePathDir))
+        })
       })
-      // Unload all removed nodes so users do not think the files still exist
+      // Mark nodes as not existing so users do not think the files still exist
       removedNodes.forEach(n => {
+        ModelManager.debug(`Marking as removed: ${n.absPath}`)
         this.errorHashesByPath.delete(n.absPath)
+        // loading undefined sets `node.exists` to `false`
         n.load(undefined)
-        this.sendFileDiagnostics(n)
       })
       this.sendAllDiagnostics()
       return removedNodes

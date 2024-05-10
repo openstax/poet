@@ -50,7 +50,7 @@ export async function autocompleteHandler(documentPosition: CompletionParams, ma
   const cursor = documentPosition.position
   const page = manager.bundle.allPages.get(documentPosition.textDocument.uri)
 
-  if (page !== undefined) {
+  if (page !== undefined && page.exists) {
     return [
       ...manager.autocompleteResources(page, cursor),
       ...manager.autocompleteUrls(page, cursor)
