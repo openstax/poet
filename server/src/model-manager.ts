@@ -285,30 +285,23 @@ export class ModelManager {
       ModelManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
 
       const removedNodes = I.Set<Fileish>().withMutations(s => {
-        if (bundle.absPath.startsWith(uri)) {
-          s.add(bundle)
-          bundle.load(undefined)
-        }
         const orphanedNodes = this.orphanedNodes
+        const markRemoved = <T extends Fileish>(n: T) => {
+          ModelManager.debug(`[MODEL_MANAGER] Marking as removed: ${n.absPath}`)
+          this.errorHashesByPath.delete(n.absPath)
+          n.load(undefined)
+          s.add(n)
+        }
+        if (bundle.absPath.startsWith(uri)) markRemoved(bundle)
         const filePathDir = `${uri}${PATH_SEP}`
-        // NOTE: Order is important here (delete things that may have references first)
         const allFactories = [
           bundle.allBooks, bundle.allPages, bundle.allH5P, bundle.allResources
         ]
-        // First all the matching nodes as mark not existing (i.e. load undefined)
+        // First mark all the matching nodes as mark not existing (i.e. load undefined)
         allFactories.forEach((factory) => {
-          factory
-            .findByKeyPrefix(filePathDir)
-            .union([factory.get(uri)])
-            .forEach((n) => {
-              if (n === undefined) return
-              const absPath = n.absPath
-              this.errorHashesByPath.delete(absPath)
-              // Unload the node and try to remove it
-              ModelManager.debug(`[MODEL_MANAGER] Marking as removed: ${absPath}`)
-              n.load(undefined)
-              s.add(n)
-            })
+          const maybeNode = factory.get(uri)
+          if (maybeNode !== undefined) markRemoved(maybeNode)
+          factory.findByKeyPrefix(filePathDir).forEach(markRemoved)
         })
         // Then remove nodes if they are orphaned, loaded, and not existing
         orphanedNodes
