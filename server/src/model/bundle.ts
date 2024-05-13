@@ -63,13 +63,13 @@ export class Bundle extends Fileish implements Bundleish {
     })))
   }
 
-  public get allFactories() {
-    return I.Set([this.allBooks, this.allPages, this.allResources, this.allH5P])
-  }
-
   public get allNodes() {
     // TODO: Will all nodes continue to be fileish in future?
-    return I.Set([this]).union(this.allFactories.flatMap<Bundle | BookNode | PageNode | ResourceNode | H5PExercise>((f) => f.all))
+    return I.Set([this])
+      .union(this.allBooks.all)
+      .union(this.allPages.all)
+      .union(this.allH5P.all)
+      .union(this.allResources.all)
   }
 
   public get books() {

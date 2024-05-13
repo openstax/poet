@@ -175,6 +175,12 @@ export class ModelManager {
     return this.bundle.allPages.all
   }
 
+  public get orphanedBooks() {
+    const allBooks = this.bundle.allBooks.all.filter(loadedAndExists)
+    const referencedBooks = this.bundle.books
+    return allBooks.subtract(referencedBooks)
+  }
+
   public get orphanedPages() {
     const books = this.bundle.books.filter(loadedAndExists)
     return this.bundle.allPages.all.filter(loadedAndExists).subtract(books.flatMap(b => b.pages))
@@ -182,14 +188,23 @@ export class ModelManager {
 
   public get orphanedResources() {
     const books = this.bundle.books.filter(loadedAndExists)
-    const pages = books.flatMap(b => b.pages)
+    const pages = books.flatMap(b => b.pages).filter(loadedAndExists)
     return this.bundle.allResources.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.resources))
   }
 
   public get orphanedH5P() {
     const books = this.bundle.books.filter(loadedAndExists)
-    const pages = books.flatMap(b => b.pages)
+    const pages = books.flatMap(b => b.pages).filter(loadedAndExists)
     return this.bundle.allH5P.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.h5p))
+  }
+
+  public get orphanedNodes() {
+    return I.Set<Fileish>().withMutations((s) => {
+      s.union(this.orphanedBooks)
+      s.union(this.orphanedPages)
+      s.union(this.orphanedH5P)
+      s.union(this.orphanedResources)
+    })
   }
 
   public async loadEnoughForToc() {
@@ -270,21 +285,44 @@ export class ModelManager {
       ModelManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
 
       const removedNodes = I.Set<Fileish>().withMutations(s => {
-        if (bundle.absPath.startsWith(uri)) s.add(bundle)
+        if (bundle.absPath.startsWith(uri)) {
+          s.add(bundle)
+          bundle.load(undefined)
+        }
+        const orphanedNodes = this.orphanedNodes
         const filePathDir = `${uri}${PATH_SEP}`
-        bundle.allFactories.forEach((f) => {
-          const maybeNode = f.get(uri)
-          if (maybeNode !== undefined) s.add(maybeNode)
-          s.union<Fileish>(f.findByKeyPrefix(filePathDir))
+        // NOTE: Order is important here (delete things that may have references first)
+        const allFactories = [
+          bundle.allBooks, bundle.allPages, bundle.allH5P, bundle.allResources
+        ]
+        // First all the matching nodes as mark not existing (i.e. load undefined)
+        allFactories.forEach((factory) => {
+          factory
+            .findByKeyPrefix(filePathDir)
+            .union([factory.get(uri)])
+            .forEach((n) => {
+              if (n === undefined) return
+              const absPath = n.absPath
+              this.errorHashesByPath.delete(absPath)
+              // Unload the node and try to remove it
+              ModelManager.debug(`[MODEL_MANAGER] Marking as removed: ${absPath}`)
+              n.load(undefined)
+              s.add(n)
+            })
         })
+        // Then remove nodes if they are orphaned, loaded, and not existing
+        orphanedNodes
+          .filter(({ isLoaded, exists }) => isLoaded && !exists)
+          .forEach(({ absPath }) => {
+            ModelManager.debug(`[MODEL_MANAGER] Dropping: ${absPath}`)
+            // Expect at least one factory to have this node
+            expectValue(
+              allFactories.find((factory) => factory.remove(absPath) !== undefined),
+              `[MODEL_MANAGER] ERROR: Failed to drop: ${absPath} (possible memory leak)`
+            )
+          })
       })
-      // Mark nodes as not existing so users do not think the files still exist
-      removedNodes.forEach(n => {
-        ModelManager.debug(`Marking as removed: ${n.absPath}`)
-        this.errorHashesByPath.delete(n.absPath)
-        // loading undefined sets `node.exists` to `false`
-        n.load(undefined)
-      })
+
       this.sendAllDiagnostics()
       return removedNodes
     }
