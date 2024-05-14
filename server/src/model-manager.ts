@@ -237,7 +237,7 @@ export class ModelManager {
   private sendAllDiagnostics() {
     ModelManager.debug('Sending All Diagnostics')
     for (const node of this.bundle.allNodes) {
-      if (loadedAndExists(node)) {
+      if (node.isLoaded) {
         const validationErrors = node.validationErrors
         const errorHashes = validationErrors.errors.map(I.hash)
         const oldHashes = this.errorHashesByPath.get(node.absPath)
@@ -292,17 +292,22 @@ export class ModelManager {
           n.load(undefined)
           s.add(n)
         }
-        if (bundle.absPath.startsWith(uri)) markRemoved(bundle)
         const filePathDir = `${uri}${PATH_SEP}`
         const allFactories = [
           bundle.allBooks, bundle.allPages, bundle.allH5P, bundle.allResources
         ]
+
         // First mark all the matching nodes as mark not existing (i.e. load undefined)
+        if (bundle.absPath.startsWith(uri)) markRemoved(bundle)
         allFactories.forEach((factory) => {
           const maybeNode = factory.get(uri)
           if (maybeNode !== undefined) markRemoved(maybeNode)
           factory.findByKeyPrefix(filePathDir).forEach(markRemoved)
         })
+
+        // Send diagnostics before removing nodes
+        this.sendAllDiagnostics()
+
         // Then remove nodes if they are orphaned, loaded, and not existing
         orphanedNodes
           .filter(({ isLoaded, exists }) => isLoaded && !exists)
@@ -315,8 +320,6 @@ export class ModelManager {
             )
           })
       })
-
-      this.sendAllDiagnostics()
       return removedNodes
     }
   }
