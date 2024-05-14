@@ -261,7 +261,7 @@ export class ModelManager {
       const node = findOrCreateNode(bundle, uri)
       if (node !== undefined) {
         ModelManager.debug('[FILESYSTEM_EVENT] Adding item')
-        await this.readAndLoad(node)
+        await this.readAndUpdate(node)
         this.sendAllDiagnostics()
         return I.Set([node])
       } else {
