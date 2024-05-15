@@ -411,11 +411,13 @@ export class ModelManager {
         diagnostics
       })
     } else {
-      // push this task back onto the job stack and then add loading jobs for each node that needs to load
-      const unloadedNodes = nodesToLoad.filter(n => !n.isLoaded)
-      ModelManager.debug('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
-      this.jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => { this.sendFileDiagnostics(node) } })
-      unloadedNodes.forEach(n => { this.jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => { await this.readAndLoad(n) } }) })
+      const unloadedNodes = nodesToLoad.filter(n => !n.isLoaded && n.isValidXML)
+      if (!unloadedNodes.isEmpty()) {
+        // push this task back onto the job stack and then add loading jobs for each node that needs to load
+        ModelManager.debug('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
+        this.jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => { this.sendFileDiagnostics(node) } })
+        unloadedNodes.forEach(n => { this.jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => { await this.readAndLoad(n) } }) })
+      }
     }
   }
 
