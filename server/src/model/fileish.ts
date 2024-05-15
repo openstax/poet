@@ -92,14 +92,13 @@ export abstract class Fileish {
           this._isLoaded.set(true)
           this._exists.set(true)
         }
-        if (process.env.NODE_ENV !== 'production') {
+        try {
           fn()
-        } else {
-          try {
-            fn()
-          } catch (err) {
-            const e = err as Error
-            this._parseError.set(new WrappedParseError(this, e))
+        } catch (err) {
+          const e = err as Error
+          this._parseError.set(new WrappedParseError(this, e))
+          if (process.env.NODE_ENV !== 'production') {
+            throw e
           }
         }
         Fileish.debug(this.workspacePath, 'parsing XML (done)')
