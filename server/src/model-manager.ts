@@ -618,7 +618,7 @@ export class ModelManager {
           type: TocNodeKind.Page,
           value: {
             token: evt.nodeToken,
-            title: pageNode.optTitle,
+            title: pageNode.title,
             fileId: pageToModuleId(pageNode),
             absPath: pageNode.absPath
           }
