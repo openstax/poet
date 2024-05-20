@@ -318,22 +318,46 @@ describe('processFilesystemChange()', () => {
     loadSuccess(first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages))
 
     const sizeBefore = manager.bundle.allNodes.size
-
+    expect(manager.bundle.allPages.all.size).toBe(1)
+    expect(manager.bundle.allResources.all.size).toBe(0)
     // Delete non-existent file
     expect((await fireChange(FileChangeType.Deleted, 'media/newpic.png')).toArray()).toEqual([])
     // Delete a file
     const deletedModules = await fireChange(FileChangeType.Deleted, 'modules/m1234/index.cnxml')
     expect(deletedModules.size).toBe(1)
     expect(first(deletedModules)).toBeInstanceOf(PageNode)
+    // Page is still referenced by book: should still be in bundle
+    expect(manager.bundle.allPages.all.size).toBe(1)
     // Delete a directory
     expect((await fireChange(FileChangeType.Deleted, 'collections')).size).toBe(1)
     // expect(sendDiagnosticsStub.callCount).toBe(0)
+    // Book deleted -> page orphaned -> page deleted
+    expect(manager.bundle.allPages.all.size).toBe(0)
 
     // Delete everything (including the bundle)
     // All nodes should still be in bundle, but they should no longer exist
-    expect((await fireChange(FileChangeType.Deleted, '')).size).toBe(sizeBefore)
+    expect((await fireChange(FileChangeType.Deleted, '')).size).toBe(sizeBefore - 1)
     expect(manager.bundle.exists).toBe(false)
     expect(manager.bundle.allNodes.every((n) => !n.exists))
+  })
+  it('cascades deletes correctly', async () => {
+    // Load the Bundle, Book, and Page
+    loadSuccess(first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages))
+
+    const sizeBefore = manager.bundle.allNodes.size
+    expect(manager.bundle.allBooks.all.size).toBe(1)
+    expect(manager.bundle.allPages.all.size).toBe(1)
+    expect(manager.bundle.allResources.all.size).toBe(0)
+    expect(manager.bundle.allNodes.size).toBe(3) // bundle + book + page
+
+    // Delete everything (including the bundle)
+    expect((await fireChange(FileChangeType.Deleted, '')).size).toBe(sizeBefore)
+    expect(manager.bundle.allBooks.all.size).toBe(0)
+    expect(manager.bundle.allPages.all.size).toBe(0)
+    // Only the bundle should remain (bundles are immortal at the moment)
+    expect(manager.bundle.allNodes.size).toBe(1)
+    expect(first(manager.bundle.allNodes)).toBe(manager.bundle)
+    expect(manager.bundle.exists).toBe(false)
   })
   it('deletes Image/Page/Book', async () => {
     // Load the Bundle, Book, and Page

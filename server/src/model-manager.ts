@@ -176,26 +176,26 @@ export class ModelManager {
   }
 
   public get orphanedBooks() {
-    const allBooks = this.bundle.allBooks.all.filter(loadedAndExists)
+    const loadedBooks = this.bundle.allBooks.all.filter((n) => n.isLoaded)
     const referencedBooks = this.bundle.books
-    return allBooks.subtract(referencedBooks)
+    return !this.bundle.exists ? loadedBooks : loadedBooks.subtract(referencedBooks)
   }
 
   public get orphanedPages() {
     const books = this.bundle.books.filter(loadedAndExists)
-    return this.bundle.allPages.all.filter(loadedAndExists).subtract(books.flatMap(b => b.pages))
+    return this.bundle.allPages.all.filter((n) => n.isLoaded).subtract(books.flatMap(b => b.pages))
   }
 
   public get orphanedResources() {
     const books = this.bundle.books.filter(loadedAndExists)
     const pages = books.flatMap(b => b.pages).filter(loadedAndExists)
-    return this.bundle.allResources.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.resources))
+    return this.bundle.allResources.all.filter((n) => n.isLoaded).subtract(pages.flatMap(p => p.resources))
   }
 
   public get orphanedH5P() {
     const books = this.bundle.books.filter(loadedAndExists)
     const pages = books.flatMap(b => b.pages).filter(loadedAndExists)
-    return this.bundle.allH5P.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.h5p))
+    return this.bundle.allH5P.all.filter((n) => n.isLoaded).subtract(pages.flatMap(p => p.h5p))
   }
 
   public get orphanedNodes() {
@@ -285,7 +285,6 @@ export class ModelManager {
       ModelManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
 
       const removedNodes = I.Set<Fileish>().withMutations(s => {
-        const orphanedNodes = this.orphanedNodes
         const markRemoved = <T extends Fileish>(n: T) => {
           ModelManager.debug(`[MODEL_MANAGER] Marking as removed: ${n.absPath}`)
           this.errorHashesByPath.delete(n.absPath)
@@ -293,6 +292,8 @@ export class ModelManager {
           s.add(n)
         }
         const filePathDir = `${uri}${PATH_SEP}`
+        // NOTE: order is important. Ideally try to delete things that could
+        // hold references first (books/pages)
         const allFactories = [
           bundle.allBooks, bundle.allPages, bundle.allH5P, bundle.allResources
         ]
@@ -309,7 +310,7 @@ export class ModelManager {
         this.sendAllDiagnostics()
 
         // Then remove nodes if they are orphaned, loaded, and not existing
-        orphanedNodes
+        this.orphanedNodes
           .filter(({ isLoaded, exists }) => isLoaded && !exists)
           .forEach(({ absPath }) => {
             ModelManager.debug(`[MODEL_MANAGER] Dropping: ${absPath}`)
@@ -476,14 +477,17 @@ export class ModelManager {
           .length > 0
       },
       getRange: this.rangeFinderFactory('src="', '"'),
-      getCompletionItems: (page, range) => this.orphanedResources.toArray().map(i => {
-        const insertText = path.relative(path.dirname(page.absPath), i.absPath)
-        const item = CompletionItem.create(insertText)
-        item.textEdit = TextEdit.replace(range, insertText)
-        item.kind = CompletionItemKind.File
-        item.detail = 'Orphaned Resource'
-        return item
-      })
+      getCompletionItems: (page, range) => this.orphanedResources
+        .filter((r) => r.exists)
+        .toArray()
+        .map(i => {
+          const insertText = path.relative(path.dirname(page.absPath), i.absPath)
+          const item = CompletionItem.create(insertText)
+          item.textEdit = TextEdit.replace(range, insertText)
+          item.kind = CompletionItemKind.File
+          item.detail = 'Orphaned Resource'
+          return item
+        })
     }
     return this.autocomplete(page, cursor, resourceAutocompleter)
   }
@@ -498,7 +502,9 @@ export class ModelManager {
       },
       getRange: this.rangeFinderFactory('url="', '"'),
       getCompletionItems: (_page, range) => {
-        return this.orphanedH5P.toArray().filter((h) => h.exists)
+        return this.orphanedH5P
+          .filter((h) => h.exists)
+          .toArray()
           .map((h) => path.dirname(h.absPath))
           .map((p) => path.basename(p))
           .map((name) => {
