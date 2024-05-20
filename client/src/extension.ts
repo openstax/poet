@@ -13,9 +13,11 @@ import { toggleTocTreesFilteringHandler } from './toc-trees-provider'
 import { type BookOrTocNode, TocsTreeProvider } from './book-tocs'
 import { type BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
 import { readmeGenerator } from './generate-readme'
+import { TocsEventHandler } from './tocs-event-handler'
 
 let tocTreesView: vscode.TreeView<BookOrTocNode>
 let tocTreesProvider: TocsTreeProvider
+let tocEventHandler: TocsEventHandler
 let client: LanguageClient
 const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter()
 const onDidChangeWatchedFiles = onDidChangeWatchedFilesEmitter.event
@@ -91,6 +93,7 @@ function doRest(client: LanguageClient): ExtensionExports {
   const imageManagerPanelManager = new PanelManager(hostContext, ImageManagerPanel)
 
   tocTreesProvider = new TocsTreeProvider()
+  tocEventHandler = new TocsEventHandler(tocTreesProvider, hostContext)
   client.onNotification(ExtensionServerNotification.BookTocs, (params: BooksAndOrphans) => {
     hostContext.bookTocs = params // When a panel opens, make sure it has the latest bookTocs
     tocTreesProvider.update(params.books)
@@ -104,7 +107,7 @@ function doRest(client: LanguageClient): ExtensionExports {
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent(hostContext)))
   vscode.commands.registerCommand('openstax.generateReadme', ensureCatch(readmeGenerator(hostContext)))
-  tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
+  tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true, dragAndDropController: tocEventHandler })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
   vscode.commands.registerCommand('openstax.validateContent', ensureCatch(validateContent))
   void ensureCatchPromise(setDefaultGitConfig())
