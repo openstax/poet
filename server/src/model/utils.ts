@@ -81,7 +81,7 @@ export interface Bundleish {
   allH5P: Factory<H5PExercise>
   workspaceRootUri: string
   isDuplicateUuid: (uuid: string) => boolean
-  isDuplicateResourcePath: (path: string) => boolean
+  isDuplicateFilePath: (path: string) => boolean
   paths: Paths
 }
 

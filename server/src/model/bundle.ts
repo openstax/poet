@@ -14,7 +14,7 @@ export class Bundle extends Fileish implements Bundleish {
   public readonly allH5P: Factory<H5PExercise> = new Factory<H5PExercise>((absPath: string) => new H5PExercise(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
-  private readonly _duplicateResourcePaths = Quarx.observable.box<I.Set<string>>(I.Set<string>())
+  private readonly _duplicateFilePaths = Quarx.observable.box<I.Set<string>>(I.Set<string>())
   private readonly _duplicateUUIDs = Quarx.observable.box<I.Set<string>>(I.Set<string>())
   // TODO: parse these from META-INF/books.xml
   public readonly paths = {
@@ -29,10 +29,12 @@ export class Bundle extends Fileish implements Bundleish {
     super(undefined, pathHelper, pathHelper.join(workspaceRootUri, 'META-INF/books.xml'))
     super.setBundle(this)
     Quarx.autorun(() => {
-      this._duplicateResourcePaths.set(
+      this._duplicateFilePaths.set(
         I.Set(
-          findDuplicates(I.List(this.allResources.all)
-            .map(n => n.absPath.toLowerCase())
+          findDuplicates(
+            I.List(this.allNodes)
+              .filter(n => n.exists)
+              .map(n => n.absPath.toLowerCase())
           )
         )
       )
@@ -40,9 +42,8 @@ export class Bundle extends Fileish implements Bundleish {
     Quarx.autorun(() => {
       this._duplicateUUIDs.set(
         I.Set(
-          findDuplicates(I.List(this.allPages.all)
-            .filter(n => n.exists)
-            .map(n => n.uuid())
+          findDuplicates(
+            I.List(this.allPages.all).filter(n => n.exists).map(n => n.uuid())
           )
         )
       )
@@ -63,15 +64,20 @@ export class Bundle extends Fileish implements Bundleish {
   }
 
   public get allNodes() {
-    return I.Set([this]).union(this.allBooks.all).union(this.allPages.all).union(this.allResources.all).union(this.allH5P.all)
+    // TODO: Will all nodes continue to be fileish in future?
+    return I.Set([this])
+      .union(this.allBooks.all)
+      .union(this.allPages.all)
+      .union(this.allH5P.all)
+      .union(this.allResources.all)
   }
 
   public get books() {
     return this.__books().map(b => b.v)
   }
 
-  public isDuplicateResourcePath(path: string): boolean {
-    return this._duplicateResourcePaths.get().has(path.toLowerCase())
+  public isDuplicateFilePath(path: string): boolean {
+    return this._duplicateFilePaths.get().has(path.toLowerCase())
   }
 
   private __books() {

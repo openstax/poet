@@ -166,7 +166,7 @@ connection.onDocumentLinks(async ({ textDocument }) => {
   const { uri } = textDocument
   const manager = getBundleForUri(uri)
   const page = manager.bundle.allPages.get(uri)
-  if (page !== undefined) {
+  if (page !== undefined && page.exists) {
     return await manager.getDocumentLinks(page)
   } else {
     return []

@@ -175,21 +175,36 @@ export class ModelManager {
     return this.bundle.allPages.all
   }
 
+  public get orphanedBooks() {
+    const loadedBooks = this.bundle.allBooks.all.filter((n) => n.isLoaded)
+    const referencedBooks = this.bundle.books
+    return !this.bundle.exists ? loadedBooks : loadedBooks.subtract(referencedBooks)
+  }
+
   public get orphanedPages() {
     const books = this.bundle.books.filter(loadedAndExists)
-    return this.bundle.allPages.all.filter(loadedAndExists).subtract(books.flatMap(b => b.pages))
+    return this.bundle.allPages.all.filter((n) => n.isLoaded).subtract(books.flatMap(b => b.pages))
   }
 
   public get orphanedResources() {
     const books = this.bundle.books.filter(loadedAndExists)
-    const pages = books.flatMap(b => b.pages)
-    return this.bundle.allResources.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.resources))
+    const pages = books.flatMap(b => b.pages).filter(loadedAndExists)
+    return this.bundle.allResources.all.filter((n) => n.isLoaded).subtract(pages.flatMap(p => p.resources))
   }
 
   public get orphanedH5P() {
     const books = this.bundle.books.filter(loadedAndExists)
-    const pages = books.flatMap(b => b.pages)
-    return this.bundle.allH5P.all.filter(loadedAndExists).subtract(pages.flatMap(p => p.h5p))
+    const pages = books.flatMap(b => b.pages).filter(loadedAndExists)
+    return this.bundle.allH5P.all.filter((n) => n.isLoaded).subtract(pages.flatMap(p => p.h5p))
+  }
+
+  public get orphanedNodes() {
+    return I.Set<Fileish>().withMutations((s) => {
+      s.union(this.orphanedBooks)
+      s.union(this.orphanedPages)
+      s.union(this.orphanedH5P)
+      s.union(this.orphanedResources)
+    })
   }
 
   public async loadEnoughForToc() {
@@ -246,7 +261,7 @@ export class ModelManager {
       const node = findOrCreateNode(bundle, uri)
       if (node !== undefined) {
         ModelManager.debug('[FILESYSTEM_EVENT] Adding item')
-        await this.readAndLoad(node)
+        await this.readAndUpdate(node)
         this.sendAllDiagnostics()
         return I.Set([node])
       } else {
@@ -270,28 +285,42 @@ export class ModelManager {
       ModelManager.debug('[FILESYSTEM_EVENT] Removing everything with this URI (including subdirectories if they exist)', uri)
 
       const removedNodes = I.Set<Fileish>().withMutations(s => {
-        // Unload if the user deleted the bundle directory
-        if (bundle.absPath.startsWith(uri)) s.add(bundle)
-        // Remove if it was a file
-        const removedNode = bundle.allBooks.remove(uri) ??
-                  bundle.allPages.remove(uri) ??
-                  bundle.allResources.remove(uri) ??
-                  bundle.allH5P.remove(uri)
-        if (removedNode !== undefined) s.add(removedNode)
-        // Remove if it was a directory
+        const markRemoved = <T extends Fileish>(n: T) => {
+          ModelManager.debug(`[MODEL_MANAGER] Marking as removed: ${n.absPath}`)
+          this.errorHashesByPath.delete(n.absPath)
+          n.load(undefined)
+          s.add(n)
+        }
         const filePathDir = `${uri}${PATH_SEP}`
-        s.union(bundle.allBooks.removeByKeyPrefix(filePathDir))
-        s.union(bundle.allPages.removeByKeyPrefix(filePathDir))
-        s.union(bundle.allResources.removeByKeyPrefix(filePathDir))
-        s.union(bundle.allH5P.removeByKeyPrefix(filePathDir))
+        // NOTE: order is important. Ideally try to delete things that could
+        // hold references first (books/pages)
+        const allFactories = [
+          bundle.allBooks, bundle.allPages, bundle.allH5P, bundle.allResources
+        ]
+
+        // First mark all the matching nodes as mark not existing (i.e. load undefined)
+        if (bundle.absPath.startsWith(uri)) markRemoved(bundle)
+        allFactories.forEach((factory) => {
+          const maybeNode = factory.get(uri)
+          if (maybeNode !== undefined) markRemoved(maybeNode)
+          factory.findByKeyPrefix(filePathDir).forEach(markRemoved)
+        })
+
+        // Send diagnostics before removing nodes
+        this.sendAllDiagnostics()
+
+        // Then remove nodes if they are orphaned, loaded, and not existing
+        this.orphanedNodes
+          .filter(({ isLoaded, exists }) => isLoaded && !exists)
+          .forEach(({ absPath }) => {
+            ModelManager.debug(`[MODEL_MANAGER] Dropping: ${absPath}`)
+            // Expect at least one factory to have this node
+            expectValue(
+              allFactories.find((factory) => factory.remove(absPath) !== undefined),
+              `[MODEL_MANAGER] ERROR: Failed to drop: ${absPath} (possible memory leak)`
+            )
+          })
       })
-      // Unload all removed nodes so users do not think the files still exist
-      removedNodes.forEach(n => {
-        this.errorHashesByPath.delete(n.absPath)
-        n.load(undefined)
-        this.sendFileDiagnostics(n)
-      })
-      this.sendAllDiagnostics()
       return removedNodes
     }
   }
@@ -448,14 +477,17 @@ export class ModelManager {
           .length > 0
       },
       getRange: this.rangeFinderFactory('src="', '"'),
-      getCompletionItems: (page, range) => this.orphanedResources.toArray().map(i => {
-        const insertText = path.relative(path.dirname(page.absPath), i.absPath)
-        const item = CompletionItem.create(insertText)
-        item.textEdit = TextEdit.replace(range, insertText)
-        item.kind = CompletionItemKind.File
-        item.detail = 'Orphaned Resource'
-        return item
-      })
+      getCompletionItems: (page, range) => this.orphanedResources
+        .filter((r) => r.exists)
+        .toArray()
+        .map(i => {
+          const insertText = path.relative(path.dirname(page.absPath), i.absPath)
+          const item = CompletionItem.create(insertText)
+          item.textEdit = TextEdit.replace(range, insertText)
+          item.kind = CompletionItemKind.File
+          item.detail = 'Orphaned Resource'
+          return item
+        })
     }
     return this.autocomplete(page, cursor, resourceAutocompleter)
   }
@@ -470,7 +502,9 @@ export class ModelManager {
       },
       getRange: this.rangeFinderFactory('url="', '"'),
       getCompletionItems: (_page, range) => {
-        return this.orphanedH5P.toArray().filter((h) => h.exists)
+        return this.orphanedH5P
+          .filter((h) => h.exists)
+          .toArray()
           .map((h) => path.dirname(h.absPath))
           .map((p) => path.basename(p))
           .map((name) => {

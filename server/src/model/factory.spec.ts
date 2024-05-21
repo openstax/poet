@@ -14,7 +14,7 @@ describe('Factory', () => {
     expect(f.getOrAdd('key2').thing).toEqual(1)
     expect(f.get('key2')).not.toBeUndefined()
   })
-  it('removesByKeyPrefix works', () => {
+  it('findByKeyPrefix works', () => {
     const f = new Factory((x) => ({ foo: x, bar: 'dummy-object' }), (x) => x)
     f.getOrAdd('keyPrefix1')
     f.getOrAdd('keyPrefix2')
@@ -22,8 +22,8 @@ describe('Factory', () => {
     f.getOrAdd('not_a_keyPrefix')
 
     expect(f.size).toEqual(4)
-    const removed = f.removeByKeyPrefix('keyPrefix')
-    expect(removed.size).toEqual(2)
-    expect(f.size).toEqual(2)
+    const found = f.findByKeyPrefix('keyPrefix')
+    expect(found.size).toEqual(2)
+    expect(f.size).toEqual(4)
   })
 })
