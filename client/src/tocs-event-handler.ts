@@ -1,9 +1,15 @@
 import type vscode from 'vscode'
 import { type TocsTreeProvider, type BookOrTocNode } from './book-tocs'
-import { type CreatePageEvent, type CreateSubbookEvent, type TocModification, TocModificationKind, type TocModificationParams, TocNodeKind } from '../../common/src/toc'
+import { type CreatePageEvent, type CreateSubbookEvent, type TocModification, TocModificationKind, type TocModificationParams, TocNodeKind, BookRootNode } from '../../common/src/toc'
 import { ExtensionServerRequest, type Opt } from '../../common/src/requests'
 import { expect, getRootPathUri } from './utils'
 import { type ExtensionHostContext } from './panel'
+
+const getNodeToken = (node: BookOrTocNode | undefined) => {
+  if (node?.type === TocNodeKind.Page) return node.value.token
+  if (node?.type === TocNodeKind.Subbook) return node.value.token
+  return undefined
+}
 
 export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOrTocNode> {
   private dragging: BookOrTocNode | undefined = undefined
@@ -33,27 +39,42 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     try {
       let event: Opt<TocModification | CreatePageEvent | CreateSubbookEvent>
       const dragging = this.dragging
-      const getNodeToken = (node: BookOrTocNode | undefined) => {
-        if (node?.type === TocNodeKind.Page) return node.value.token
-        if (node?.type === TocNodeKind.Subbook) return node.value.token
-        return undefined
+      if (target === undefined || dragging === undefined || target === dragging) {
+        return
       }
 
-      if (dragging !== undefined && dragging !== target) {
+      const nodeToken = expect(
+        getNodeToken(dragging),
+        'BUG: Could not get token of dragged node'
+      )
+      if (target.type === BookRootNode.Singleton) {
+        const bookIndex = expect(
+          this.tocTreesProvider.getParentBookIndex(dragging),
+          'BUG: Could not get index of parent book'
+        )
+        event = {
+          type: TocModificationKind.Remove,
+          nodeToken,
+          bookIndex
+        }
+      } else {
         let newParentToken: string | undefined
         let newChildIndex = 0
-        const bookIndex = 0
-        const nodeToken = expect(getNodeToken(dragging), '')
-        if (target !== undefined) {
-          const newParent = this.tocTreesProvider.getParent(target)
-          const targetToken = expect(getNodeToken(target), '')
+        const bookIndex = expect(
+          this.tocTreesProvider.getParentBookIndex(target),
+          'BUG: Could not get index of target\'s parent book'
+        )
+        const newParent = this.tocTreesProvider.getParent(target)
+        if (newParent !== undefined) {
+          const targetToken = expect(
+            getNodeToken(target),
+            'BUG: Could not get target token'
+          )
+          newChildIndex = this.tocTreesProvider
+            .getChildren(newParent)
+            .findIndex((node) => getNodeToken(node) === targetToken)
+          if (newChildIndex === -1) newChildIndex = 0
           newParentToken = getNodeToken(newParent)
-          if (newParent !== undefined) {
-            newChildIndex = this.tocTreesProvider
-              .getChildren(newParent)
-              .findIndex((node) => getNodeToken(node) === targetToken)
-            if (newChildIndex === -1) newChildIndex = 0
-          }
         }
         event = {
           type: TocModificationKind.Move,

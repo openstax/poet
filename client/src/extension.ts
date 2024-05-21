@@ -96,7 +96,7 @@ function doRest(client: LanguageClient): ExtensionExports {
   tocEventHandler = new TocsEventHandler(tocTreesProvider, hostContext)
   client.onNotification(ExtensionServerNotification.BookTocs, (params: BooksAndOrphans) => {
     hostContext.bookTocs = params // When a panel opens, make sure it has the latest bookTocs
-    tocTreesProvider.update(params.books)
+    tocTreesProvider.update(params.books, params.orphans)
     /* istanbul ignore next */
     void tocPanelManager.panel()?.update(params)
   })

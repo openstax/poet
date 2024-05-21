@@ -576,11 +576,13 @@ export class ModelManager {
       } else if (evt.type === TocModificationKind.Remove) {
         removeNode(parent, node)
         await writeBookToc(book, bookToc)
-      } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
+      } else if (evt.type === TocModificationKind.Move) {
+        ModelManager.debug('MOVE EVENT')
         removeNode(parent, node)
         // Add the node
         const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
         newParentChildren.splice(evt.newChildIndex, 0, node)
+        // TODO: write book ToC for src book as well
         await writeBookToc(book, bookToc)
       }
     } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
@@ -598,8 +600,9 @@ export class ModelManager {
           }
         }
         // Add the node
-        /* istanbul ignore next */
-        const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
+        const newParentChildren = evt.newParentToken !== undefined
+          ? /* istanbul ignore next */ childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node)
+          : bookToc.tocTree
         newParentChildren.splice(evt.newChildIndex, 0, node)
         await writeBookToc(book, bookToc)
       } else {

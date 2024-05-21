@@ -50,7 +50,7 @@ describe('Toc Provider', () => {
     expect(p.getTreeItem(nonloadedPage).label).toBe(`Loading... (${nonloadedPage.value.fileId})`)
   })
   it('gets children and parents', () => {
-    p.update([testToc])
+    p.update([testToc], [])
     expect(p.getChildren()).toEqual([testToc])
     expect(p.getParent(testToc)).toBe(undefined)
     expect(p.getChildren(testToc)).toEqual(testToc.tocTree)

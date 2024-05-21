@@ -1,9 +1,11 @@
 import { EventEmitter, TreeItemCollapsibleState, Uri, type TreeDataProvider } from 'vscode'
 
-import { type BookToc, type ClientTocNode, BookRootNode, TocNodeKind } from '../../common/src/toc'
+import { type BookToc, type ClientTocNode, BookRootNode, TocNodeKind, type ClientPageish } from '../../common/src/toc'
 import { TocItemIcon } from './toc-trees-provider'
 
 export type BookOrTocNode = BookToc | ClientTocNode
+
+const toClientTocNode = (n: ClientPageish): ClientTocNode => ({ type: TocNodeKind.Page, value: n })
 
 export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
   private readonly _onDidChangeTreeData = new EventEmitter<void>()
@@ -11,10 +13,12 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
 
   public includeFileIdsForFilter = false
   private bookTocs: BookToc[]
+  private orphans: BookOrTocNode[]
   private readonly parentsMap = new Map<BookOrTocNode, BookOrTocNode>()
 
   constructor() {
     this.bookTocs = []
+    this.orphans = []
   }
 
   public toggleFilterMode() {
@@ -22,10 +26,11 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
     this._onDidChangeTreeData.fire()
   }
 
-  public update(n: BookToc[]) {
+  public update(n: BookToc[], o: ClientPageish[]) {
     this.bookTocs = n
     this.parentsMap.clear()
     this.bookTocs.forEach(n => { this.recAddParent(n) })
+    this.orphans = o.map(toClientTocNode)
     this._onDidChangeTreeData.fire()
   }
 
@@ -71,7 +76,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
   public getChildren(node?: BookOrTocNode) {
     let kids: BookOrTocNode[] = []
     if (node === undefined) {
-      return this.bookTocs
+      return [...this.bookTocs, ...this.orphans]
     } else if (node.type === BookRootNode.Singleton) {
       kids = node.tocTree
     } else if (node.type === TocNodeKind.Page) {
@@ -84,5 +89,24 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
 
   public getParent(node: BookOrTocNode) {
     return this.parentsMap.get(node)
+  }
+
+  public getParentBook(node: BookOrTocNode): BookToc | undefined {
+    let bookNode: BookOrTocNode | undefined = node
+    // Books do not have parent books
+    if (bookNode.type === BookRootNode.Singleton) return undefined
+    while (bookNode !== undefined && bookNode.type !== BookRootNode.Singleton) {
+      bookNode = this.getParent(bookNode)
+    }
+    return bookNode?.type === BookRootNode.Singleton ? bookNode : undefined
+  }
+
+  public getParentBookIndex(node: BookOrTocNode) {
+    const parentBook = this.getParentBook(node)
+    let idx: number | undefined
+    if (parentBook !== undefined) {
+      idx = this.bookTocs.findIndex((b) => b.absPath === parentBook.absPath)
+    }
+    return idx === -1 ? undefined : idx
   }
 }
