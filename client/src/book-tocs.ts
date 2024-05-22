@@ -103,6 +103,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
     let bookNode: BookOrTocNode | undefined = node
     // Books do not have parent books
     if (bookNode.type === BookRootNode.Singleton) return undefined
+    // Crawl up the tree to find the parent book
     while (bookNode !== undefined && bookNode.type !== BookRootNode.Singleton) {
       bookNode = this.getParent(bookNode)
     }
@@ -111,10 +112,8 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
 
   public getParentBookIndex(node: BookOrTocNode) {
     const parentBook = this.getParentBook(node)
-    let idx: number | undefined
-    if (parentBook !== undefined) {
-      idx = this.bookTocs.findIndex((b) => b.absPath === parentBook.absPath)
-    }
-    return idx === -1 ? undefined : idx
+    return parentBook === undefined
+      ? undefined
+      : this.bookTocs.findIndex((b) => b.absPath === parentBook.absPath)
   }
 }

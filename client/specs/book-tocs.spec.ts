@@ -36,6 +36,8 @@ describe('Toc Provider', () => {
     expect(p.getTreeItem(testTocPage)).toMatchSnapshot()
   })
   it('filters fileids when filtering is set', () => {
+    const p = new TocsTreeProvider()
+    p.update([testToc], [])
     expect(p.getTreeItem(testTocPage)).toMatchSnapshot()
     p.toggleFilterMode()
     expect(p.getTreeItem(testTocPage)).toMatchSnapshot()
