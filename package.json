@@ -77,6 +77,12 @@
         "command": "openstax.validateContent",
         "title": "Validate Content",
         "category": "Openstax"
+      },
+      {
+        "command": "openstax.test",
+        "title": "Validate Content",
+        "category": "Openstax",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
@@ -140,6 +146,13 @@
           "command": "openstax.toggleTocTreesFiltering",
           "when": "view == tocTrees",
           "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "openstax.test",
+          "when": "view == tocTrees && viewItem =~ /TocNodeKind.Page|TocNodeKind.Subbook/",
+          "group": "inline"
         }
       ]
     },

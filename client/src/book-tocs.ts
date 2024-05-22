@@ -1,4 +1,4 @@
-import { EventEmitter, TreeItemCollapsibleState, Uri, type TreeDataProvider } from 'vscode'
+import { EventEmitter, type TreeItem, TreeItemCollapsibleState, Uri, type TreeDataProvider } from 'vscode'
 
 import { type BookToc, type ClientTocNode, BookRootNode, TocNodeKind, type ClientPageish } from '../../common/src/toc'
 import { TocItemIcon } from './toc-trees-provider'
@@ -42,7 +42,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
     })
   }
 
-  public getTreeItem(node: BookOrTocNode) {
+  public getTreeItem(node: BookOrTocNode): TreeItem {
     if (node.type === BookRootNode.Singleton) {
       const uri = Uri.parse(node.absPath)
       return {
@@ -62,13 +62,15 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
         iconPath: TocItemIcon.Page,
         collapsibleState: TreeItemCollapsibleState.None,
         resourceUri: uri,
-        command: { title: 'open', command: 'vscode.open', arguments: [uri] }
+        command: { title: 'open', command: 'vscode.open', arguments: [uri] },
+        contextValue: TocNodeKind.Page
       }
     } else {
       return {
         iconPath: TocItemIcon.Subbook,
         collapsibleState: TreeItemCollapsibleState.Collapsed,
-        label: node.value.title
+        label: node.value.title,
+        contextValue: TocNodeKind.Subbook
       }
     }
   }

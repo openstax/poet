@@ -110,6 +110,7 @@ function doRest(client: LanguageClient): ExtensionExports {
   tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true, dragAndDropController: tocEventHandler })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
   vscode.commands.registerCommand('openstax.validateContent', ensureCatch(validateContent))
+  vscode.commands.registerCommand('openstax.test', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.removeNode(node) }))
   void ensureCatchPromise(setDefaultGitConfig())
   void ensureCatchPromise(initPrivateSubmodule(hostContext))
 
