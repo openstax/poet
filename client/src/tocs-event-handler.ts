@@ -1,4 +1,4 @@
-import type vscode from 'vscode'
+import vscode from 'vscode'
 import { type TocsTreeProvider, type BookOrTocNode } from './book-tocs'
 import { type TocModification, TocModificationKind, type TocModificationParams, TocNodeKind, BookRootNode } from '../../common/src/toc'
 import { ExtensionServerRequest } from '../../common/src/requests'
@@ -12,7 +12,7 @@ const getNodeToken = (node: BookOrTocNode | undefined) => {
 }
 
 export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOrTocNode> {
-  private dragging: BookOrTocNode | undefined = undefined
+  private readonly treeId = 'application/vnd.code.tree.tocTrees'
 
   constructor(
     private readonly tocTreesProvider: TocsTreeProvider,
@@ -78,10 +78,8 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
       getNodeToken(node),
       'BUG: Could not get token of dragged node'
     )
-    const bookIndex = expect(
-      this.tocTreesProvider.getParentBookIndex(node),
-      'BUG: Could not get index of parent book'
-    )
+    const bookIndex = this.tocTreesProvider.getParentBookIndex(node)
+    if (bookIndex === undefined) { return }
     const event: TocModification = {
       type: TocModificationKind.Remove,
       nodeToken,
@@ -90,23 +88,21 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     await this.fireEvent(event)
   }
 
-  handleDrag(source: readonly BookOrTocNode[]): void | Thenable<void> {
-    this.dragging = source[0]
+  handleDrag(source: readonly BookOrTocNode[], dataTransfer: vscode.DataTransfer): void {
+    dataTransfer.set(this.treeId, new vscode.DataTransferItem(source[0]))
   }
 
-  async handleDrop(target: BookOrTocNode | undefined): Promise<void> {
-    const dragging = this.dragging
-    if (target === undefined || dragging === undefined || target === dragging) {
+  async handleDrop(target: BookOrTocNode | undefined, dataTransfer: vscode.DataTransfer): Promise<void> {
+    const dragging: BookOrTocNode | undefined = dataTransfer.get(this.treeId)?.value
+    if (dragging?.type === undefined) throw new Error('BUG: Bad drag target')
+    if (target?.type === undefined) throw new Error('BUG: Bad drop target')
+    if (target === dragging || dragging.type === BookRootNode.Singleton) {
       return
     }
-    try {
-      if (target.type === BookRootNode.Singleton) {
-        await this.removeNode(dragging)
-      } else {
-        await this.moveNode(dragging, target)
-      }
-    } finally {
-      this.dragging = undefined
+    if (target.type === BookRootNode.Singleton) {
+      await this.removeNode(dragging)
+    } else {
+      await this.moveNode(dragging, target)
     }
   }
 }
