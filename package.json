@@ -151,7 +151,7 @@
       "view/item/context": [
         {
           "command": "openstax.test",
-          "when": "view == tocTrees && viewItem =~ /TocNodeKind.Page|TocNodeKind.Subbook/",
+          "when": "view == tocTrees && viewItem =~ /,?delete,?/",
           "group": "inline"
         }
       ]

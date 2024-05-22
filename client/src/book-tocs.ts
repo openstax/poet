@@ -43,6 +43,12 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
   }
 
   public getTreeItem(node: BookOrTocNode): TreeItem {
+    const capabilities: string[] = [
+      'rename'
+    ]
+    if (this.getParent(node) !== undefined) {
+      capabilities.push('delete')
+    }
     if (node.type === BookRootNode.Singleton) {
       const uri = Uri.parse(node.absPath)
       return {
@@ -63,14 +69,14 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
         collapsibleState: TreeItemCollapsibleState.None,
         resourceUri: uri,
         command: { title: 'open', command: 'vscode.open', arguments: [uri] },
-        contextValue: TocNodeKind.Page
+        contextValue: capabilities.join(',')
       }
     } else {
       return {
         iconPath: TocItemIcon.Subbook,
         collapsibleState: TreeItemCollapsibleState.Collapsed,
         label: node.value.title,
-        contextValue: TocNodeKind.Subbook
+        contextValue: capabilities.join(',')
       }
     }
   }
