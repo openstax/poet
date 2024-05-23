@@ -57,5 +57,6 @@ describe('Toc Provider', () => {
     expect(p.getParent(testToc)).toBe(undefined)
     expect(p.getChildren(testToc)).toEqual(testToc.tocTree)
     expect(p.getParent(testToc.tocTree[0])).toBe(testToc)
+    expect(p.getParentBook(testToc)).toBe(undefined)
   })
 })
