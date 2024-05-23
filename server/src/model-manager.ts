@@ -555,11 +555,11 @@ export class ModelManager {
     ModelManager.debug('[MODIFY_TOC]', evt)
 
     // !!WARNING!!
-    // When this function calls `writeBookToc` the ToC, it causes
-    // `this.bookTocs` to update with a new array, distinct from the old,
-    // before the function continues. This can cause variables that reference
-    // `this.bookTocs` to become stale which can result in unexpected behavior.
-    // For more information, see `sideEffectFn` in ModelManager constructor.
+    // When this function calls `writeBookToc`, it causes`this.bookTocs` to
+    // update with a new array, distinct from the old, before the function
+    // continues. This can cause variables that reference `this.bookTocs` to
+    // become stale which can result in unexpected behavior. For more
+    // information, see `sideEffectFn` in ModelManager constructor.
     // !!WARNING!!
 
     const bookToc = this.bookTocs[evt.bookIndex]
