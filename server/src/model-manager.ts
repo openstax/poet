@@ -623,7 +623,6 @@ export class ModelManager {
         // Add the node
         const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
         newParentChildren.splice(evt.newChildIndex, 0, node)
-        // TODO: write book ToC for src book as well
         await writeBookToc(book, bookToc)
         // When moving between books in a bundle, update both collection files
         if (srcBookToc.absPath !== bookToc.absPath) {
