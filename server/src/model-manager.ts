@@ -554,6 +554,14 @@ export class ModelManager {
   async modifyToc(evt: TocModification) {
     ModelManager.debug('[MODIFY_TOC]', evt)
 
+    // !!WARNING!!
+    // When this function calls `writeBookToc` the ToC, it causes
+    // `this.bookTocs` to update with a new array, distinct from the old,
+    // before the function continues. This can cause variables that reference
+    // `this.bookTocs` to become stale which can result in unexpected behavior.
+    // For more information, see `sideEffectFn` in ModelManager constructor.
+    // !!WARNING!!
+
     const bookToc = this.bookTocs[evt.bookIndex]
     const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
     const nodeAndParent = this.lookupToken(evt.nodeToken)
@@ -577,13 +585,25 @@ export class ModelManager {
         removeNode(parent, node)
         await writeBookToc(book, bookToc)
       } else if (evt.type === TocModificationKind.Move) {
-        ModelManager.debug('MOVE EVENT')
+        const recFindParentBook = (n: ClientTocNode | BookToc): BookToc => {
+          if (n.type === BookRootNode.Singleton) return n
+          const { parent } = expectValue(this.lookupToken(n.value.token), `BUG: Unexpected orphaned node: ${n.value.token}`)
+          return recFindParentBook(parent)
+        }
+        const srcBookToc = recFindParentBook(parent)
         removeNode(parent, node)
         // Add the node
         const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
         newParentChildren.splice(evt.newChildIndex, 0, node)
-        // TODO: write book ToC for src book as well
         await writeBookToc(book, bookToc)
+        // When moving between books in a bundle, update both collection files
+        if (srcBookToc.absPath !== bookToc.absPath) {
+          const srcBookNode = expectValue(
+            this.bundle.allBooks.get(srcBookToc.absPath),
+            `BUG: Parent book did not exist in bundle: ${srcBookToc.absPath}`
+          )
+          await writeBookToc(srcBookNode, srcBookToc)
+        }
       }
     } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
       // We are manipulating an orphaned Page (probably moving it into the ToC of a book)
