@@ -618,7 +618,6 @@ export class ModelManager {
       if (node.value.token === token) {
         return { node, parent }
       }
-      /* istanbul ignore else */
       if (node.type === TocNodeKind.Subbook) {
         const ret = this.recFind(token, node, node.children)
         if (ret !== undefined) return ret
@@ -629,7 +628,6 @@ export class ModelManager {
   private lookupToken(token: string): Opt<NodeAndParent> {
     for (const b of this.bookTocs) {
       const ret = this.recFind(token, b, b.tocTree)
-      /* istanbul ignore else */
       if (ret !== undefined) return ret
     }
   }
