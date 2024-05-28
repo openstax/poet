@@ -34,6 +34,11 @@ export function setLanguageServerLauncher(l: typeof languageServerLauncher) {
 export const forwardOnDidChangeWorkspaceFolders = (clientInner: LanguageClient) => async (event: vscode.WorkspaceFoldersChangeEvent) => {
   await clientInner.sendRequest('onDidChangeWorkspaceFolders', event)
 }
+export const getTocTree = (): {
+  tocTreesView: vscode.TreeView<BookOrTocNode> | undefined | null
+  tocTreesProvider: TocsTreeProvider | undefined | null
+  tocEventHandler: TocsEventHandler | undefined | null
+} => ({ tocTreesView, tocTreesProvider, tocEventHandler })
 
 type ExtensionExports = { [key in OpenstaxCommand]: PanelManager<Panel<unknown, unknown, unknown>> }
 export async function activate(context: vscode.ExtensionContext): Promise<ExtensionExports> {
