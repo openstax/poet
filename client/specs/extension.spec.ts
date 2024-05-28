@@ -2,14 +2,13 @@ import { join } from 'path'
 import { expect } from '@jest/globals'
 import mockfs from 'mock-fs'
 
-import { activate, deactivate, forwardOnDidChangeWorkspaceFolders, setLanguageServerLauncher, setResourceRootDir } from '../src/extension'
+import { activate, deactivate, forwardOnDidChangeWorkspaceFolders, getTocTree, setLanguageServerLauncher, setResourceRootDir } from '../src/extension'
 import { type Extension, type ExtensionContext, type WebviewPanel } from 'vscode'
 import * as vscode from 'vscode'
 import * as utils from '../src/utils' // Used for dependency mocking in tests
 import Sinon from 'sinon'
 import { type LanguageClient } from 'vscode-languageclient/node'
 import { OpenstaxCommand } from '../src/extension-types'
-import { type TocEditorPanel } from '../src/panel-toc-editor'
 import { type BooksAndOrphans, ExtensionServerNotification } from '../../common/src/requests'
 import { type PanelManager } from '../src/panel'
 import { type CnxmlPreviewPanel } from '../src/panel-cnxml-preview'
@@ -53,20 +52,19 @@ describe('Extension', () => {
       it('Starts up', async function () {
         await expect(activate(extensionContext)).resolves.toBeTruthy()
       })
-      it('updates the TocPanel when the language server sends a BookTocs Notification', async () => {
+      it('updates the TreeView when the language server sends a BookTocs Notification', async () => {
         setResourceRootDir(join(__dirname, '..', 'static'))
 
-        const extensions = await activate(extensionContext)
-        const pm = extensions[OpenstaxCommand.SHOW_TOC_EDITOR]
-        expect(pm.panel()).toBeNull()
+        await activate(extensionContext)
 
         expect(onNotificationStub.firstCall.args[0]).toBe(ExtensionServerNotification.BookTocs)
         const cb = onNotificationStub.firstCall.args[1]
         const params: BooksAndOrphans = { books: [], orphans: [] }
         cb(params)
 
-        const panel = pm.newPanel() as TocEditorPanel
-        const updateStub = sinon.stub(panel, 'update')
+        const { tocTreesProvider } = getTocTree()
+        if (tocTreesProvider == null) throw new Error('tocTreesProvider was not set yet')
+        const updateStub = sinon.stub(tocTreesProvider, 'update')
         cb(params)
 
         expect(updateStub.callCount).toBe(1)
