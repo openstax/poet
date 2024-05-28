@@ -1,5 +1,4 @@
 /* istanbul ignore file */
-// This enum is also hardcoded in the toc-editor Webview
 export enum TocNodeKind {
   Subbook = 'TocNodeKind.Subbook',
   Page = 'TocNodeKind.Page',
