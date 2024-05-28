@@ -8,7 +8,7 @@ import { expect, ensureCatch, ensureCatchPromise, launchLanguageServer, populate
 import { OpenstaxCommand } from './extension-types'
 import { type ExtensionHostContext, type Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
-import { toggleTocTreesFilteringHandler } from './toc-trees-provider'
+import { toggleTocTreesFilteringHandler } from './book-tocs'
 import { type BookOrTocNode, TocsTreeProvider } from './book-tocs'
 import { type BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
 import { readmeGenerator } from './generate-readme'

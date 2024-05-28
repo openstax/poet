@@ -136,3 +136,27 @@ exports[`Toc Provider returns tree items for children 3`] = `
   },
 }
 `;
+
+exports[`filtering toggleTocTreesFilteringHandler 1`] = `
+[
+  [
+    {
+      "children": [],
+      "label": "m1",
+    },
+    {
+      "expand": 3,
+    },
+  ],
+  [
+    {
+      "children": [],
+      "label": "m2",
+      "type": "TocNodeKind.Page",
+    },
+    {
+      "expand": 3,
+    },
+  ],
+]
+`;
