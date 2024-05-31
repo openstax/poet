@@ -1,6 +1,6 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
-import { type Opt, type Position, PathKind, type WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, type HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, type Range } from './utils'
+import { type Opt, PathKind, type WithRange, textWithRange, select, selectOne, calculateElementPositions, expectValue, type HasRange, NOWHERE, join, equalsOpt, equalsWithRange, tripleEq, type Range } from './utils'
 import { Fileish, type ValidationCheck, ValidationKind, ValidationSeverity } from './fileish'
 import { type ResourceNode } from './resource'
 import { H5PExercise } from './h5p-exercise'
@@ -43,11 +43,6 @@ export type PageLink = HasRange & ({
   url: string
   h5p: H5PExercise
 })
-
-function convertToPos(str: string, cursor: number): Position {
-  const lines = str.substring(cursor).split('\n')
-  return { line: lines.length, character: lines[lines.length - 1].length }
-}
 
 function filterNull<T>(set: I.Set<Opt<T>>): I.Set<T> {
   return I.Set<T>().withMutations(s => {
@@ -100,55 +95,24 @@ function termSpecificSelector(e: string): string {
   return e === 'term' ? '[not(parent::cnxml:definition)]' : ''
 }
 
+const DEFAULT_TITLE = {
+  v: UNTITLED_FILE,
+  range: NOWHERE
+}
+
 export const ELEMENTS_MISSING_IDS_SEL = Array.from(ELEMENT_TO_PREFIX.keys()).map(e => `//cnxml:${e}[not(@id)]${termSpecificSelector(e)}`).join('|')
 export class PageNode extends Fileish {
   private readonly _uuid = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
-  private readonly _title = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _title = Quarx.observable.box<WithRange<string>>(DEFAULT_TITLE, { equals: equalsOptWithRange })
   private readonly _elementIds = Quarx.observable.box<Opt<I.Set<WithRange<string>>>>(undefined)
   private readonly _resourceLinks = Quarx.observable.box<Opt<I.Set<ResourceLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
   private readonly _elementsMissingIds = Quarx.observable.box<Opt<I.Set<Range>>>(undefined)
 
   public uuid() { return this.ensureLoaded(this._uuid).v }
-  public get optTitle() {
-    const t = this._title.get()
-    return t?.v
-  }
 
-  public title(fileReader: () => string) {
-    // A quick way to get the title for the ToC
-    const v = this._title.get()
-    if (v === undefined) {
-      const data = fileReader()
-      return this.guessTitle(data)?.v ?? UNTITLED_FILE
-    }
-    return v.v
-  }
-
-  private guessTitle(data: string): Opt<WithRange<string>> {
-    const openTag = '<title>'
-    const closeTag = '</title>'
-    const titleTagStart = data.indexOf(openTag)
-    const titleTagEnd = data.indexOf(closeTag)
-    if (titleTagStart === -1 || titleTagEnd === -1) {
-      return
-    }
-    const actualTitleStart = titleTagStart + openTag.length
-    /* istanbul ignore if */
-    if (titleTagEnd - actualTitleStart > 280) {
-      // If the title is so long you can't tweet it,
-      // then something probably went wrong.
-      /* istanbul ignore next */
-      return
-    }
-    const range = {
-      start: convertToPos(data, actualTitleStart),
-      end: convertToPos(data, titleTagEnd)
-    }
-    return {
-      v: data.substring(actualTitleStart, titleTagEnd).trim(),
-      range
-    }
+  public get title() {
+    return this._title.get().v
   }
 
   public get resources() {
@@ -236,14 +200,11 @@ export class PageNode extends Fileish {
       }
     })))
 
-    const titleNode = select('//cnxml:title', doc) as Element[]
+    const titleNode = select('/cnxml:document/cnxml:title', doc) as Element[]
     if (titleNode.length > 0) {
       this._title.set(textWithRange(titleNode[0]))
     } else {
-      this._title.set({
-        v: UNTITLED_FILE,
-        range: NOWHERE
-      })
+      this._title.set(DEFAULT_TITLE)
     }
   }
 
