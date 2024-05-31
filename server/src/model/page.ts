@@ -200,7 +200,7 @@ export class PageNode extends Fileish {
       }
     })))
 
-    const titleNode = select('//cnxml:title', doc) as Element[]
+    const titleNode = select('/cnxml:document/cnxml:title', doc) as Element[]
     if (titleNode.length > 0) {
       this._title.set(textWithRange(titleNode[0]))
     } else {
