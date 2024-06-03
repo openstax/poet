@@ -53,11 +53,6 @@
         "icon": "$(preview)"
       },
       {
-        "command": "openstax.showTocEditor",
-        "title": "Show ToC Editor",
-        "category": "Openstax"
-      },
-      {
         "command": "openstax.pushContent",
         "title": "Push Content",
         "category": "Openstax"
@@ -77,6 +72,12 @@
         "command": "openstax.validateContent",
         "title": "Validate Content",
         "category": "Openstax"
+      },
+      {
+        "command": "openstax.test",
+        "title": "Validate Content",
+        "category": "Openstax",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
@@ -103,7 +104,7 @@
     "viewsWelcome": [
       {
         "view": "openstax-controls",
-        "contents": "[Open ToC Editor](command:openstax.showTocEditor)\n[Push Content](command:openstax.pushContent)\n[Generate README](command:openstax.generateReadme)\n[Validate Content](command:openstax.validateContent)"
+        "contents": "[Push Content](command:openstax.pushContent)\n[Generate README](command:openstax.generateReadme)\n[Validate Content](command:openstax.validateContent)"
       }
     ],
     "menus": {
@@ -140,6 +141,13 @@
           "command": "openstax.toggleTocTreesFiltering",
           "when": "view == tocTrees",
           "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "openstax.test",
+          "when": "view == tocTrees && viewItem =~ /,?delete,?/",
+          "group": "inline"
         }
       ]
     },

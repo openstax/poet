@@ -582,6 +582,14 @@ export class ModelManager {
   async modifyToc(evt: TocModification) {
     ModelManager.debug('[MODIFY_TOC]', evt)
 
+    // !!WARNING!!
+    // When this function calls `writeBookToc`, it causes`this.bookTocs` to
+    // update with a new array, distinct from the old, before the function
+    // continues. This can cause variables that reference `this.bookTocs` to
+    // become stale which can result in unexpected behavior. For more
+    // information, see `sideEffectFn` in ModelManager constructor.
+    // !!WARNING!!
+
     const bookToc = this.bookTocs[evt.bookIndex]
     const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
     const nodeAndParent = this.lookupToken(evt.nodeToken)
@@ -604,12 +612,26 @@ export class ModelManager {
       } else if (evt.type === TocModificationKind.Remove) {
         removeNode(parent, node)
         await writeBookToc(book, bookToc)
-      } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
+      } else if (evt.type === TocModificationKind.Move) {
+        const recFindParentBook = (n: ClientTocNode | BookToc): BookToc => {
+          if (n.type === BookRootNode.Singleton) return n
+          const { parent } = expectValue(this.lookupToken(n.value.token), `BUG: Unexpected orphaned node: ${n.value.token}`)
+          return recFindParentBook(parent)
+        }
+        const srcBookToc = recFindParentBook(parent)
         removeNode(parent, node)
         // Add the node
         const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
         newParentChildren.splice(evt.newChildIndex, 0, node)
         await writeBookToc(book, bookToc)
+        // When moving between books in a bundle, update both collection files
+        if (srcBookToc.absPath !== bookToc.absPath) {
+          const srcBookNode = expectValue(
+            this.bundle.allBooks.get(srcBookToc.absPath),
+            `BUG: Parent book did not exist in bundle: ${srcBookToc.absPath}`
+          )
+          await writeBookToc(srcBookNode, srcBookToc)
+        }
       }
     } else /* istanbul ignore else */ if (evt.type === TocModificationKind.Move) {
       // We are manipulating an orphaned Page (probably moving it into the ToC of a book)
@@ -626,8 +648,9 @@ export class ModelManager {
           }
         }
         // Add the node
-        /* istanbul ignore next */
-        const newParentChildren = evt.newParentToken !== undefined ? childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node) : bookToc.tocTree
+        const newParentChildren = evt.newParentToken !== undefined
+          ? /* istanbul ignore next */ childrenOf(expectValue(this.lookupToken(evt.newParentToken), 'BUG: should always have a parent').node)
+          : bookToc.tocTree
         newParentChildren.splice(evt.newChildIndex, 0, node)
         await writeBookToc(book, bookToc)
       } else {
@@ -643,7 +666,6 @@ export class ModelManager {
       if (node.value.token === token) {
         return { node, parent }
       }
-      /* istanbul ignore else */
       if (node.type === TocNodeKind.Subbook) {
         const ret = this.recFind(token, node, node.children)
         if (ret !== undefined) return ret
@@ -654,7 +676,6 @@ export class ModelManager {
   private lookupToken(token: string): Opt<NodeAndParent> {
     for (const b of this.bookTocs) {
       const ret = this.recFind(token, b, b.tocTree)
-      /* istanbul ignore else */
       if (ret !== undefined) return ret
     }
   }
