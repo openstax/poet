@@ -72,7 +72,7 @@
     <xs:complexType>
       <xs:all>
         <xs:element ref="mdml:content-id"/>
-        <xs:element ref="mdml:title"/>
+        <xs:element minOccurs="0" ref="mdml:title"/>
         <xs:element ref="mdml:uuid"/>
         <xs:element minOccurs="0" ref="mdml:abstract"/>
       </xs:all>
