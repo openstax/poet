@@ -14,6 +14,7 @@ export class Bundle extends Fileish implements Bundleish {
   public readonly allH5P: Factory<H5PExercise> = new Factory<H5PExercise>((absPath: string) => new H5PExercise(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   public readonly allBooks = new Factory((absPath: string) => new BookNode(this, this.pathHelper, absPath), (x) => this.pathHelper.canonicalize(x))
   private readonly _books = Quarx.observable.box<Opt<I.Set<WithRange<BookNode>>>>(undefined)
+  private readonly _booksXMLBooks = Quarx.observable.box<Opt<I.Set<WithRange<BooksXMLBook>>>>(undefined)
   private readonly _duplicateFilePaths = Quarx.observable.box<I.Set<string>>(I.Set<string>())
   private readonly _duplicateUUIDs = Quarx.observable.box<I.Set<string>>(I.Set<string>())
   // TODO: parse these from META-INF/books.xml
@@ -52,9 +53,17 @@ export class Bundle extends Fileish implements Bundleish {
 
   protected parseXML = (doc: Document) => {
     const bookNodes = select('//bk:book', doc) as Element[]
-    this._books.set(I.Set(bookNodes.map(b => {
+    const booksXMLBooks = I.Set(bookNodes.map((b => {
       const range = calculateElementPositions(b)
       const href = expectValue(b.getAttribute('href'), 'ERROR: Missing @href attribute on book element')
+      const slug = expectValue(b.getAttribute('slug'), 'ERROR: Missing @slug attribute on book element')
+      const v: BooksXMLBook = { slug, href }
+      return { v, range }
+    })))
+    this._booksXMLBooks.set(booksXMLBooks)
+    this._books.set(I.Set(booksXMLBooks.map(b => {
+      const range = b.range
+      const href = b.v.href
       const book = this.allBooks.getOrAdd(join(this.pathHelper, PathKind.ABS_TO_REL, this.absPath, href))
       return {
         v: book,
@@ -90,6 +99,7 @@ export class Bundle extends Fileish implements Bundleish {
 
   protected getValidationChecks(): ValidationCheck[] {
     const books = this.__books()
+    const booksXMLBooks = this.ensureLoaded(this._booksXMLBooks)
     return [
       {
         message: BundleValidationKind.MISSING_BOOK,
@@ -100,12 +110,29 @@ export class Bundle extends Fileish implements Bundleish {
         message: BundleValidationKind.NO_BOOKS,
         nodesToLoad: I.Set(),
         fn: () => books.isEmpty() ? I.Set([NOWHERE]) : I.Set()
+      },
+      {
+        message: BundleValidationKind.MISMATCHED_SLUG,
+        nodesToLoad: this.books,
+        fn: () => booksXMLBooks
+          .filter(
+            ({ v: bx }) => books.filter(
+              ({ v: b }) => b.isValidXML && b.exists && b.slug === bx.slug
+            ).size === 0
+          )
+          .map(bx => bx.range)
       }
     ]
   }
 }
 
 export class BundleValidationKind extends ValidationKind {
+  static MISMATCHED_SLUG = new BundleValidationKind('Slug does not match any defined in a book')
   static MISSING_BOOK = new BundleValidationKind('Missing book')
   static NO_BOOKS = new BundleValidationKind('No books defined')
+}
+
+interface BooksXMLBook {
+  slug: string
+  href: string
 }
