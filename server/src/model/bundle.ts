@@ -116,8 +116,13 @@ export class Bundle extends Fileish implements Bundleish {
         nodesToLoad: this.books,
         fn: () => booksXMLBooks
           .filter(
-            ({ v: bx }) => books.filter(
-              ({ v: b }) => b.isValidXML && b.exists && b.slug === bx.slug
+            ({ v: bx, range: xr }) => books.filter(
+              ({ v: b, range: br }) =>
+                xr.start === br.start &&
+                xr.end === br.end &&
+                b.isValidXML &&
+                b.exists &&
+                b.slug === bx.slug
             ).size === 0
           )
           .map(bx => bx.range)
