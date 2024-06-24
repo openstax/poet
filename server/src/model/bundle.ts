@@ -127,6 +127,7 @@ export class Bundle extends Fileish implements Bundleish {
 }
 
 export class BundleValidationKind extends ValidationKind {
+  // openstax/enki/bakery-src/scripts/link_single.py#L59
   static MISMATCHED_SLUG = new BundleValidationKind('Slug does not match any defined in a book')
   static MISSING_BOOK = new BundleValidationKind('Missing book')
   static NO_BOOKS = new BundleValidationKind('No books defined')
