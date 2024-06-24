@@ -114,18 +114,22 @@ export class Bundle extends Fileish implements Bundleish {
       {
         message: BundleValidationKind.MISMATCHED_SLUG,
         nodesToLoad: this.books,
-        fn: () => booksXMLBooks
-          .filter(
-            ({ v: bx, range: xr }) => books.filter(
-              ({ v: b, range: br }) =>
-                xr.start === br.start &&
-                xr.end === br.end &&
-                b.isValidXML &&
-                b.exists &&
-                b.slug === bx.slug
-            ).size === 0
-          )
-          .map(bx => bx.range)
+        fn: () => {
+          return booksXMLBooks
+            .filter(({ v: bx, range: rx }) => {
+              const maybeBookNode = books.find(
+                ({ range: r }) => r.start === rx.start && r.end === rx.end
+              )
+              if (maybeBookNode !== undefined) {
+                const { v: book } = maybeBookNode
+                if (book.isValidXML && book.exists) {
+                  return book.slug !== bx.slug
+                }
+              }
+              return false
+            })
+            .map(({ range }) => range)
+        }
       }
     ]
   }
@@ -133,7 +137,7 @@ export class Bundle extends Fileish implements Bundleish {
 
 export class BundleValidationKind extends ValidationKind {
   // openstax/enki/bakery-src/scripts/link_single.py#L59
-  static MISMATCHED_SLUG = new BundleValidationKind('Slug does not match any defined in a book')
+  static MISMATCHED_SLUG = new BundleValidationKind('Slug does not match the one defined in the book')
   static MISSING_BOOK = new BundleValidationKind('Missing book')
   static NO_BOOKS = new BundleValidationKind('No books defined')
 }
