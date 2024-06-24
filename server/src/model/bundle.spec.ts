@@ -1,6 +1,6 @@
 import { expect } from '@jest/globals'
 import { type Bundle, BundleValidationKind } from './bundle'
-import { bundleMaker, expectErrors, first, loadSuccess, makeBundle, read } from './spec-helpers.spec'
+import { bookMaker, bundleMaker, expectErrors, first, loadSuccess, makeBundle, read } from './spec-helpers.spec'
 
 describe('Bundle validations', () => {
   it(BundleValidationKind.NO_BOOKS.title, () => {
@@ -13,6 +13,12 @@ describe('Bundle validations', () => {
     const book = first(bundle.books)
     book.load(undefined)
     expectErrors(bundle, [BundleValidationKind.MISSING_BOOK])
+  })
+  it(BundleValidationKind.MISMATCHED_SLUG.title, () => {
+    const bundle = loadSuccess(makeBundle())
+    const book = first(bundle.books)
+    book.load(bookMaker({ slug: 'something' }))
+    expectErrors(bundle, [BundleValidationKind.MISMATCHED_SLUG])
   })
 })
 

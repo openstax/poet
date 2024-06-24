@@ -11,7 +11,7 @@ describe('Book validations', () => {
       { title: chapterTitle, children: [] },
       { title: chapterTitle, children: [] }
     ]
-    book.load(bookMaker({ toc }))
+    book.load(bookMaker({ toc, slug: 'test' }))
     expectErrors(book, [BookValidationKind.DUPLICATE_CHAPTER_TITLE, BookValidationKind.DUPLICATE_CHAPTER_TITLE])
   })
   it(BookValidationKind.MISSING_PAGE.title, () => {
@@ -28,10 +28,21 @@ describe('Book validations', () => {
       { title: 'Chapter 1', children: ['m00001'] },
       { title: 'Chapter 2', children: ['m00001'] }
     ]
-    book.load(bookMaker({ toc }))
+    book.load(bookMaker({ toc, slug: 'test' }))
     const page = first(book.pages)
     page.load(pageMaker({}))
     expectErrors(book, [BookValidationKind.DUPLICATE_PAGE, BookValidationKind.DUPLICATE_PAGE])
+  })
+  it(BookValidationKind.INVALID_BOOK_NAME.title, () => {
+    const bundle = makeBundle()
+    const book = first(loadSuccess(bundle).books)
+    const toc: BookMakerTocNode[] = [
+      { title: 'Chapter 1', children: ['m00001'] }
+    ]
+    book.load(bookMaker({ toc, slug: 'not-test' }))
+    const page = first(book.pages)
+    page.load(pageMaker({}))
+    expectErrors(book, [BookValidationKind.INVALID_BOOK_NAME])
   })
 })
 
