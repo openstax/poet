@@ -665,7 +665,6 @@ export class ModelManager {
 <document xmlns="http://cnx.rice.edu/cnxml">
   <title/>
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
-    <md:title/>
     <md:content-id/>
     <md:uuid/>
   </metadata>
@@ -689,7 +688,6 @@ export class ModelManager {
 
       const doc = new DOMParser().parseFromString(template(), 'text/xml')
       selectOne('/cnxml:document/cnxml:title', doc).textContent = title
-      selectOne('/cnxml:document/cnxml:metadata/md:title', doc).textContent = title
       selectOne('/cnxml:document/cnxml:metadata/md:content-id', doc).textContent = newModuleId
       selectOne('/cnxml:document/cnxml:metadata/md:uuid', doc).textContent = uuid4()
       const xmlStr = new XMLSerializer().serializeToString(doc)
