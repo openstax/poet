@@ -12,10 +12,19 @@ const testTocPage: ClientTocNode = {
     fileId: 'fileId'
   }
 }
+const testTocAncillary: ClientTocNode = {
+  type: TocNodeKind.Ancillary,
+  value: {
+    absPath: '/path/to/ancillary',
+    token: 'token',
+    title: 'title',
+    fileId: 'fileId'
+  }
+}
 const testTocSubbook: ClientTocNode = {
   type: TocNodeKind.Subbook,
   value: { token: 'token', title: 'title' },
-  children: [testTocPage]
+  children: [testTocPage, testTocAncillary]
 }
 const testToc: BookToc = {
   type: BookRootNode.Singleton,
@@ -27,13 +36,13 @@ const testToc: BookToc = {
   licenseUrl: 'licenseUrl',
   tocTree: [testTocSubbook]
 }
-
 describe('Toc Provider', () => {
   const p = new TocsTreeProvider()
   it('returns tree items for children', () => {
     expect(p.getTreeItem(testToc)).toMatchSnapshot()
     expect(p.getTreeItem(testTocSubbook)).toMatchSnapshot()
     expect(p.getTreeItem(testTocPage)).toMatchSnapshot()
+    expect(p.getTreeItem(testTocAncillary)).toMatchSnapshot()
   })
   it('filters fileids when filtering is set', () => {
     const p = new TocsTreeProvider()

@@ -68,10 +68,28 @@
         "category": "Openstax"
       },
       {
+        "command": "openstax.addAncillaryToToc",
+        "title": "Add Ancillary",
+        "category": "Openstax",
+        "icon": "$(person-add)"
+      },
+      {
+        "command": "openstax.addPageToToc",
+        "title": "Add Page",
+        "category": "Openstax",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "openstax.addSubBookToToc",
+        "title": "Add Sub Book",
+        "category": "Openstax",
+        "icon": "$(file-directory-create)"
+      },
+      {
         "command": "openstax.toggleTocTreesFiltering",
         "title": "Toggle ToC Filtering",
         "category": "Openstax",
-        "icon": "$(filter)"
+        "icon": "$(expand-all)"
       },
       {
         "command": "openstax.validateContent",
@@ -79,8 +97,14 @@
         "category": "Openstax"
       },
       {
-        "command": "openstax.test",
-        "title": "Validate Content",
+        "command": "openstax.renameNode",
+        "title": "Rename Node",
+        "category": "Openstax",
+        "icon": "$(pencil)"
+      },
+      {
+        "command": "openstax.removeNode",
+        "title": "Remove Node",
         "category": "Openstax",
         "icon": "$(trash)"
       }
@@ -136,7 +160,7 @@
       ],
       "commandPalette": [
         {
-          "command": "openstax.showPreviewToSide",
+          "command": "openstax.showPreviewToSide", 
           "when": "editorLangId == xml && !notebookEditorFocused",
           "group": "navigation"
         }
@@ -146,11 +170,30 @@
           "command": "openstax.toggleTocTreesFiltering",
           "when": "view == tocTrees",
           "group": "navigation"
+        },
+        {
+          "command": "openstax.addAncillaryToToc",
+          "when": "view == tocTrees",
+          "group": "navigation"
+        },
+        {
+          "command": "openstax.addSubBookToToc",
+          "when": "view == tocTrees",
+          "group": "navigation"
+        },
+        {
+          "command": "openstax.addPageToToc",
+          "when": "view == tocTrees",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "openstax.test",
+          "command": "openstax.renameNode",
+          "when": "view == tocTrees && viewItem =~ /,?rename,?/",
+          "group": "inline"
+        },{
+          "command": "openstax.removeNode",
           "when": "view == tocTrees && viewItem =~ /,?delete,?/",
           "group": "inline"
         }

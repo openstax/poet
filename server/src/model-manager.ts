@@ -597,7 +597,7 @@ export class ModelManager {
     if (nodeAndParent !== undefined) {
       // We are manipulating an item in a Book ToC
       const { node, parent } = nodeAndParent
-      if (evt.type === TocModificationKind.PageRename || evt.type === TocModificationKind.SubbookRename) {
+      if (evt.type === TocModificationKind.PageRename || evt.type === TocModificationKind.SubbookRename || evt.type === TocModificationKind.AncillaryRename) {
         if (node.type === TocNodeKind.Page) {
           const page = expectValue(this.bundle.allPages.get(node.value.absPath), `BUG: This node should exist: ${node.value.absPath}`)
           const fsPath = URI.parse(node.value.absPath).fsPath
@@ -680,20 +680,7 @@ export class ModelManager {
     }
   }
 
-  public async createPage(bookIndex: number, title: string) {
-    const template = (): string => {
-      return `
-<document xmlns="http://cnx.rice.edu/cnxml">
-  <title/>
-  <metadata xmlns:md="http://cnx.rice.edu/mdml">
-    <md:title/>
-    <md:content-id/>
-    <md:uuid/>
-  </metadata>
-  <content>
-  </content>
-</document>`.trim()
-    }
+  public async createDocument(bookIndex: number, title: string, documentType: string, template: string) {
     const workspaceRootUri = URI.parse(this.bundle.workspaceRootUri)
     const pageDirUri = Utils.joinPath(workspaceRootUri, 'modules')
     let moduleNumber = 0
@@ -708,9 +695,8 @@ export class ModelManager {
       const pageUri = Utils.joinPath(pageDirUri, newModuleId, 'index.cnxml')
       const page = this.bundle.allPages.getOrAdd(pageUri.fsPath) // fsPath works for tests and gets converted to file:// for real
 
-      const doc = new DOMParser().parseFromString(template(), 'text/xml')
+      const doc = new DOMParser().parseFromString(template, 'text/xml')
       selectOne('/cnxml:document/cnxml:title', doc).textContent = title
-      selectOne('/cnxml:document/cnxml:metadata/md:title', doc).textContent = title
       selectOne('/cnxml:document/cnxml:metadata/md:content-id', doc).textContent = newModuleId
       selectOne('/cnxml:document/cnxml:metadata/md:uuid', doc).textContent = uuid4()
       const xmlStr = new XMLSerializer().serializeToString(doc)
@@ -718,7 +704,7 @@ export class ModelManager {
       page.load(xmlStr)
       await mkdirp(Utils.joinPath(pageDirUri, newModuleId).fsPath)
       await fs.promises.writeFile(pageUri.fsPath, xmlStr)
-      ModelManager.debug(`[NEW_PAGE] Created: ${pageUri.fsPath}`)
+      ModelManager.debug(`[NEW_${documentType.toUpperCase()}] Created: ${pageUri.fsPath}`)
 
       const bookToc = this.bookTocs[bookIndex]
       const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
@@ -727,11 +713,39 @@ export class ModelManager {
         value: { token: 'unused-when-writing', title: undefined, fileId: newModuleId, absPath: page.absPath }
       })
       await writeBookToc(book, bookToc)
-      ModelManager.debug(`[CREATE_PAGE] Prepended to Book: ${pageUri.fsPath}`)
+      ModelManager.debug(`[CREATE_${documentType.toUpperCase()}] Prepended to Book: ${pageUri.fsPath}`)
       return { page, id: newModuleId }
     }
     /* istanbul ignore next */
     throw new Error('Error: Too many page directories already exist')
+  }
+
+  public async createPage(bookIndex: number, title: string) {
+    return await this.createDocument(bookIndex, title, 'page', `
+<document xmlns="http://cnx.rice.edu/cnxml">
+  <title/>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:title/>
+    <md:content-id/>
+    <md:uuid/>
+  </metadata>
+  <content>
+  </content>
+</document>`.trim())
+  }
+
+  public async createAncillary(bookIndex: number, title: string) {
+    return await this.createDocument(bookIndex, title, 'ancilliary', `
+<document xmlns="http://cnx.rice.edu/cnxml" class="super" resource="" document-link="" ancillary-type="">
+  <title/>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:title/>
+    <md:content-id/>
+    <md:uuid/>
+  </metadata>
+  <content class="super">
+  </content>
+</document>`.trim())
   }
 
   public async createSubbook(bookIndex: number, title: string) {

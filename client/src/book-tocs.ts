@@ -87,7 +87,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
       return [...this.bookTocs, ...this.orphans]
     } else if (node.type === BookRootNode.Singleton) {
       kids = node.tocTree
-    } else if (node.type === TocNodeKind.Page) {
+    } else if (node.type === TocNodeKind.Page || node.type === TocNodeKind.Ancillary) {
       kids = []
     } else {
       kids = node.children

@@ -147,6 +147,8 @@ connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocM
     await manager.createPage(event.bookIndex, event.title)
   } else if (event.type === TocNodeKind.Subbook) {
     await manager.createSubbook(event.bookIndex, event.title)
+  } else if (event.type === TocNodeKind.Ancillary) {
+    await manager.createAncillary(event.bookIndex, event.title)
   } else {
     await manager.modifyToc(event)
   }

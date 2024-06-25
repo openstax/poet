@@ -2,7 +2,8 @@
 // This enum is also hardcoded in the toc-editor Webview
 export enum TocNodeKind {
   Subbook = 'TocNodeKind.Subbook',
-  Page = 'TocNodeKind.Page'
+  Page = 'TocNodeKind.Page',
+  Ancillary = 'TocNodeKind.Ancillary'
 }
 
 export enum BookRootNode {
@@ -10,20 +11,24 @@ export enum BookRootNode {
 }
 
 export enum TocModificationKind {
+  Add = 'TocModificationKind.Add',
   Move = 'TocModificationKind.Move',
   Remove = 'TocModificationKind.Remove',
   PageRename = 'TocModificationKind.PageRename',
   SubbookRename = 'TocModificationKind.SubbookRename',
+  AncillaryRename = 'TocModificationKind.AncillaryRename'
 }
 
-type TocNode<I, L> = TocSubbook<I, L> | TocPage<L>
+type TocNode<I, L> = TocSubbook<I, L> | TocPage<L> | TocAncillary<L>
 export interface TocSubbook<I, L> { readonly type: TocNodeKind.Subbook, children: Array<TocNode<I, L>>, value: I }
 export interface TocPage<L> { readonly type: TocNodeKind.Page, value: L }
+export interface TocAncillary<L> { readonly type: TocNodeKind.Ancillary, value: L }
 
 export type Token = string
 export interface ClientPageish { token: Token, title: string | undefined, fileId: string, absPath: string }
+export interface ClientAncillaryish { token: Token, title: string | undefined, fileId: string, absPath: string }
 export interface ClientSubbookish { token: Token, title: string }
-export type ClientTocNode = TocNode<ClientSubbookish, ClientPageish>
+export type ClientTocNode = TocNode<ClientSubbookish, (ClientPageish | ClientAncillaryish)>
 
 export interface BookToc {
   readonly type: BookRootNode.Singleton
@@ -38,9 +43,9 @@ export interface BookToc {
 
 export interface TocModificationParams {
   workspaceUri: string
-  event: TocModification | CreateSubbookEvent | CreatePageEvent
+  event: TocModification | CreateSubbookEvent | CreatePageEvent | CreateAncillaryEvent
 }
-export type TocModification = (TocMoveEvent | TocRemoveEvent | PageRenameEvent | SubbookRenameEvent)
+export type TocModification = (TocMoveEvent | TocRemoveEvent | PageRenameEvent | SubbookRenameEvent | AncillaryRenameEvent)
 export interface TocMoveEvent {
   readonly type: TocModificationKind.Move
   readonly nodeToken: Token
@@ -67,12 +72,27 @@ export interface SubbookRenameEvent {
   readonly bookIndex: number
 }
 
+export interface AncillaryRenameEvent {
+  readonly type: TocModificationKind.AncillaryRename
+  readonly newTitle: string
+  readonly nodeToken: Token
+  readonly bookIndex: number
+}
+
 export interface CreateSubbookEvent {
   readonly type: TocNodeKind.Subbook
   readonly title: string
-  readonly slug: string
+  readonly slug: string | undefined
   readonly bookIndex: number
 }
+
+export interface CreateAncillaryEvent {
+  readonly type: TocNodeKind.Ancillary
+  readonly title: string
+  readonly slug: string | undefined
+  readonly bookIndex: number
+}
+
 export interface CreatePageEvent {
   readonly type: TocNodeKind.Page
   readonly title: string

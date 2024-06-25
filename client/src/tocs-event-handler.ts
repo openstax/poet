@@ -1,12 +1,12 @@
 import vscode from 'vscode'
 import { type TocsTreeProvider, type BookOrTocNode } from './book-tocs'
-import { type TocModification, TocModificationKind, type TocModificationParams, TocNodeKind, BookRootNode } from '../../common/src/toc'
+import { type TocModification, TocModificationKind, type TocModificationParams, TocNodeKind, BookRootNode, type CreatePageEvent, type CreateSubbookEvent, type CreateAncillaryEvent } from '../../common/src/toc'
 import { ExtensionServerRequest } from '../../common/src/requests'
 import { expect, getRootPathUri } from './utils'
 import { type ExtensionHostContext } from './panel'
 
 const getNodeToken = (node: BookOrTocNode) => {
-  return node.type === TocNodeKind.Page || node.type === TocNodeKind.Subbook
+  return node.type === TocNodeKind.Page || node.type === TocNodeKind.Subbook || node.type === TocNodeKind.Ancillary
     ? node.value.token
     : undefined
 }
@@ -26,7 +26,7 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     return expect(getRootPathUri(), 'Could not get root path uri').toString()
   }
 
-  private async fireEvent(event: TocModification) {
+  private async fireEvent(event: TocModification | CreateSubbookEvent | CreatePageEvent | CreateAncillaryEvent) {
     const workspaceUri = this.workspaceUri
     const params: TocModificationParams = { workspaceUri, event }
     await this.context.client.sendRequest(
@@ -82,6 +82,84 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
       bookIndex
     }
     await this.fireEvent(event)
+  }
+
+  async askTitle(title?: string): Promise<string | undefined> {
+    return await vscode.window.showInputBox({
+      prompt: 'Please enter the title',
+      value: title ?? '',
+      validateInput: text => {
+        return text.trim().length === 0 ? 'Title cannot be empty' : null
+      }
+    })
+  }
+
+  async addNode(nodeType: TocNodeKind, node: BookOrTocNode, slug: string | undefined) {
+    const title = await this.askTitle()
+    if (title === undefined) { return }
+    const bookIndex = this.tocTreesProvider.getParentBookIndex(node) ?? 0
+    if (nodeType === TocNodeKind.Page) {
+      const event: CreatePageEvent = {
+        type: TocNodeKind.Page,
+        title,
+        bookIndex
+      }
+      await this.fireEvent(event)
+    } else if (nodeType === TocNodeKind.Subbook) {
+      const event: CreateSubbookEvent = {
+        type: TocNodeKind.Subbook,
+        title,
+        slug,
+        bookIndex
+      }
+      await this.fireEvent(event)
+    } else if (nodeType === TocNodeKind.Ancillary) {
+      const event: CreateAncillaryEvent = {
+        type: TocNodeKind.Ancillary,
+        title,
+        slug,
+        bookIndex
+      }
+      await this.fireEvent(event)
+    }
+  }
+
+  async renameNode(node: BookOrTocNode) {
+    // TODO Implement the rename functionality using inline editing (wait for the API to be available)
+    // https://github.com/microsoft/vscode/issues/97190
+    // https://stackoverflow.com/questions/70594061/change-an-existing-label-name-in-tree-view-vscode-extension
+    const newTitle = await this.askTitle(('title' in node) ? node.title : '')
+    const nodeToken = expect(
+      getNodeToken(node),
+      'BUG: Could not get token of renamed node'
+    )
+    if (newTitle === undefined) { return }
+    const bookIndex = this.tocTreesProvider.getParentBookIndex(node) ?? 0
+    if (node.type === TocNodeKind.Subbook) {
+      const event: TocModification = {
+        type: TocModificationKind.SubbookRename,
+        newTitle,
+        nodeToken,
+        bookIndex
+      }
+      await this.fireEvent(event)
+    } else if (node.type === TocNodeKind.Page) {
+      const event: TocModification = {
+        type: TocModificationKind.PageRename,
+        newTitle,
+        nodeToken,
+        bookIndex
+      }
+      await this.fireEvent(event)
+    } else if (node.type === TocNodeKind.Ancillary) {
+      const event: TocModification = {
+        type: TocModificationKind.AncillaryRename,
+        newTitle,
+        nodeToken,
+        bookIndex
+      }
+      await this.fireEvent(event)
+    }
   }
 
   handleDrag(source: readonly BookOrTocNode[], dataTransfer: vscode.DataTransfer): void {

@@ -228,7 +228,7 @@ function traverse(node: BookNode | TocNodeWithRange, indexes: number[]): TocPage
 
 /* Returns true if this node has nothing worth keeping (trimMe) */
 function trimNodes(node: ClientTocNode | BookToc, keepPages: Set<PageNode>): boolean {
-  if (node.type === TocNodeKind.Page) {
+  if (node.type === TocNodeKind.Page || node.type === TocNodeKind.Ancillary) {
     const hasKeeper = [...keepPages].find(n => n.absPath === node.value.absPath) !== undefined
     return !hasKeeper
   } else {

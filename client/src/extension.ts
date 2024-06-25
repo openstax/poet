@@ -14,6 +14,7 @@ import { type BookOrTocNode, TocsTreeProvider } from './book-tocs'
 import { type BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
 import { readmeGenerator } from './generate-readme'
 import { TocsEventHandler } from './tocs-event-handler'
+import { TocNodeKind } from '../../common/src/toc'
 
 let tocTreesView: vscode.TreeView<BookOrTocNode>
 let tocTreesProvider: TocsTreeProvider
@@ -109,8 +110,12 @@ function doRest(client: LanguageClient): ExtensionExports {
   vscode.commands.registerCommand('openstax.generateReadme', ensureCatch(readmeGenerator(hostContext)))
   tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true, dragAndDropController: tocEventHandler })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
+  vscode.commands.registerCommand('openstax.addAncillaryToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Ancillary, node, 'test') }))
+  vscode.commands.registerCommand('openstax.addPageToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Page, node, 'test') }))
+  vscode.commands.registerCommand('openstax.addSubBookToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Subbook, node, 'test') }))
   vscode.commands.registerCommand('openstax.validateContent', ensureCatch(validateContent))
-  vscode.commands.registerCommand('openstax.test', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.removeNode(node) }))
+  vscode.commands.registerCommand('openstax.removeNode', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.removeNode(node) }))
+  vscode.commands.registerCommand('openstax.renameNode', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.renameNode(node) }))
   void ensureCatchPromise(setDefaultGitConfig())
   void ensureCatchPromise(initPrivateSubmodule(hostContext))
 
