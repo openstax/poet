@@ -9,27 +9,15 @@ describe('Page', () => {
   beforeEach(() => {
     page = new PageNode(makeBundle(), FS_PATH_HELPER, '/some/path/filename')
   })
-  it('can return a title before being loaded', () => {
-    const quickTitle = 'quick title'
+  it('defaults to untitled before being loaded', () => {
     expect(page.isLoaded).toBe(false)
-    const title = page.title(() => `a regexp reads this string so it does not have to be XML <title>${quickTitle}</title>.`)
-    expect(title).toBe(quickTitle)
-    expect(page.isLoaded).toBe(false)
-  })
-  it('falls back if the quick-title did not find a title', () => {
-    const quickTitle = 'quick title'
-    expect(page.isLoaded).toBe(false)
-    let title = page.title(() => 'no title element to be seen in this contents')
-    expect(title).toBe(UNTITLED_FILE)
-    title = page.title(() => `<title>${quickTitle}</title>`)
-    expect(title).toBe(quickTitle)
-    title = page.title(() => 'Just an opening <title>but no closing tag')
+    const title = page.title
     expect(title).toBe(UNTITLED_FILE)
     expect(page.isLoaded).toBe(false)
   })
   it('sets Untitled when there is no title element in the CNXML', () => {
     page.load(pageMaker({ title: null }))
-    expect(page.optTitle).toBe(UNTITLED_FILE)
+    expect(page.title).toBe(UNTITLED_FILE)
   })
   it('errors if there are two uuid elements (or any element that should occur exactly once in the doc)', () => {
     expect(() => { page.load(pageMaker({ uuid: 'little bobby drop tables</md:uuid><md:uuid>injection is fun' })) })

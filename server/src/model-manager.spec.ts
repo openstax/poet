@@ -270,7 +270,13 @@ describe('processFilesystemChange()', () => {
       'META-INF/books.xml': bundleMaker({ books: [bookSlug] }),
       'collections/slug2.collection.xml': bookMaker({ slug: bookSlug, toc: [{ title: 'subbook', children: [pageId] }] }),
       'modules/m1234/index.cnxml': pageMaker({}),
-      'media/newpic.png': ''
+      'modules/a/ignored.txt': '',
+      'media/newpic.png': '',
+      'interactives/abc': {
+        'h5p.json': '',
+        'content.json': '',
+        'metadata.json': ''
+      }
     })
     const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
     manager = new ModelManager(bundle, conn)
@@ -284,7 +290,7 @@ describe('processFilesystemChange()', () => {
     sinon.resetBehavior()
     sinon.resetHistory()
   })
-  it('creates Images/Pages/Books', async () => {
+  it('creates Images/Pages/Books/H5P', async () => {
     // Verify each type of object gets loaded
     expect(manager.bundle.isLoaded).toBe(false)
     expect((await fireChange(FileChangeType.Created, 'META-INF/books.xml')).size).toBe(1)
@@ -294,7 +300,18 @@ describe('processFilesystemChange()', () => {
     expect((await fireChange(FileChangeType.Created, 'modules/m1234/index.cnxml')).size).toBe(1)
     expect((await fireChange(FileChangeType.Created, 'media/newpic.png')).size).toBe(1)
     expect((await fireChange(FileChangeType.Created, 'media/does-not-exist.png')).size).toBe(1)
-    expect((await fireChange(FileChangeType.Created, `${manager.bundle.paths.publicRoot}/does-not-exist/h5p.json`)).size).toBe(1)
+    expect((await fireChange(FileChangeType.Created, 'interactives/abc/h5p.json')).size).toBe(1)
+  })
+  it('handles directory creation', async () => {
+    // Verify each type of object gets loaded
+    expect(manager.bundle.isLoaded).toBe(false)
+    expect((await fireChange(FileChangeType.Created, 'META-INF')).size).toBe(1)
+    expect(manager.bundle.isLoaded).toBe(true)
+
+    expect((await fireChange(FileChangeType.Created, 'collections')).size).toBe(1)
+    expect((await fireChange(FileChangeType.Created, 'modules')).size).toBe(1)
+    expect((await fireChange(FileChangeType.Created, 'media')).size).toBe(1)
+    expect((await fireChange(FileChangeType.Created, 'interactives')).size).toBe(1)
   })
   it('does not create things it does not understand', async () => {
     expect((await fireChange(FileChangeType.Created, 'README.md')).toArray()).toEqual([])
@@ -311,7 +328,7 @@ describe('processFilesystemChange()', () => {
     expect(sendDiagnosticsStub.callCount).toBe(1)
 
     expect((await fireChange(FileChangeType.Changed, 'media/newpic.png')).toArray()).toEqual([]) // Since the model was not aware of the file yet
-    expect((await fireChange(FileChangeType.Changed, `${manager.bundle.paths.publicRoot}/does-not-exist/h5p.json`)).toArray()).toEqual([]) // Since the model was not aware of the file yet
+    expect((await fireChange(FileChangeType.Changed, 'interactives/does-not-exist/h5p.json')).toArray()).toEqual([]) // Since the model was not aware of the file yet
   })
   it('deletes Files and directories', async () => {
     // Load the Bundle, Book, and Page
@@ -645,7 +662,7 @@ describe('modifyToc()', () => {
     }
 
     await manager.modifyToc(evt)
-    expect(page.optTitle).toBe(newTitle)
+    expect(page.title).toBe(newTitle)
   })
   it('SubbookRename', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
@@ -809,7 +826,7 @@ describe('modifyToc()', () => {
 
     expect(book.pages.size).toBe(2)
     expect(I.Set(book.pages).has(loadedPage)).toBe(true)
-    expect(loadedPage.optTitle).toBe('TEST_TITLE')
+    expect(loadedPage.title).toBe('TEST_TITLE')
 
     // Add another page for code coverage reasons
     await manager.createPage(bookIndex, 'TEST_TITLE2')

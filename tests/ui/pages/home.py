@@ -320,7 +320,7 @@ class HomePoet:
 
     @property
     def gitpod_user_dropdown(self):
-        return self.page.wait_for_selector("div:nth-child(1) > div.relative")
+        return self.page.wait_for_selector("div:nth-child(1) > button:nth-child(1)")
 
     def click_gitpod_user_dropdown(self):
         self.gitpod_user_dropdown.click()
@@ -328,7 +328,7 @@ class HomePoet:
     @property
     def gitpod_user_selector(self):
         return self.page.wait_for_selector(
-            "div:nth-child(1) > div.relative :text('openstax')"
+            "div:nth-child(1) > button:nth-child(1) :text('openstax')"
         )
 
     def click_gitpod_user_selector(self):
@@ -347,6 +347,17 @@ class HomePoet:
         )
 
     def click_continue_with_github_button(self):
+        self.continue_with_github_button.click()
+
+    @property
+    def continue_with_workspace_is_visible(self):
+        return self.page.is_visible("div.flex:nth-child(4)")
+
+    @property
+    def continue_with_workspace_button(self):
+        return self.page.locator("button").get_by_text("Continue (⌘Enter)", exact=True)
+
+    def click_continue_with_workspace_button(self):
         self.continue_with_github_button.click()
 
     def wait_for_validation_end(

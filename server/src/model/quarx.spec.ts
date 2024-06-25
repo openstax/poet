@@ -1,19 +1,15 @@
 import { expect } from '@jest/globals'
 import * as Quarx from 'quarx'
 import { type TocNode, TocNodeKind } from './utils'
-import { bookMaker, first, loadSuccess, makeBundle, read } from './spec-helpers.spec'
+import { bookMaker, first, loadSuccess, makeBundle, pageMaker } from './spec-helpers.spec'
 import { type PageNode } from './page'
 
 describe('Quarx.autorun code', () => {
   it('Triggers a ToC autorun when the Page title changes', () => {
-    const bugTosser = () => { throw new Error('BUG: Title should already have been loaded') }
     const bundle = loadSuccess(makeBundle())
     const book = loadSuccess(first(bundle.books))
     const page = loadSuccess(first(book.pages))
-    const origTitle = page.title(bugTosser)
-    const xml = read(page.absPath)
-    const xml2 = xml.replace(origTitle, `${origTitle}2`)
-    const xml3 = xml2 + ' '
+    page.load(pageMaker({ title: 'test' }))
 
     let autorunCalls = 0
     let tocSideEffect = ''
@@ -25,10 +21,10 @@ describe('Quarx.autorun code', () => {
     })
     expect(autorunCalls).toBe(1)
     // Change the page title
-    page.load(xml2)
+    page.load(pageMaker({ title: 'test2' }))
     expect(autorunCalls).toBe(2)
-    // Changing page whitespace
-    page.load(xml3)
+    // Title remains the same
+    page.load(pageMaker({ title: 'test2' }))
     expect(autorunCalls).toBe(2)
 
     // just so that the tocSideEffect does not get marked as an unused variable by the linter
@@ -60,6 +56,6 @@ function tocToString(n: TocNode<PageNode>): string {
   if (n.type === TocNodeKind.Subbook) {
     return n.children.map(tocToString).join(' ')
   } else {
-    return n.page.title(() => { throw new Error('BUG: Title should have been loaded by now') })
+    return n.page.title
   }
 }

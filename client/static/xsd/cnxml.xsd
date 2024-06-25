@@ -41,6 +41,14 @@
         </xs:simpleType>
       </xs:attribute>
       <xs:attribute name="module-id"/>
+      <xs:attribute name="noindex">
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="true"/>
+            <xs:enumeration value="false"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
     </xs:complexType>
   </xs:element>
   <xs:group name="title">
@@ -72,7 +80,7 @@
     <xs:complexType>
       <xs:all>
         <xs:element ref="mdml:content-id"/>
-        <xs:element ref="mdml:title"/>
+        <xs:element minOccurs="0" ref="mdml:title"/>
         <xs:element ref="mdml:uuid"/>
         <xs:element minOccurs="0" ref="mdml:abstract"/>
       </xs:all>

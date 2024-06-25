@@ -19,6 +19,7 @@ import { type BookNode, type TocSubbookWithRange } from './model/book'
 import { mkdirp } from 'fs-extra'
 import { DOMParser, XMLSerializer } from 'xmldom'
 import { H5PExercise } from './model/h5p-exercise'
+import { walkDir, readdirSync, isDirectorySync, followSymbolicLinks } from './fs-utils'
 
 // Note: `[^/]+` means "All characters except slash"
 const IMAGE_RE = /\/media\/[^/]+\.[^.]+$/
@@ -47,6 +48,8 @@ function loadedAndExists(n: Fileish) {
 }
 
 function findOrCreateNode(bundle: Bundle, absPath: string) {
+  // TODO: Support `bundle.paths` (variable paths for modules, media,
+  // collections, etc)
   if (bundle.absPath === absPath) {
     return bundle
   } else if (IMAGE_RE.test(absPath)) {
@@ -55,7 +58,7 @@ function findOrCreateNode(bundle: Bundle, absPath: string) {
     return bundle.allPages.getOrAdd(absPath)
   } else if (BOOK_RE.test(absPath)) {
     return bundle.allBooks.getOrAdd(absPath)
-  } else if (absPath.endsWith('h5p.json')) {
+  } else if (absPath.endsWith('/h5p.json')) {
     return bundle.allH5P.getOrAdd(absPath)
   }
   return undefined
@@ -84,6 +87,12 @@ const checkFileExists = async (s: string): Promise<boolean> => {
   } catch {
     return false
   }
+}
+
+function walkDirectorySync(start: string, onError: (err: Error) => void) {
+  const shouldWalk = followSymbolicLinks()
+  const readdir = readdirSync
+  return walkDir({ readdir, shouldWalk, onError }, start)
 }
 
 function toStringFileChangeType(t: FileChangeType) {
@@ -258,17 +267,34 @@ export class ModelManager {
 
     if (type === FileChangeType.Created) {
       // Check if we are adding an Image/Page/Book
-      const node = findOrCreateNode(bundle, uri)
+      const tryGetUpdatedNode = async (bundle: Bundle, uri: string) => {
+        const node = findOrCreateNode(bundle, uri)
+        if (node !== undefined) await this.readAndUpdate(node)
+        return node
+      }
+      const relatedNodes: Fileish[] = []
+      const node = await tryGetUpdatedNode(bundle, uri)
       if (node !== undefined) {
         ModelManager.debug('[FILESYSTEM_EVENT] Adding item')
-        await this.readAndUpdate(node)
-        this.sendAllDiagnostics()
-        return I.Set([node])
+        relatedNodes.push(node)
       } else {
-        // No, we are adding something unknown. Ignore
-        ModelManager.debug('[FILESYSTEM_EVENT] New file did not match anything we understand. Ignoring', uri)
-        return I.Set()
+        const { fsPath } = URI.parse(uri)
+        if (!isDirectorySync(fsPath)) {
+          // No, we are adding something unknown. Ignore
+          ModelManager.debug('[FILESYSTEM_EVENT] New path did not match anything we understand. Ignoring', uri)
+          return I.Set()
+        }
+        ModelManager.debug('[FILESYSTEM_EVENT] Searching directory', fsPath)
+        const onError = (err: Error) => { ModelManager.debug('[MODEL_MANAGER]', err) }
+        for (const dirent of walkDirectorySync(fsPath, onError)) {
+          if (!dirent.isFile()) continue
+          const node = await tryGetUpdatedNode(bundle, dirent.path)
+          if (node === undefined) continue
+          relatedNodes.push(node)
+        }
       }
+      this.sendAllDiagnostics()
+      return I.Set(relatedNodes)
     } else if (type === FileChangeType.Changed) {
       const item = findNode(bundle, uri)
       if (item !== undefined) {
@@ -385,11 +411,13 @@ export class ModelManager {
         diagnostics
       })
     } else {
-      // push this task back onto the job stack and then add loading jobs for each node that needs to load
-      const unloadedNodes = nodesToLoad.filter(n => !n.isLoaded)
-      ModelManager.debug('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
-      this.jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => { this.sendFileDiagnostics(node) } })
-      unloadedNodes.forEach(n => { this.jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => { await this.readAndLoad(n) } }) })
+      const unloadedNodes = nodesToLoad.filter(n => !n.isLoaded && n.isValidXML)
+      if (!unloadedNodes.isEmpty()) {
+        // push this task back onto the job stack and then add loading jobs for each node that needs to load
+        ModelManager.debug('[SEND_DIAGNOSTICS] Dependencies to check validity were not met yet. Enqueuing dependencies and then re-enqueueing this job', node.absPath, unloadedNodes.map(n => n.absPath).toArray())
+        this.jobRunner.enqueue({ type: 'SEND_DELAYED_DIAGNOSTICS', context: node, fn: () => { this.sendFileDiagnostics(node) } })
+        unloadedNodes.forEach(n => { this.jobRunner.enqueue({ type: 'LOAD_DEPENDENCY', context: n, fn: async () => { await this.readAndLoad(n) } }) })
+      }
     }
   }
 
@@ -614,7 +642,7 @@ export class ModelManager {
           type: TocNodeKind.Page,
           value: {
             token: evt.nodeToken,
-            title: pageNode.optTitle,
+            title: pageNode.title,
             fileId: pageToModuleId(pageNode),
             absPath: pageNode.absPath
           }
