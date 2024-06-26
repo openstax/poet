@@ -117,7 +117,6 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
       const event: CreateAncillaryEvent = {
         type: TocNodeKind.Ancillary,
         title,
-        slug,
         bookIndex
       }
       await this.fireEvent(event)

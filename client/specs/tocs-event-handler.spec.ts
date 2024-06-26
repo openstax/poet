@@ -1,11 +1,13 @@
 import { jest, expect } from '@jest/globals'
 import { type BookOrTocNode, TocsTreeProvider } from '../src/book-tocs'
-import { type ClientTocNode, TocNodeKind, type BookToc, BookRootNode, TocModificationKind, type TocModification } from '../../common/src/toc'
+import { type ClientTocNode, TocNodeKind, type BookToc, BookRootNode, TocModificationKind, type TocModification, CreateSubbookEvent, CreatePageEvent, CreateAncillaryEvent } from '../../common/src/toc'
 import { TocsEventHandler, XFER_ITEM_ID } from '../src/tocs-event-handler'
 import { type LanguageClient } from 'vscode-languageclient/node'
 import { type ExtensionHostContext } from '../src/panel'
 import { ExtensionServerRequest } from '../../common/src/requests'
 import { DataTransferItem, type DataTransfer } from 'vscode'
+
+import vscode from 'vscode'
 
 const createPage = (title: string, token: string, fileId: string, absPath: string): ClientTocNode => ({
   type: TocNodeKind.Page,
@@ -22,10 +24,19 @@ const createBookToC = () => {
       fileId: 'fileId'
     }
   }
+  const testTocAncillary: ClientTocNode = {
+    type: TocNodeKind.Ancillary,
+    value: {
+      absPath: '/path/to/ancillary',
+      token: 'token',
+      title: 'title',
+      fileId: 'fileId'
+    }
+  }
   const testTocSubbook: ClientTocNode = {
     type: TocNodeKind.Subbook,
     value: { token: 'token', title: 'title' },
-    children: [testTocPage]
+    children: [testTocPage, testTocAncillary]
   }
   const testToc: BookToc = {
     type: BookRootNode.Singleton,
@@ -43,6 +54,7 @@ const createBookToC = () => {
 const testToc = Object.freeze(createBookToC())
 const testTocSubbook = testToc.tocTree[0] as (ClientTocNode & { type: TocNodeKind.Subbook })
 const testTocPage = testTocSubbook.children[0]
+const testTocAncillary = testTocSubbook.children[1]
 const orphanedPage = createPage(
   'orphan', 'Token', 'file2', '/path/to/file2'
 )
@@ -60,12 +72,14 @@ describe('TocsEventHandler', () => {
   let mockHostContext: ExtensionHostContext
   let tocsTreeProvider: TocsTreeProvider
   let tocsEventHandler: TocsEventHandler
+  let askTitleMock: jest.Mock<any>
   const tocsEventHandlerOverrides = {
     workspaceUri: ''
   }
   let sendRequestMock: jest.Mock
   beforeEach(() => {
     sendRequestMock = jest.fn()
+    askTitleMock = jest.fn().mockReturnValue('new-title')
     mockClient = {
       sendRequest: sendRequestMock
     } as unknown as LanguageClient
@@ -76,6 +90,7 @@ describe('TocsEventHandler', () => {
     tocsEventHandler = stub(
       new TocsEventHandler(tocsTreeProvider, mockHostContext), tocsEventHandlerOverrides
     )
+    tocsEventHandler.askTitle = askTitleMock
     tocsTreeProvider.update([testToc], [])
   })
   describe('remove node', () => {
@@ -180,7 +195,7 @@ describe('TocsEventHandler', () => {
           event: {
             type: TocModificationKind.Move,
             bookIndex: 0,
-            newChildIndex: 1,
+            newChildIndex: 2,
             newParentToken: subbook.value.token,
             nodeToken: orphanedPage.value.token
           }
@@ -199,6 +214,142 @@ describe('TocsEventHandler', () => {
       expect(sendRequestMock).not.toHaveBeenCalled()
     })
   })
+
+  describe('add node', () => {
+    const testCases: Array<{
+      subtitle: string
+      node: BookOrTocNode
+      event: CreatePageEvent | CreateSubbookEvent | CreateAncillaryEvent
+    }> = [
+      {
+        subtitle: 'page',
+        node: testTocPage,
+        event: {
+          type: TocNodeKind.Page,
+          title: 'new-title',
+          bookIndex: 0
+        }
+      },
+      {
+        subtitle: 'subbook',
+        node: testTocSubbook,
+        event: {
+          type: TocNodeKind.Subbook,
+          title: 'new-title',
+          slug: 'new-slug',
+          bookIndex: 0
+        }
+      },
+      {
+        subtitle: 'ancillary',
+        node: testTocAncillary,
+        event: {
+          type: TocNodeKind.Ancillary,
+          title: 'new-title',
+          bookIndex: 0
+        }
+      }
+    ]
+    testCases.forEach(({ subtitle, node, event }) => {
+      it(`sends the correct event (${subtitle})`, async () => {
+        expect(sendRequestMock).toHaveBeenCalledTimes(0)
+        await tocsEventHandler.addNode(event.type, node, 'new-slug')
+        expect(askTitleMock).toHaveBeenCalledTimes(1)
+        expect(sendRequestMock).toHaveBeenCalledTimes(1)
+        expect(sendRequestMock).toHaveBeenCalledWith(
+          ExtensionServerRequest.TocModification,
+          {
+            workspaceUri: tocsEventHandlerOverrides.workspaceUri,
+            event
+          }
+        )
+      })
+    })
+  })
+
+  describe('rename node', () => {
+    const testCases: Array<{
+      subtitle: string
+      node: BookOrTocNode
+      title: string
+      event: TocModification
+    }> = [
+      {
+        subtitle: 'rename page',
+        node: testTocPage,
+        title: 'title',
+        event: {
+          type: TocModificationKind.PageRename,
+          nodeToken: testTocPage.value.token,
+          newTitle: 'new-title',
+          bookIndex: 0
+        }
+      },
+      {
+        subtitle: 'subbook',
+        node: testTocSubbook,
+        title: 'title',
+        event: {
+          type: TocModificationKind.SubbookRename,
+          nodeToken: testTocSubbook.value.token,
+          newTitle: 'new-title',
+          bookIndex: 0
+        }
+      },
+      {
+        subtitle: 'ancillary',
+        node: testTocAncillary,
+        title: 'title',
+        event: {
+          type: TocModificationKind.AncillaryRename,
+          nodeToken: testTocAncillary.value.token,
+          newTitle: 'new-title',
+          bookIndex: 0
+        }
+      }
+    ]
+    testCases.forEach(({ subtitle, node, title, event }) => {
+      it(`sends the correct event (${subtitle})`, async () => {
+        expect(sendRequestMock).toHaveBeenCalledTimes(0)
+        await tocsEventHandler.renameNode(node)
+        expect(askTitleMock).toHaveBeenCalledTimes(1)
+        expect(askTitleMock).toHaveBeenCalledWith('')
+        expect(sendRequestMock).toHaveBeenCalledTimes(1)
+        expect(sendRequestMock).toHaveBeenCalledWith(
+          ExtensionServerRequest.TocModification,
+          {
+            workspaceUri: tocsEventHandlerOverrides.workspaceUri,
+            event
+          }
+        )
+      })
+    })
+  })
+
+  describe('askTitle', () => {
+    let withSubbedEvents: TocsEventHandler
+    beforeEach(() => {
+      withSubbedEvents = stub(
+        new TocsEventHandler(tocsTreeProvider, mockHostContext),
+        tocsEventHandlerOverrides
+      )
+    })
+    it('should prompt the user for a title and validate the input', async () => {
+      let result = await withSubbedEvents.askTitle('title')
+      expect(result).toBeUndefined()
+      expect(vscode.window.showInputBox).toBeCalledTimes(1)
+
+      result = await withSubbedEvents.askTitle('default-title')
+      expect(result).toBeUndefined()
+      expect(vscode.window.showInputBox).toBeCalledTimes(2)
+      expect(vscode.window.showInputBox).toHaveBeenCalledWith({
+        prompt: 'Please enter the title',
+        value: 'default-title',
+        validateInput: expect.any(Function)
+      })
+    })
+  })
+
   describe('workspaceUri', () => {
     it('errors when value is null', async () => {
       const t = new TocsEventHandler(tocsTreeProvider, mockHostContext)
