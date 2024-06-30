@@ -136,3 +136,12 @@ exports[`Toc Provider returns tree items for children 3`] = `
   },
 }
 `;
+
+exports[`Toc Provider returns tree items for children 4`] = `
+{
+  "collapsibleState": "Collapsed",
+  "contextValue": "rename",
+  "iconPath": "Folder",
+  "label": "title",
+}
+`;
