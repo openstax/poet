@@ -136,6 +136,10 @@ class CodeLens {}
 class DocumentLink {}
 class CodeAction {}
 class CallHierarchyItem {}
+class DataTransferItem {
+  constructor(value) { this.value = value }
+}
+class DataTransfer {}
 
 class ThemeIcon {
   static File = 'File'
@@ -222,6 +226,8 @@ const vscode = {
   ProgressLocation,
   FileSystemError,
   TextEditorRevealType,
+  DataTransferItem,
+  DataTransfer
 };
 
 module.exports = { ...vscode, default: vscode };

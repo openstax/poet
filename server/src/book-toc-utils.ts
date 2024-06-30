@@ -99,7 +99,7 @@ function recTree(tocIdMap: IdMap<string, TocSubbookWithRange | PageNode>, parent
 }
 
 function recBuild(doc: Document, node: ClientTocNode): Element {
-  if (node.type === TocNodeKind.Page) {
+  if (node.type === TocNodeKind.Page || node.type === TocNodeKind.Ancillary) {
     const ret = doc.createElementNS(NS_COLLECTION, 'col:module')
     ret.setAttribute('document', node.value.fileId)
     return ret

@@ -61,11 +61,13 @@ export function textWithRange(el: Element, attr?: string): WithRange<string> {
 // This also exists in ../common/
 export enum TocNodeKind {
   Subbook = 'TocNodeKind.Subbook',
-  Page = 'TocNodeKind.Page'
+  Page = 'TocNodeKind.Page',
+  Ancillary = 'TocNodeKind.Ancillary'
 }
-export type TocNode<T> = TocSubbook<T> | TocPage<T>
+export type TocNode<T> = TocSubbook<T> | TocPage<T> | TocAncillary<T>
 export interface TocSubbook<T> { type: TocNodeKind.Subbook, readonly title: string, readonly children: Array<TocNode<T>> }
 export interface TocPage<T> { type: TocNodeKind.Page, readonly page: T }
+export interface TocAncillary<T> { type: TocNodeKind.Ancillary, readonly page: T }
 
 export interface Paths {
   booksRoot: string
