@@ -160,7 +160,7 @@
       ],
       "commandPalette": [
         {
-          "command": "openstax.showPreviewToSide", 
+          "command": "openstax.showPreviewToSide",
           "when": "editorLangId == xml && !notebookEditorFocused",
           "group": "navigation"
         }
@@ -192,7 +192,8 @@
           "command": "openstax.renameNode",
           "when": "view == tocTrees && viewItem =~ /,?rename,?/",
           "group": "inline"
-        },{
+        },
+        {
           "command": "openstax.removeNode",
           "when": "view == tocTrees && viewItem =~ /,?delete,?/",
           "group": "inline"

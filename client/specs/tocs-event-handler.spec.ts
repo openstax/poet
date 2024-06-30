@@ -1,6 +1,6 @@
 import { jest, expect } from '@jest/globals'
 import { type BookOrTocNode, TocsTreeProvider } from '../src/book-tocs'
-import { type ClientTocNode, TocNodeKind, type BookToc, BookRootNode, TocModificationKind, type TocModification, CreateSubbookEvent, CreatePageEvent, CreateAncillaryEvent } from '../../common/src/toc'
+import { type ClientTocNode, TocNodeKind, type BookToc, BookRootNode, TocModificationKind, type TocModification, type CreateSubbookEvent, type CreatePageEvent, type CreateAncillaryEvent } from '../../common/src/toc'
 import { TocsEventHandler, XFER_ITEM_ID } from '../src/tocs-event-handler'
 import { type LanguageClient } from 'vscode-languageclient/node'
 import { type ExtensionHostContext } from '../src/panel'
