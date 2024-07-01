@@ -30985,6 +30985,7 @@
             <xs:group ref="mathml:mlongdiv"/>
             <xs:group ref="mathml:maction"/>
             <xs:group ref="mathml:semantics_2"/>
+            <xs:group ref="mathml:_1"/>
           </xs:choice>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="xref"/>
@@ -33958,6 +33959,7 @@
             <xs:group ref="mathml:mlongdiv_2"/>
             <xs:group ref="mathml:maction_2"/>
             <xs:group ref="mathml:semantics_4"/>
+            <xs:group ref="mathml:_2"/>
           </xs:choice>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="xref"/>
@@ -36348,6 +36350,12 @@
       <xs:group ref="cnxml:row"/>
     </xs:sequence>
   </xs:group>
+  <xs:group name="_1">
+    <xs:choice>
+      <xs:any namespace="##other" processContents="skip"/>
+      <xs:any namespace="##local" processContents="skip"/>
+    </xs:choice>
+  </xs:group>
   <xs:group name="semantics_5">
     <xs:sequence>
       <xs:element name="semantics">
@@ -36919,6 +36927,12 @@
     <xs:sequence>
       <xs:group ref="cnxml:commentary1"/>
     </xs:sequence>
+  </xs:group>
+  <xs:group name="_2">
+    <xs:choice>
+      <xs:any namespace="##other" processContents="skip"/>
+      <xs:any namespace="##local" processContents="skip"/>
+    </xs:choice>
   </xs:group>
   <xs:group name="semantics_6">
     <xs:sequence>
