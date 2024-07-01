@@ -12,7 +12,7 @@ describe('Element ID creation', () => {
       const simple = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
             <title>Introduction</title>
             <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
-              <md:title>Introduction</md:title>
+              <md:uuid>00000000-0000-0000-0000-000000000000</md:uuid>
             </metadata>
             <content>
               <para id="test">Test Introduction</para>
@@ -28,7 +28,7 @@ describe('Element ID creation', () => {
       const paraPartialId = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
             <title>Introduction</title>
             <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
-              <md:title>Introduction</md:title>
+              <md:uuid>00000000-0000-0000-0000-000000000000</md:uuid>
             </metadata>
             <content>
               <section>
@@ -62,7 +62,7 @@ describe('Element ID creation', () => {
       const xml = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
             <title>Introduction</title>
             <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
-              <md:title>Introduction</md:title>
+              <md:uuid>00000000-0000-0000-0000-000000000000</md:uuid>
             </metadata>
             <content>
               <para>no id here</para>
@@ -94,7 +94,7 @@ describe('Element ID creation', () => {
       const xml = `<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
             <title>Introduction</title>
             <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
-              <md:title>Introduction</md:title>
+              <md:uuid>00000000-0000-0000-0000-000000000000</md:uuid>
             </metadata>
             <content>
               <para>
