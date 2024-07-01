@@ -1,7 +1,7 @@
 import I from 'immutable'
 import * as Quarx from 'quarx'
 import { type PageNode } from './page'
-import { type Opt, type WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, type HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, TocNodeKind } from './utils'
+import { type Opt, type WithRange, textWithRange, select, selectOne, findDuplicates, calculateElementPositions, expectValue, type HasRange, join, equalsOpt, equalsWithRange, tripleEq, equalsPos, equalsArray, PathKind, TocNodeKind, NOWHERE } from './utils'
 import { Fileish, type ValidationCheck, ValidationKind } from './fileish'
 import { getCCLicense } from './cc-license'
 
@@ -157,12 +157,21 @@ export class BookNode extends Fileish {
         message: BookValidationKind.DUPLICATE_PAGE,
         nodesToLoad: I.Set(),
         fn: () => I.Set(pageLeaves.filter(p => duplicatePages.has(p.page)).map(l => l.range))
+      },
+      {
+        message: BookValidationKind.INVALID_BOOK_NAME,
+        nodesToLoad: I.Set(),
+        fn: () => this.absPath.endsWith(`${this.slug}.collection.xml`)
+          ? I.Set()
+          : I.Set([NOWHERE])
       }
     ]
   }
 }
 
 export class BookValidationKind extends ValidationKind {
+  // openstax/enki/bakery-js/src/epub/toc.tsx#L74
+  static INVALID_BOOK_NAME = new BookValidationKind('Book must be named <slug>.collection.xml')
   static MISSING_PAGE = new BookValidationKind('Missing Page')
   static DUPLICATE_CHAPTER_TITLE = new BookValidationKind('Duplicate chapter title')
   static DUPLICATE_PAGE = new BookValidationKind('Duplicate page')
