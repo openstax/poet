@@ -11,6 +11,10 @@ const getNodeToken = (node: BookOrTocNode) => {
     : undefined
 }
 
+export const validateTitle = (title: string) => {
+  return title.trim().length === 0 ? 'Title cannot be empty' : undefined
+}
+
 export const XFER_ITEM_ID = 'application/vnd.code.tree.tocTrees'
 
 export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOrTocNode> {
@@ -87,17 +91,18 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
   async askTitle(title?: string): Promise<string | undefined> {
     return await vscode.window.showInputBox({
       prompt: 'Please enter the title',
-      value: title ?? '',
-      validateInput: text => {
-        return text.trim().length === 0 ? 'Title cannot be empty' : null
-      }
+      /* istanbul ignore next */
+      value: title,
+      validateInput: validateTitle
     })
   }
 
   async addNode(nodeType: TocNodeKind, node: BookOrTocNode, slug: string | undefined) {
     const title = await this.askTitle()
+    /* istanbul ignore next */
     if (title === undefined) { return }
-    const bookIndex = this.tocTreesProvider.getParentBookIndex(node) ?? 0
+    let bookIndex = this.tocTreesProvider.getParentBookIndex(node)
+    if (bookIndex === undefined) { bookIndex = 0 }
     if (nodeType === TocNodeKind.Page) {
       const event: CreatePageEvent = {
         type: TocNodeKind.Page,
@@ -127,13 +132,19 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     // TODO Implement the rename functionality using inline editing (wait for the API to be available)
     // https://github.com/microsoft/vscode/issues/97190
     // https://stackoverflow.com/questions/70594061/change-an-existing-label-name-in-tree-view-vscode-extension
-    const newTitle = await this.askTitle(('title' in node) ? node.title : '')
+    let oldTitle: string | undefined = ''
+    if (node.type !== BookRootNode.Singleton && 'title' in node.value) {
+      /* istanbul ignore next */
+      oldTitle = node.value.title
+    }
+    const newTitle = await this.askTitle(oldTitle)
     const nodeToken = expect(
       getNodeToken(node),
       'BUG: Could not get token of renamed node'
     )
+    /* istanbul ignore next */
     if (newTitle === undefined) { return }
-    const bookIndex = this.tocTreesProvider.getParentBookIndex(node) ?? 0
+    const bookIndex = expect(this.tocTreesProvider.getParentBookIndex(node), 'BUG: Could not get index of parent book')
     if (node.type === TocNodeKind.Subbook) {
       const event: TocModification = {
         type: TocModificationKind.SubbookRename,

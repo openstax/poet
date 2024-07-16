@@ -1,7 +1,7 @@
 import { jest, expect } from '@jest/globals'
 import { type BookOrTocNode, TocsTreeProvider } from '../src/book-tocs'
 import { type ClientTocNode, TocNodeKind, type BookToc, BookRootNode, TocModificationKind, type TocModification, type CreateSubbookEvent, type CreatePageEvent, type CreateAncillaryEvent } from '../../common/src/toc'
-import { TocsEventHandler, XFER_ITEM_ID } from '../src/tocs-event-handler'
+import { TocsEventHandler, XFER_ITEM_ID, validateTitle } from '../src/tocs-event-handler'
 import { type LanguageClient } from 'vscode-languageclient/node'
 import { type ExtensionHostContext } from '../src/panel'
 import { ExtensionServerRequest } from '../../common/src/requests'
@@ -248,9 +248,25 @@ describe('TocsEventHandler', () => {
           title: 'new-title',
           bookIndex: 0
         }
+      },
+      {
+        subtitle: 'wrong-ancillary',
+        node: orphanedPage,
+        event: {
+          type: TocNodeKind.Page,
+          title: 'new-title',
+          bookIndex: 0
+        }
       }
     ]
     testCases.forEach(({ subtitle, node, event }) => {
+      it(`checks if the title: (${subtitle}) is valid`, async () => {
+        const validation = validateTitle(subtitle)
+        expect(validation).toBeUndefined()
+        const invalid = validateTitle('')
+        expect(invalid).toBe('Title cannot be empty')
+      })
+
       it(`sends the correct event (${subtitle})`, async () => {
         expect(sendRequestMock).toHaveBeenCalledTimes(0)
         await tocsEventHandler.addNode(event.type, node, 'new-slug')
@@ -313,7 +329,7 @@ describe('TocsEventHandler', () => {
         expect(sendRequestMock).toHaveBeenCalledTimes(0)
         await tocsEventHandler.renameNode(node)
         expect(askTitleMock).toHaveBeenCalledTimes(1)
-        expect(askTitleMock).toHaveBeenCalledWith('')
+        expect(askTitleMock).toHaveBeenCalledWith(title)
         expect(sendRequestMock).toHaveBeenCalledTimes(1)
         expect(sendRequestMock).toHaveBeenCalledWith(
           ExtensionServerRequest.TocModification,

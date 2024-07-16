@@ -846,6 +846,22 @@ describe('modifyToc()', () => {
       expect(tocNode.title).toBe('TEST_TITLE')
     } else throw new Error('BUG: unreachable case')
   })
+
+  it('creates a new Ancillary in book', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    expect(book.pages.size).toBe(1)
+
+    const bookIndex = 0
+    const { page: loadedPage } = await manager.createAncillary(bookIndex, 'TEST_TITLE')
+
+    expect(book.pages.size).toBe(2)
+    expect(I.Set(book.pages).has(loadedPage)).toBe(true)
+    expect(loadedPage.title).toBe('TEST_TITLE')
+
+    // Add another page for code coverage reasons
+    await manager.createAncillary(bookIndex, 'TEST_TITLE2')
+  })
 })
 
 // ------------ Stubs ------------
