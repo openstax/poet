@@ -23,6 +23,11 @@ describe('Page', () => {
     expect(() => { page.load(pageMaker({ uuid: 'little bobby drop tables</md:uuid><md:uuid>injection is fun' })) })
       .toThrow("Expected one but found 2 results that match '//md:uuid'")
   })
+  it('loads title correctly', () => {
+    expect(page.isLoaded).toBe(false)
+    page.load(pageMaker({ title: 'Some <emphasis>text</emphasis>' }))
+    expect(page.title).toBe('Some text')
+  })
 })
 
 describe('Page validations', () => {

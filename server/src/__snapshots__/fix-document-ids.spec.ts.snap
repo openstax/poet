@@ -4,7 +4,7 @@ exports[`Element ID creation fixDocument check if ids are created 1`] = `
 "<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
             <title>Introduction</title>
             <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
-              <md:title>Introduction</md:title>
+              <md:uuid>00000000-0000-0000-0000-000000000000</md:uuid>
             </metadata>
             <content>
               <para id="test">Test Introduction</para>
@@ -17,7 +17,7 @@ exports[`Element ID creation fixDocument check if ids are generated with right (
 "<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
             <title>Introduction</title>
             <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
-              <md:title>Introduction</md:title>
+              <md:uuid>00000000-0000-0000-0000-000000000000</md:uuid>
             </metadata>
             <content>
               <para id="para-00001">no id here</para>
@@ -46,7 +46,7 @@ exports[`Element ID creation fixDocument check if term in defintion does not get
 "<document id="new" cnxml-version="0.7" module-id="" xmlns="http://cnx.rice.edu/cnxml" class="introduction">
             <title>Introduction</title>
             <metadata mdml-version="0.5" xmlns:md="http://cnx.rice.edu/mdml">
-              <md:title>Introduction</md:title>
+              <md:uuid>00000000-0000-0000-0000-000000000000</md:uuid>
             </metadata>
             <content>
               <para id="para-00001">
