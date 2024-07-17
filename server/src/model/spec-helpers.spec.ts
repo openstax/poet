@@ -20,12 +20,14 @@ export const read = (filePath: string) => readFileSync(filePath, 'utf-8')
 interface PathHelper<T> {
   join: (root: T, ...components: string[]) => T
   dirname: (p: T) => T
+  basename: (p: T) => T
   canonicalize: (p: T) => T
 }
 
 export const FS_PATH_HELPER: PathHelper<string> = {
   join: (root, ...components) => path.join(root, ...components),
   dirname: (p) => path.dirname(p),
+  basename: (p) => path.basename(p),
   canonicalize: (x) => x
 }
 

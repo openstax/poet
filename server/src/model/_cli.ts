@@ -52,6 +52,7 @@ function loadNode(n: Fileish) {
 const pathHelper: PathHelper<string> = {
   join: (root, ...components) => path.join(root, ...components),
   dirname: (p) => path.dirname(p),
+  basename: (p) => path.basename(p),
   canonicalize: (x) => x
 }
 
