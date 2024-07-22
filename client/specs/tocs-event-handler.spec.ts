@@ -148,7 +148,19 @@ describe('TocsEventHandler', () => {
           type: TocModificationKind.Move,
           bookIndex: 0,
           newChildIndex: 0,
-          newParentToken: undefined, // = testToc.token,
+          newParentToken: testTocSubbook.value.token,
+          nodeToken: testTocPage.value.token
+        }
+      },
+      {
+        subtitle: 'drag page onto book',
+        node: testTocPage,
+        target: testToc,
+        event: {
+          type: TocModificationKind.Move,
+          bookIndex: 0,
+          newChildIndex: 0,
+          newParentToken: undefined,
           nodeToken: testTocPage.value.token
         }
       },
@@ -160,7 +172,7 @@ describe('TocsEventHandler', () => {
           type: TocModificationKind.Move,
           bookIndex: 0,
           newChildIndex: 0,
-          newParentToken: undefined, // = testToc.token,
+          newParentToken: testTocSubbook.value.token,
           nodeToken: orphanedPage.value.token
         }
       }
@@ -410,12 +422,12 @@ describe('TocsEventHandler', () => {
       expect(removeNodeStub).not.toHaveBeenCalled()
       expect(moveNodeStub).not.toHaveBeenCalled()
     })
-    it('calls removeNode when the target is a book', async () => {
-      const dt = { get: () => ({ value: orphanedPage }) } as unknown as DataTransfer
-      await withSubbedEvents.handleDrop(testToc, dt)
-      expect(removeNodeStub).toHaveBeenCalledWith(orphanedPage)
-      expect(moveNodeStub).not.toHaveBeenCalled()
-    })
+    // it('calls removeNode when the target is a book', async () => {
+    //   const dt = { get: () => ({ value: orphanedPage }) } as unknown as DataTransfer
+    //   await withSubbedEvents.handleDrop(testToc, dt)
+    //   expect(removeNodeStub).toHaveBeenCalledWith(orphanedPage)
+    //   expect(moveNodeStub).not.toHaveBeenCalled()
+    // })
     it('calls moveNode when the target is anything else', async () => {
       const dt = { get: () => ({ value: orphanedPage }) } as unknown as DataTransfer
       await withSubbedEvents.handleDrop(testTocPage, dt)

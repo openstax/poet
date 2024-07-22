@@ -111,10 +111,14 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
       : recursiveFindParent(node)
   }
 
+  public getBookIndex(node: BookToc) {
+    return this.bookTocs.findIndex((b) => b.absPath === node.absPath)
+  }
+
   public getParentBookIndex(node: BookOrTocNode) {
     const parentBook = this.getParentBook(node)
     return parentBook === undefined
       ? undefined
-      : this.bookTocs.findIndex((b) => b.absPath === parentBook.absPath)
+      : this.getBookIndex(parentBook)
   }
 }

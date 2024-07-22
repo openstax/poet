@@ -46,22 +46,33 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     )
     let newParentToken: string | undefined
     let newChildIndex = 0
-    const bookIndex = expect(
-      this.tocTreesProvider.getParentBookIndex(target),
-      'BUG: Could not get index of target\'s parent book'
-    )
-    const newParent = this.tocTreesProvider.getParent(target)
-    if (newParent !== undefined) {
-      const targetToken = expect(
-        getNodeToken(target),
-        'BUG: Could not get target token'
+    let bookIndex: number
+    if (target.type === BookRootNode.Singleton) {
+      // In case of book drop target, use book index directly
+      bookIndex = this.tocTreesProvider.getBookIndex(target)
+    } else {
+      bookIndex = expect(
+        this.tocTreesProvider.getParentBookIndex(target),
+        'BUG: Could not get index of target\'s parent book'
       )
-      newParentToken = getNodeToken(newParent)
-      // Do not try to move a book/subbook into itself
-      if (newParentToken === nodeToken) { return }
-      newChildIndex = this.tocTreesProvider
-        .getChildren(newParent)
-        .findIndex((node) => getNodeToken(node) === targetToken)
+      if (target.type === TocNodeKind.Subbook) {
+        newParentToken = getNodeToken(target)
+      } else {
+        const newParent = expect(
+          this.tocTreesProvider.getParent(target),
+          'BUG: Could not get new parent node'
+        )
+        const targetToken = expect(
+          getNodeToken(target),
+          'BUG: Could not get target token'
+        )
+        newParentToken = getNodeToken(newParent)
+        // Do not try to move a book/subbook into itself
+        if (newParentToken === nodeToken) { return }
+        newChildIndex = this.tocTreesProvider
+          .getChildren(newParent)
+          .findIndex((node) => getNodeToken(node) === targetToken)
+      }
     }
     const event: TocModification = {
       type: TocModificationKind.Move,
@@ -184,11 +195,7 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     if (dragging?.type === undefined) throw new Error('BUG: Bad drag target')
     if (target === undefined) throw new Error('BUG: Bad drop target')
     if (target !== dragging && dragging.type !== BookRootNode.Singleton) {
-      if (target.type === BookRootNode.Singleton) {
-        await this.removeNode(dragging)
-      } else {
-        await this.moveNode(dragging, target)
-      }
+      await this.moveNode(dragging, target)
     }
   }
 }
