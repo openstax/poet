@@ -19,7 +19,7 @@ const createBookToC = () => {
     type: TocNodeKind.Page,
     value: {
       absPath: '/path/to/file',
-      token: 'token',
+      token: 'page-token',
       title: 'title',
       fileId: 'fileId'
     }
@@ -35,7 +35,7 @@ const createBookToC = () => {
   }
   const testTocSubbook: ClientTocNode = {
     type: TocNodeKind.Subbook,
-    value: { token: 'token', title: 'title' },
+    value: { token: 'subbook-token', title: 'title' },
     children: [testTocPage, testTocAncillary]
   }
   const testToc: BookToc = {

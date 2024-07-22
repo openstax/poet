@@ -67,12 +67,12 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
           'BUG: Could not get target token'
         )
         newParentToken = getNodeToken(newParent)
-        // Do not try to move a book/subbook into itself
-        if (newParentToken === nodeToken) { return }
         newChildIndex = this.tocTreesProvider
           .getChildren(newParent)
           .findIndex((node) => getNodeToken(node) === targetToken)
       }
+      // Do not try to move a book/subbook into itself
+      if (newParentToken === nodeToken) { return }
     }
     const event: TocModification = {
       type: TocModificationKind.Move,
