@@ -246,6 +246,7 @@ describe('TocsEventHandler', () => {
         event: {
           type: TocNodeKind.Ancillary,
           title: 'new-title',
+          nodeToken: '',
           bookIndex: 0
         }
       },

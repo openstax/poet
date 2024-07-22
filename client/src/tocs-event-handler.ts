@@ -97,11 +97,13 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     })
   }
 
-  async addNode(nodeType: TocNodeKind, node: BookOrTocNode, slug: string | undefined) {
+  async addNode(nodeType: TocNodeKind, node: BookOrTocNode, slug?: string) {
+    console.log(node)
     const title = await this.askTitle()
     /* istanbul ignore next */
     if (title === undefined) { return }
     let bookIndex = this.tocTreesProvider.getParentBookIndex(node)
+    const nodeToken = expect(getNodeToken(node), 'Expected node token')
     if (bookIndex === undefined) { bookIndex = 0 }
     if (nodeType === TocNodeKind.Page) {
       const event: CreatePageEvent = {
@@ -122,6 +124,7 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
       const event: CreateAncillaryEvent = {
         type: TocNodeKind.Ancillary,
         title,
+        nodeToken,
         bookIndex
       }
       await this.fireEvent(event)

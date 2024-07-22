@@ -43,11 +43,15 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
   }
 
   public getTreeItem(node: BookOrTocNode): TreeItem {
-    const capabilities: string[] = [
-      'rename'
-    ]
+    const capabilities: string[] = []
     if (this.getParent(node) !== undefined) {
       capabilities.push('delete')
+    }
+    if (node.type !== BookRootNode.Singleton) {
+      capabilities.push('rename')
+    }
+    if (node.type === BookRootNode.Singleton || node.type === TocNodeKind.Subbook) {
+      capabilities.push('collection')
     }
     if (node.type === BookRootNode.Singleton) {
       const uri = Uri.parse(node.absPath)
@@ -57,7 +61,8 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
         label: node.title,
         description: node.slug,
         resourceUri: uri,
-        command: { title: 'open', command: 'vscode.open', arguments: [uri] }
+        command: { title: 'open', command: 'vscode.open', arguments: [uri] },
+        contextValue: capabilities.join(',')
       }
     } else if (node.type === TocNodeKind.Page) {
       const uri = Uri.parse(node.value.absPath)

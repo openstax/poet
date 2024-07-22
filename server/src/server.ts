@@ -143,11 +143,16 @@ connection.onDidChangeWatchedFiles(({ changes }) => {
 connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocModificationParams) => {
   const { event } = params
   const manager = getBundleForUri(params.workspaceUri)
+  ModelManager.debug(params)
+  ModelManager.debug(event)
   if (event.type === TocNodeKind.Page) {
     await manager.createPage(event.bookIndex, event.title)
   } else if (event.type === TocNodeKind.Subbook) {
     await manager.createSubbook(event.bookIndex, event.title)
   } else if (event.type === TocNodeKind.Ancillary) {
+    const parentNode = manager.lookupToken(event.nodeToken)
+    ModelManager.debug('TOKEN:', event.nodeToken)
+    ModelManager.debug('PARENT NODE:', parentNode)
     await manager.createAncillary(event.bookIndex, event.title)
   } else {
     await manager.modifyToc(event)

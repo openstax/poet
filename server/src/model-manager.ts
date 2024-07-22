@@ -581,6 +581,7 @@ export class ModelManager {
 
   async modifyToc(evt: TocModification) {
     ModelManager.debug('[MODIFY_TOC]', evt)
+    console.log(evt)
 
     // !!WARNING!!
     // When this function calls `writeBookToc`, it causes`this.bookTocs` to
@@ -673,7 +674,7 @@ export class ModelManager {
     }
   }
 
-  private lookupToken(token: string): Opt<NodeAndParent> {
+  public lookupToken(token: string): Opt<NodeAndParent> {
     for (const b of this.bookTocs) {
       const ret = this.recFind(token, b, b.tocTree)
       if (ret !== undefined) return ret

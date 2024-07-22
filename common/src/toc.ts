@@ -89,6 +89,7 @@ export interface CreateSubbookEvent {
 export interface CreateAncillaryEvent {
   readonly type: TocNodeKind.Ancillary
   readonly title: string
+  readonly nodeToken: Token
   readonly bookIndex: number
 }
 

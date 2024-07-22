@@ -172,11 +172,6 @@
           "group": "navigation"
         },
         {
-          "command": "openstax.addAncillaryToToc",
-          "when": "view == tocTrees",
-          "group": "navigation"
-        },
-        {
           "command": "openstax.addSubBookToToc",
           "when": "view == tocTrees",
           "group": "navigation"
@@ -196,6 +191,11 @@
         {
           "command": "openstax.removeNode",
           "when": "view == tocTrees && viewItem =~ /,?delete,?/",
+          "group": "inline"
+        },
+        {
+          "command": "openstax.addAncillaryToToc",
+          "when": "view == tocTrees && viewItem =~ /,?collection,?/",
           "group": "inline"
         }
       ]
