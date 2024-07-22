@@ -101,7 +101,10 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     const title = await this.askTitle()
     /* istanbul ignore next */
     if (title === undefined) { return }
-    let bookIndex = this.tocTreesProvider.getParentBookIndex(node)
+    let bookIndex: number | undefined = 0
+    if (node !== undefined) {
+      bookIndex = this.tocTreesProvider.getParentBookIndex(node)
+    }
     if (bookIndex === undefined) { bookIndex = 0 }
     if (nodeType === TocNodeKind.Page) {
       const event: CreatePageEvent = {
