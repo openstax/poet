@@ -822,14 +822,14 @@ describe('modifyToc()', () => {
     expect(book.pages.size).toBe(1)
 
     const bookIndex = 0
-    const { page: loadedPage } = await manager.createPage(bookIndex, 'TEST_TITLE')
+    const { page: loadedPage } = await manager.createPage(bookIndex, undefined, 'TEST_TITLE')
 
     expect(book.pages.size).toBe(2)
     expect(I.Set(book.pages).has(loadedPage)).toBe(true)
     expect(loadedPage.title).toBe('TEST_TITLE')
 
     // Add another page for code coverage reasons
-    await manager.createPage(bookIndex, 'TEST_TITLE2')
+    await manager.createPage(bookIndex, undefined, 'TEST_TITLE2')
   })
   it('creates a new Subbook in book', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
@@ -837,7 +837,7 @@ describe('modifyToc()', () => {
     expect(book.toc.length).toBe(1)
 
     const bookIndex = 0
-    await manager.createSubbook(bookIndex, 'TEST_TITLE')
+    await manager.createSubbook(bookIndex, undefined, 'TEST_TITLE')
 
     expect(book.toc.length).toBe(2)
     expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
@@ -853,14 +853,14 @@ describe('modifyToc()', () => {
     expect(book.pages.size).toBe(1)
 
     const bookIndex = 0
-    const { page: loadedPage } = await manager.createAncillary(bookIndex, 'TEST_TITLE')
+    const { page: loadedPage } = await manager.createAncillary(bookIndex, undefined, 'TEST_TITLE')
 
     expect(book.pages.size).toBe(2)
     expect(I.Set(book.pages).has(loadedPage)).toBe(true)
     expect(loadedPage.title).toBe('TEST_TITLE')
 
     // Add another page for code coverage reasons
-    await manager.createAncillary(bookIndex, 'TEST_TITLE2')
+    await manager.createAncillary(bookIndex, undefined, 'TEST_TITLE2')
   })
 })
 

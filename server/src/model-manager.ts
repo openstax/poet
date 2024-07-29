@@ -680,7 +680,7 @@ export class ModelManager {
     }
   }
 
-  public async createDocument(bookIndex: number, title: string, documentType: string, template: string) {
+  public async createDocument(bookIndex: number, parentNodeToken: string | undefined, title: string, documentType: string, template: string) {
     const workspaceRootUri = URI.parse(this.bundle.workspaceRootUri)
     const pageDirUri = Utils.joinPath(workspaceRootUri, 'modules')
     let moduleNumber = 0
@@ -708,7 +708,9 @@ export class ModelManager {
 
       const bookToc = this.bookTocs[bookIndex]
       const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
-      bookToc.tocTree.unshift({
+
+      const newParentChildren = parentNodeToken !== undefined ? childrenOf(expectValue(this.lookupToken(parentNodeToken), 'BUG: should always have a parent').node) : bookToc.tocTree
+      newParentChildren.splice(0, 0, {
         type: TocNodeKind.Page,
         value: { token: 'unused-when-writing', title: undefined, fileId: newModuleId, absPath: page.absPath }
       })
@@ -720,8 +722,8 @@ export class ModelManager {
     throw new Error('Error: Too many page directories already exist')
   }
 
-  public async createPage(bookIndex: number, title: string) {
-    return await this.createDocument(bookIndex, title, 'page', `
+  public async createPage(bookIndex: number, parentToken: string | undefined, title: string) {
+    return await this.createDocument(bookIndex, parentToken, title, 'page', `
 <document xmlns="http://cnx.rice.edu/cnxml">
   <title/>
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
@@ -734,8 +736,8 @@ export class ModelManager {
 </document>`.trim())
   }
 
-  public async createAncillary(bookIndex: number, title: string) {
-    return await this.createDocument(bookIndex, title, 'ancilliary', `
+  public async createAncillary(bookIndex: number, parentNodeToken: string | undefined, title: string) {
+    return await this.createDocument(bookIndex, parentNodeToken, title, 'ancilliary', `
 <document xmlns="http://cnx.rice.edu/cnxml" class="super" resource="" document-link="" ancillary-type="">
   <title/>
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
@@ -748,7 +750,7 @@ export class ModelManager {
 </document>`.trim())
   }
 
-  public async createSubbook(bookIndex: number, title: string) {
+  public async createSubbook(bookIndex: number, parentNodeToken: string | undefined, title: string) {
     ModelManager.debug(`[CREATE_SUBBOOK] Creating: ${title}`)
     const bookToc = this.bookTocs[bookIndex]
     const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')

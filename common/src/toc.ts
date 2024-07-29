@@ -84,16 +84,19 @@ export interface CreateSubbookEvent {
   readonly title: string
   readonly slug: string | undefined
   readonly bookIndex: number
+  readonly parentNodeToken: Token | undefined
 }
 
 export interface CreateAncillaryEvent {
   readonly type: TocNodeKind.Ancillary
   readonly title: string
   readonly bookIndex: number
+  readonly parentNodeToken: Token | undefined
 }
 
 export interface CreatePageEvent {
   readonly type: TocNodeKind.Page
   readonly title: string
   readonly bookIndex: number
+  readonly parentNodeToken: Token | undefined
 }

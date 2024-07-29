@@ -251,10 +251,10 @@ describe('Toc Editor', () => {
       expect(getMessage().type).toBe(TocModificationKind.SubbookRename)
 
       sinon.stub(vscode.window, 'showInputBox').returns(Promise.resolve('new_title'))
-      await p.handleMessage({ type: TocNodeKind.Page, title: 'foo', bookIndex: 0 })
+      await p.handleMessage({ type: TocNodeKind.Page, title: 'foo', bookIndex: 0, parentNodeToken: undefined })
       expect(getMessage().title).toBe('new_title')
 
-      await p.handleMessage({ type: TocNodeKind.Subbook, title: 'foo', bookIndex: 0, slug: 'subbook_slug' })
+      await p.handleMessage({ type: TocNodeKind.Subbook, title: 'foo', bookIndex: 0, slug: 'subbook_slug', parentNodeToken: undefined })
       expect(getMessage().title).toBe('new_title')
     })
     it('disposes', () => {

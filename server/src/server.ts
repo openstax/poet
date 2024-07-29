@@ -144,11 +144,11 @@ connection.onRequest(ExtensionServerRequest.TocModification, async (params: TocM
   const { event } = params
   const manager = getBundleForUri(params.workspaceUri)
   if (event.type === TocNodeKind.Page) {
-    await manager.createPage(event.bookIndex, event.title)
+    await manager.createPage(event.bookIndex, event.parentNodeToken, event.title)
   } else if (event.type === TocNodeKind.Subbook) {
-    await manager.createSubbook(event.bookIndex, event.title)
+    await manager.createSubbook(event.bookIndex, event.parentNodeToken, event.title)
   } else if (event.type === TocNodeKind.Ancillary) {
-    await manager.createAncillary(event.bookIndex, event.title)
+    await manager.createAncillary(event.bookIndex, event.parentNodeToken, event.title)
   } else {
     await manager.modifyToc(event)
   }

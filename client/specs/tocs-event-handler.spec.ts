@@ -239,7 +239,8 @@ describe('TocsEventHandler', () => {
         event: {
           type: TocNodeKind.Page,
           title: 'new-title',
-          bookIndex: 0
+          bookIndex: 0,
+          parentNodeToken: undefined
         }
       },
       {
@@ -249,7 +250,8 @@ describe('TocsEventHandler', () => {
           type: TocNodeKind.Subbook,
           title: 'new-title',
           slug: 'new-slug',
-          bookIndex: 0
+          bookIndex: 0,
+          parentNodeToken: undefined
         }
       },
       {
@@ -258,7 +260,8 @@ describe('TocsEventHandler', () => {
         event: {
           type: TocNodeKind.Ancillary,
           title: 'new-title',
-          bookIndex: 0
+          bookIndex: 0,
+          parentNodeToken: undefined
         }
       },
       {
@@ -267,7 +270,8 @@ describe('TocsEventHandler', () => {
         event: {
           type: TocNodeKind.Page,
           title: 'new-title',
-          bookIndex: 0
+          bookIndex: 0,
+          parentNodeToken: undefined
         }
       }
     ]

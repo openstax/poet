@@ -112,16 +112,27 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     const title = await this.askTitle()
     /* istanbul ignore next */
     if (title === undefined) { return }
+    let parentNodeToken: string | undefined
     let bookIndex: number | undefined = 0
     if (node !== undefined) {
       bookIndex = this.tocTreesProvider.getParentBookIndex(node)
+      if (bookIndex === undefined) { bookIndex = 0 }
+      if (node.type === TocNodeKind.Subbook) {
+        parentNodeToken = getNodeToken(node)
+      } else if (node.type === TocNodeKind.Page || node.type === TocNodeKind.Ancillary) {
+        const parent = expect(
+          this.tocTreesProvider.getParent(node),
+          'BUG: Could not get parent node'
+        )
+        parentNodeToken = getNodeToken(parent)
+      }
     }
-    if (bookIndex === undefined) { bookIndex = 0 }
     if (nodeType === TocNodeKind.Page) {
       const event: CreatePageEvent = {
         type: TocNodeKind.Page,
         title,
-        bookIndex
+        bookIndex,
+        parentNodeToken
       }
       await this.fireEvent(event)
     } else if (nodeType === TocNodeKind.Subbook) {
@@ -129,14 +140,16 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
         type: TocNodeKind.Subbook,
         title,
         slug,
-        bookIndex
+        bookIndex,
+        parentNodeToken
       }
       await this.fireEvent(event)
     } else if (nodeType === TocNodeKind.Ancillary) {
       const event: CreateAncillaryEvent = {
         type: TocNodeKind.Ancillary,
         title,
-        bookIndex
+        bookIndex,
+        parentNodeToken
       }
       await this.fireEvent(event)
     }
