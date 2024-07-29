@@ -120,11 +120,10 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
       if (node.type === TocNodeKind.Subbook) {
         parentNodeToken = getNodeToken(node)
       } else if (node.type === TocNodeKind.Page || node.type === TocNodeKind.Ancillary) {
-        const parent = expect(
-          this.tocTreesProvider.getParent(node),
-          'BUG: Could not get parent node'
-        )
-        parentNodeToken = getNodeToken(parent)
+        const parent = this.tocTreesProvider.getParent(node)
+        if (parent !== undefined) {
+          parentNodeToken = getNodeToken(parent)
+        }
       }
     }
     if (nodeType === TocNodeKind.Page) {

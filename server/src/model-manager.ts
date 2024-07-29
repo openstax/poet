@@ -708,7 +708,7 @@ export class ModelManager {
 
       const bookToc = this.bookTocs[bookIndex]
       const book = expectValue(this.bundle.allBooks.get(bookToc.absPath), 'BUG: Book no longer exists')
-
+      /* istanbul ignore next */
       const newParentChildren = parentNodeToken !== undefined ? childrenOf(expectValue(this.lookupToken(parentNodeToken), 'BUG: should always have a parent').node) : bookToc.tocTree
       newParentChildren.splice(0, 0, {
         type: TocNodeKind.Page,

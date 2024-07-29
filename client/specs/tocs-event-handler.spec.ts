@@ -240,7 +240,7 @@ describe('TocsEventHandler', () => {
           type: TocNodeKind.Page,
           title: 'new-title',
           bookIndex: 0,
-          parentNodeToken: undefined
+          parentNodeToken: 'subbook-token'
         }
       },
       {
@@ -251,7 +251,7 @@ describe('TocsEventHandler', () => {
           title: 'new-title',
           slug: 'new-slug',
           bookIndex: 0,
-          parentNodeToken: undefined
+          parentNodeToken: 'subbook-token'
         }
       },
       {
@@ -261,7 +261,7 @@ describe('TocsEventHandler', () => {
           type: TocNodeKind.Ancillary,
           title: 'new-title',
           bookIndex: 0,
-          parentNodeToken: undefined
+          parentNodeToken: 'subbook-token'
         }
       },
       {
