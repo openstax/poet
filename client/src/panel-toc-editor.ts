@@ -29,7 +29,7 @@ export type PanelIncomingMessage = (
 )
 
 export type TreeItemWithToken = TreeItemUI & ({
-  type: TocNodeKind.Page
+  type: TocNodeKind.Page | TocNodeKind.Ancillary
   token: string
   title: string | undefined
   fileId: string
@@ -51,7 +51,7 @@ export interface PanelState {
 }
 
 function toTreeItem(n: ClientTocNode): TreeItemWithToken {
-  if (n.type === TocNodeKind.Page) {
+  if (n.type === TocNodeKind.Page || n.type === TocNodeKind.Ancillary) {
     return {
       type: n.type,
       token: n.value.token,
@@ -162,7 +162,7 @@ export class TocEditorPanel extends Panel<PanelIncomingMessage, never, PanelStat
   protected getState(): PanelState {
     const allModules = new Set<ClientPageish>()
     function recAddModules(n: ClientTocNode) {
-      if (n.type === TocNodeKind.Page) {
+      if (n.type === TocNodeKind.Page || n.type === TocNodeKind.Ancillary) {
         allModules.add(n.value)
       } else {
         n.children.forEach(recAddModules)

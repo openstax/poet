@@ -12,10 +12,19 @@ const testTocPage: ClientTocNode = {
     fileId: 'fileId'
   }
 }
+const testTocAncillary: ClientTocNode = {
+  type: TocNodeKind.Ancillary,
+  value: {
+    absPath: '/path/to/ancillary',
+    token: 'token',
+    title: 'title',
+    fileId: 'fileId'
+  }
+}
 const testTocSubbook: ClientTocNode = {
   type: TocNodeKind.Subbook,
   value: { token: 'token', title: 'title' },
-  children: [testTocPage]
+  children: [testTocPage, testTocAncillary]
 }
 const testToc: BookToc = {
   type: BookRootNode.Singleton,
@@ -27,15 +36,17 @@ const testToc: BookToc = {
   licenseUrl: 'licenseUrl',
   tocTree: [testTocSubbook]
 }
-
 describe('Toc Provider', () => {
   const p = new TocsTreeProvider()
   it('returns tree items for children', () => {
     expect(p.getTreeItem(testToc)).toMatchSnapshot()
     expect(p.getTreeItem(testTocSubbook)).toMatchSnapshot()
     expect(p.getTreeItem(testTocPage)).toMatchSnapshot()
+    expect(p.getTreeItem(testTocAncillary)).toMatchSnapshot()
   })
   it('filters fileids when filtering is set', () => {
+    const p = new TocsTreeProvider()
+    p.update([testToc], [])
     expect(p.getTreeItem(testTocPage)).toMatchSnapshot()
     p.toggleFilterMode()
     expect(p.getTreeItem(testTocPage)).toMatchSnapshot()
@@ -50,10 +61,11 @@ describe('Toc Provider', () => {
     expect(p.getTreeItem(nonloadedPage).label).toBe(`Loading... (${nonloadedPage.value.fileId})`)
   })
   it('gets children and parents', () => {
-    p.update([testToc])
+    p.update([testToc], [])
     expect(p.getChildren()).toEqual([testToc])
     expect(p.getParent(testToc)).toBe(undefined)
     expect(p.getChildren(testToc)).toEqual(testToc.tocTree)
     expect(p.getParent(testToc.tocTree[0])).toBe(testToc)
+    expect(p.getParentBook(testToc)).toBe(undefined)
   })
 })
