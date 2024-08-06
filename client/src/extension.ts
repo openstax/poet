@@ -13,9 +13,12 @@ import { toggleTocTreesFilteringHandler } from './toc-trees-provider'
 import { type BookOrTocNode, TocsTreeProvider } from './book-tocs'
 import { type BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
 import { readmeGenerator } from './generate-readme'
+import { TocsEventHandler } from './tocs-event-handler'
+import { TocNodeKind } from '../../common/src/toc'
 
 let tocTreesView: vscode.TreeView<BookOrTocNode>
 let tocTreesProvider: TocsTreeProvider
+let tocEventHandler: TocsEventHandler
 let client: LanguageClient
 const onDidChangeWatchedFilesEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter()
 const onDidChangeWatchedFiles = onDidChangeWatchedFilesEmitter.event
@@ -91,9 +94,10 @@ function doRest(client: LanguageClient): ExtensionExports {
   const imageManagerPanelManager = new PanelManager(hostContext, ImageManagerPanel)
 
   tocTreesProvider = new TocsTreeProvider()
+  tocEventHandler = new TocsEventHandler(tocTreesProvider, hostContext)
   client.onNotification(ExtensionServerNotification.BookTocs, (params: BooksAndOrphans) => {
     hostContext.bookTocs = params // When a panel opens, make sure it has the latest bookTocs
-    tocTreesProvider.update(params.books)
+    tocTreesProvider.update(params.books, params.orphans)
     /* istanbul ignore next */
     void tocPanelManager.panel()?.update(params)
   })
@@ -104,9 +108,14 @@ function doRest(client: LanguageClient): ExtensionExports {
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent(hostContext)))
   vscode.commands.registerCommand('openstax.generateReadme', ensureCatch(readmeGenerator(hostContext)))
-  tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true })
+  tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true, dragAndDropController: tocEventHandler })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
+  vscode.commands.registerCommand('openstax.addAncillaryToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Ancillary, node, 'test') }))
+  vscode.commands.registerCommand('openstax.addPageToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Page, node, 'test') }))
+  vscode.commands.registerCommand('openstax.addSubBookToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Subbook, node, 'test') }))
   vscode.commands.registerCommand('openstax.validateContent', ensureCatch(validateContent))
+  vscode.commands.registerCommand('openstax.removeNode', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.removeNode(node) }))
+  vscode.commands.registerCommand('openstax.renameNode', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.renameNode(node) }))
   void ensureCatchPromise(setDefaultGitConfig())
   void ensureCatchPromise(initPrivateSubmodule(hostContext))
 

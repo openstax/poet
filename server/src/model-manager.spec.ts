@@ -766,20 +766,70 @@ describe('modifyToc()', () => {
       expect(tocEntry.page).toBe(orphan)
     }
   })
+  it('moves a Page between books', async () => {
+    mockfs({
+      collections: {
+        'book-a.collection.xml': bookMaker({
+          slug: 'book-a',
+          toc: [{ title: 'subbook-a', children: ['m2468'] }]
+        }),
+        'book-b.collection.xml': bookMaker({
+          slug: 'book-b',
+          toc: [{ title: 'subbook-b', children: ['m1357'] }]
+        })
+      },
+      'META-INF/books.xml': bundleMaker({
+        books: ['book-a', 'book-b']
+      }),
+      'modules/m2468/index.cnxml': pageMaker({ uuid: 'somethig' }),
+      'modules/m1357/index.cnxml': pageMaker({})
+    })
+
+    const bundle = new Bundle(FS_PATH_HELPER, process.cwd())
+    const manager = new ModelManager(bundle, conn, (p) => { params = p })
+    await manager.loadEnoughForOrphans()
+    const { books } = params
+    const subbookA = books[0].tocTree[0]
+    let subbookB = books[1].tocTree[0]
+    expect(subbookA).toBeDefined()
+    expect(subbookB).toBeDefined()
+    if (subbookA.type !== TocNodeKind.Subbook) { throw new Error('Expected subbook') }
+    if (subbookB.type !== TocNodeKind.Subbook) { throw new Error('Expected subbook') }
+    const page1A = subbookA.children[0]
+    const page1B = subbookB.children[0]
+
+    const evt1: TocModification = {
+      type: TocModificationKind.Move,
+      nodeToken: page1A.value.token,
+      newParentToken: subbookB.value.token,
+      newChildIndex: 0,
+      bookIndex: 1 // book-b
+    }
+    await manager.modifyToc(evt1)
+    expect(bundle.allBooks.all.toArray()[0]?.pages.size).toBe(0)
+    expect(bundle.allBooks.all.toArray()[1]?.pages.size).toBe(2)
+    subbookB = params.books[1].tocTree[0]
+    if (subbookB.type !== TocNodeKind.Subbook) { throw new Error('Expected subbook') }
+    expect(subbookB.children[0].value.token).toBe(page1A.value.token)
+    expect(subbookB.children[1].value.token).toBe(page1B.value.token)
+    expect(params.orphans).toStrictEqual([])
+
+    mockfs.restore()
+  })
   it('creates a new Page in book', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
 
     expect(book.pages.size).toBe(1)
 
     const bookIndex = 0
-    const { page: loadedPage } = await manager.createPage(bookIndex, 'TEST_TITLE')
+    const { page: loadedPage } = await manager.createPage(bookIndex, undefined, 'TEST_TITLE')
 
     expect(book.pages.size).toBe(2)
     expect(I.Set(book.pages).has(loadedPage)).toBe(true)
     expect(loadedPage.title).toBe('TEST_TITLE')
 
     // Add another page for code coverage reasons
-    await manager.createPage(bookIndex, 'TEST_TITLE2')
+    await manager.createPage(bookIndex, undefined, 'TEST_TITLE2')
   })
   it('creates a new Subbook in book', async () => {
     const book = loadSuccess(first(loadSuccess(manager.bundle).books))
@@ -787,7 +837,7 @@ describe('modifyToc()', () => {
     expect(book.toc.length).toBe(1)
 
     const bookIndex = 0
-    await manager.createSubbook(bookIndex, 'TEST_TITLE')
+    await manager.createSubbook(bookIndex, undefined, 'TEST_TITLE')
 
     expect(book.toc.length).toBe(2)
     expect(book.toc[0].type).toBe(TocNodeKind.Subbook)
@@ -795,6 +845,22 @@ describe('modifyToc()', () => {
     if (tocNode.type === TocNodeKind.Subbook) {
       expect(tocNode.title).toBe('TEST_TITLE')
     } else throw new Error('BUG: unreachable case')
+  })
+
+  it('creates a new Ancillary in book', async () => {
+    const book = loadSuccess(first(loadSuccess(manager.bundle).books))
+
+    expect(book.pages.size).toBe(1)
+
+    const bookIndex = 0
+    const { page: loadedPage } = await manager.createAncillary(bookIndex, undefined, 'TEST_TITLE')
+
+    expect(book.pages.size).toBe(2)
+    expect(I.Set(book.pages).has(loadedPage)).toBe(true)
+    expect(loadedPage.title).toBe('TEST_TITLE')
+
+    // Add another page for code coverage reasons
+    await manager.createAncillary(bookIndex, undefined, 'TEST_TITLE2')
   })
 })
 

@@ -47,6 +47,9 @@
           </xs:restriction>
         </xs:simpleType>
       </xs:attribute>
+      <xs:attribute name="resource"/>
+      <xs:attribute name="document-link"/>
+      <xs:attribute name="ancillary-type"/>
     </xs:complexType>
   </xs:element>
   <xs:group name="title">
