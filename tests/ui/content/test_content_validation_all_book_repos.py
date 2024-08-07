@@ -12,7 +12,7 @@ def test_content_validation_all_book_repos(
     # run the test: pytest -k test_content_validation_all_repos.py tests/ui --github_user xxx --github_password yyy
     # --github_token zzz > validation.log
 
-    # As per github changes, modified on November 30, 2023
+    # Updated: August 7th, 2024
 
     sign_in_button_selector = "input.btn.btn-primary.btn-block.js-sign-in-button"
 
@@ -37,10 +37,10 @@ def test_content_validation_all_book_repos(
             else:
                 home.click_workspace_continue_button()
 
-                # THEN: openstax extension launches and icon appears
                 if not home.openstax_icon_is_visible:
                     print("No openstax icon")
                 else:
+                    home.click_cat_icon()
                     home.click_openstax_icon()
 
                     # THEN: TOC Editor and book list dropdown is visible
@@ -105,7 +105,7 @@ def test_content_validation_all_book_repos(
                 if not home.openstax_icon_is_visible:
                     print("No openstax icon")
                 else:
-                    # THEN: openstax extension launches and icon appears
+                    home.click_cat_icon()
                     home.click_openstax_icon()
 
                     # THEN: TOC Editor and book list dropdown is visible
