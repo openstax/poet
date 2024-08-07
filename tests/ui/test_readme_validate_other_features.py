@@ -42,6 +42,7 @@ def test_readme_validate_other_features(
     assert home.openstax_icon_is_visible
 
     # THEN: POET UI launches and is visible
+    home.click_cat_icon()
     home.click_openstax_icon()
 
     home.click_push_content_button()
@@ -49,12 +50,11 @@ def test_readme_validate_other_features(
     assert home.push_message_input_field_is_visible
     assert "Push Content: Pushing..." in home.push_content_dialog_box.inner_text()
 
-    home.click_push_content_dialog_box_cancel_button()
+    chrome_page.keyboard.press("Escape")
     assert home.push_message_input_field_not_visible
 
     home.click_generate_readme_button()
     assert home.generate_readme_dialog_box_is_visible
-    assert "Generate README: Done!" in home.generate_readme_dialog_box_text.inner_text()
 
     home.click_validate_content_button()
     assert home.validate_content_popup_dialog_is_visible

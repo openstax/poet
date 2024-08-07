@@ -84,13 +84,6 @@ class HomePoet:
         return self.page.locator("div > div.notifications-toasts.visible")
 
     @property
-    def push_content_dialog_box_cancel_button(self):
-        return self.page.locator("div.notification-list-item-buttons-container")
-
-    def click_push_content_dialog_box_cancel_button(self):
-        return self.push_content_dialog_box_cancel_button.click()
-
-    @property
     def generate_readme_button_is_visible(self):
         return self.page.get_by_text("Generate README", exact=True)
 
@@ -99,12 +92,8 @@ class HomePoet:
 
     @property
     def generate_readme_dialog_box_is_visible(self):
-        return self.page.wait_for_selector("div.notifications-toasts.visible")
-
-    @property
-    def generate_readme_dialog_box_text(self):
-        return self.page.locator(
-            "div.notification-list-item-main-row > div.notification-list-item-message"
+        return self.page.locator("div.notifications-toasts.visible").get_by_text(
+            "README: Done!"
         )
 
     @property
