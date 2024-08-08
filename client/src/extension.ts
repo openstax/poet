@@ -3,13 +3,12 @@ import fs from 'fs'
 import vscode from 'vscode'
 import { type LanguageClient } from 'vscode-languageclient/node'
 import { pushContent, validateContent, setDefaultGitConfig, initPrivateSubmodule } from './push-content'
-import { TocEditorPanel } from './panel-toc-editor'
 import { CnxmlPreviewPanel } from './panel-cnxml-preview'
 import { expect, ensureCatch, ensureCatchPromise, launchLanguageServer, populateXsdSchemaFiles, getRootPathUri, configureWorkspaceSettings } from './utils'
 import { OpenstaxCommand } from './extension-types'
 import { type ExtensionHostContext, type Panel, PanelManager } from './panel'
 import { ImageManagerPanel } from './panel-image-manager'
-import { toggleTocTreesFilteringHandler } from './toc-trees-provider'
+import { toggleTocTreesFilteringHandler } from './book-tocs'
 import { type BookOrTocNode, TocsTreeProvider } from './book-tocs'
 import { type BooksAndOrphans, EMPTY_BOOKS_AND_ORPHANS, ExtensionServerNotification } from '../../common/src/requests'
 import { readmeGenerator } from './generate-readme'
@@ -35,6 +34,11 @@ export function setLanguageServerLauncher(l: typeof languageServerLauncher) {
 export const forwardOnDidChangeWorkspaceFolders = (clientInner: LanguageClient) => async (event: vscode.WorkspaceFoldersChangeEvent) => {
   await clientInner.sendRequest('onDidChangeWorkspaceFolders', event)
 }
+export const getTocTree = (): {
+  tocTreesView: vscode.TreeView<BookOrTocNode> | undefined | null
+  tocTreesProvider: TocsTreeProvider | undefined | null
+  tocEventHandler: TocsEventHandler | undefined | null
+} => ({ tocTreesView, tocTreesProvider, tocEventHandler })
 
 type ExtensionExports = { [key in OpenstaxCommand]: PanelManager<Panel<unknown, unknown, unknown>> }
 export async function activate(context: vscode.ExtensionContext): Promise<ExtensionExports> {
@@ -79,9 +83,8 @@ function createHostContext(client: LanguageClient): ExtensionHostContext {
   }
 }
 
-function createExports(tocPanelManager: PanelManager<TocEditorPanel>, cnxmlPreviewPanelManager: PanelManager<CnxmlPreviewPanel>, imageManagerPanelManager: PanelManager<ImageManagerPanel>): ExtensionExports {
+function createExports(cnxmlPreviewPanelManager: PanelManager<CnxmlPreviewPanel>, imageManagerPanelManager: PanelManager<ImageManagerPanel>): ExtensionExports {
   return {
-    [OpenstaxCommand.SHOW_TOC_EDITOR]: tocPanelManager,
     [OpenstaxCommand.SHOW_CNXML_PREVIEW]: cnxmlPreviewPanelManager,
     [OpenstaxCommand.SHOW_IMAGE_MANAGER]: imageManagerPanelManager
   }
@@ -89,7 +92,6 @@ function createExports(tocPanelManager: PanelManager<TocEditorPanel>, cnxmlPrevi
 
 function doRest(client: LanguageClient): ExtensionExports {
   const hostContext = createHostContext(client)
-  const tocPanelManager = new PanelManager(hostContext, TocEditorPanel)
   const cnxmlPreviewPanelManager = new PanelManager(hostContext, CnxmlPreviewPanel)
   const imageManagerPanelManager = new PanelManager(hostContext, ImageManagerPanel)
 
@@ -98,12 +100,9 @@ function doRest(client: LanguageClient): ExtensionExports {
   client.onNotification(ExtensionServerNotification.BookTocs, (params: BooksAndOrphans) => {
     hostContext.bookTocs = params // When a panel opens, make sure it has the latest bookTocs
     tocTreesProvider.update(params.books, params.orphans)
-    /* istanbul ignore next */
-    void tocPanelManager.panel()?.update(params)
   })
 
   vscode.workspace.onDidChangeWorkspaceFolders(ensureCatch(forwardOnDidChangeWorkspaceFolders(client)))
-  vscode.commands.registerCommand(OpenstaxCommand.SHOW_TOC_EDITOR, tocPanelManager.revealOrNew.bind(tocPanelManager))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_IMAGE_MANAGER, imageManagerPanelManager.revealOrNew.bind(imageManagerPanelManager))
   vscode.commands.registerCommand(OpenstaxCommand.SHOW_CNXML_PREVIEW, cnxmlPreviewPanelManager.revealOrNew.bind(cnxmlPreviewPanelManager))
   vscode.commands.registerCommand('openstax.pushContent', ensureCatch(pushContent(hostContext)))
@@ -123,5 +122,5 @@ function doRest(client: LanguageClient): ExtensionExports {
   // It is only allowed a single handler, from what we can tell
   client.onRequest('onDidChangeWatchedFiles', () => { onDidChangeWatchedFilesEmitter.fire() })
 
-  return createExports(tocPanelManager, cnxmlPreviewPanelManager, imageManagerPanelManager)
+  return createExports(cnxmlPreviewPanelManager, imageManagerPanelManager)
 }
