@@ -12,3 +12,5 @@ node_modules/
 
 # These are here for the testbook
 /.xsd/
+
+/client/static/xsd/*.xsd.orig

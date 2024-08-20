@@ -4,7 +4,7 @@ from tests.ui.pages.home import HomePoet
 
 
 @pytest.mark.nondestructive
-def test_home_ui(chrome_page, github_user, github_password, gitpod_repo_url):
+def test_cat_h5p(chrome_page, github_user, github_password, gitpod_repo_url):
     # GIVEN: Playwright, chromium and a gitpod repo url
     # (https://gitpod.io/#https://github.com/openstax/osbooks-otto-book)
 
@@ -36,7 +36,7 @@ def test_home_ui(chrome_page, github_user, github_password, gitpod_repo_url):
     if home.continue_with_workspace_is_visible:
         home.click_workspace_continue_button()
 
-    # THEN: openstax extension launches and icon appears
+    # THEN: openstax and cat extension launches and both icons appear
     assert home.openstax_icon_is_visible
     assert home.cat_icon_is_visible
 
@@ -44,20 +44,23 @@ def test_home_ui(chrome_page, github_user, github_password, gitpod_repo_url):
 
     # THEN: POET UI launches and is visible
     assert home.open_toc_editor_button_is_visible
-    assert home.push_content_button_is_visible
-    assert home.generate_readme_button_is_visible
-    assert home.validate_content_button_is_visible
 
-    assert home.toc_tree_dropdown_list_is_visible
-    assert "TOC TREES" in home.toc_tree_dropdown_list_is_visible.inner_text()
+    home.click_cat_icon()
 
+    # THEN: CAT UI launches and is visible
+    assert home.open_h5p_editor_button_is_visible
+
+    home.click_open_h5p_editor_button()
+
+    assert home.cat_tab_is_visible
+    assert home.h5p_editor_create_new_content_button_is_visible
+
+    home.click_openstax_icon()
     home.click_open_toc_editor_button()
 
-    assert home.toc_editor_add_buttons_are_visible
-    assert home.chapter_subcollection_list_is_visible
-
-    assert home.toc_editor_all_modules_dropdown_is_visible
-    assert home.toc_editor_deleted_modules_list_is_visible
+    # THEN: Both POET and CAT tabs are visible
+    assert home.openstax_tab_is_visible
+    assert home.cat_icon_is_visible
 
     home.click_gitpod_menubar()
     home.click_stop_workspace_button()

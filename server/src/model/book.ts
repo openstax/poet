@@ -161,7 +161,7 @@ export class BookNode extends Fileish {
       {
         message: BookValidationKind.INVALID_BOOK_NAME,
         nodesToLoad: I.Set(),
-        fn: () => this.absPath.endsWith(`${this.slug}.collection.xml`)
+        fn: () => this.pathHelper.basename(this.absPath) === this.pathHelper.basename(`${this.slug}.collection.xml`)
           ? I.Set()
           : I.Set([NOWHERE])
       }

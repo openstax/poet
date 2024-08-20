@@ -20,6 +20,36 @@ class HomePoet:
         self.openstax_icon_is_visible.click()
 
     @property
+    def cat_icon_is_visible(self):
+        return self.page.wait_for_selector("ul > li:nth-child(8)", timeout=90000)
+
+    def click_cat_icon(self):
+        self.cat_icon_is_visible.click()
+
+    @property
+    def cat_tab_is_visible(self):
+        return self.page.locator("div.tabs-container > div:nth-child(2)").get_by_text(
+            "H5P Editor"
+        )
+
+    @property
+    def openstax_tab_is_visible(self):
+        return self.page.locator("div.tabs-container > div:nth-child(3)").get_by_text(
+            "Table of Contents Editor"
+        )
+
+    @property
+    def open_h5p_editor_button_is_visible(self):
+        return self.page.get_by_text("Open H5P Editor", exact=True)
+
+    def click_open_h5p_editor_button(self):
+        return self.open_h5p_editor_button_is_visible.click()
+
+    @property
+    def h5p_editor_create_new_content_button_is_visible(self):
+        return self.page.get_by_text("Create new content", exact=True)
+
+    @property
     def parent_frame(self):
         return self.page.frame_locator("iframe").last
 
@@ -54,13 +84,6 @@ class HomePoet:
         return self.page.locator("div > div.notifications-toasts.visible")
 
     @property
-    def push_content_dialog_box_cancel_button(self):
-        return self.page.locator("div.notification-list-item-buttons-container")
-
-    def click_push_content_dialog_box_cancel_button(self):
-        return self.push_content_dialog_box_cancel_button.click()
-
-    @property
     def generate_readme_button_is_visible(self):
         return self.page.get_by_text("Generate README", exact=True)
 
@@ -69,12 +92,8 @@ class HomePoet:
 
     @property
     def generate_readme_dialog_box_is_visible(self):
-        return self.page.wait_for_selector("div.notifications-toasts.visible")
-
-    @property
-    def generate_readme_dialog_box_text(self):
-        return self.page.locator(
-            "div.notification-list-item-main-row > div.notification-list-item-message"
+        return self.page.locator("div.notifications-toasts.visible").get_by_text(
+            "README: Done!"
         )
 
     @property
