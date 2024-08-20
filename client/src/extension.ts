@@ -110,7 +110,7 @@ function doRest(client: LanguageClient): ExtensionExports {
   vscode.commands.registerCommand('openstax.generateReadme', ensureCatch(readmeGenerator(hostContext)))
   tocTreesView = vscode.window.createTreeView('tocTrees', { treeDataProvider: tocTreesProvider, showCollapseAll: true, dragAndDropController: tocEventHandler })
   vscode.commands.registerCommand('openstax.toggleTocTreesFiltering', ensureCatch(toggleTocTreesFilteringHandler(tocTreesView, tocTreesProvider)))
-  vscode.commands.registerCommand('openstax.addAncillaryToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Ancillary, node, 'test') }))
+  // vscode.commands.registerCommand('openstax.addAncillaryToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Ancillary, node, 'test') }))
   vscode.commands.registerCommand('openstax.addPageToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Page, node, 'test') }))
   vscode.commands.registerCommand('openstax.addSubBookToToc', ensureCatch(async (node: BookOrTocNode) => { await tocEventHandler.addNode(TocNodeKind.Subbook, node, 'test') }))
   vscode.commands.registerCommand('openstax.validateContent', ensureCatch(validateContent))
