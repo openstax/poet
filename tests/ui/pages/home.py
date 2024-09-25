@@ -80,10 +80,6 @@ class HomePoet:
         return self.page.locator("div.monaco-inputbox.idle")
 
     @property
-    def push_content_dialog_box(self):
-        return self.page.locator("div > div.notifications-toasts.visible")
-
-    @property
     def generate_readme_button_is_visible(self):
         return self.page.get_by_text("Generate README", exact=True)
 
@@ -279,6 +275,7 @@ class HomePoet:
         return self.page.locator("div.menubar-menu-button")
 
     def click_gitpod_menubar(self):
+        self.gitpod_menubar_locator.focus()
         self.gitpod_menubar_locator.click()
 
     @property

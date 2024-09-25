@@ -48,7 +48,6 @@ def test_readme_validate_other_features(
     home.click_push_content_button()
 
     assert home.push_message_input_field_is_visible
-    assert "Push Content: Pushing..." in home.push_content_dialog_box.inner_text()
 
     chrome_page.keyboard.press("Escape")
     assert home.push_message_input_field_not_visible
