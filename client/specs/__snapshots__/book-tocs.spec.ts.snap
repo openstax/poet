@@ -139,10 +139,27 @@ exports[`Toc Provider returns tree items for children 3`] = `
 
 exports[`Toc Provider returns tree items for children 4`] = `
 {
-  "collapsibleState": "Collapsed",
+  "collapsibleState": "None",
+  "command": {
+    "arguments": [
+      {
+        "$mid": 1,
+        "path": "/path/to/ancillary",
+        "scheme": "file",
+      },
+    ],
+    "command": "vscode.open",
+    "title": "open",
+  },
   "contextValue": "rename",
-  "iconPath": "Folder",
+  "description": "fileId",
+  "iconPath": "File",
   "label": "title",
+  "resourceUri": {
+    "$mid": 1,
+    "path": "/path/to/ancillary",
+    "scheme": "file",
+  },
 }
 `;
 

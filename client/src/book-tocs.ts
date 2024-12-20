@@ -19,7 +19,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
 
   public includeFileIdsForFilter = false
   private bookTocs: BookToc[]
-  private orphans: BookOrTocNode[]
+  private orphans: ClientTocNode[]
   private readonly parentsMap = new Map<BookOrTocNode, BookOrTocNode>()
 
   constructor() {
@@ -55,42 +55,46 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
     if (this.getParent(node) !== undefined) {
       capabilities.push('delete')
     }
-    if (node.type === BookRootNode.Singleton) {
-      const uri = Uri.parse(node.absPath)
-      return {
-        iconPath: TocItemIcon.Book,
-        collapsibleState: TreeItemCollapsibleState.Collapsed,
-        label: node.title,
-        description: node.slug,
-        resourceUri: uri,
-        command: { title: 'open', command: 'vscode.open', arguments: [uri] }
+    switch (node.type) {
+      case BookRootNode.Singleton: {
+        const uri = Uri.parse(node.absPath)
+        return {
+          iconPath: TocItemIcon.Book,
+          collapsibleState: TreeItemCollapsibleState.Collapsed,
+          label: node.title,
+          description: node.slug,
+          resourceUri: uri,
+          command: { title: 'open', command: 'vscode.open', arguments: [uri] }
+        }
       }
-    } else if (node.type === TocNodeKind.Page) {
-      const uri = Uri.parse(node.value.absPath)
-      const title = node.value.title ?? 'Loading...'
-      const ret = this.includeFileIdsForFilter ? { label: `${title} (${node.value.fileId})` } : { label: title, description: node.value.fileId }
-      return {
-        ...ret,
-        iconPath: TocItemIcon.Page,
-        collapsibleState: TreeItemCollapsibleState.None,
-        resourceUri: uri,
-        command: { title: 'open', command: 'vscode.open', arguments: [uri] },
-        contextValue: capabilities.join(',')
+      case TocNodeKind.Ancillary:
+      case TocNodeKind.Page: {
+        const uri = Uri.parse(node.value.absPath)
+        const title = node.value.title ?? 'Loading...'
+        const ret = this.includeFileIdsForFilter ? { label: `${title} (${node.value.fileId})` } : { label: title, description: node.value.fileId }
+        return {
+          ...ret,
+          iconPath: TocItemIcon.Page,
+          collapsibleState: TreeItemCollapsibleState.None,
+          resourceUri: uri,
+          command: { title: 'open', command: 'vscode.open', arguments: [uri] },
+          contextValue: capabilities.join(',')
+        }
       }
-    } else {
-      return {
-        iconPath: TocItemIcon.Subbook,
-        collapsibleState: TreeItemCollapsibleState.Collapsed,
-        label: node.value.title,
-        contextValue: capabilities.join(',')
-      }
+      case TocNodeKind.Subbook:
+        return {
+          iconPath: TocItemIcon.Subbook,
+          collapsibleState: TreeItemCollapsibleState.Collapsed,
+          label: node.value.title,
+          contextValue: capabilities.join(',')
+        }
     }
   }
 
   public getChildren(node?: BookOrTocNode) {
     let kids: BookOrTocNode[] = []
     if (node === undefined) {
-      return [...this.bookTocs, ...this.orphans]
+      kids = [...this.bookTocs, ...this.orphans]
     } else if (node.type === BookRootNode.Singleton) {
       kids = node.tocTree
     } else if (node.type === TocNodeKind.Page || node.type === TocNodeKind.Ancillary) {
