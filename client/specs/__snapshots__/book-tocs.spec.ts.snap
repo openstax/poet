@@ -163,8 +163,26 @@ exports[`Toc Provider returns tree items for children 4`] = `
 }
 `;
 
+exports[`Toc Provider returns tree items for children 5`] = `
+{
+  "collapsibleState": "Collapsed",
+  "iconPath": "Folder",
+  "label": "Orphaned Modules",
+}
+`;
+
 exports[`filtering toggleTocTreesFilteringHandler 1`] = `
 [
+  [
+    {
+      "children": [],
+      "type": "ClientOnlyTocKinds.OrphanCollection",
+      "value": undefined,
+    },
+    {
+      "expand": 3,
+    },
+  ],
   [
     {
       "children": [],

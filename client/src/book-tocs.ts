@@ -3,7 +3,15 @@ import { EventEmitter, type TreeItem, TreeItemCollapsibleState, Uri, type TreeDa
 import { type BookToc, type ClientTocNode, BookRootNode, TocNodeKind, type ClientPageish } from '../../common/src/toc'
 import type vscode from 'vscode'
 
-export type BookOrTocNode = BookToc | ClientTocNode
+export enum ClientOnlyTocKinds {
+  OrphanCollection = 'ClientOnlyTocKinds.OrphanCollection'
+}
+
+interface OrphanCollection {
+  type: ClientOnlyTocKinds.OrphanCollection
+  children: BookOrTocNode[]
+}
+export type BookOrTocNode = BookToc | ClientTocNode | OrphanCollection
 
 const toClientTocNode = (n: ClientPageish): ClientTocNode => ({ type: TocNodeKind.Page, value: n })
 
@@ -19,12 +27,12 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
 
   public includeFileIdsForFilter = false
   private bookTocs: BookToc[]
-  private orphans: ClientTocNode[]
+  private readonly orphanCollection: OrphanCollection
   private readonly parentsMap = new Map<BookOrTocNode, BookOrTocNode>()
 
   constructor() {
     this.bookTocs = []
-    this.orphans = []
+    this.orphanCollection = { type: ClientOnlyTocKinds.OrphanCollection, children: [] }
   }
 
   public toggleFilterMode() {
@@ -36,7 +44,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
     this.bookTocs = n
     this.parentsMap.clear()
     this.bookTocs.forEach(n => { this.recAddParent(n) })
-    this.orphans = o.map(toClientTocNode)
+    this.orphanCollection.children = o.map(toClientTocNode)
     this._onDidChangeTreeData.fire()
   }
 
@@ -88,13 +96,19 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
           label: node.value.title,
           contextValue: capabilities.join(',')
         }
+      case ClientOnlyTocKinds.OrphanCollection:
+        return {
+          iconPath: TocItemIcon.Subbook,
+          collapsibleState: TreeItemCollapsibleState.Collapsed,
+          label: 'Orphaned Modules'
+        }
     }
   }
 
   public getChildren(node?: BookOrTocNode) {
     let kids: BookOrTocNode[] = []
     if (node === undefined) {
-      kids = [...this.bookTocs, ...this.orphans]
+      kids = [...this.bookTocs, this.orphanCollection]
     } else if (node.type === BookRootNode.Singleton) {
       kids = node.tocTree
     } else if (node.type === TocNodeKind.Page || node.type === TocNodeKind.Ancillary) {
@@ -140,7 +154,7 @@ export function toggleTocTreesFilteringHandler(view: vscode.TreeView<BookOrTocNo
   // is fully expanded. This approach is used since attempting to simply call
   // reveal on root notes with the max expand value of 3 doesn't seem to always
   // fully expose leaf nodes for large trees.
-  function leafFinder(acc: ClientTocNode[], elements: BookOrTocNode[]) {
+  function leafFinder(acc: Array<ClientTocNode | OrphanCollection>, elements: BookOrTocNode[]) {
     for (const el of elements) {
       if (el.type === BookRootNode.Singleton) {
         leafFinder(acc, el.tocTree)

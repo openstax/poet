@@ -3,7 +3,7 @@ import type vscode from 'vscode'
 import { expect } from '@jest/globals'
 
 import { BookRootNode, type BookToc, type ClientTocNode, TocNodeKind } from '../../common/src/toc'
-import { type BookOrTocNode, TocsTreeProvider, toggleTocTreesFilteringHandler } from '../src/book-tocs'
+import { type BookOrTocNode, ClientOnlyTocKinds, TocsTreeProvider, toggleTocTreesFilteringHandler } from '../src/book-tocs'
 
 const testTocPage: ClientTocNode = {
   type: TocNodeKind.Page,
@@ -38,6 +38,10 @@ const testToc: BookToc = {
   licenseUrl: 'licenseUrl',
   tocTree: [testTocSubbook]
 }
+const testOrphanCollection = {
+  type: ClientOnlyTocKinds.OrphanCollection,
+  children: []
+}
 describe('Toc Provider', () => {
   const p = new TocsTreeProvider()
   it('returns tree items for children', () => {
@@ -45,6 +49,7 @@ describe('Toc Provider', () => {
     expect(p.getTreeItem(testTocSubbook)).toMatchSnapshot()
     expect(p.getTreeItem(testTocPage)).toMatchSnapshot()
     expect(p.getTreeItem(testTocAncillary)).toMatchSnapshot()
+    expect(p.getTreeItem(testOrphanCollection)).toMatchSnapshot()
   })
   it('filters fileids when filtering is set', () => {
     const p = new TocsTreeProvider()
@@ -64,7 +69,7 @@ describe('Toc Provider', () => {
   })
   it('gets children and parents', () => {
     p.update([testToc], [])
-    expect(p.getChildren()).toEqual([testToc])
+    expect(p.getChildren()).toEqual([testToc, { children: [], type: ClientOnlyTocKinds.OrphanCollection, value: undefined }])
     expect(p.getParent(testToc)).toBe(undefined)
     expect(p.getChildren(testToc)).toEqual(testToc.tocTree)
     expect(p.getParent(testToc.tocTree[0])).toBe(testToc)
@@ -92,7 +97,8 @@ describe('filtering', () => {
     } as unknown as TocsTreeProvider
     const fakeChildren = [
       { type: BookRootNode.Singleton, tocTree: [{ type: TocNodeKind.Subbook, label: 'unit1', children: [{ type: TocNodeKind.Subbook, label: 'subcol1', children: [{ type: TocNodeKind.Page, label: 'm2', children: [] }] }] }] },
-      { type: BookRootNode.Singleton, tocTree: [{ label: 'm1', children: [] }] }
+      { type: BookRootNode.Singleton, tocTree: [{ label: 'm1', children: [] }] },
+      { type: ClientOnlyTocKinds.OrphanCollection, children: [], value: undefined }
     ]
     getChildrenStub.returns(fakeChildren)
 
@@ -100,7 +106,7 @@ describe('filtering', () => {
     await handler()
     expect(toggleFilterStub.callCount).toBe(1)
     expect(getChildrenStub.callCount).toBe(1)
-    expect(revealStub.callCount).toBe(2)
+    expect(revealStub.callCount).toBe(3)
     expect(revealStub.getCalls().map(c => c.args)).toMatchSnapshot()
     expect(refreshStub.callCount).toBe(0)
   })

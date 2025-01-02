@@ -1,5 +1,5 @@
 import vscode from 'vscode'
-import { type TocsTreeProvider, type BookOrTocNode } from './book-tocs'
+import { type TocsTreeProvider, type BookOrTocNode, ClientOnlyTocKinds } from './book-tocs'
 import { type TocModification, TocModificationKind, type TocModificationParams, TocNodeKind, BookRootNode, type CreatePageEvent, type CreateSubbookEvent, type CreateAncillaryEvent, isClientTocNode } from '../../common/src/toc'
 import { ExtensionServerRequest } from '../../common/src/requests'
 import { expect, getRootPathUri } from './utils'
@@ -210,8 +210,16 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     const dragging: BookOrTocNode | undefined = dataTransfer.get(XFER_ITEM_ID)?.value
     if (dragging?.type === undefined) { throw new Error('BUG: Bad drag target') }
     if (target === undefined) { throw new Error('BUG: Bad drop target') }
-    if (target !== dragging && dragging.type !== BookRootNode.Singleton) {
-      await this.moveNode(dragging, target)
+    if (
+      target !== dragging &&
+      dragging.type !== ClientOnlyTocKinds.OrphanCollection &&
+      dragging.type !== BookRootNode.Singleton
+    ) {
+      if (target.type === ClientOnlyTocKinds.OrphanCollection) {
+        await this.removeNode(dragging)
+      } else {
+        await this.moveNode(dragging, target)
+      }
     }
   }
 }
