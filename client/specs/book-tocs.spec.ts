@@ -3,7 +3,7 @@ import type vscode from 'vscode'
 import { expect } from '@jest/globals'
 
 import { BookRootNode, type BookToc, type ClientTocNode, TocNodeKind } from '../../common/src/toc'
-import { type BookOrTocNode, ClientOnlyTocKinds, TocsTreeProvider, toggleTocTreesFilteringHandler } from '../src/book-tocs'
+import { type BookOrTocNode, type OrphanCollection, OrphanCollectionKind, TocsTreeProvider, toggleTocTreesFilteringHandler } from '../src/book-tocs'
 
 const testTocPage: ClientTocNode = {
   type: TocNodeKind.Page,
@@ -38,8 +38,8 @@ const testToc: BookToc = {
   licenseUrl: 'licenseUrl',
   tocTree: [testTocSubbook]
 }
-const testOrphanCollection = {
-  type: ClientOnlyTocKinds.OrphanCollection,
+const testOrphanCollection: OrphanCollection = {
+  type: OrphanCollectionKind,
   children: []
 }
 describe('Toc Provider', () => {
@@ -69,7 +69,7 @@ describe('Toc Provider', () => {
   })
   it('gets children and parents', () => {
     p.update([testToc], [])
-    expect(p.getChildren()).toEqual([testToc, { children: [], type: ClientOnlyTocKinds.OrphanCollection, value: undefined }])
+    expect(p.getChildren()).toEqual([testToc, { children: [], type: OrphanCollectionKind, value: undefined }])
     expect(p.getParent(testToc)).toBe(undefined)
     expect(p.getChildren(testToc)).toEqual(testToc.tocTree)
     expect(p.getParent(testToc.tocTree[0])).toBe(testToc)
@@ -98,7 +98,7 @@ describe('filtering', () => {
     const fakeChildren = [
       { type: BookRootNode.Singleton, tocTree: [{ type: TocNodeKind.Subbook, label: 'unit1', children: [{ type: TocNodeKind.Subbook, label: 'subcol1', children: [{ type: TocNodeKind.Page, label: 'm2', children: [] }] }] }] },
       { type: BookRootNode.Singleton, tocTree: [{ label: 'm1', children: [] }] },
-      { type: ClientOnlyTocKinds.OrphanCollection, children: [], value: undefined }
+      { type: OrphanCollectionKind, children: [], value: undefined }
     ]
     getChildrenStub.returns(fakeChildren)
 

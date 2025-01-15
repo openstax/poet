@@ -176,7 +176,7 @@ exports[`filtering toggleTocTreesFilteringHandler 1`] = `
   [
     {
       "children": [],
-      "type": "ClientOnlyTocKinds.OrphanCollection",
+      "type": "OrphanCollection",
       "value": undefined,
     },
     {

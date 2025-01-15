@@ -3,13 +3,11 @@ import { EventEmitter, type TreeItem, TreeItemCollapsibleState, Uri, type TreeDa
 import { type BookToc, type ClientTocNode, BookRootNode, TocNodeKind, type ClientPageish } from '../../common/src/toc'
 import type vscode from 'vscode'
 
-export enum ClientOnlyTocKinds {
-  OrphanCollection = 'ClientOnlyTocKinds.OrphanCollection'
-}
+export const OrphanCollectionKind = 'OrphanCollection'
 
-interface OrphanCollection {
-  type: ClientOnlyTocKinds.OrphanCollection
-  children: BookOrTocNode[]
+export interface OrphanCollection {
+  type: typeof OrphanCollectionKind
+  children: Array<BookToc | ClientTocNode>
 }
 export type BookOrTocNode = BookToc | ClientTocNode | OrphanCollection
 
@@ -32,7 +30,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
 
   constructor() {
     this.bookTocs = []
-    this.orphanCollection = { type: ClientOnlyTocKinds.OrphanCollection, children: [] }
+    this.orphanCollection = { type: OrphanCollectionKind, children: [] }
   }
 
   public toggleFilterMode() {
@@ -96,7 +94,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
           label: node.value.title,
           contextValue: capabilities.join(',')
         }
-      case ClientOnlyTocKinds.OrphanCollection:
+      case OrphanCollectionKind:
         return {
           iconPath: TocItemIcon.Subbook,
           collapsibleState: TreeItemCollapsibleState.Collapsed,
