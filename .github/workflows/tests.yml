@@ -6,7 +6,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 0 * * 0' # weekly
+    - cron: "0 0 * * 0" # weekly
 jobs:
   tests:
     timeout-minutes: 30
@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "18"
       - name: Setup
         run: |
           npm install
