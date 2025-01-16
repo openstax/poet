@@ -1,6 +1,6 @@
 import vscode from 'vscode'
-import { type TocsTreeProvider, type BookOrTocNode } from './book-tocs'
-import { type TocModification, TocModificationKind, type TocModificationParams, TocNodeKind, BookRootNode, type CreatePageEvent, type CreateSubbookEvent, type CreateAncillaryEvent } from '../../common/src/toc'
+import { type TocsTreeProvider, type BookOrTocNode, OrphanCollectionKind } from './book-tocs'
+import { type TocModification, TocModificationKind, type TocModificationParams, TocNodeKind, BookRootNode, type CreatePageEvent, type CreateSubbookEvent, type CreateAncillaryEvent, isClientTocNode } from '../../common/src/toc'
 import { ExtensionServerRequest } from '../../common/src/requests'
 import { expect, getRootPathUri } from './utils'
 import { type ExtensionHostContext } from './panel'
@@ -17,6 +17,8 @@ export const validateTitle = (title: string) => {
 
 export const XFER_ITEM_ID = 'application/vnd.code.tree.tocTrees'
 
+type TocEvent = TocModification | CreateSubbookEvent | CreatePageEvent | CreateAncillaryEvent
+
 export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOrTocNode> {
   constructor(
     private readonly tocTreesProvider: TocsTreeProvider,
@@ -30,7 +32,7 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     return expect(getRootPathUri(), 'Could not get root path uri').toString()
   }
 
-  private async fireEvent(event: TocModification | CreateSubbookEvent | CreatePageEvent | CreateAncillaryEvent) {
+  private async fireEvent(event: TocEvent) {
     const workspaceUri = this.workspaceUri
     const params: TocModificationParams = { workspaceUri, event }
     await this.context.client.sendRequest(
@@ -126,32 +128,35 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
         }
       }
     }
-    if (nodeType === TocNodeKind.Page) {
-      const event: CreatePageEvent = {
-        type: TocNodeKind.Page,
-        title,
-        bookIndex,
-        parentNodeToken
-      }
-      await this.fireEvent(event)
-    } else if (nodeType === TocNodeKind.Subbook) {
-      const event: CreateSubbookEvent = {
-        type: TocNodeKind.Subbook,
-        title,
-        slug,
-        bookIndex,
-        parentNodeToken
-      }
-      await this.fireEvent(event)
-    } else if (nodeType === TocNodeKind.Ancillary) {
-      const event: CreateAncillaryEvent = {
-        type: TocNodeKind.Ancillary,
-        title,
-        bookIndex,
-        parentNodeToken
-      }
-      await this.fireEvent(event)
+    let event: CreatePageEvent | CreateSubbookEvent | CreateAncillaryEvent
+    switch (nodeType) {
+      case TocNodeKind.Page:
+        event = {
+          type: TocNodeKind.Page,
+          title,
+          bookIndex,
+          parentNodeToken
+        }
+        break
+      case TocNodeKind.Subbook:
+        event = {
+          type: TocNodeKind.Subbook,
+          title,
+          slug,
+          bookIndex,
+          parentNodeToken
+        }
+        break
+      case TocNodeKind.Ancillary:
+        event = {
+          type: TocNodeKind.Ancillary,
+          title,
+          bookIndex,
+          parentNodeToken
+        }
+        break
     }
+    await this.fireEvent(event)
   }
 
   async renameNode(node: BookOrTocNode) {
@@ -159,8 +164,7 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     // https://github.com/microsoft/vscode/issues/97190
     // https://stackoverflow.com/questions/70594061/change-an-existing-label-name-in-tree-view-vscode-extension
     let oldTitle: string | undefined = ''
-    if (node.type !== BookRootNode.Singleton && 'title' in node.value) {
-      /* istanbul ignore next */
+    if (isClientTocNode(node)) {
       oldTitle = node.value.title
     }
     const newTitle = await this.askTitle(oldTitle)
@@ -204,10 +208,18 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
 
   async handleDrop(target: BookOrTocNode | undefined, dataTransfer: vscode.DataTransfer): Promise<void> {
     const dragging: BookOrTocNode | undefined = dataTransfer.get(XFER_ITEM_ID)?.value
-    if (dragging?.type === undefined) throw new Error('BUG: Bad drag target')
-    if (target === undefined) throw new Error('BUG: Bad drop target')
-    if (target !== dragging && dragging.type !== BookRootNode.Singleton) {
-      await this.moveNode(dragging, target)
+    if (dragging?.type === undefined) { throw new Error('BUG: Bad drag target') }
+    if (target === undefined) { throw new Error('BUG: Bad drop target') }
+    if (
+      target !== dragging &&
+      dragging.type !== OrphanCollectionKind &&
+      dragging.type !== BookRootNode.Singleton
+    ) {
+      if (target.type === OrphanCollectionKind) {
+        await this.removeNode(dragging)
+      } else {
+        await this.moveNode(dragging, target)
+      }
     }
   }
 }

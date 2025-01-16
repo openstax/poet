@@ -29,6 +29,12 @@ export interface ClientAncillaryish { token: Token, title: string | undefined, f
 export interface ClientSubbookish { token: Token, title: string }
 export type ClientTocNode = TocNode<ClientSubbookish, (ClientPageish | ClientAncillaryish)>
 
+export const isClientTocNode = (n: { type: unknown }): n is ClientTocNode => (
+  n.type === TocNodeKind.Page ||
+  n.type === TocNodeKind.Subbook ||
+  n.type === TocNodeKind.Ancillary
+)
+
 export interface BookToc {
   readonly type: BookRootNode.Singleton
   readonly absPath: string

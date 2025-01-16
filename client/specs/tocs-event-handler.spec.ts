@@ -438,5 +438,12 @@ describe('TocsEventHandler', () => {
       expect(removeNodeStub).not.toHaveBeenCalled()
       expect(moveNodeStub).toHaveBeenCalledWith(orphanedPage, testTocPage)
     })
+    it('calls removeNode when the target is an orphan collection', async () => {
+      const dt = { get: () => ({ value: testTocPage }) } as unknown as DataTransfer
+      const orphanCollection = tocsTreeProvider.getChildren().pop()
+      await withSubbedEvents.handleDrop(orphanCollection, dt)
+      expect(removeNodeStub).toHaveBeenCalledWith(testTocPage)
+      expect(moveNodeStub).not.toHaveBeenCalled()
+    })
   })
 })

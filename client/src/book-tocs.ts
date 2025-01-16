@@ -3,7 +3,13 @@ import { EventEmitter, type TreeItem, TreeItemCollapsibleState, Uri, type TreeDa
 import { type BookToc, type ClientTocNode, BookRootNode, TocNodeKind, type ClientPageish } from '../../common/src/toc'
 import type vscode from 'vscode'
 
-export type BookOrTocNode = BookToc | ClientTocNode
+export const OrphanCollectionKind = 'OrphanCollection'
+
+export interface OrphanCollection {
+  type: typeof OrphanCollectionKind
+  children: Array<BookToc | ClientTocNode>
+}
+export type BookOrTocNode = BookToc | ClientTocNode | OrphanCollection
 
 const toClientTocNode = (n: ClientPageish): ClientTocNode => ({ type: TocNodeKind.Page, value: n })
 
@@ -19,12 +25,12 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
 
   public includeFileIdsForFilter = false
   private bookTocs: BookToc[]
-  private orphans: BookOrTocNode[]
+  private readonly orphanCollection: OrphanCollection
   private readonly parentsMap = new Map<BookOrTocNode, BookOrTocNode>()
 
   constructor() {
     this.bookTocs = []
-    this.orphans = []
+    this.orphanCollection = { type: OrphanCollectionKind, children: [] }
   }
 
   public toggleFilterMode() {
@@ -36,7 +42,7 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
     this.bookTocs = n
     this.parentsMap.clear()
     this.bookTocs.forEach(n => { this.recAddParent(n) })
-    this.orphans = o.map(toClientTocNode)
+    this.orphanCollection.children = o.map(toClientTocNode)
     this._onDidChangeTreeData.fire()
   }
 
@@ -55,42 +61,52 @@ export class TocsTreeProvider implements TreeDataProvider<BookOrTocNode> {
     if (this.getParent(node) !== undefined) {
       capabilities.push('delete')
     }
-    if (node.type === BookRootNode.Singleton) {
-      const uri = Uri.parse(node.absPath)
-      return {
-        iconPath: TocItemIcon.Book,
-        collapsibleState: TreeItemCollapsibleState.Collapsed,
-        label: node.title,
-        description: node.slug,
-        resourceUri: uri,
-        command: { title: 'open', command: 'vscode.open', arguments: [uri] }
+    switch (node.type) {
+      case BookRootNode.Singleton: {
+        const uri = Uri.parse(node.absPath)
+        return {
+          iconPath: TocItemIcon.Book,
+          collapsibleState: TreeItemCollapsibleState.Collapsed,
+          label: node.title,
+          description: node.slug,
+          resourceUri: uri,
+          command: { title: 'open', command: 'vscode.open', arguments: [uri] }
+        }
       }
-    } else if (node.type === TocNodeKind.Page) {
-      const uri = Uri.parse(node.value.absPath)
-      const title = node.value.title ?? 'Loading...'
-      const ret = this.includeFileIdsForFilter ? { label: `${title} (${node.value.fileId})` } : { label: title, description: node.value.fileId }
-      return {
-        ...ret,
-        iconPath: TocItemIcon.Page,
-        collapsibleState: TreeItemCollapsibleState.None,
-        resourceUri: uri,
-        command: { title: 'open', command: 'vscode.open', arguments: [uri] },
-        contextValue: capabilities.join(',')
+      case TocNodeKind.Ancillary:
+      case TocNodeKind.Page: {
+        const uri = Uri.parse(node.value.absPath)
+        const title = node.value.title ?? 'Loading...'
+        const ret = this.includeFileIdsForFilter ? { label: `${title} (${node.value.fileId})` } : { label: title, description: node.value.fileId }
+        return {
+          ...ret,
+          iconPath: TocItemIcon.Page,
+          collapsibleState: TreeItemCollapsibleState.None,
+          resourceUri: uri,
+          command: { title: 'open', command: 'vscode.open', arguments: [uri] },
+          contextValue: capabilities.join(',')
+        }
       }
-    } else {
-      return {
-        iconPath: TocItemIcon.Subbook,
-        collapsibleState: TreeItemCollapsibleState.Collapsed,
-        label: node.value.title,
-        contextValue: capabilities.join(',')
-      }
+      case TocNodeKind.Subbook:
+        return {
+          iconPath: TocItemIcon.Subbook,
+          collapsibleState: TreeItemCollapsibleState.Collapsed,
+          label: node.value.title,
+          contextValue: capabilities.join(',')
+        }
+      case OrphanCollectionKind:
+        return {
+          iconPath: TocItemIcon.Subbook,
+          collapsibleState: TreeItemCollapsibleState.Collapsed,
+          label: 'Orphaned Modules'
+        }
     }
   }
 
   public getChildren(node?: BookOrTocNode) {
     let kids: BookOrTocNode[] = []
     if (node === undefined) {
-      return [...this.bookTocs, ...this.orphans]
+      kids = [...this.bookTocs, this.orphanCollection]
     } else if (node.type === BookRootNode.Singleton) {
       kids = node.tocTree
     } else if (node.type === TocNodeKind.Page || node.type === TocNodeKind.Ancillary) {
@@ -136,7 +152,7 @@ export function toggleTocTreesFilteringHandler(view: vscode.TreeView<BookOrTocNo
   // is fully expanded. This approach is used since attempting to simply call
   // reveal on root notes with the max expand value of 3 doesn't seem to always
   // fully expose leaf nodes for large trees.
-  function leafFinder(acc: ClientTocNode[], elements: BookOrTocNode[]) {
+  function leafFinder(acc: Array<ClientTocNode | OrphanCollection>, elements: BookOrTocNode[]) {
     for (const el of elements) {
       if (el.type === BookRootNode.Singleton) {
         leafFinder(acc, el.tocTree)
