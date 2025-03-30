@@ -53,11 +53,20 @@ export /* for server-handler.ts */ const bundleFactory = new Factory(workspaceUr
   return new ModelManager(b, connection)
 }, (x) => pathHelper.canonicalize(x))
 
+// Swap console.* with a function that sends the message through the network to the VSCode client so it can show up in logs
+const originalConsoleDebug = console.debug
+
 const consoleDebug = (...args: any[]) => {
-  console.debug(...args)
+  originalConsoleDebug.call(console, ...args)
   // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
   connection.console.log(args.map(a => `${a}`).join(', '))
 }
+
+console.log = consoleDebug
+console.warn = consoleDebug
+console.error = consoleDebug
+console.info = consoleDebug
+
 Fileish.debug = consoleDebug
 ModelManager.debug = consoleDebug
 JobRunner.debug = () => {}
