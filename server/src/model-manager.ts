@@ -32,7 +32,7 @@ interface NodeAndParent { node: ClientTocNode, parent: BookToc | ClientTocNode }
 interface Autocompleter {
   hasLinkNearCursor: (page: PageNode, cursor: Position) => boolean
   getRange: (cursor: Position, content: string) => Range | undefined
-  getCompletionItems: (page: PageNode, range: Range) => CompletionItem[]
+  getCompletionItems: (page: PageNode, range: Range) => Promise<CompletionItem[]>
 }
 function childrenOf(n: ClientTocNode) {
   /* istanbul ignore else */
@@ -466,7 +466,7 @@ export class ModelManager {
     jobs.reverse().forEach(j => { this.jobRunner.enqueue(j) })
   }
 
-  private autocomplete(
+  private async autocomplete(
     page: PageNode,
     cursor: Position,
     autocompleter: Autocompleter
@@ -481,7 +481,7 @@ export class ModelManager {
     const range = autocompleter.getRange(cursor, content)
     if (range === undefined) { return [] }
 
-    return autocompleter.getCompletionItems(page, range)
+    return await autocompleter.getCompletionItems(page, range)
   }
 
   private rangeFinderFactory(start: string, end: string) {
@@ -503,7 +503,7 @@ export class ModelManager {
     }
   }
 
-  public autocompleteResources(page: PageNode, cursor: Position) {
+  public async autocompleteResources(page: PageNode, cursor: Position) {
     const resourceAutocompleter: Autocompleter = {
       hasLinkNearCursor: (page, cursor) => {
         return page.resourceLinks
@@ -512,22 +512,25 @@ export class ModelManager {
           .length > 0
       },
       getRange: this.rangeFinderFactory('src="', '"'),
-      getCompletionItems: (page, range) => this.orphanedResources
-        .filter((r) => r.exists)
-        .toArray()
-        .map(i => {
-          const insertText = path.relative(path.dirname(page.absPath), i.absPath)
-          const item = CompletionItem.create(insertText)
-          item.textEdit = TextEdit.replace(range, insertText)
-          item.kind = CompletionItemKind.File
-          item.detail = 'Orphaned Resource'
-          return item
-        })
+      getCompletionItems: async (page, range) => {
+        await this.loadEnoughForOrphans(500)
+        return this.orphanedResources
+          .filter((r) => r.exists)
+          .toArray()
+          .map(i => {
+            const insertText = path.relative(path.dirname(page.absPath), i.absPath)
+            const item = CompletionItem.create(insertText)
+            item.textEdit = TextEdit.replace(range, insertText)
+            item.kind = CompletionItemKind.File
+            item.detail = 'Orphaned Resource'
+            return item
+          })
+      }
     }
-    return this.autocomplete(page, cursor, resourceAutocompleter)
+    return await this.autocomplete(page, cursor, resourceAutocompleter)
   }
 
-  public autocompleteUrls(page: PageNode, cursor: Position) {
+  public async autocompleteUrls(page: PageNode, cursor: Position) {
     const urlAutocompleter: Autocompleter = {
       hasLinkNearCursor: (page, cursor) => {
         return page.pageLinks
@@ -536,7 +539,8 @@ export class ModelManager {
           .length > 0
       },
       getRange: this.rangeFinderFactory('url="', '"'),
-      getCompletionItems: (_page, range) => {
+      getCompletionItems: async (_page, range) => {
+        await this.loadEnoughForOrphans(500)
         return this.orphanedH5P
           .filter((h) => h.exists)
           .toArray()
@@ -552,7 +556,7 @@ export class ModelManager {
           })
       }
     }
-    return this.autocomplete(page, cursor, urlAutocompleter)
+    return await this.autocomplete(page, cursor, urlAutocompleter)
   }
 
   async getDocumentLinks(page: PageNode) {
