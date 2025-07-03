@@ -137,7 +137,7 @@ export class ModelManager {
   public readonly jobRunner = new JobRunner()
   private readonly openDocuments = new Map<string, string>()
   private readonly errorHashesByPath = new Map<string, I.Set<number>>()
-  private didLoadOrphans = false
+  private loadOrphansTask: Promise<void> | undefined
   private bookTocs: BookToc[] = []
   private tocIdMap = new IdMap<string, TocSubbookWithRange | PageNode>(x => {
     /* istanbul ignore next */
@@ -228,19 +228,26 @@ export class ModelManager {
     }))
   }
 
-  public async loadEnoughForOrphans() {
-    if (this.didLoadOrphans) return
-    await this.loadEnoughForToc()
-    const { pagesRoot, mediaRoot, booksRoot, publicRoot } = this.bundle.paths
-    // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-    const files = glob.sync(`{${pagesRoot}/*/*.cnxml,${mediaRoot}/*.*,${booksRoot}/*.collection.xml,${publicRoot}/*/h5p.json}`, { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
-    Quarx.batch(() => {
-      files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, this.bundle.pathHelper.canonicalize(absPath)), `BUG? We found files that the bundle did not recognize: ${absPath}`))
-    })
-    // Load everything before we can know where the orphans are
-    this.performInitialValidation()
-    await this.jobRunner.done()
-    this.didLoadOrphans = true
+  public async loadEnoughForOrphans(timeout = -1) {
+    if (this.loadOrphansTask === undefined) {
+      this.loadOrphansTask = (async () => {
+        await this.loadEnoughForToc()
+        const { pagesRoot, mediaRoot, booksRoot, publicRoot } = this.bundle.paths
+        // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
+        const files = glob.sync(`{${pagesRoot}/*/*.cnxml,${mediaRoot}/*.*,${booksRoot}/*.collection.xml,${publicRoot}/*/h5p.json}`, { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
+        Quarx.batch(() => {
+          files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, this.bundle.pathHelper.canonicalize(absPath)), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+        })
+        // Load everything before we can know where the orphans are
+        this.performInitialValidation()
+        await this.jobRunner.done()
+      })()
+    }
+    await (
+      timeout >= 0
+        ? Promise.race([this.loadOrphansTask, new Promise((resolve) => setTimeout(resolve, timeout))])
+        : this.loadOrphansTask
+    )
   }
 
   private sendAllDiagnostics() {

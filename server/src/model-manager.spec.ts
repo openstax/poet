@@ -205,6 +205,8 @@ describe('Find orphaned files', () => {
     await manager.loadEnoughForOrphans()
     // Run again to verify we do not perform the expensive fetch again (via code coverage)
     await manager.loadEnoughForOrphans()
+    // Run again with timeout
+    await manager.loadEnoughForOrphans(500)
     expect(manager.orphanedPages.size).toBe(2)
   })
 })
