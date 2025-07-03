@@ -749,7 +749,7 @@ export class ModelManager {
 
   public async createAncillary(bookIndex: number, parentNodeToken: string | undefined, title: string) {
     return await this.createDocument(bookIndex, parentNodeToken, title, 'ancilliary', `
-<document xmlns="http://cnx.rice.edu/cnxml" class="super" resource="" document-link="" ancillary-type="">
+<document xmlns="http://cnx.rice.edu/cnxml" class="super">
   <title/>
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
     <md:title/>
