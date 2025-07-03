@@ -1,5 +1,5 @@
 diff --git a/client/static/xsd/cnxml.xsd b/client/static/xsd/cnxml.xsd
-index 239b653..e08fd2b 100644
+index 6091f11..04071d3 100644
 --- a/client/static/xsd/cnxml.xsd
 +++ b/client/static/xsd/cnxml.xsd
 @@ -76,36 +76,13 @@
@@ -34,14 +34,14 @@ index 239b653..e08fd2b 100644
 -        <xs:group ref="mathml:canonical-book-uuid_2"/>
 -        <xs:group ref="mathml:slug_2"/>
 -        <xs:group ref="mathml:language_2"/>
--        <xs:element ref="mdml:tags"/>
+-        <xs:element ref="mdml:super"/>
 -      </xs:choice>
 +      <xs:all>
 +        <xs:element ref="mdml:content-id"/>
 +        <xs:element minOccurs="0" ref="mdml:title"/>
 +        <xs:element ref="mdml:uuid"/>
 +        <xs:element minOccurs="0" ref="mdml:abstract"/>
-+        <xs:element minOccurs="0" ref="mdml:tags"/>
++        <xs:element minOccurs="0" ref="mdml:super"/>
 +      </xs:all>
        <xs:attribute ref="cmlnle:case"/>
        <xs:attribute ref="cmlnle:reference"/>
@@ -175,7 +175,7 @@ index 628bd82..48f2bff 100644
              <xs:choice minOccurs="0" maxOccurs="unbounded">
                <xs:element ref="mathml:annotation"/>
 diff --git a/client/static/xsd/mdml.xsd b/client/static/xsd/mdml.xsd
-index 9d4e0a5..4545969 100644
+index 23d4f59..a01e190 100644
 --- a/client/static/xsd/mdml.xsd
 +++ b/client/static/xsd/mdml.xsd
 @@ -10,6 +10,41 @@
