@@ -1036,7 +1036,7 @@
     <xs:complexType>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
         <xs:element ref="mdml:tags"/>
-        <xs:element ref="mdml:author"/>
+        <xs:element ref="mdml:subject-name"/>
       </xs:choice>
     </xs:complexType>
   </xs:element>
@@ -1279,7 +1279,7 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="author">
+  <xs:element name="subject-name">
     <xs:simpleType>
       <xs:restriction base="xs:string">
         <xs:pattern value="(.+)"/>

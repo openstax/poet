@@ -175,7 +175,7 @@ index 628bd82..48f2bff 100644
              <xs:choice minOccurs="0" maxOccurs="unbounded">
                <xs:element ref="mathml:annotation"/>
 diff --git a/client/static/xsd/mdml.xsd b/client/static/xsd/mdml.xsd
-index 23d4f59..a01e190 100644
+index 8bf37cc..b745ccc 100644
 --- a/client/static/xsd/mdml.xsd
 +++ b/client/static/xsd/mdml.xsd
 @@ -10,6 +10,41 @@
