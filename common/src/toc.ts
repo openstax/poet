@@ -87,7 +87,6 @@ export interface AncillaryRenameEvent {
 export interface CreateSubbookEvent {
   readonly type: TocNodeKind.Subbook
   readonly title: string
-  readonly slug: string | undefined
   readonly bookIndex: number
   readonly parentNodeToken: Token | undefined
 }
