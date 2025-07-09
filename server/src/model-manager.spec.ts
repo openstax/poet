@@ -597,11 +597,11 @@ describe('documentLinks()', () => {
 
     await testPageLink({ pageLinks: [{ url: 'https://openstax.org/somepage' }] }, 'https://openstax.org/somepage')
     // line number will change when pageMaker changes
-    await testPageLink({ elementIds: ['my-el-id'], pageLinks: [{ targetId: 'my-el-id' }] }, 'modules/m00001/index.cnxml#9:0')
+    await testPageLink({ elementIds: ['my-el-id'], pageLinks: [{ targetId: 'my-el-id' }] }, 'modules/m00001/index.cnxml#10:0')
     await testPageLink({ pageLinks: [{ targetPage: 'm_doesnotexist' }] }, 'modules/m_doesnotexist/index.cnxml')
     await testPageLink({ pageLinks: [{ targetPage: otherId }] }, `modules/${otherId}/index.cnxml`)
     await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'nonexistent-id' }] }, `modules/${otherId}/index.cnxml`)
-    await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'other-el-id' }] }, `modules/${otherId}/index.cnxml#9:0`)
+    await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'other-el-id' }] }, `modules/${otherId}/index.cnxml#10:0`)
     await testPageLink({ pageLinks: [{ targetPage: nonexistentButLoadedId }] }, undefined)
     await testPageLink(
       {
