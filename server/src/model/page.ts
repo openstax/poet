@@ -166,17 +166,19 @@ export class PageNode extends Fileish {
 
     this._resourceLinks.set(I.Set([...imageLinks, ...iframeLinks]))
 
-    const superNodeSearch = select('/cnxml:document/cnxml:metadata/md:super', doc) as Element[] | undefined
+    const superNodeSearch = select('/cnxml:document/cnxml:metadata/md:super', doc) as Element[]
     const document = selectOne('/cnxml:document', doc)
     const documentClass = document.getAttribute('class')
     this._hasSuperNode.set(
-      superNodeSearch !== undefined && superNodeSearch.length > 0
+      superNodeSearch.length > 0
         ? { range: calculateElementPositions(superNodeSearch[0]), v: true }
         : undefined
     )
-    // Could not find a way to make it null during testing
-    expectValue(documentClass, 'BUG: documentClass was unexpectedly null or undefined')
-    this._documentClass.set({ range: calculateElementPositions(document), v: documentClass as string })
+    // Could not find a way to make `documentClass` null/undefined during testing
+    this._documentClass.set({
+      range: calculateElementPositions(document),
+      v: expectValue(documentClass, 'BUG: documentClass was unexpectedly null or undefined')
+    })
 
     const linkNodes = select('//cnxml:link', doc) as Element[]
     const changeEmptyToNull = (str: string | null): Opt<string> => (str === '' || str === null) ? undefined : str
@@ -299,7 +301,8 @@ export class PageNode extends Fileish {
         fn: () => {
           const documentClass = this._documentClass.get()
           const hasSuperNode = this._hasSuperNode.get()
-          return documentClass !== undefined && documentClass.v !== 'super' && hasSuperNode !== undefined
+          return hasSuperNode !== undefined && hasSuperNode.v &&
+              (documentClass === undefined || documentClass.v !== 'super')
             ? I.Set([hasSuperNode.range])
             : I.Set()
         }
