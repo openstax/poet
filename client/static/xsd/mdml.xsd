@@ -1589,13 +1589,6 @@
               </xs:union>
             </xs:simpleType>
           </xs:attribute>
-          <xs:attribute name="link">
-            <xs:simpleType>
-              <xs:restriction base="xs:token">
-                <xs:pattern value="(https?://.+)"/>
-              </xs:restriction>
-            </xs:simpleType>
-          </xs:attribute>
         </xs:restriction>
       </xs:simpleContent>
     </xs:complexType>
