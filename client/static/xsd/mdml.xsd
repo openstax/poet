@@ -1032,6 +1032,14 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
+  <xs:element name="super">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="mdml:tags"/>
+        <xs:element ref="mdml:subject-name"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
   <xs:group name="person">
     <xs:sequence>
       <xs:element name="person">
@@ -1264,6 +1272,20 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
+  <xs:element name="tags">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="mdml:tag"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="subject-name">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:pattern value="(.+)"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:element>
   <xs:group name="honorific">
     <xs:sequence>
       <xs:element name="honorific">
@@ -1512,4 +1534,63 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
+  <xs:element name="tag">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:restriction base="xs:anyType">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:pattern value="([0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12})|(https://openstax.org/orn/.+)"/>
+            </xs:restriction>
+          </xs:simpleType>
+          <xs:attribute name="type" use="required">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="primer"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="preparedness"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="learning"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="practice"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="enrichment"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assessment"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="reflection"/>
+                  </xs:restriction>
+                </xs:simpleType>
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="review"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
+        </xs:restriction>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

@@ -108,6 +108,8 @@ export class PageNode extends Fileish {
   private readonly _resourceLinks = Quarx.observable.box<Opt<I.Set<ResourceLink>>>(undefined)
   private readonly _pageLinks = Quarx.observable.box<Opt<I.Set<PageLink>>>(undefined)
   private readonly _elementsMissingIds = Quarx.observable.box<Opt<I.Set<Range>>>(undefined)
+  private readonly _hasSuperNode = Quarx.observable.box<Opt<WithRange<boolean>>>(undefined, { equals: equalsOptWithRange })
+  private readonly _documentClass = Quarx.observable.box<Opt<WithRange<string>>>(undefined, { equals: equalsOptWithRange })
 
   public uuid() { return this.ensureLoaded(this._uuid).v }
 
@@ -163,6 +165,20 @@ export class PageNode extends Fileish {
     const iframeLinks = iframeNodes.map(n => toResourceLink(ResourceLinkKind.IFrame, n))
 
     this._resourceLinks.set(I.Set([...imageLinks, ...iframeLinks]))
+
+    const superNodeSearch = select('/cnxml:document/cnxml:metadata/md:super', doc) as Element[]
+    const document = selectOne('/cnxml:document', doc)
+    const documentClass = document.getAttribute('class')
+    this._hasSuperNode.set(
+      superNodeSearch.length > 0
+        ? { range: calculateElementPositions(superNodeSearch[0]), v: true }
+        : undefined
+    )
+    // Could not find a way to make `documentClass` null/undefined during testing
+    this._documentClass.set({
+      range: calculateElementPositions(document),
+      v: expectValue(documentClass, 'BUG: documentClass was unexpectedly null or undefined')
+    })
 
     const linkNodes = select('//cnxml:link', doc) as Element[]
     const changeEmptyToNull = (str: string | null): Opt<string> => (str === '' || str === null) ? undefined : str
@@ -279,6 +295,17 @@ export class PageNode extends Fileish {
             isWebPath(l.url) || isExercisePath(l.url) || isH5PPath(l.url)
           )
         }).map(l => l.range)
+      }, {
+        message: PageValidationKind.INVALID_METADATA,
+        nodesToLoad: I.Set(),
+        fn: () => {
+          const documentClass = this._documentClass.get()
+          const hasSuperNode = this._hasSuperNode.get()
+          return hasSuperNode !== undefined && hasSuperNode.v &&
+              (documentClass === undefined || documentClass.v !== 'super')
+            ? I.Set([hasSuperNode.range])
+            : I.Set()
+        }
       }
     ]
   }
@@ -291,4 +318,5 @@ export class PageValidationKind extends ValidationKind {
   static MISSING_ID = new PageValidationKind('Missing ID attribute', ValidationSeverity.INFORMATION)
   static EMPTY_LINK = new PageValidationKind('Link target is empty', ValidationSeverity.WARNING)
   static INVALID_URL = new PageValidationKind('Invalid URL', ValidationSeverity.ERROR)
+  static INVALID_METADATA = new PageValidationKind('Invalid Metadata', ValidationSeverity.ERROR)
 }

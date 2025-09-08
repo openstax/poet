@@ -1,8 +1,8 @@
 diff --git a/client/static/xsd/cnxml.xsd b/client/static/xsd/cnxml.xsd
-index e985975..e100413 100644
+index 6091f11..04071d3 100644
 --- a/client/static/xsd/cnxml.xsd
 +++ b/client/static/xsd/cnxml.xsd
-@@ -65,35 +65,12 @@
+@@ -76,36 +76,13 @@
    </xs:group>
    <xs:element name="metadata">
      <xs:complexType>
@@ -34,21 +34,23 @@ index e985975..e100413 100644
 -        <xs:group ref="mathml:canonical-book-uuid_2"/>
 -        <xs:group ref="mathml:slug_2"/>
 -        <xs:group ref="mathml:language_2"/>
+-        <xs:element ref="mdml:super"/>
 -      </xs:choice>
 +      <xs:all>
 +        <xs:element ref="mdml:content-id"/>
 +        <xs:element minOccurs="0" ref="mdml:title"/>
 +        <xs:element ref="mdml:uuid"/>
 +        <xs:element minOccurs="0" ref="mdml:abstract"/>
++        <xs:element minOccurs="0" ref="mdml:super"/>
 +      </xs:all>
        <xs:attribute ref="cmlnle:case"/>
        <xs:attribute ref="cmlnle:reference"/>
        <xs:attribute ref="cxlxt:born"/>
 diff --git a/client/static/xsd/collxml.xsd b/client/static/xsd/collxml.xsd
-index 43d3127..744f1b7 100644
+index c8d2dfc..32589fe 100644
 --- a/client/static/xsd/collxml.xsd
 +++ b/client/static/xsd/collxml.xsd
-@@ -30,37 +30,14 @@
+@@ -29,37 +29,14 @@
    </xs:element>
    <xs:element name="metadata">
      <xs:complexType>
@@ -94,12 +96,90 @@ index 43d3127..744f1b7 100644
        <xs:attribute ref="xml:lang"/>
        <xs:attribute name="class" type="xs:token"/>
        <xs:attribute ref="s:read-only"/>
+diff --git a/client/static/xsd/mathml.xsd b/client/static/xsd/mathml.xsd
+index 628bd82..48f2bff 100644
+--- a/client/static/xsd/mathml.xsd
++++ b/client/static/xsd/mathml.xsd
+@@ -3086,6 +3086,36 @@
+               <xs:element ref="mathml:pi"/>
+               <xs:element ref="mathml:eulergamma"/>
+               <xs:element ref="mathml:infinity"/>
++              <xs:group ref="mathml:mi"/>
++              <xs:group ref="mathml:mn"/>
++              <xs:group ref="mathml:mo"/>
++              <xs:group ref="mathml:mtext"/>
++              <xs:element ref="mathml:mspace"/>
++              <xs:group ref="mathml:ms"/>
++              <xs:element ref="mathml:maligngroup"/>
++              <xs:element ref="mathml:malignmark"/>
++              <xs:group ref="mathml:mrow"/>
++              <xs:group ref="mathml:mfrac"/>
++              <xs:group ref="mathml:msqrt"/>
++              <xs:group ref="mathml:mroot"/>
++              <xs:group ref="mathml:mstyle"/>
++              <xs:group ref="mathml:merror"/>
++              <xs:group ref="mathml:mpadded"/>
++              <xs:group ref="mathml:mphantom"/>
++              <xs:group ref="mathml:mfenced"/>
++              <xs:group ref="mathml:menclose"/>
++              <xs:group ref="mathml:msub"/>
++              <xs:group ref="mathml:msup"/>
++              <xs:group ref="mathml:msubsup"/>
++              <xs:group ref="mathml:munder"/>
++              <xs:group ref="mathml:mover"/>
++              <xs:group ref="mathml:munderover"/>
++              <xs:group ref="mathml:mmultiscripts"/>
++              <xs:group ref="mathml:mtable"/>
++              <xs:group ref="mathml:mstack"/>
++              <xs:group ref="mathml:mlongdiv"/>
++              <xs:group ref="mathml:maction"/>
++              <xs:group ref="mathml:semantics_2"/>
+             </xs:choice>
+             <xs:choice minOccurs="0" maxOccurs="unbounded">
+               <xs:element ref="mathml:annotation"/>
+@@ -17988,6 +18018,36 @@
+               <xs:element ref="mathml:pi"/>
+               <xs:element ref="mathml:eulergamma"/>
+               <xs:element ref="mathml:infinity"/>
++              <xs:group ref="mathml:mi"/>
++              <xs:group ref="mathml:mn"/>
++              <xs:group ref="mathml:mo"/>
++              <xs:group ref="mathml:mtext"/>
++              <xs:element ref="mathml:mspace"/>
++              <xs:group ref="mathml:ms"/>
++              <xs:element ref="mathml:maligngroup"/>
++              <xs:element ref="mathml:malignmark"/>
++              <xs:group ref="mathml:mrow"/>
++              <xs:group ref="mathml:mfrac"/>
++              <xs:group ref="mathml:msqrt"/>
++              <xs:group ref="mathml:mroot"/>
++              <xs:group ref="mathml:mstyle"/>
++              <xs:group ref="mathml:merror"/>
++              <xs:group ref="mathml:mpadded"/>
++              <xs:group ref="mathml:mphantom"/>
++              <xs:group ref="mathml:mfenced"/>
++              <xs:group ref="mathml:menclose"/>
++              <xs:group ref="mathml:msub"/>
++              <xs:group ref="mathml:msup"/>
++              <xs:group ref="mathml:msubsup"/>
++              <xs:group ref="mathml:munder"/>
++              <xs:group ref="mathml:mover"/>
++              <xs:group ref="mathml:munderover"/>
++              <xs:group ref="mathml:mmultiscripts"/>
++              <xs:group ref="mathml:mtable"/>
++              <xs:group ref="mathml:mstack"/>
++              <xs:group ref="mathml:mlongdiv"/>
++              <xs:group ref="mathml:maction"/>
++              <xs:group ref="mathml:semantics_2"/>
+             </xs:choice>
+             <xs:choice minOccurs="0" maxOccurs="unbounded">
+               <xs:element ref="mathml:annotation"/>
 diff --git a/client/static/xsd/mdml.xsd b/client/static/xsd/mdml.xsd
-index ad83744..a54a24a 100644
+index 8bf37cc..b745ccc 100644
 --- a/client/static/xsd/mdml.xsd
 +++ b/client/static/xsd/mdml.xsd
-@@ -11,6 +11,41 @@
-   <xs:import namespace="http://www.w3.org/1999/xlink" schemaLocation="xlink.xsd"/>
+@@ -10,6 +10,41 @@
+   <xs:import namespace="http://www.w3.org/1998/Math/MathML" schemaLocation="mathml.xsd"/>
    <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
    <xs:import namespace="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" schemaLocation="ns1.xsd"/>
 +  <xs:element name="content-id" type="xs:string"/>
@@ -140,81 +220,3 @@ index ad83744..a54a24a 100644
    <xs:group name="content-id">
      <xs:sequence>
        <xs:element name="content-id">
-diff --git a/mathml.xsd b/mathml.xsd
-index bf61b8f..72fcf53 100644
---- a/client/static/xsd/mathml.xsd
-+++ b/client/static/xsd/mathml.xsd
-@@ -3071,6 +3071,36 @@
-               <xs:element ref="mathml:pi"/>
-               <xs:element ref="mathml:eulergamma"/>
-               <xs:element ref="mathml:infinity"/>
-+              <xs:group ref="mathml:mi"/>
-+              <xs:group ref="mathml:mn"/>
-+              <xs:group ref="mathml:mo"/>
-+              <xs:group ref="mathml:mtext"/>
-+              <xs:element ref="mathml:mspace"/>
-+              <xs:group ref="mathml:ms"/>
-+              <xs:element ref="mathml:maligngroup"/>
-+              <xs:element ref="mathml:malignmark"/>
-+              <xs:group ref="mathml:mrow"/>
-+              <xs:group ref="mathml:mfrac"/>
-+              <xs:group ref="mathml:msqrt"/>
-+              <xs:group ref="mathml:mroot"/>
-+              <xs:group ref="mathml:mstyle"/>
-+              <xs:group ref="mathml:merror"/>
-+              <xs:group ref="mathml:mpadded"/>
-+              <xs:group ref="mathml:mphantom"/>
-+              <xs:group ref="mathml:mfenced"/>
-+              <xs:group ref="mathml:menclose"/>
-+              <xs:group ref="mathml:msub"/>
-+              <xs:group ref="mathml:msup"/>
-+              <xs:group ref="mathml:msubsup"/>
-+              <xs:group ref="mathml:munder"/>
-+              <xs:group ref="mathml:mover"/>
-+              <xs:group ref="mathml:munderover"/>
-+              <xs:group ref="mathml:mmultiscripts"/>
-+              <xs:group ref="mathml:mtable"/>
-+              <xs:group ref="mathml:mstack"/>
-+              <xs:group ref="mathml:mlongdiv"/>
-+              <xs:group ref="mathml:maction"/>
-+              <xs:group ref="mathml:semantics_2"/>
-             </xs:choice>
-             <xs:choice minOccurs="0" maxOccurs="unbounded">
-               <xs:element ref="mathml:annotation"/>
-@@ -17973,6 +18003,36 @@
-               <xs:element ref="mathml:pi"/>
-               <xs:element ref="mathml:eulergamma"/>
-               <xs:element ref="mathml:infinity"/>
-+              <xs:group ref="mathml:mi"/>
-+              <xs:group ref="mathml:mn"/>
-+              <xs:group ref="mathml:mo"/>
-+              <xs:group ref="mathml:mtext"/>
-+              <xs:element ref="mathml:mspace"/>
-+              <xs:group ref="mathml:ms"/>
-+              <xs:element ref="mathml:maligngroup"/>
-+              <xs:element ref="mathml:malignmark"/>
-+              <xs:group ref="mathml:mrow"/>
-+              <xs:group ref="mathml:mfrac"/>
-+              <xs:group ref="mathml:msqrt"/>
-+              <xs:group ref="mathml:mroot"/>
-+              <xs:group ref="mathml:mstyle"/>
-+              <xs:group ref="mathml:merror"/>
-+              <xs:group ref="mathml:mpadded"/>
-+              <xs:group ref="mathml:mphantom"/>
-+              <xs:group ref="mathml:mfenced"/>
-+              <xs:group ref="mathml:menclose"/>
-+              <xs:group ref="mathml:msub"/>
-+              <xs:group ref="mathml:msup"/>
-+              <xs:group ref="mathml:msubsup"/>
-+              <xs:group ref="mathml:munder"/>
-+              <xs:group ref="mathml:mover"/>
-+              <xs:group ref="mathml:munderover"/>
-+              <xs:group ref="mathml:mmultiscripts"/>
-+              <xs:group ref="mathml:mtable"/>
-+              <xs:group ref="mathml:mstack"/>
-+              <xs:group ref="mathml:mlongdiv"/>
-+              <xs:group ref="mathml:maction"/>
-+              <xs:group ref="mathml:semantics_2"/>
-             </xs:choice>
-             <xs:choice minOccurs="0" maxOccurs="unbounded">
-               <xs:element ref="mathml:annotation"/>

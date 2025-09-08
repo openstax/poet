@@ -249,7 +249,6 @@ describe('TocsEventHandler', () => {
         event: {
           type: TocNodeKind.Subbook,
           title: 'new-title',
-          slug: 'new-slug',
           bookIndex: 0,
           parentNodeToken: 'subbook-token'
         }
@@ -285,7 +284,7 @@ describe('TocsEventHandler', () => {
 
       it(`sends the correct event (${subtitle})`, async () => {
         expect(sendRequestMock).toHaveBeenCalledTimes(0)
-        await tocsEventHandler.addNode(event.type, node, 'new-slug')
+        await tocsEventHandler.addNode(event.type, node)
         expect(askTitleMock).toHaveBeenCalledTimes(1)
         expect(sendRequestMock).toHaveBeenCalledTimes(1)
         expect(sendRequestMock).toHaveBeenCalledWith(

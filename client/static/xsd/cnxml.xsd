@@ -47,9 +47,6 @@
           </xs:restriction>
         </xs:simpleType>
       </xs:attribute>
-      <xs:attribute name="resource"/>
-      <xs:attribute name="document-link"/>
-      <xs:attribute name="ancillary-type"/>
     </xs:complexType>
   </xs:element>
   <xs:group name="title">
@@ -84,6 +81,7 @@
         <xs:element minOccurs="0" ref="mdml:title"/>
         <xs:element ref="mdml:uuid"/>
         <xs:element minOccurs="0" ref="mdml:abstract"/>
+        <xs:element minOccurs="0" ref="mdml:super"/>
       </xs:all>
       <xs:attribute ref="cmlnle:case"/>
       <xs:attribute ref="cmlnle:reference"/>

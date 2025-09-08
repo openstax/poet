@@ -110,7 +110,7 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
     })
   }
 
-  async addNode(nodeType: TocNodeKind, node: BookOrTocNode, slug: string | undefined) {
+  async addNode(nodeType: TocNodeKind, node: BookOrTocNode) {
     const title = await this.askTitle()
     /* istanbul ignore next */
     if (title === undefined) { return }
@@ -142,7 +142,6 @@ export class TocsEventHandler implements vscode.TreeDragAndDropController<BookOr
         event = {
           type: TocNodeKind.Subbook,
           title,
-          slug,
           bookIndex,
           parentNodeToken
         }

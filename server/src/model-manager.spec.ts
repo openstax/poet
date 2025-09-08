@@ -1,4 +1,4 @@
-import { expect } from '@jest/globals'
+import { expect, jest } from '@jest/globals'
 import fs from 'fs'
 import path from 'path'
 import mockfs from 'mock-fs'
@@ -205,6 +205,8 @@ describe('Find orphaned files', () => {
     await manager.loadEnoughForOrphans()
     // Run again to verify we do not perform the expensive fetch again (via code coverage)
     await manager.loadEnoughForOrphans()
+    // Run again with timeout
+    await manager.loadEnoughForOrphans(500)
     expect(manager.orphanedPages.size).toBe(2)
   })
 })
@@ -416,7 +418,7 @@ describe('Image Autocomplete', () => {
     sinon.restore()
   })
 
-  it('Returns only orphaned images', () => {
+  it('Returns only orphaned images', async () => {
     const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
 
     const imagePath = '../../media/image.png'
@@ -432,13 +434,15 @@ describe('Image Autocomplete', () => {
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
     expect(page.resourceLinks.size).toBe(1)
+    const fn = jest.spyOn(manager, 'loadEnoughForOrphans').mockResolvedValue()
     const firstImageRef = first(page.resourceLinks)
-    const results = manager.autocompleteResources(page, { line: firstImageRef.range.start.line, character: firstImageRef.range.start.character + '<image src="X'.length })
-    expect(results).not.toEqual([])
-    expect(results[0].label).toBe(orphanedPath)
+    const results = await manager.autocompleteResources(page, { line: firstImageRef.range.start.line, character: firstImageRef.range.start.character + '<image src="X'.length })
+    expect(results.map((r) => r.label)).toStrictEqual([orphanedPath])
+    expect(fn).toHaveBeenCalledTimes(1)
+    fn.mockRestore()
   })
 
-  it('Returns no results outside image tag', () => {
+  it('Returns no results outside image tag', async () => {
     const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
 
     const imagePath = '../../media/image.png'
@@ -454,11 +458,11 @@ describe('Image Autocomplete', () => {
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
     const cursor = { line: 0, character: 0 }
-    const results = manager.autocompleteResources(page, cursor)
+    const results = await manager.autocompleteResources(page, cursor)
     expect(results).toEqual([])
   })
 
-  it('Returns no results outside replacement range', () => {
+  it('Returns no results outside replacement range', async () => {
     const page = first(loadSuccess(first(loadSuccess(manager.bundle).books)).pages)
 
     const imagePath = '../../media/image.png'
@@ -477,7 +481,7 @@ describe('Image Autocomplete', () => {
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
     const secondImageRef = page.resourceLinks.toArray()[1]
-    const results = manager.autocompleteResources(page, { line: secondImageRef.range.start.line, character: secondImageRef.range.start.character + '<image'.length })
+    const results = await manager.autocompleteResources(page, { line: secondImageRef.range.start.line, character: secondImageRef.range.start.character + '<image'.length })
     expect(results).toEqual([])
   })
 })
@@ -506,38 +510,41 @@ describe('URL Autocomplete', () => {
     sinon.restore()
   })
 
-  it('Returns orphaned H5P interactives', () => {
+  it('Returns orphaned H5P interactives', async () => {
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
     expect(page.pageLinks.size).toBe(1)
     const firstLink = first(page.pageLinks)
-    const results = manager.autocompleteUrls(
+    const fn = jest.spyOn(manager, 'loadEnoughForOrphans').mockResolvedValue()
+    const results = await manager.autocompleteUrls(
       page,
       {
         line: firstLink.range.start.line,
         character: firstLink.range.start.character + '<link url="X'.length
       }
     )
-    expect(results).not.toEqual([])
-    expect(results[0].label).toBe(`${H5PExercise.PLACEHOLDER}/${orphanedH5PName}`)
+    const expectedLabel = `${H5PExercise.PLACEHOLDER}/${orphanedH5PName}`
+    expect(results.map((r) => r.label)).toStrictEqual([expectedLabel])
+    expect(fn).toHaveBeenCalledTimes(1)
+    fn.mockRestore()
   })
 
-  it('Returns no results outside url tag', () => {
+  it('Returns no results outside url tag', async () => {
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
     const cursor = { line: 0, character: 0 }
-    const results = manager.autocompleteResources(page, cursor)
+    const results = await manager.autocompleteResources(page, cursor)
     expect(results).toEqual([])
   })
 
-  it('Returns no results outside replacement range', () => {
+  it('Returns no results outside replacement range', async () => {
     expect(page.validationErrors.nodesToLoad.toArray()).toEqual([])
     expect(page.validationErrors.errors.toArray()).toEqual([])
 
     const firstLink = first(page.pageLinks)
-    const results = manager.autocompleteResources(
+    const results = await manager.autocompleteResources(
       page, {
         line: firstLink.range.start.line,
         character: firstLink.range.start.character + '<url'.length
@@ -590,11 +597,11 @@ describe('documentLinks()', () => {
 
     await testPageLink({ pageLinks: [{ url: 'https://openstax.org/somepage' }] }, 'https://openstax.org/somepage')
     // line number will change when pageMaker changes
-    await testPageLink({ elementIds: ['my-el-id'], pageLinks: [{ targetId: 'my-el-id' }] }, 'modules/m00001/index.cnxml#9:0')
+    await testPageLink({ elementIds: ['my-el-id'], pageLinks: [{ targetId: 'my-el-id' }] }, 'modules/m00001/index.cnxml#10:0')
     await testPageLink({ pageLinks: [{ targetPage: 'm_doesnotexist' }] }, 'modules/m_doesnotexist/index.cnxml')
     await testPageLink({ pageLinks: [{ targetPage: otherId }] }, `modules/${otherId}/index.cnxml`)
     await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'nonexistent-id' }] }, `modules/${otherId}/index.cnxml`)
-    await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'other-el-id' }] }, `modules/${otherId}/index.cnxml#9:0`)
+    await testPageLink({ pageLinks: [{ targetPage: otherId, targetId: 'other-el-id' }] }, `modules/${otherId}/index.cnxml#10:0`)
     await testPageLink({ pageLinks: [{ targetPage: nonexistentButLoadedId }] }, undefined)
     await testPageLink(
       {

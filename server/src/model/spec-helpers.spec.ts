@@ -61,27 +61,44 @@ export function expectErrors<T extends Fileish>(node: T, validationKinds: Valida
 }
 
 export interface PageInfo {
+  documentClass?: string
   uuid?: string
   title?: string | null // null means omit the whole element
   elementIds?: string[]
   imageHrefs?: string[]
   pageLinks?: Array<{ targetPage?: string, targetId?: string, url?: string }>
   extraCnxml?: string
+  super?: { tags: Array<{ type: string, link?: string, value: string }>, subjectName: string }
 }
 export function pageMaker(info: PageInfo) {
   const i = {
+    documentClass: info.documentClass,
     title: info.title !== undefined ? info.title : 'TestTitle',
     uuid: info.uuid ?? '00000000-0000-4000-0000-000000000000',
     elementIds: info.elementIds ?? [],
     imageHrefs: info.imageHrefs ?? [],
     pageLinks: info.pageLinks !== undefined ? info.pageLinks.map(({ targetPage, targetId, url }) => ({ targetPage, targetId, url })) : [],
-    extraCnxml: info.extraCnxml ?? ''
+    extraCnxml: info.extraCnxml ?? '',
+    super: info.super
   }
   const titleElement = i.title === null ? '' : `<title>${i.title}</title>`
-  return `<document xmlns="http://cnx.rice.edu/cnxml">
+  const maybeSuperElement = i.super === undefined
+    ? ''
+    : `
+  <md:super>
+    <md:subject-name>${i.super.subjectName}</md:subject-name>
+    <md:tags>
+      ${i.super.tags.map((t) =>
+        `<md:tag ${t.link !== undefined ? `link=${t.link}` : ''} type=${t.type}>${t.value}</md:tag>`
+      ).join('\n')}
+    </md:tags>
+  </md:super>
+  `
+  return `<document xmlns="http://cnx.rice.edu/cnxml"${i.documentClass !== undefined ? ` class="${i.documentClass}"` : ''}>
   ${titleElement}
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
     <md:uuid>${i.uuid}</md:uuid>
+    ${maybeSuperElement}
   </metadata>
   <content>
 ${i.imageHrefs.map(href => `    <image src="${href}"/>`).join('\n')}

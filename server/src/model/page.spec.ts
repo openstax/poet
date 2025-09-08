@@ -1,7 +1,7 @@
 import { expect } from '@jest/globals'
 import * as path from 'path'
 import { ELEMENT_TO_PREFIX, PageNode, PageValidationKind, UNTITLED_FILE } from './page'
-import { expectErrors, first, FS_PATH_HELPER, makeBundle, newH5PPath, pageMaker } from './spec-helpers.spec'
+import { expectErrors, first, FS_PATH_HELPER, makeBundle, newH5PPath, type PageInfo, pageMaker } from './spec-helpers.spec'
 import { H5PExercise } from './h5p-exercise'
 
 describe('Page', () => {
@@ -168,5 +168,29 @@ describe('Page validations', () => {
     }
     page.load(pageMaker(info))
     expectErrors(page, [])
+  })
+  it(PageValidationKind.INVALID_METADATA.title, () => {
+    const bundle = makeBundle()
+    const page = bundle.allPages.getOrAdd('somepage/filename')
+    const info: PageInfo = {
+      super: {
+        tags: [],
+        subjectName: 'Someone'
+      }
+    }
+    page.load(pageMaker(info))
+    expectErrors(page, [PageValidationKind.INVALID_METADATA])
+
+    info.documentClass = 'something'
+    page.load(pageMaker(info))
+    expectErrors(page, [PageValidationKind.INVALID_METADATA])
+
+    info.documentClass = 'super'
+    page.load(pageMaker(info))
+    expectErrors(page, [])
+
+    info.documentClass = 'something else'
+    page.load(pageMaker(info))
+    expectErrors(page, [PageValidationKind.INVALID_METADATA])
   })
 })

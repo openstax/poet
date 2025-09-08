@@ -32,7 +32,7 @@ interface NodeAndParent { node: ClientTocNode, parent: BookToc | ClientTocNode }
 interface Autocompleter {
   hasLinkNearCursor: (page: PageNode, cursor: Position) => boolean
   getRange: (cursor: Position, content: string) => Range | undefined
-  getCompletionItems: (page: PageNode, range: Range) => CompletionItem[]
+  getCompletionItems: (page: PageNode, range: Range) => Promise<CompletionItem[]>
 }
 function childrenOf(n: ClientTocNode) {
   /* istanbul ignore else */
@@ -137,7 +137,7 @@ export class ModelManager {
   public readonly jobRunner = new JobRunner()
   private readonly openDocuments = new Map<string, string>()
   private readonly errorHashesByPath = new Map<string, I.Set<number>>()
-  private didLoadOrphans = false
+  private loadOrphansTask: Promise<void> | undefined
   private bookTocs: BookToc[] = []
   private tocIdMap = new IdMap<string, TocSubbookWithRange | PageNode>(x => {
     /* istanbul ignore next */
@@ -228,19 +228,26 @@ export class ModelManager {
     }))
   }
 
-  public async loadEnoughForOrphans() {
-    if (this.didLoadOrphans) return
-    await this.loadEnoughForToc()
-    const { pagesRoot, mediaRoot, booksRoot, publicRoot } = this.bundle.paths
-    // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
-    const files = glob.sync(`{${pagesRoot}/*/*.cnxml,${mediaRoot}/*.*,${booksRoot}/*.collection.xml,${publicRoot}/*/h5p.json}`, { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
-    Quarx.batch(() => {
-      files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, this.bundle.pathHelper.canonicalize(absPath)), `BUG? We found files that the bundle did not recognize: ${absPath}`))
-    })
-    // Load everything before we can know where the orphans are
-    this.performInitialValidation()
-    await this.jobRunner.done()
-    this.didLoadOrphans = true
+  public async loadEnoughForOrphans(timeout = -1) {
+    if (this.loadOrphansTask === undefined) {
+      this.loadOrphansTask = (async () => {
+        await this.loadEnoughForToc()
+        const { pagesRoot, mediaRoot, booksRoot, publicRoot } = this.bundle.paths
+        // Add all the orphaned Images/Pages/Books dangling around in the filesystem without loading them
+        const files = glob.sync(`{${pagesRoot}/*/*.cnxml,${mediaRoot}/*.*,${booksRoot}/*.collection.xml,${publicRoot}/*/h5p.json}`, { cwd: URI.parse(this.bundle.workspaceRootUri).fsPath, absolute: true })
+        Quarx.batch(() => {
+          files.forEach(absPath => expectValue(findOrCreateNode(this.bundle, this.bundle.pathHelper.canonicalize(absPath)), `BUG? We found files that the bundle did not recognize: ${absPath}`))
+        })
+        // Load everything before we can know where the orphans are
+        this.performInitialValidation()
+        await this.jobRunner.done()
+      })()
+    }
+    await (
+      timeout >= 0
+        ? Promise.race([this.loadOrphansTask, new Promise((resolve) => setTimeout(resolve, timeout))])
+        : this.loadOrphansTask
+    )
   }
 
   private sendAllDiagnostics() {
@@ -459,7 +466,7 @@ export class ModelManager {
     jobs.reverse().forEach(j => { this.jobRunner.enqueue(j) })
   }
 
-  private autocomplete(
+  private async autocomplete(
     page: PageNode,
     cursor: Position,
     autocompleter: Autocompleter
@@ -474,7 +481,7 @@ export class ModelManager {
     const range = autocompleter.getRange(cursor, content)
     if (range === undefined) { return [] }
 
-    return autocompleter.getCompletionItems(page, range)
+    return await autocompleter.getCompletionItems(page, range)
   }
 
   private rangeFinderFactory(start: string, end: string) {
@@ -496,7 +503,7 @@ export class ModelManager {
     }
   }
 
-  public autocompleteResources(page: PageNode, cursor: Position) {
+  public async autocompleteResources(page: PageNode, cursor: Position) {
     const resourceAutocompleter: Autocompleter = {
       hasLinkNearCursor: (page, cursor) => {
         return page.resourceLinks
@@ -505,22 +512,25 @@ export class ModelManager {
           .length > 0
       },
       getRange: this.rangeFinderFactory('src="', '"'),
-      getCompletionItems: (page, range) => this.orphanedResources
-        .filter((r) => r.exists)
-        .toArray()
-        .map(i => {
-          const insertText = path.relative(path.dirname(page.absPath), i.absPath)
-          const item = CompletionItem.create(insertText)
-          item.textEdit = TextEdit.replace(range, insertText)
-          item.kind = CompletionItemKind.File
-          item.detail = 'Orphaned Resource'
-          return item
-        })
+      getCompletionItems: async (page, range) => {
+        await this.loadEnoughForOrphans(500)
+        return this.orphanedResources
+          .filter((r) => r.exists)
+          .toArray()
+          .map(i => {
+            const insertText = path.relative(path.dirname(page.absPath), i.absPath)
+            const item = CompletionItem.create(insertText)
+            item.textEdit = TextEdit.replace(range, insertText)
+            item.kind = CompletionItemKind.File
+            item.detail = 'Orphaned Resource'
+            return item
+          })
+      }
     }
-    return this.autocomplete(page, cursor, resourceAutocompleter)
+    return await this.autocomplete(page, cursor, resourceAutocompleter)
   }
 
-  public autocompleteUrls(page: PageNode, cursor: Position) {
+  public async autocompleteUrls(page: PageNode, cursor: Position) {
     const urlAutocompleter: Autocompleter = {
       hasLinkNearCursor: (page, cursor) => {
         return page.pageLinks
@@ -529,7 +539,8 @@ export class ModelManager {
           .length > 0
       },
       getRange: this.rangeFinderFactory('url="', '"'),
-      getCompletionItems: (_page, range) => {
+      getCompletionItems: async (_page, range) => {
+        await this.loadEnoughForOrphans(500)
         return this.orphanedH5P
           .filter((h) => h.exists)
           .toArray()
@@ -545,7 +556,7 @@ export class ModelManager {
           })
       }
     }
-    return this.autocomplete(page, cursor, urlAutocompleter)
+    return await this.autocomplete(page, cursor, urlAutocompleter)
   }
 
   async getDocumentLinks(page: PageNode) {
@@ -738,12 +749,14 @@ export class ModelManager {
 
   public async createAncillary(bookIndex: number, parentNodeToken: string | undefined, title: string) {
     return await this.createDocument(bookIndex, parentNodeToken, title, 'ancilliary', `
-<document xmlns="http://cnx.rice.edu/cnxml" class="super" resource="" document-link="" ancillary-type="">
+<document xmlns="http://cnx.rice.edu/cnxml" class="super">
   <title/>
   <metadata xmlns:md="http://cnx.rice.edu/mdml">
     <md:title/>
     <md:content-id/>
     <md:uuid/>
+    <md:super>
+    </md:super>
   </metadata>
   <content class="super">
   </content>

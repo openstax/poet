@@ -5,4 +5,7 @@
   <uri
     name="http://cnx.rice.edu/collxml"
     uri="./collxml.xsd" />
+  <uri
+    name="http://cnx.rice.edu/mdml"
+    uri="./mdml.xsd" />
 </catalog>
