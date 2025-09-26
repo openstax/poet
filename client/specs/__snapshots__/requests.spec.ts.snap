@@ -13,6 +13,10 @@ exports[`generateReadme runs and yields a response 1`] = `
 [
   "GENREATE_README",
   {
+    "repo": {
+      "name": "",
+      "owner": "",
+    },
     "workspaceUri": "/fake/workspace",
   },
 ]

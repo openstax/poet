@@ -17,6 +17,9 @@ import * as pushContent from '../src/push-content'
 describe('Extension', () => {
   const sinon = Sinon.createSandbox()
   beforeEach(async () => {
+    sinon.stub(pushContent, 'getRemotes').returns([{
+      name: 'origin', domain: '', owner: '', repoName: '', isReadOnly: false
+    }])
     sinon.stub(pushContent, 'setDefaultGitConfig').resolves()
     sinon.stub(pushContent, 'initPrivateSubmodule').resolves()
   })

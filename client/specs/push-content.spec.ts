@@ -60,6 +60,32 @@ describe('Push Button Test Suite', () => {
     const repo = pushContent.getBookRepo()
     expect(repo.rootUri).toBeDefined()
   })
+  test('getRemotes returns a repository', async () => {
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
+    sinon.stub(pushContent, 'getBookRepo').returns({
+      state: {
+        remotes: [
+          { name: 'origin', fetchUrl: 'https://example.com/owner/name', isReadOnly: false },
+          { name: 'place', isReadOnly: false }
+        ]
+      } as unknown as any
+    } as unknown as any)
+    const remotes = pushContent.getRemotes()
+    expect(remotes).toMatchInlineSnapshot(`
+[
+  {
+    "domain": "example.com",
+    "fetchUrl": "https://example.com/owner/name",
+    "isReadOnly": false,
+    "name": "origin",
+    "owner": "owner",
+    "repoName": "name",
+  },
+  undefined,
+]
+`)
+  })
   test('pushContent pushes with no conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)

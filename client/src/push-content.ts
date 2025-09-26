@@ -188,6 +188,22 @@ export const getBookRepo = (): Repository => {
   return expect(getRepo(uri.fsPath), 'Could not get book repository')
 }
 
+export const getRemotes = () => {
+  const repo = getBookRepo()
+  const pat = /^https:\/\/([^/]+)\/([^/]+)\/([^/]+)\/?$/
+  return repo.state.remotes
+    .map((r) => {
+      if (r.fetchUrl !== undefined) {
+        const result = pat.exec(r.fetchUrl)
+        if (result != null) {
+          const [,domain, owner, repoName] = result
+          return { ...r, domain, owner, repoName }
+        }
+      }
+      return undefined
+    })
+}
+
 export const setDefaultGitConfig = async (): Promise<void> => {
   for (const repo of getRepos()) {
     const config = await repo.getConfigs()
