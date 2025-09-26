@@ -16,6 +16,7 @@ import { type ResourceNode } from './resource'
 import { removeNode, writeBookToc } from '../model-manager'
 import { BookRootNode, type BookToc, type ClientTocNode } from '../../../common/src/toc'
 import { fromBook, IdMap } from '../book-toc-utils'
+import { generateReadmeForWorkspace } from '../readme-generator'
 
 const ALLOWED_FILES = [
   'LICENSE',
@@ -341,7 +342,19 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
     .union(bundle.allResources.all.subtract(I.Set(keepResources)))
   info('Deleting files:', filesToDelete.size)
   filesToDelete.forEach(f => { fs.unlinkSync(f.absPath) })
-}; (async function () {
+};
+
+async function generateReadme(repoPath: string, extras?: Record<string, string>) {
+  const bundle = new Bundle(pathHelper, repoPath)
+  loadNode(bundle)
+  const nodesToLoad = bundle.allBooks.all
+  info('Loading', nodesToLoad.size, 'file(s)...')
+  nodesToLoad.forEach(loadNode)
+  const readme = generateReadmeForWorkspace(bundle.books.toArray(), extras)
+  await fs.promises.writeFile(path.join(repoPath, 'README.md'), readme, 'utf-8')
+}
+
+(async function () {
   switch (process.argv[2]) {
     case 'validate': {
       const bookDirs = process.argv.length >= 4 ? process.argv.slice(3) : [process.cwd()]
@@ -370,12 +383,24 @@ async function shrink(repoDir: string, entries: MinDefinition[]) {
       await shrink(repoDir, entries)
       break
     }
+    case 'generate-readme': {
+      const repoDir = process.argv[3]
+      const extras = process.argv.slice(4)
+      const extrasObj = Object.fromEntries(
+        extras
+          .map((e) => e.split('=').map((p) => p.trim()))
+          .filter((a): a is [string, string] => a.length === 2)
+      )
+      await generateReadme(repoDir, extrasObj)
+      break
+    }
     default: {
       info(`Unsupported command '${process.argv[2]}'. Expected one of the following:`)
       info('    validate <directory>')
       info('    links <directory>')
       info('    orphans <directory>')
       info('    shrink <directory> bookslug:0,9.0,9.7 bookslug2:13.0')
+      info('    generate-readme <directory> [extra-values...]')
     }
   }
 })().then(null, (err) => { throw err })
