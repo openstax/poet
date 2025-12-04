@@ -14,7 +14,7 @@ _{{ book_title }}_ is a textbook published by [OpenStax](https://openstax.org/),
 The book can be viewed [online]({{ book_link }}), where you can also see a list of contributors.
 
 ## License
-This book is available under the [{{ license_text }}](./LICENSE) license.
+_{{ book_title }}_ is available under the [{{ license_text }}](./LICENSE) license.
 
 ## Support
 If you would like to support the creation of free textbooks for students, your [donations are welcome](https://riceconnect.rice.edu/donation/support-openstax-banner).
@@ -31,7 +31,7 @@ To view these books online and view contributors, please visit:
 {{ book_links }}
 
 ## License
-These books are available under the [{{ license_text }}](./LICENSE) license.
+_{{ book_titles }}_ are available under the [{{ license_text }}](./LICENSE) license.
 
 ## Support
 If you would like to support the creation of free textbooks for students, your [donations are welcome](https://riceconnect.rice.edu/donation/support-openstax-banner).
