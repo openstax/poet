@@ -55,7 +55,12 @@ export interface BundleRequestParams {
 }
 
 export interface BundleEnsureIdsParams extends BundleRequestParams { }
-export interface BundleGenerateReadmeParams extends BundleRequestParams { }
+export interface BundleGenerateReadmeParams extends BundleRequestParams {
+  repo: {
+    owner: string
+    name: string
+  }
+}
 export interface BundleGetSubmoduleConfigParams extends BundleRequestParams { }
 
 export const requestEnsureIds = async (client: LanguageClient, args: BundleEnsureIdsParams): Promise<void> => {

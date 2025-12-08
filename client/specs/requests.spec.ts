@@ -23,7 +23,7 @@ describe('generateReadme', () => {
     const client = {
       sendRequest: sinon.stub()
     }
-    await requestGenerateReadme(client, { workspaceUri: '/fake/workspace' })
+    await requestGenerateReadme(client, { workspaceUri: '/fake/workspace', repo: { owner: '', name: '' } })
     expect(client.sendRequest.firstCall.args).toMatchSnapshot()
   })
 })

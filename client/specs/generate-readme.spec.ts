@@ -6,6 +6,8 @@ import { ExtensionServerRequest } from '../../common/src/requests'
 import { setLanguageServerLauncher } from '../src/extension'
 import { readmeGenerator } from '../src/generate-readme'
 import * as utils from '../src/utils'
+import Substitute from '@fluffy-spoon/substitute'
+import { type GitExtension } from '../src/git-api/git'
 
 describe('Request readme generated', () => {
   const sinon = Sinon.createSandbox()
@@ -26,15 +28,23 @@ describe('Request readme generated', () => {
       sendRequest: sendRequestStub,
       start: sinon.stub()
     } as unknown as LanguageClient
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
     setLanguageServerLauncher(() => mockClient)
     await readmeGenerator({
       client: mockClient
     } as any)()
-    expect(getRootPathUriStub.callCount).toBe(1)
+    expect(getRootPathUriStub.callCount).toBe(2)
     expect(sendRequestStub.callCount).toBe(1)
     expect(sendRequestStub.args[0]).toStrictEqual([
       ExtensionServerRequest.GenerateReadme,
-      { workspaceUri: fakeWorkspacePath.toString() }
+      {
+        workspaceUri: fakeWorkspacePath.toString(),
+        repo: {
+          name: '',
+          owner: ''
+        }
+      }
     ])
   })
 })

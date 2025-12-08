@@ -28,11 +28,15 @@ export function bundleGenerateReadme(): (request: BundleGenerateReadmeParams) =>
     const manager = bundleFactory.getOrAdd(request.workspaceUri)
     const books = manager.bundle.books
     const readmePath = `${URI.parse(request.workspaceUri).fsPath}/README.md`
+    const extras = {
+      repoName: request.repo.name,
+      repoOwner: request.repo.owner
+    }
     if (!books.every(b => b.exists && b.isLoaded)) {
       throw new Error('Wait longer for books to load')
     }
     // toArray because I.Set uses non-standard iterators
-    fs.writeFileSync(readmePath, generateReadmeForWorkspace(books.toArray()))
+    fs.writeFileSync(readmePath, generateReadmeForWorkspace(books.toArray(), extras))
   }
 }
 

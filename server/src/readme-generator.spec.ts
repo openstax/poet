@@ -23,11 +23,13 @@ describe('generate readme', () => {
     })
   }
 
+  const extras = { repoOwner: 'testOwner', repoName: 'testName' }
+
   it('generates the readme for a single book', () => {
     const bundle = makeBundle()
     bundle.load(bundleMaker({ books: [slugs[0]] }))
     initBooks(bundle.books)
-    const output = generateReadmeForWorkspace(Array.from(bundle.allBooks.all))
+    const output = generateReadmeForWorkspace(Array.from(bundle.allBooks.all), extras)
     const outputLines = output.split('\n')
     expect(outputLines.length).toBe(14)
     expect(outputLines[0].startsWith(`# ${titles[0]}`)).toBe(true)
@@ -39,7 +41,7 @@ describe('generate readme', () => {
     const bundle = makeBundle()
     bundle.load(bundleMaker({ books: slugs.slice(0, 2) }))
     initBooks(bundle.books)
-    const output = generateReadmeForWorkspace(Array.from(bundle.allBooks.all))
+    const output = generateReadmeForWorkspace(Array.from(bundle.allBooks.all), extras)
     const outputLines = output.split('\n')
     expect(outputLines.length).toBe(16)
     expect(outputLines[0].startsWith(`# ${titles[0] + ' and ' + titles[1]}`)).toBe(true)
@@ -56,7 +58,7 @@ describe('generate readme', () => {
     const bundle = makeBundle()
     bundle.load(bundleMaker({ books: slugs }))
     initBooks(bundle.books)
-    const output = generateReadmeForWorkspace(Array.from(bundle.allBooks.all))
+    const output = generateReadmeForWorkspace(Array.from(bundle.allBooks.all), extras)
     const outputLines = output.split('\n')
     expect(outputLines.length).toBe(17)
     expect(outputLines[0].startsWith(`# ${titles[0]}, ${titles[1]}, and ${titles[2]}`)).toBe(true)
@@ -83,7 +85,7 @@ describe('generate readme', () => {
 
     let err: Error | undefined
     try {
-      generateReadmeForWorkspace(bundle.books.toArray())
+      generateReadmeForWorkspace(bundle.books.toArray(), extras)
     } catch (e) {
       err = e as Error
     }
@@ -97,7 +99,7 @@ describe('generate readme', () => {
   it('fails for empty book set', () => {
     let err: Error | undefined
     try {
-      generateReadmeForWorkspace([])
+      generateReadmeForWorkspace([], extras)
     } catch (e) {
       err = e as Error
     }
