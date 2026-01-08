@@ -190,11 +190,19 @@ export const getBookRepo = (): Repository => {
 
 export const getRemotes = () => {
   const repo = getBookRepo()
-  const pat = /^https:\/\/([^/]+)\/([^/]+)\/([^/]+)\/?$/
+  const httpsPat = /^https:\/\/([^/]+)\/([^/]+)\/(.+?)(\.git)?\/?$/
+  const sshPat = /^git@([^:]+):([^/]+)\/(.+?)(\.git)?$/
   return repo.state.remotes
     .map((r) => {
       if (r.fetchUrl !== undefined) {
-        const result = pat.exec(r.fetchUrl)
+        // Try HTTPS pattern first
+        let result = httpsPat.exec(r.fetchUrl)
+        if (result != null) {
+          const [,domain, owner, repoName] = result
+          return { ...r, domain, owner, repoName }
+        }
+        // Try SSH pattern
+        result = sshPat.exec(r.fetchUrl)
         if (result != null) {
           const [,domain, owner, repoName] = result
           return { ...r, domain, owner, repoName }

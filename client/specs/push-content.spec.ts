@@ -86,6 +86,84 @@ describe('Push Button Test Suite', () => {
 ]
 `)
   })
+  test('getRemotes returns a repository with https .git suffix', async () => {
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
+    sinon.stub(pushContent, 'getBookRepo').returns({
+      state: {
+        remotes: [
+          { name: 'origin', fetchUrl: 'https://example.com/owner/name.git', isReadOnly: false },
+          { name: 'place', isReadOnly: false }
+        ]
+      } as unknown as any
+    } as unknown as any)
+    const remotes = pushContent.getRemotes()
+    expect(remotes).toMatchInlineSnapshot(`
+[
+  {
+    "domain": "example.com",
+    "fetchUrl": "https://example.com/owner/name.git",
+    "isReadOnly": false,
+    "name": "origin",
+    "owner": "owner",
+    "repoName": "name",
+  },
+  undefined,
+]
+`)
+  })
+  test('getRemotes returns a repository with ssh remote', async () => {
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
+    sinon.stub(pushContent, 'getBookRepo').returns({
+      state: {
+        remotes: [
+          { name: 'origin', fetchUrl: 'git@github.com:owner/name', isReadOnly: false },
+          { name: 'place', isReadOnly: false }
+        ]
+      } as unknown as any
+    } as unknown as any)
+    const remotes = pushContent.getRemotes()
+    expect(remotes).toMatchInlineSnapshot(`
+[
+  {
+    "domain": "github.com",
+    "fetchUrl": "git@github.com:owner/name",
+    "isReadOnly": false,
+    "name": "origin",
+    "owner": "owner",
+    "repoName": "name",
+  },
+  undefined,
+]
+`)
+  })
+  test('getRemotes returns a repository with ssh remote .git suffix', async () => {
+    const getExtensionStub = Substitute.for<vscode.Extension<GitExtension>>()
+    sinon.stub(vscode.extensions, 'getExtension').returns(getExtensionStub)
+    sinon.stub(pushContent, 'getBookRepo').returns({
+      state: {
+        remotes: [
+          { name: 'origin', fetchUrl: 'git@github.com:owner/name.git', isReadOnly: false },
+          { name: 'place', isReadOnly: false }
+        ]
+      } as unknown as any
+    } as unknown as any)
+    const remotes = pushContent.getRemotes()
+    expect(remotes).toMatchInlineSnapshot(`
+[
+  {
+    "domain": "github.com",
+    "fetchUrl": "git@github.com:owner/name.git",
+    "isReadOnly": false,
+    "name": "origin",
+    "owner": "owner",
+    "repoName": "name",
+  },
+  undefined,
+]
+`)
+  })
   test('pushContent pushes with no conflict', async () => {
     const messages: string[] = []
     const captureMessage = makeCaptureMessage(messages)
