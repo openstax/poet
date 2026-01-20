@@ -31,6 +31,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="cnxml-version">
         <xs:simpleType>
@@ -68,6 +79,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -93,6 +115,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="mdml-version">
         <xs:simpleType>
@@ -117,6 +150,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="id" type="xs:ID"/>
     </xs:complexType>
@@ -154,6 +198,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="id" type="xs:ID"/>
     </xs:complexType>
@@ -171,6 +226,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="id" type="xs:ID"/>
     </xs:complexType>
@@ -193,6 +259,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type" use="required"/>
@@ -288,6 +365,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type" use="required"/>
@@ -331,6 +419,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -391,6 +490,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -425,6 +535,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -468,6 +589,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -503,6 +635,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="orient">
@@ -594,6 +737,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
         </xs:complexType>
       </xs:element>
@@ -685,6 +839,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -781,6 +946,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -891,6 +1067,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type">
@@ -980,6 +1167,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="alt" use="required"/>
@@ -1036,6 +1234,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="mark-prefix"/>
           <xs:attribute name="type"/>
@@ -1135,6 +1344,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
         </xs:complexType>
       </xs:element>
@@ -1163,6 +1383,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -1192,6 +1423,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -1223,6 +1465,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="print-placement">
@@ -1290,6 +1543,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -1651,6 +1915,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -1713,6 +1988,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -1747,6 +2033,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -1776,6 +2073,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -1805,6 +2113,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -1834,6 +2153,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -1863,6 +2193,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -1892,6 +2233,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -1921,6 +2273,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -1950,6 +2313,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -1979,6 +2353,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="display">
             <xs:simpleType>
               <xs:restriction base="xs:token">
@@ -2025,6 +2410,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="display">
             <xs:simpleType>
               <xs:restriction base="xs:token">
@@ -2071,6 +2467,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="display">
             <xs:simpleType>
               <xs:restriction base="xs:token">
@@ -2120,6 +2527,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -2159,6 +2577,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2222,6 +2651,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2263,6 +2703,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2335,6 +2786,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2389,6 +2851,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2443,6 +2916,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2504,6 +2988,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2558,6 +3053,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2630,6 +3136,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2671,6 +3188,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2712,6 +3240,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2771,6 +3310,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2789,6 +3339,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="id" type="xs:ID"/>
       <xs:attribute name="count">
@@ -2843,6 +3404,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="id" type="xs:ID"/>
       <xs:attribute name="count">
@@ -2903,6 +3475,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -2963,6 +3546,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -2993,6 +3587,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -3035,6 +3640,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -3094,6 +3710,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -3144,6 +3771,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -3215,6 +3853,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -3288,6 +3937,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -3392,6 +4052,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -3496,6 +4167,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -3571,6 +4253,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -3695,6 +4388,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -3786,6 +4490,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -3857,6 +4572,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -3960,6 +4686,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4016,6 +4753,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4058,6 +4806,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -4101,6 +4860,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -4144,6 +4914,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -4195,6 +4976,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -4256,6 +5048,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -4353,6 +5156,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4406,6 +5220,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4459,6 +5284,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4519,6 +5355,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4572,6 +5419,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4643,6 +5501,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4683,6 +5552,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4723,6 +5603,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4803,6 +5694,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
         </xs:complexType>
       </xs:element>
@@ -4892,6 +5794,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -4986,6 +5899,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -5094,6 +6018,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type">
@@ -5179,6 +6114,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="mark-prefix"/>
           <xs:attribute name="type"/>
@@ -5250,6 +6196,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="alt" use="required"/>
@@ -5310,6 +6267,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -5344,6 +6312,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
         </xs:complexType>
       </xs:element>
     </xs:sequence>
@@ -5360,6 +6339,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="id" type="xs:ID"/>
       <xs:attribute name="name" use="required"/>
@@ -5408,6 +6398,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="id" type="xs:ID"/>
     </xs:complexType>
@@ -5455,6 +6456,17 @@
       <xs:attribute ref="ns1:font-style"/>
       <xs:attribute ref="ns1:font-weight"/>
       <xs:attribute ref="xml:lang"/>
+      <xs:attribute name="data-platform-hidden">
+        <xs:simpleType>
+          <xs:union memberTypes="xs:token">
+            <xs:simpleType>
+              <xs:restriction base="xs:token">
+                <xs:enumeration value="assignable"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:attribute>
       <xs:attribute name="class" type="xs:token"/>
       <xs:attribute name="id" type="xs:ID"/>
     </xs:complexType>
@@ -5486,6 +6498,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -5519,6 +6542,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -5549,6 +6583,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -5589,6 +6634,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -5629,6 +6685,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -5686,6 +6753,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -5744,6 +6822,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -5778,6 +6867,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -5821,6 +6921,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -5856,6 +6967,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="orient">
@@ -5951,6 +7073,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
         </xs:complexType>
       </xs:element>
@@ -5979,6 +7112,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -6005,6 +7149,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -6033,6 +7188,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="print-placement">
@@ -6122,6 +7288,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -6180,6 +7357,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -6229,6 +7417,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -6299,6 +7498,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -6371,6 +7581,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -6474,6 +7695,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -6577,6 +7809,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -6651,6 +7894,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -6766,6 +8020,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -6856,6 +8121,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -6926,6 +8202,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="height"/>
@@ -6987,6 +8274,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7011,6 +8309,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -7070,6 +8379,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7112,6 +8432,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -7143,6 +8474,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -7200,6 +8542,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7242,6 +8595,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -7285,6 +8649,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -7328,6 +8703,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -7379,6 +8765,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -7439,6 +8836,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
           <xs:attribute name="type"/>
@@ -7544,6 +8952,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7603,6 +9022,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7636,6 +9066,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7669,6 +9110,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7699,6 +9151,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7739,6 +9202,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7842,6 +9316,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
@@ -7901,6 +9386,17 @@
           <xs:attribute ref="ns1:font-style"/>
           <xs:attribute ref="ns1:font-weight"/>
           <xs:attribute ref="xml:lang"/>
+          <xs:attribute name="data-platform-hidden">
+            <xs:simpleType>
+              <xs:union memberTypes="xs:token">
+                <xs:simpleType>
+                  <xs:restriction base="xs:token">
+                    <xs:enumeration value="assignable"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:union>
+            </xs:simpleType>
+          </xs:attribute>
           <xs:attribute name="class" type="xs:token"/>
           <xs:attribute name="id" type="xs:ID"/>
         </xs:complexType>
