@@ -1331,11 +1331,13 @@
   </xs:group>
   <xs:element name="super">
     <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="mdml:tags"/>
-        <xs:element ref="mdml:subject-name"/>
+      <xs:sequence>
         <xs:element ref="mdml:ancillary-type"/>
-      </xs:choice>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element ref="mdml:tags"/>
+          <xs:element ref="mdml:subject-name"/>
+        </xs:choice>
+      </xs:sequence>
     </xs:complexType>
   </xs:element>
   <xs:group name="person">
@@ -1636,20 +1638,6 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
-  <xs:element name="tags">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element maxOccurs="unbounded" ref="mdml:tag"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="subject-name">
-    <xs:simpleType>
-      <xs:restriction base="xs:string">
-        <xs:pattern value="(.+)"/>
-      </xs:restriction>
-    </xs:simpleType>
-  </xs:element>
   <xs:element name="ancillary-type">
     <xs:simpleType>
       <xs:union>
@@ -1674,6 +1662,20 @@
           </xs:restriction>
         </xs:simpleType>
       </xs:union>
+    </xs:simpleType>
+  </xs:element>
+  <xs:element name="tags">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="mdml:tag"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="subject-name">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:pattern value="(.+)"/>
+      </xs:restriction>
     </xs:simpleType>
   </xs:element>
   <xs:group name="honorific">
