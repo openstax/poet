@@ -1659,6 +1659,16 @@
           </xs:restriction>
         </xs:simpleType>
         <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="current-issues-and-ethics"/>
+          </xs:restriction>
+        </xs:simpleType>
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="labs-and-activities"/>
+          </xs:restriction>
+        </xs:simpleType>
+        <xs:simpleType>
           <xs:restriction base="xs:string">
             <xs:pattern value="(.+)"/>
           </xs:restriction>
