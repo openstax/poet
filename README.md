@@ -24,6 +24,7 @@ Table of Contents
    * [Opening a Webview](#opening-a-webview)
    * [Editing Files and Interaction](#editing-files-and-interaction)
 * [Generating XSD schema files](#generating-xsd-schema-files)
+* [Ancillary ("super") documents](#ancillary-super-documents)
 
 
 # Development
@@ -284,3 +285,27 @@ $ java -jar ../jing-trang/build/trang.jar -I rng -O xsd poet-simplified.rng clie
 $ patch -p1 < client/static/xsd/trang.patch
 $ rm poet-simplified.rng
 ```
+
+# Ancillary ("super") documents
+
+An **ancillary** is a page-like document that is not core textbook content, e.g. an instructor guide or activity handout. Internally these are called **"super" documents** because both the CNXML `<document>` and `<content>` elements carry `class="super"`, and the metadata includes a `<md:super>` block with a required `<md:ancillary-type>`:
+
+```xml
+<document xmlns="http://cnx.rice.edu/cnxml" class="super">
+  <title/>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+    <md:title/>
+    <md:content-id/>
+    <md:uuid/>
+    <md:super>
+      <md:ancillary-type/>
+    </md:super>
+  </metadata>
+  <content class="super">
+  </content>
+</document>
+```
+
+* Use the **Add Ancillary** command (right-click a book or ToC node, or `openstax.addAncillaryToToc`) to create one. This scaffolds the template above via `ModelManager.createAncillary` (`server/src/model-manager.ts`) and adds it to the book's ToC as a `TocNodeKind.Ancillary` node, distinct from a regular `TocNodeKind.Page`.
+* `<md:ancillary-type>` must be non-empty; the XSD (`client/static/xsd/mdml.xsd`) allows any free-text value, with `portrait-of-a-researcher` enumerated as a known example.
+* Validation (`server/src/model/page.ts`, `PageValidationKind.INVALID_METADATA`) flags a page if it has a `<md:super>` metadata block but the `<document>` element is missing `class="super"` — the two must agree.
