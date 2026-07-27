@@ -1331,10 +1331,13 @@
   </xs:group>
   <xs:element name="super">
     <xs:complexType>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element ref="mdml:tags"/>
-        <xs:element ref="mdml:subject-name"/>
-      </xs:choice>
+      <xs:sequence>
+        <xs:element ref="mdml:ancillary-type"/>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element ref="mdml:tags"/>
+          <xs:element ref="mdml:subject-name"/>
+        </xs:choice>
+      </xs:sequence>
     </xs:complexType>
   </xs:element>
   <xs:group name="person">
@@ -1635,6 +1638,22 @@
       </xs:element>
     </xs:sequence>
   </xs:group>
+  <xs:element name="ancillary-type">
+    <xs:simpleType>
+      <xs:union>
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="portrait-of-a-researcher"/>
+          </xs:restriction>
+        </xs:simpleType>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="(.+)"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:union>
+    </xs:simpleType>
+  </xs:element>
   <xs:element name="tags">
     <xs:complexType>
       <xs:sequence>

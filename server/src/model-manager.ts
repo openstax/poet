@@ -756,6 +756,7 @@ export class ModelManager {
     <md:content-id/>
     <md:uuid/>
     <md:super>
+      <md:ancillary-type/>
     </md:super>
   </metadata>
   <content class="super">
