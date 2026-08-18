@@ -1644,6 +1644,7 @@
         <xs:simpleType>
           <xs:restriction base="xs:token">
             <xs:enumeration value="portrait-of-a-researcher"/>
+            <xs:enumeration value="research-and-issues"/>
           </xs:restriction>
         </xs:simpleType>
         <xs:simpleType>
